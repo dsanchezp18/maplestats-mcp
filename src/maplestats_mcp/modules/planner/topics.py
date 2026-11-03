@@ -44,6 +44,25 @@ class Topic:
     patterns: tuple[str, ...] = ()
 
 
+# A department's total spending or headcount is GC InfoBase's, not proactive
+# disclosure's: "How much did ESDC spend in 2023-24 and how many employees"
+# got no plan at all before these words were spending cues. The unambiguous
+# words are terms; "spend" and "employees" count only beside a federal
+# department, so "how much do households spend" stays off this topic.
+_DEPARTMENT_TOTALS = (
+    "fte",
+    "full-time equivalent*",
+    "public servant*",
+    "fonctionnaire*",
+    "equivalents temps plein",
+)
+_DEPARTMENT_SPENDING = (
+    r"^(?=.*?\b(?P<cue>spend|spent|employees|staff|headcount|depense\w*|effectifs)\b)"
+    r"(?=.*?\b(?:federal department|department|ministry|ministere|agency|agence|esdc|edsc"
+    r"|emploi et developpement social|ircc|cra|arc|dnd|mdn|pspc|spac|tbs|sct|rcmp|grc"
+    r"|isc|sac|phac|aspc|ised|isde|eccc|dfo|mpo|nrcan|rncan|cbsa|asfc)\b)"
+)
+
 _TRADE_TERMS = (
     "trade",
     "export",
@@ -328,6 +347,11 @@ TOPICS: tuple[Topic, ...] = (
         ),
         (
             "LFS monthly estimates are survey based with sampling error; small areas use 3-month averages.",
+        ),
+        # The department's name is not a labour-market question.
+        shadows=(
+            "employment and social development canada",
+            "emploi et developpement social canada",
         ),
     ),
     Topic(
@@ -1031,6 +1055,7 @@ TOPICS: tuple[Topic, ...] = (
         "Government spending, procurement and finances",
         (
             "spending",
+            *_DEPARTMENT_TOTALS,
             "budget",
             "expenditure",
             "main estimates",
@@ -1042,7 +1067,6 @@ TOPICS: tuple[Topic, ...] = (
             "tender",
             "grant",
             "transfer payment",
-            "depenses",
             "comptes publics",
             "marche public",
             "appel d'offres",
@@ -1083,8 +1107,18 @@ TOPICS: tuple[Topic, ...] = (
                 "for finance_frt_get_table)",
                 ("fiscal reference tables", "federal debt", "dette federale"),
             ),
-            PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
-            PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
+            PlanStep(
+                "gc_infobase_list_files",
+                "Estimates, Public Accounts, program spending and FTEs",
+                (*_DEPARTMENT_TOTALS, "spending by department", "depenses par ministere"),
+                (_DEPARTMENT_SPENDING,),
+            ),
+            PlanStep(
+                "gc_infobase_query",
+                "a department's expenditures or FTEs: filter by organization and fiscal year",
+                (*_DEPARTMENT_TOTALS, "spending by department", "depenses par ministere"),
+                (_DEPARTMENT_SPENDING,),
+            ),
             PlanStep(
                 "disclosure_search_contracts",
                 "federal contracts over $10,000 by vendor, department, fiscal year or value",
@@ -1142,6 +1176,7 @@ TOPICS: tuple[Topic, ...] = (
             ),
         ),
         ("Federal fiscal years run April to March; match them to calendar-year data explicitly.",),
+        patterns=(_DEPARTMENT_SPENDING,),
     ),
     Topic(
         "legislation",

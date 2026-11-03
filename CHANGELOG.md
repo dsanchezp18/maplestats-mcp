@@ -14,11 +14,14 @@ This release adds Job Bank wages, IRCC processing times, federal proactive discl
 (contracts, grants, ministers' travel and hospitality), server-side SQL over StatCan
 series, leaf members, and three portals; `check_answer`, which re-checks the figures an
 answer cites before it is given; reading notes derived from StatCan's own metadata; and
-new caveats on traps found by the Maple Test v2. Results are smaller: a search, data and
-plan sequence carries about 45% less text, and on the Maple Test the cost per question
-fell by about a third. Nothing breaks a caller, but one default changed:
-`wds_get_cube_metadata` returns 10 distinct footnotes instead of 25 footnotes, with
-repeats merged (`footnote_limit` raises it).
+new caveats on traps found by the Maple Test v2. Results are smaller: a `search_tools`
+answer went from 15,702 to 6,605 characters, table 14-10-0287's cube metadata from
+36,579 to 18,769, and a search, data and plan sequence from 20,849 to 11,526 characters
+(45% less); on the Maple Test the cost per question fell by about a third. Nothing
+breaks a caller, but two defaults changed: `wds_get_cube_metadata` returns 10 distinct
+footnotes instead of 25 footnotes, with repeats merged (`footnote_limit` raises it), and
+`reproduce_workbook` no longer saves a file unless `MAPLE_EXPORT_DIR` is set (without
+it, a local server returns the workbook as base64, as a hosted one does).
 
 ### Added
 
@@ -85,8 +88,9 @@ repeats merged (`footnote_limit` raises it).
   gain a "one of these values" match, used for the members.
 - Job Bank wages from Employment and Social Development Canada (`jobbank_*`, a new
   module): low, median and high hourly or annual wages for the 516 NOC 2021 occupations,
-  for Canada, provinces and territories and 86 economic regions, from the yearly "Wages"
-  dataset on open.canada.ca. `jobbank_search_occupations` finds NOC codes by title
+  for 86 geographies (Canada, nine provinces and 76 economic regions; Prince Edward Island
+  and each territory are one economic region), from the yearly "Wages" dataset on
+  open.canada.ca. `jobbank_search_occupations` finds NOC codes by title
   (English or French) or code prefix, `jobbank_get_wages` gives one occupation's wages
   by region or province, `jobbank_compare_occupations` compares 2 to 25 occupations in
   one region, and `jobbank_list_regions` lists the economic regions. The newest release
@@ -195,9 +199,9 @@ repeats merged (`footnote_limit` raises it).
   population, which comes from StatCan's demographic estimates (17-10-0009, 17-10-0040,
   17-10-0121). The low-income caveat says rates by disability (11-10-0090) are for Canada
   only.
-- Benchmarks page and home page: MapleStats after the fixes (51.7 of 53 correct, USD 0.074
-  per question, was 49.7 and 0.116); the home page says MapleStats checks its answer
-  before replying and names the routes for figures that are not published.
+- Benchmarks page and home page: MapleStats's cost after the fixes (USD 0.074 per
+  question, was 0.116); the home page names `check_answer`, which the assistant can call
+  before replying, and the routes for figures that are not published.
 - Maple Test version 2 results (53 questions, 11 setups, three runs each, blind hand
   review) on the benchmarks page and in `tests/maple_test/README.md`.
 - The shared CKAN client can send an action as a POST with a JSON body, so a

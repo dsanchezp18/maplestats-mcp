@@ -45,20 +45,26 @@ other tools on public benchmarks: [see how it does](https://maplestats.danielsta
 
 - **It knows the traps.** Constant vs current dollars, family vs individual
   income, annual average vs December over December, survey rent vs listing
-  rent: it warns in plain language, and each warning is checked against
-  StatCan's or CMHC's own documentation.
-- **Every number comes with its citation:** the table and series number, the
-  period, the release date, the unit, the geography and a link to the official
-  table.
+  rent: it warns in plain language, and each fitness-for-use caution rests on
+  the publisher's own documentation.
+- **Every number names its source:** every StatCan series carries a citation
+  (table, vector, release date, with the period, unit, geography and a link to
+  the official table); every other result names its source and licence.
 - **It says when data do not exist.** A series that is not published, a period
   not released yet or a date with no data gets a plain no, and the nearest
   figure that does exist.
+- **The answer can be checked.** Before replying, the assistant can send the
+  StatCan and Bank of Canada figures it cites to `check_answer`, which re-reads
+  them from the source.
 - **Your work stays reproducible.** It writes the R, Python, Stata or Julia
   script, or the Excel query, that pulls the same data from the source.
 - **Quality flags and revisions, shown:** "use with caution", "too unreliable
-  to be published", preliminary and revised are spelled out on every value.
-- **It only reads, in English and French.** It never changes anything on your
-  computer.
+  to be published", preliminary and revised are spelled out on every StatCan
+  value.
+- **It only reads, in English and French.** The server only reads from public
+  sources. The scripts it writes run only if you run them (the full-table ones
+  then save the download under `data/raw/`), and saving a workbook to disk is
+  opt-in (`MAPLE_EXPORT_DIR`, on a local server).
 
 Project vision: [`docs/PROJECT_GUIDE.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/PROJECT_GUIDE.md).
 Source coverage: [`docs/ROADMAP.md`](https://github.com/dsanchezp18/maplestats-mcp/blob/main/docs/ROADMAP.md).
@@ -162,7 +168,12 @@ Tools are found through search rather than listed flat: call
 `plan_query` turns a question into an ordered, multi-source plan, and
 `reproduce_code` writes the R, Python, Stata or Julia script (or an Excel
 Power Query) that fetches the same data straight from the source;
-`reproduce_workbook` returns the rows as a formatted Excel workbook. Every tool accepts `lang: "en"|"fr"`;
+`reproduce_workbook` returns the rows as a formatted Excel workbook.
+Before replying with figures, the assistant can call `check_answer` with the
+StatCan and Bank of Canada figures it cites: it re-reads them from the source
+and returns only the problems (a different value, a missed scale factor, a
+newer period, another geography, an unadjusted series), each with a fix.
+Every tool accepts `lang: "en"|"fr"`;
 some sources only publish English content (for example Yukon's CKAN portal,
 the World Bank's indicator definitions and the PMPRB), so there `lang`
 changes the labels MapleStats adds, not the source's own text. Every response
@@ -209,7 +220,7 @@ by a person
 | Statistics Canada | `wds_`, `sdmx_`, `sdmx_space_`, `rdaas_`, `cimt_`, `statcan_*` | Tables and series, the extra SDMX spaces (energy information, shared data), classifications, Census Profiles 2001–2021, public use microdata (codebooks, weighted tables), merchandise trade by commodity (CIMT), open databases (LODE), The Daily, delta files, indicators, surveys, census geography |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
-| Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `disclosure_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `cbsa_tariff_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `borealis_`, `isc_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, federal contracts, grants and travel and hospitality disclosures, energy, mineral production, oceans, grain, forestry, immigration, border wait times, customs tariff rates, budgets, mergers, elections, earthquakes, university-library data tables, First Nation profiles, registered population and drinking water advisories |
+| Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `disclosure_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `cbsa_tariff_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `cra_charities_`, `jobbank_`, `telecom_`, `earthquakes_`, `borealis_`, `isc_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, federal contracts, grants and travel and hospitality disclosures, energy, mineral production, oceans, grain, forestry, immigration and application processing times, Job Bank wages and outlooks by occupation, registered charities, mobile and Internet plan prices, border wait times, customs tariff rates, budgets, mergers, elections, earthquakes, university-library data tables, First Nation profiles, registered population and drinking water advisories |
 | Wildland fire | `cwfis_`, `nrcan_nbac_`, `ab_wildfire_` | NRCan's Canadian Wildland Fire Information System (satellite hotspots, fire danger, weather stations), burned areas, and Alberta Wildfire's live fire status |
 | Electricity | `electricity_ontario_`, `electricity_quebec_`, `oeb_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only); Ontario Energy Board datasets |
 | Parliament and elected officials | `ourcommons_`, `senate_`, `represent_` | MPs and their roles, party standings, Cabinet, Senate votes; elected officials and districts for a postal code via Open North's Represent (unofficial) |

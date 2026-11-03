@@ -130,13 +130,20 @@ def test_a_series_without_issues_gets_no_note():
 
 
 def test_moving_average_from_the_title():
+    # Seasonally adjusted (14-10-0459): no advice to compare with a year earlier,
+    # which the fitness rule gives for unadjusted series only.
     notes, _ = _notes(LFS_CMA, "3.5.1.1")
     assert notes == [
         (
-            "Three-month moving average: each value averages three months, so compare it with "
-            "the same months a year earlier, not with the previous month."
+            "Three-month moving average, seasonally adjusted: each value averages three "
+            "months, so consecutive values share most of them; say so when you report a change."
         )
     ]
+    notes, _ = _notes(LFS_CMA, "3.5.1.2")
+    assert notes[0] == (
+        "Three-month moving average: each value averages three months, so compare it with "
+        "the same months a year earlier, not with the previous month."
+    )
 
 
 def test_unadjusted_member_points_to_its_adjusted_sibling():

@@ -403,10 +403,12 @@ FR: dict[str, str] = {
         "Tableaux de référence financiers : longues séries fédérales et provinciales "
         "(numéro de tableau pour finance_frt_get_table)"
     ),
-    "Estimates, Public Accounts, program spending": (
-        "budgets des dépenses, Comptes publics, dépenses de programmes"
+    "Estimates, Public Accounts, program spending and FTEs": (
+        "budgets des dépenses, Comptes publics, dépenses de programmes et ETP"
     ),
-    "filter by organization and fiscal year": "filtrer par organisation et par exercice",
+    "a department's expenditures or FTEs: filter by organization and fiscal year": (
+        "dépenses ou ETP d'un ministère : filtrer par organisation et par exercice"
+    ),
     "federal contracts over $10,000 by vendor, department, fiscal year or value": (
         "contrats fédéraux de plus de 10 000 $ par fournisseur, ministère, exercice ou valeur"
     ),
@@ -1454,8 +1456,8 @@ GUIDANCE_FR = tuple(
         ),
         "Si une étape ne trouve rien, utilisez search_tools avec l'objet de l'étape comme requête.",
         (
-            "Avant de répondre, appelez check_answer une fois avec la question et les chiffres "
-            "que vous citerez."
+            "Avant de répondre, appelez check_answer avec la question et les chiffres de "
+            "Statistique Canada et de la Banque du Canada que vous citerez."
         ),
     )
 )

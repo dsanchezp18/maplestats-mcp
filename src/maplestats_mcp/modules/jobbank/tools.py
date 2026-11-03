@@ -65,11 +65,16 @@ async def jobbank_get_wages(
     source Job Bank names (Labour Force Survey, Small Area Estimation, Census,
     EI survey), the reference period, and published=false where Job Bank
     publishes no wage. Low and high are in most cases the 10th and 90th
-    percentiles. These are Job Bank estimates, not a StatCan table.
+    percentiles; average_wage, where present, is Job Bank's own estimate too.
+    These are Job Bank estimates, not a StatCan table: for StatCan's
+    published average wages by occupation use the Labour Force Survey table
+    14-10-0417 (Employee wages by occupation, annual) through wds_, and for
+    industries the Survey of Employment, Payrolls and Hours (SEPH, e.g.
+    14-10-0223, average weekly earnings by industry).
     Keywords: Job Bank, wages, salary by region, earn, earnings, median wage, prevailing wage, economic region, hourly wage,
     annual salary, occupation pay, trades, NOC, LMIA, ESDC.
     Mots-clés : Guichet-Emplois, salaires, salaire par région, combien
-    gagne, gains, salaire médian, salaire courant, région économique, taux
+    gagne, gains, salaire médian, salaire en vigueur, région économique, taux
     horaire, salaire annuel, rémunération d'une profession, métiers, CNP,
     EIMT, EDSC.
     """

@@ -76,8 +76,9 @@ async def wds_search_cubes(
 
     Use for: finding a StatCan table's productId when you only know a
     topic (GDP by industry, the consumer price index (CPI), the monthly
-    unemployment rate for Alberta, population estimates by province) or a
-    number such as "18-10-0004",
+    unemployment rate for Alberta or a CMA, average hourly wages by
+    occupation, population estimates by province) or a number such as
+    "18-10-0004",
     discovering which StatCan tables cover a subject before requesting
     metadata or data. Every word must
     be in a title, else the best partial matches come back. `limit`
@@ -87,10 +88,11 @@ async def wds_search_cubes(
     Keywords: statcan, find a StatCan table, statistics canada, table, cube, search, productId,
     discover, wds, catalogue, browse, list, inventory, all cubes, full
     list, tables, labour force, monthly unemployment rate, employment,
-    GDP by industry, CPI, consumer price index monthly, population estimates
+    GDP by industry monthly, CPI, consumer price index monthly, population estimates
     quarterly, retail trade, wages, trade, interprovincial migration,
     time series, real-time table, Alberta, by province, which table has,
-    LFS, SEPH, MBM, low income.
+    LFS, SEPH, MBM, low income, CMA, Toronto, monthly GDP, wages by
+    occupation, nurses.
     Mots-clés : Statistique Canada, StatCan, chercher un tableau, trouver un
     tableau, quel tableau, tableau de données, recherche, tableaux,
     numéro de tableau, découverte, catalogue, parcourir, liste, inventaire,
@@ -99,7 +101,8 @@ async def wds_search_cubes(
     de bâtir, permis de construire, estimations de population
     trimestrielles, commerce de détail, salaires, commerce, migration
     interprovinciale, séries chronologiques, tableau en temps réel,
-    révisions, espérance de vie, mortalité.
+    révisions, espérance de vie, mortalité, RMR, PIB mensuel, salaire
+    selon la profession, infirmières.
     """
     client.use_lang(lang)
     if query is not None and query.strip() and not lite:
