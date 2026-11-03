@@ -31,6 +31,12 @@
           "description": "Folder for downloaded PUMF microdata (default: system temp).",
           "isRequired": false,
           "format": "string"
+        },
+        {
+          "name": "MAPLE_EXPORT_DIR",
+          "description": "Folder where reproduce_workbook saves Excel files (unset: no files are written).",
+          "isRequired": false,
+          "format": "string"
         }
       ]
     }
