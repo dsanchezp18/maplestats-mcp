@@ -229,7 +229,13 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
             outcome, reason = "abstained", "declined without saying the figure does not exist"
     elif kind == "flag":
         years = question.get("flag_years", [])
-        flagged = all(y in text for y in years) and bool(MISMATCH.search(text))
+        # A question names its own warning sign when the problem is not mixed years
+        # (v2's "multiply an annual rate by 12").
+        pattern = question.get("flag_pattern")
+        if pattern:
+            flagged = bool(re.search(pattern, text, re.IGNORECASE))
+        else:
+            flagged = all(y in text for y in years) and bool(MISMATCH.search(text))
         direct = all(matched.values()) if matched else False
         if flagged or direct:
             why = "flagged the mismatch" if flagged else "gave the published figure instead"
@@ -308,6 +314,7 @@ def grade_runs(paths: list[Path], version: str = "v1", verify: bool = False) -> 
                 "grade": asdict(g),
                 "false_claim": o.get("false_claim"),
                 "has_figures": bool(figures_in(run["response"])) and q["eval_type"] != "refusal",
+                "group": q.get("group", "core"),
             }
         )
     return {
@@ -343,6 +350,24 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         supporting = sum(len(c["vectors_supporting"]) + len(c["valet_supporting"]) for c in cites)
         with_figures = [i for i in items if i["has_figures"]]
         costs = [i["run"]["cost_usd"] for i in items if i["run"].get("cost_usd") is not None]
+        # v2 reports the core half (StatCan, Bank of Canada) and the beyond half apart.
+        groups = {}
+        for g in sorted({i.get("group", "core") for i in items}):
+            in_group = [i for i in items if i.get("group", "core") == g]
+            groups[g] = {
+                "questions": len({i["run"]["question_id"] for i in in_group}),
+                "correct": round(
+                    mean(
+                        sum(
+                            i["grade"]["outcome"] == "correct"
+                            for i in in_group
+                            if i["run"].get("repeat", 0) == r
+                        )
+                        for r in repeats
+                    ),
+                    1,
+                ),
+            }
         out.append(
             {
                 "arm": arm,
@@ -376,6 +401,7 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "seconds": round(mean(i["run"]["duration_s"] for i in items), 1),
                 "cost_usd": round(sum(costs) / len(costs), 4) if costs else None,
                 "errors": sum(i["run"]["is_error"] for i in items),
+                "groups": groups,
             }
         )
     return out
@@ -388,6 +414,8 @@ def _pct(value: float | None) -> str:
 def render(report: dict[str, Any], version: str = "v1") -> str:
     summary = report["summary"]
     repeated = any(s["repeats"] > 1 for s in summary)
+    group_names = sorted({g for s in summary for g in s.get("groups", {})})
+    split = len(group_names) > 1
     lines = [
         f"# Maple Test {version} results",
         "",
@@ -400,9 +428,13 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         + ".",
         "",
         "| Arm | Correct | "
+        + "".join(f"{g.capitalize()} | " for g in group_names if split)
         + ("Worst–best | Consistency | " if repeated else "")
         + "Partial | Abstained | Hallucinated | False claims |",
-        "| :-- | --: | " + ("--: | --: | " if repeated else "") + "--: | --: | --: | --: |",
+        "| :-- | --: | "
+        + ("--: | " * len(group_names) if split else "")
+        + ("--: | --: | " if repeated else "")
+        + "--: | --: | --: | --: |",
     ]
     for s in summary:
         extra = (
@@ -410,8 +442,18 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
             if repeated
             else ""
         )
+        halves = (
+            "".join(
+                f"{s['groups'][g]['correct']:g} of {s['groups'][g]['questions']} | "
+                for g in group_names
+                if g in s["groups"]
+            )
+            if split
+            else ""
+        )
         lines.append(
-            f"| {s['arm']} | {s['correct']:g} | {extra}{s['partial']:g} | {s['abstained']:g} "
+            f"| {s['arm']} | {s['correct']:g} | {halves}{extra}{s['partial']:g} "
+            f"| {s['abstained']:g} "
             f"| {s['hallucinated']:g} | {s['false_claims']} |"
         )
     lines += [
