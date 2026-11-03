@@ -13,6 +13,7 @@ from maplestats_mcp.shared.models import Provenance
 # puts the valid portal keys into each tool's JSON schema.
 PortalKey = Literal[
     "mb",
+    "sk",
     "pe",
     "london",
     "kitchener",
@@ -26,6 +27,7 @@ PortalKey = Literal[
     "peel",
     "durham",
     "waterloo_region",
+    "waterloo",
     "metro_vancouver",
     "york",
     "markham",
@@ -79,6 +81,7 @@ PortalKey = Literal[
     "port_moody",
     "white_rock",
     "penticton",
+    "new_westminster",
     "orangeville",
     "canmore",
     "ntgs",

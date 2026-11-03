@@ -1426,8 +1426,9 @@ FR = {english: french_text(french) for english, french in FR.items()}
 # "search with portal='x' (...)": one rule for the many portal steps.
 _SEARCH = re.compile(r"^search with (portal=.+?)(?: \((.+)\))?$")
 _SEARCH_NOTES = {
-    "city data; no provincial portal is covered": (
-        "données municipales ; aucun portail provincial n'est couvert"
+    "city data": "données municipales",
+    "provincial GeoHub: geospatial layers only": (
+        "GeoHub provincial : couches géospatiales seulement"
     ),
     "no Nunavut portal is covered": "aucun portail du Nunavut n'est couvert",
     "the city publishes on Donnees Quebec": "la ville publie sur Données Québec",

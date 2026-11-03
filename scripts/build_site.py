@@ -957,6 +957,7 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
     },
     "arcgis_hub": {
         "mb": ("MB", _P),
+        "sk": ("SK", _P),
         "pe": ("PE", _P),
         "alberta_geological_survey": ("AB", _P),
         "london": ("ON", _M),
@@ -967,6 +968,7 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "peel": ("ON", _M),
         "durham": ("ON", _M),
         "waterloo_region": ("ON", _M),
+        "waterloo": ("ON", _M),
         "york": ("ON", _M),
         "markham": ("ON", _M),
         "newmarket": ("ON", _M),
@@ -1023,6 +1025,7 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "port_moody": ("BC", _M),
         "white_rock": ("BC", _M),
         "penticton": ("BC", _M),
+        "new_westminster": ("BC", _M),
         "orangeville": ("ON", _M),
         "canmore": ("AB", _M),
         "ntgs": ("NT", _P),

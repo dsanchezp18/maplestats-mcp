@@ -32,23 +32,25 @@ async def arcgis_hub_list_portals(lang: Lang = "en") -> PortalList:
     """List every ArcGIS Hub open-data portal (province, city, region) and its portal key.
 
     Use for: finding the `portal` key the other arcgis_hub_ tools need,
-    and portal-specific caveats. Covers Manitoba (mb), Prince Edward Island (pe), London, Kitchener,
-    Windsor, Saskatoon, Victoria, Surrey, Ottawa, Halifax, Mississauga,
-    Peel, Durham, Waterloo Region, Metro Vancouver, York, Markham,
-    Newmarket, Aurora, Medicine Hat, Grande Prairie, Grande Prairie
-    County, St. Albert, Lethbridge, Airdrie, Strathcona County, Parkland
-    County, Sturgeon County, Edmonton Metropolitan Region Board, Alberta
-    Geological Survey, Red Deer, Cochrane, Okotoks, Oakville, Burlington,
-    Milton, Brampton, Kingston, Kelowna, Barrie, Burnaby, Fredericton,
-    Greater Sudbury, Guelph, Moncton, Abbotsford, Whitby, Oshawa, Niagara
-    Falls, Niagara Region, St. Catharines, Thunder Bay, Peterborough,
-    Coquitlam, Saanich, Kamloops, Prince George, Delta, Yellowknife,
-    Cambridge, Maple Ridge, Pickering, Sarnia, Saint John, Port Moody,
-    White Rock, Penticton, Orangeville, Canmore, BC Energy Regulator,
-    Toronto Police Service, Ottawa Police Service, Conservation Halton,
-    Credit Valley, Niagara Peninsula, Hamilton and Central Lake Ontario
-    conservation authorities, Quinte Conservation, Ontario GeoHub (Land
-    Information Ontario) and Parks Canada.
+    and portal-specific caveats. Covers Manitoba (mb), Saskatchewan GeoHub
+    (sk), Prince Edward Island (pe), London, Kitchener, Windsor,
+    Saskatoon, Victoria, Surrey, Ottawa, Halifax, Mississauga, Peel,
+    Durham, Waterloo Region, City of Waterloo, Metro Vancouver, York,
+    Markham, Newmarket, Aurora, Medicine Hat, Grande Prairie, Grande
+    Prairie County, St. Albert, Lethbridge, Airdrie, Strathcona County,
+    Parkland County, Sturgeon County, Edmonton Metropolitan Region Board,
+    Alberta Geological Survey, Red Deer, Cochrane, Okotoks, Oakville,
+    Burlington, Milton, Brampton, Kingston, Kelowna, Barrie, Burnaby,
+    Fredericton, Greater Sudbury, Guelph, Moncton, Abbotsford, Whitby,
+    Oshawa, Niagara Falls, Niagara Region, St. Catharines, Thunder Bay,
+    Peterborough, Coquitlam, Saanich, Kamloops, Prince George, Delta,
+    Yellowknife, Cambridge, Maple Ridge, Pickering, Sarnia, Saint John,
+    Port Moody, White Rock, Penticton, New Westminster, Orangeville,
+    Canmore, BC Energy Regulator, Toronto Police Service, Ottawa Police
+    Service, Conservation Halton, Credit Valley, Niagara Peninsula,
+    Hamilton and Central Lake Ontario conservation authorities, Quinte
+    Conservation, Ontario GeoHub (Land Information Ontario) and Parks
+    Canada.
     Keywords: ArcGIS Hub, open data portal, municipal, city, region,
     province, GIS, geospatial, list portals.
     Mots-clés : ArcGIS Hub, portail de données ouvertes, municipal,

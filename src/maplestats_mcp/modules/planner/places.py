@@ -56,18 +56,17 @@ PROVINCES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
         ),
     ),
     "manitoba": ("Manitoba", (_arcgis("mb"),)),
-    # No provincial catalogue is covered; the two largest cities publish their own.
+    # The provincial GeoHub is geospatial only; the two largest cities publish
+    # their own catalogues.
     "saskatchewan": (
         "Saskatchewan",
         (
             PlanStep(
                 "arcgis_hub_search_datasets",
-                "search with portal='saskatoon' (city data; no provincial portal is covered)",
+                "search with portal='sk' (provincial GeoHub: geospatial layers only)",
             ),
-            PlanStep(
-                "ckan_search_datasets",
-                "search with portal='regina' (city data; no provincial portal is covered)",
-            ),
+            PlanStep("arcgis_hub_search_datasets", "search with portal='saskatoon' (city data)"),
+            PlanStep("ckan_search_datasets", "search with portal='regina' (city data)"),
         ),
     ),
     "prince edward island": ("Prince Edward Island", (_arcgis("pe"),)),
@@ -147,6 +146,8 @@ PROVINCE_CODES: dict[str, str] = {
 # is not Delta, British Columbia.
 CITY_SHADOWS: dict[str, tuple[str, ...]] = {
     "delta": ("delta file", "delta files", "fichier delta", "fichiers delta", "statcan delta"),
+    # The region is its own place; "Waterloo" alone is the city.
+    "waterloo": ("region of waterloo", "waterloo region", "region de waterloo"),
 }
 
 # City aliases that are also well-known foreign cities. When the question names a
@@ -187,7 +188,11 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "halifax": ("Halifax", (_arcgis("halifax"),)),
     "london": ("London (Ontario)", (_arcgis("london"),)),
     "kitchener": ("Kitchener", (_arcgis("kitchener"), _arcgis("waterloo_region"))),
-    "waterloo": ("Region of Waterloo", (_arcgis("waterloo_region"),)),
+    # "Waterloo" alone is the city; the region has its own aliases.
+    "waterloo": ("Waterloo (Ontario)", (_arcgis("waterloo"), _arcgis("waterloo_region"))),
+    "region of waterloo": ("Region of Waterloo", (_arcgis("waterloo_region"),)),
+    "waterloo region": ("Region of Waterloo", (_arcgis("waterloo_region"),)),
+    "region de waterloo": ("Region of Waterloo", (_arcgis("waterloo_region"),)),
     "windsor": ("Windsor", (_arcgis("windsor"),)),
     "saskatoon": ("Saskatoon", (_arcgis("saskatoon"),)),
     "victoria": ("Victoria", (_arcgis("victoria"),)),
@@ -240,6 +245,7 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "port moody": ("Port Moody", (_arcgis("port_moody"),)),
     "white rock": ("White Rock", (_arcgis("white_rock"),)),
     "penticton": ("Penticton", (_arcgis("penticton"),)),
+    "new westminster": ("New Westminster", (_arcgis("new_westminster"),)),
     "orangeville": ("Orangeville", (_arcgis("orangeville"),)),
     "canmore": ("Canmore", (_arcgis("canmore"),)),
 }
