@@ -22,11 +22,15 @@ async def plan_query(question: str, lang: Literal["en", "fr"] = "en") -> QueryPl
     matches the question against this server's source map and calls no
     external API. Use search_tools instead to find a single tool for a
     narrow, single-source need. lang='fr' gives the labels, purposes,
-    caveats and guidance in French; tool and argument names stay as they
-    are.
+    caveats and guidance in French (a question written in French gets
+    them in French too); tool and argument names stay as they are.
     Keywords: plan, which data source, where to find, combine sources,
     cross-source, question, research, Canada data.
     Mots-clés : planifier, quelle source de données, où trouver, combiner
     des sources, question, recherche, données canadiennes, statistiques.
     """
+    # lang defaults to "en", so a client that forgets lang='fr' on a French
+    # question would get an English plan (one did); the question decides then.
+    if lang == "en" and client.looks_french(question):
+        lang = "fr"
     return client.plan(question, lang)

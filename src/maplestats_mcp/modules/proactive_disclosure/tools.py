@@ -59,14 +59,16 @@ async def disclosure_search_contracts(
     sort by date (default, newest first) or value; limit up to 100, page
     with offset. Every record carries its dataset and resource ids and the
     Open Government Portal page to cite.
+    Not total spending or headcount: for a department's expenditures or
+    FTEs use gc_infobase_.
     Keywords: federal contracts, government procurement, contracts over
     $10,000, proactive disclosure, vendor, supplier, contract value,
     amendment, sole source, non-competitive, standing offer, consulting
-    contracts, department spending.
+    contracts, department contracts.
     Mots-clés : contrats fédéraux, marchés publics, approvisionnement,
     divulgation proactive, contrats de plus de 10 000 $, fournisseur,
     valeur du contrat, modification de contrat, fournisseur unique, non
-    concurrentiel, offre à commandes, dépenses ministérielles.
+    concurrentiel, offre à commandes, contrats ministériels.
     """
     return await client.search_contracts(
         vendor=vendor,
@@ -120,6 +122,8 @@ async def disclosure_search_grants(
     agreement_value, so use disclosure_summarize for totals. sort by date or
     value; limit up to 100, page with offset. Every record carries its
     dataset and resource ids and the Open Government Portal page to cite.
+    Not total spending or headcount: for a department's expenditures or
+    FTEs use gc_infobase_.
     Keywords: grants and contributions, federal funding, transfer payments,
     proactive disclosure, recipient, funding program, riding, constituency,
     contribution agreement, subsidy, nonprofit funding, business support.
@@ -182,6 +186,8 @@ async def disclosure_search_travel(
     other expenses. Monthly disclosures; the newest months are incomplete.
     sort by date or value; limit up to 100, page with offset. Totals by
     person, title or department: disclosure_summarize(dataset='travel').
+    Not total spending or headcount: for a department's expenditures or
+    FTEs use gc_infobase_.
     Keywords: travel expenses, ministers travel, ministerial expenses,
     senior officials, deputy minister, proactive disclosure, airfare,
     hotel, per diem, trip cost, exempt staff, government travel.
@@ -241,6 +247,8 @@ async def disclosure_search_hospitality(
     attending, and total cost. Quarterly disclosures. sort by date or value;
     limit up to 100, page with offset. Totals: disclosure_summarize(
     dataset='hospitality').
+    Not total spending or headcount: for a department's expenditures or
+    FTEs use gc_infobase_.
     Keywords: hospitality expenses, ministers hospitality, receptions,
     business meals, events, senior officials, proactive disclosure,
     entertainment costs, guests, catering, restaurant, deputy minister.
@@ -309,10 +317,12 @@ async def disclosure_summarize(
     published, which double-counts amendments. The portal
     has no SQL or aggregate API, so the matching rows (up to 100,000) are
     read and summed here; narrow by fiscal year or department when refused.
-    Keywords: total contract value, spending by department, top vendors,
+    Not total spending or headcount: for a department's expenditures or
+    FTEs use gc_infobase_.
+    Keywords: total contract value, contract value by department, top vendors,
     procurement totals, grants by province, funding by riding, travel
     costs, hospitality costs, proactive disclosure, aggregate, sum, ranking.
-    Mots-clés : valeur totale des contrats, dépenses par ministère,
+    Mots-clés : valeur totale des contrats, contrats par ministère,
     principaux fournisseurs, total des marchés, subventions par province,
     financement par circonscription, coûts de déplacement, frais d'accueil,
     divulgation proactive, somme, classement, agrégat.

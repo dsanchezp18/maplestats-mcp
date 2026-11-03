@@ -135,7 +135,7 @@
       copy: "Copy",
       copied: "Copied",
       selected: "Selected, press Ctrl+C",
-      // "searchable": plan_query is always listed, so search_tools ranks the others.
+      // The total counts every tool, as the rest of the site does.
       top: (n, total) => `Top ${n} of ${total} tools.`,
       few: (n, total) =>
         `${n} of ${total} tools ${n === 1 ? "matches" : "match"}, best first.`,
@@ -302,7 +302,7 @@
           const { index, modules } = await loadIndex();
           if (asked !== query) return;
           const hits = rank(index, query).slice(0, index.top);
-          const total = index.len.length;
+          const total = index.total ?? index.len.length;
           list.innerHTML = hits.map((i, k) => resultItem(index.tools[i], k + 1, modules, query)).join("");
           // The status is the live region: it says how many came back ("Top
           // 5" only when there were 5 to show), or that none did.

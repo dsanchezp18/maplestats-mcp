@@ -25,21 +25,24 @@ Canada lookup + Spectrum Management System + CIPO Canadian Trademarks
 Database search), Elections Canada (CKAN bulk/ DataStore data plus a
 dedicated `elections_financial_returns` module for candidate campaign
 financial returns), CRA's digital economy GST/HST registry, Health Canada
-and ESDC (via `ckan_*`), NRCan's National Burned Area Composite, Alberta
+and ESDC (via `ckan_*`, plus the dedicated `hc_*` and `jobbank` modules), NRCan's National Burned Area Composite, Alberta
 (CKAN plus a dedicated `aer` module for Alberta Energy Regulator statistical
 reports), British Columbia (CKAN plus a dedicated `bcgw` module for the BC
 Geographic Warehouse's WFS layers), Ontario, Quebec (CKAN, including MSSS
 ER-wait-time and health-installation DataStore resources), Nova Scotia, New
 Brunswick, Manitoba, Saskatchewan, Prince Edward Island, Newfoundland and
 Labrador, the Northwest Territories, Yukon, Montreal, Toronto, Regina,
-Hamilton, London, Kitchener, Windsor, Saskatoon, Victoria, Surrey, Calgary,
+London, Kitchener, Windsor, Saskatoon, Victoria, Surrey, Calgary,
 Edmonton, Winnipeg, Ottawa, Halifax, Mississauga, Peel Region, Durham
 Region, the Region of Waterloo, Metro Vancouver, York Region, Markham,
 Newmarket, Aurora, Medicine Hat, the City and County of Grande Prairie, St.
 Albert, Lethbridge, Airdrie, Strathcona County, and Vancouver (Laval and
 Gatineau are covered through the existing Quebec CKAN module, not a
-dedicated one). CRA, OSFI, and CRTC's own data are likewise already covered
-through the federal CKAN module -- see the Census and specialized federal
+dedicated one). Hamilton was removed on 2026-10-01: its portal answers
+automated requests with a Cloudflare challenge. CRA, OSFI, and CRTC's own
+data are likewise already covered through the federal CKAN module (CRA's
+charities list and CRTC's market reports now have their own modules,
+`cra_charities` and `telecom_prices`) -- see the Census and specialized federal
 agencies section below for what each turned out to need (or not need). All
 10 provinces and 2 of 3 territories are now shipped (Nunavut is Blocked).
 The rows below are the source-of-truth for remaining work; each row has its

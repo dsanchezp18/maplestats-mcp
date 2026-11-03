@@ -2785,6 +2785,8 @@ mark {
   max-width: 78ch;
   font-size: 0.9375rem;
   color: var(--ink-2);
+  /* A long identifier (a tool name, a series list) wraps on a phone. */
+  overflow-wrap: anywhere;
 }
 
 .t-use b {
@@ -2852,6 +2854,10 @@ mark {
 .t-kw dd {
   margin-top: 3px;
   color: var(--ink-2);
+}
+
+dl.t-kw code {
+  overflow-wrap: anywhere;
 }
 
 .call {
@@ -4937,6 +4943,17 @@ html:not(.js) .chips {
 .params.bench th:not(:first-child) {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Six columns of figures: narrower gutters so the table fits a phone. */
+.params.bench th,
+.params.bench td {
+  padding-right: 10px;
+}
+
+.params.bench th:last-child,
+.params.bench td:last-child {
+  padding-right: 0;
 }
 
 .faq p {

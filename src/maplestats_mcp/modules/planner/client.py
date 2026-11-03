@@ -55,7 +55,10 @@ _GUIDANCE = (
         "into one series."
     ),
     "If a step finds nothing, use search_tools with the step's purpose as the query.",
-    "Before replying, call check_answer once with the question and the figures you will cite.",
+    (
+        "Before replying, call check_answer with the question and the StatCan and Bank of "
+        "Canada figures you will cite."
+    ),
 )
 # A step whose purpose names the place asked about ("Alberta fires...") moves
 # ahead of national steps; "BC" is how purposes name British Columbia.
@@ -218,6 +221,32 @@ def _add_fitness_notes(plan_out: QueryPlan, lang: str) -> QueryPlan:
                     topic.caveats.append(note)
                 seen.add(note)
     return plan_out
+
+
+# French function words that English questions do not use. A question with two
+# of them, outside hyphenated place names ("Rivière-du-Loup"), is French: a
+# client that sends a French question without lang='fr' still gets a French
+# plan (one did, and answered in English).
+_FRENCH_WORDS = frozenset(
+    {
+        *("le", "la", "les", "des", "du", "de", "au", "aux", "un", "une", "est", "sont"),
+        *("quel", "quelle", "quels", "quelles", "combien", "dans", "pour", "depuis"),
+        *("avec", "entre", "qui", "que", "qu", "et", "ou", "sur", "à"),
+    }
+)
+
+
+def looks_french(question: str) -> bool:
+    """Whether a question is written in French (two French function words)."""
+    words = set()
+    for token in question.lower().replace("’", "'").split():
+        if "-" in token:
+            continue
+        for part in re.split(r"'", token):
+            part = part.strip('.,;:!?()«»"')
+            if part in _FRENCH_WORDS:
+                words.add(part)
+    return len(words) >= 2
 
 
 def plan(question: str, lang: str = "en") -> QueryPlan:

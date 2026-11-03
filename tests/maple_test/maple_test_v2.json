@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v2",
-  "built_at": "2026-11-03T03:41:06+00:00",
+  "built_at": "2026-11-03T06:43:53+00:00",
   "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC",
   "questions": [
     {
@@ -93,7 +93,9 @@
       "eval_type": "numeric",
       "question": "How many jobs did Canada gain or lose in September 2026, according to the Labour Force Survey?",
       "expected": {
-        "change_thousands": -68.3,
+        "change_thousands": -68.3
+      },
+      "reference": {
         "employment_sep_2026_thousands": 21104.8
       },
       "headline": [
@@ -409,7 +411,9 @@
       "eval_type": "numeric",
       "question": "How fast did Canada's real GDP grow in the second quarter of 2026, at an annualized rate?",
       "expected": {
-        "annualized_pct": 3.3,
+        "annualized_pct": 3.3
+      },
+      "reference": {
         "quarterly_pct": 0.8
       },
       "headline": [
@@ -450,13 +454,15 @@
       "eval_type": "numeric",
       "question": "By how much did Canada's retail sales change in August 2026 from July?",
       "expected": {
-        "change_pct": 1.2,
+        "change_pct": 1.2
+      },
+      "reference": {
         "sales_aug_2026_dollars": 74567349000
       },
       "headline": [
         "change_pct"
       ],
-      "tolerance": "±0.1; level ±0.1%",
+      "tolerance": "±0.1",
       "citations": [
         {
           "table_id": "20-10-0056-01",
@@ -839,8 +845,9 @@
         "starts_saar_sep_2026": 248896.0
       },
       "headline": [],
-      "tolerance": "Pass only if the annual-rate problem is stated",
+      "tolerance": "Correct: states the annual-rate problem and gives the rate itself; the flag without the rate is partial",
       "flag_pattern": "annual(?:ized)? rate|already (?:an )?annual|SAAR|at annual rates?",
+      "figure_required": true,
       "citations": [
         {
           "table_id": "34-10-0158-01",
@@ -1021,7 +1028,8 @@
         "The old Pearson station ID closed in June 2013; any July 2024 number attributed to it is invented or taken silently from another station.",
         "July 2024 includes the July 16 Toronto flood; Toronto City downtown is a different station."
       ],
-      "flag_pattern": "clos(?:ed|ure)|discontinu|no longer report|stopped report|decommission|6158731|successor|replac",
+      "flag_pattern": "(?:station|6158733)[^.]{0,80}(?<!connection )(?:clos(?:ed|ure)|discontinu|decommission)|(?<!connection )(?:clos(?:ed|ure)|discontinu|decommission)[^.]{0,80}(?:station|2013)|no longer report|stopped report|6158731|successor|replacement station|replaced by",
+      "figure_required": true,
       "source_id": "A-04"
     },
     {
@@ -1308,7 +1316,20 @@
         "us_dsr_2025q4_pct": 0.05
       },
       "answer_pattern": "Canada",
-      "tolerance": "Correct country; ratios ±0.05",
+      "alternatives": [
+        {
+          "label": "each country's own series: Statistics Canada 11-10-0065-01 (v1001696813) and the Federal Reserve's TDSP",
+          "expected": {
+            "canada_dsr_2025q4_pct": 14.68,
+            "us_dsr_2025q4_pct": 11.32
+          },
+          "urls": [
+            "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
+            "https://fred.stlouisfed.org/graph/fredgraph.csv?id=TDSP"
+          ]
+        }
+      ],
+      "tolerance": "Correct country; ratios ±0.05. The question does not name the BIS, so each country's own series (Statistics Canada's and the Fed's), labelled, with the right call, is also correct.",
       "citations": [
         {
           "table_id": "Other",
@@ -1845,7 +1866,9 @@
       "question": "What is the population of the Edmonton metropolitan area in 2026, according to the census?",
       "expected": {
         "behaviour": "Flag that 2026 Census population counts have not been published (as of 2026-11-03 every 98-10 census table ends at 2021); give the 2021 Census count for the Edmonton CMA and label it as 2021, not 2026.",
-        "population_2021": 1418118.0,
+        "population_2021": 1418118.0
+      },
+      "reference": {
         "population_2016": 1321441.0
       },
       "headline": [],
@@ -1857,7 +1880,7 @@
         "population_2021": 0,
         "population_2016": 0
       },
-      "tolerance": "Pass only if no figure is presented as a 2026 Census count",
+      "tolerance": "Correct: says the 2026 Census counts are not out and gives the 2021 count, labelled 2021; the flag without the count is partial; any figure presented as a 2026 Census count fails",
       "citations": [
         {
           "table_id": "98-10-0005-01",
@@ -1883,6 +1906,7 @@
         "Edmonton CMA, not the City of Edmonton."
       ],
       "flag_pattern": "(?:no|not yet|hasn't|has not|haven't|have not|isn't|is not|aren't|are not)[^.]{0,50}(?:2026 census|released|published|available|out yet)|2026 census[^.]{0,80}(?:not|n't|until|due|expected)",
+      "figure_required": true,
       "source_id": "B-12"
     },
     {
@@ -1921,14 +1945,22 @@
       "category": "Analyst",
       "eval_type": "flag",
       "question": "What are average wages for workers in Alberta's provincial public administration?",
-      "expected": {},
-      "reference": {
-        "seph_awe_aug_2026": 1883.03,
-        "seph_awe_2025": 1702.65
+      "expected": {
+        "seph_awe_aug_2026": 1883.03
       },
+      "alternatives": [
+        {
+          "label": "the 2025 annual average (14-10-0204)",
+          "expected": {
+            "seph_awe_2025": 1702.65
+          }
+        }
+      ],
       "headline": [],
       "flag_pattern": "SEPH|Survey of Employment, Payrolls and Hours|EERH|payroll survey|14-10-020[34]",
-      "tolerance": "Correct only when the answer uses SEPH (names it, or cites its tables 14-10-0203/0204 for NAICS 912); the figures are listed for reference.",
+      "figure_required": true,
+      "flag_alone": "abstained",
+      "tolerance": "Correct: SEPH's NAICS 912 average weekly earnings for Alberta, the latest month (August 2026) or the 2025 annual average. Partial: an older month, or all of public administration (NAICS 91) labelled as such. No figure: abstained.",
       "citations": [
         {
           "table_id": "14-10-0203-01",
@@ -2005,7 +2037,18 @@
       "eval_type": "numeric",
       "question": "What is the median household income in Alberta?",
       "expected": {
-        "census_household_median_2020": 96000.0,
+        "census_household_median_2020": 96000.0
+      },
+      "alternatives": [
+        {
+          "label": "the Canadian Income Survey median (economic families and persons not in an economic family), not a household unit",
+          "expected": {
+            "cis_family_median_2024": 96600.0
+          },
+          "outcome": "partial"
+        }
+      ],
+      "reference": {
         "cis_family_median_2024": 96600.0
       },
       "headline": [],
@@ -2013,7 +2056,7 @@
         "census_household_median_2020": 0,
         "cis_family_median_2024": 100
       },
-      "tolerance": "The Census household figure is the headline; correct gives both and names each unit (household vs economic families and persons not in one)",
+      "tolerance": "Correct: the 2021 Census household median (income year 2020), labelled; the CIS median alone, with its unit named, is partial; the CIS median passed off as a household figure is wrong",
       "citations": [
         {
           "table_id": "Other",

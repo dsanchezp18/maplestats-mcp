@@ -255,6 +255,25 @@ CASES = [
     ("mobile market share Bell Rogers TELUS", "telecom_get_market_table"),
     ("list CRTC communications market report tables", "telecom_list_market_tables"),
     ("quarterly mobile subscribers and wireless data traffic", "telecom_get_quarterly_trends"),
+    # A department's total spending or headcount is GC InfoBase's; proactive disclosure
+    # (contracts, travel) ranked first for these before 2026-11-03.
+    ("federal government spending by department", "gc_infobase_query"),
+    ("public servants employees count by department", "gc_infobase_query"),
+    ("How much did ESDC spend in 2023-24 and how many employees", "gc_infobase_query"),
+    # StatCan tables for a CMA or a monthly series, not BC Stats or the Ontario
+    # electricity price history (2026-11-03).
+    ("unemployment rate Toronto CMA", "wds_search_cubes"),
+    ("GDP by industry monthly", "wds_search_cubes"),
+    ("average hourly wage of registered nurses in Ontario", "jobbank_get_wages"),
+]
+
+# Queries whose right tool must come first, not just within TOP_N.
+FIRST = [
+    ("federal government spending by department", "gc_infobase_query"),
+    ("public servants employees count by department", "gc_infobase_query"),
+    ("unemployment rate Toronto CMA", "wds_search_cubes"),
+    ("GDP by industry monthly", "wds_search_cubes"),
+    ("average hourly wage of registered nurses in Ontario", "jobbank_get_wages"),
 ]
 
 
@@ -281,3 +300,8 @@ def top_names() -> dict[str, list[str]]:
 def test_english_query_finds_tool(query: str, expected: str, top_names: dict[str, list[str]]):
     names = top_names[query]
     assert expected in names, f"{query!r} -> {names}"
+
+
+@pytest.mark.parametrize(("query", "expected"), FIRST)
+def test_english_query_ranks_tool_first(query: str, expected: str, top_names: dict[str, list[str]]):
+    assert top_names[query][:1] == [expected], f"{query!r} -> {top_names[query]}"

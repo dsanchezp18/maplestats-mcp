@@ -53,7 +53,7 @@ dependencies = [
     "beautifulsoup4>=4.15.0",
     "gtfs-realtime-bindings>=3.0.0",
     "openpyxl>=3.1.5",
-    "duckdb>=1.5.5",
+    "duckdb>=2.0.0",
     "pyyaml>=6.0.3",
     "xlrd>=2.0.1",
     # Pinned exactly: modules/cbsa_tariff/accdb.py reads its private

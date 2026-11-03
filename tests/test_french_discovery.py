@@ -226,6 +226,9 @@ CASES = [
     ("revenu moyen par Go de données mobiles", "telecom_get_market_table"),
     ("rapport sur le marché des communications CRTC tableaux", "telecom_list_market_tables"),
     ("abonnés mobiles par trimestre", "telecom_get_quarterly_trends"),
+    # Dépenses et effectifs d'un ministère : InfoBase du GC, pas la divulgation proactive.
+    ("dépenses du gouvernement fédéral par ministère", "gc_infobase_list_files"),
+    ("nombre de fonctionnaires par ministère", "gc_infobase_query"),
 ]
 
 

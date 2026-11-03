@@ -214,6 +214,21 @@ def adjusted_sibling(members: Sequence[tuple[dict, dict]]) -> tuple[dict, dict, 
     return None
 
 
+_UNADJUSTED = re.compile(r"\bnot seasonally adjusted|unadjusted", re.IGNORECASE)
+
+
+def seasonally_adjusted(names: Sequence[str]) -> bool:
+    """Whether the series is seasonally adjusted: `names` is the table title, then
+    the series' member names, and a member's word wins over the title's (a table
+    titled "seasonally adjusted" can still hold an "Unadjusted" member)."""
+    for text in [*names[1:], names[0]] if names else []:
+        if _UNADJUSTED.search(text):
+            return False
+        if "seasonally adjusted" in text.lower():
+            return True
+    return False
+
+
 def replacement_table(cube: dict[str, Any]) -> str | None:
     for note in list_or_empty(cube, "footnote"):
         link = note.get("link") or {}
@@ -244,7 +259,24 @@ def metadata_notes(
         str(m.get("memberNameEn") or "") for _, m in members
     ]
     moving = next((found for text in names if (found := _MOVING.search(text))), None)
-    if moving:
+    if moving and seasonally_adjusted(names):
+        # A seasonally adjusted average (14-10-0459) can be compared with the
+        # month before; the same-months-a-year-earlier advice is for unadjusted
+        # series only, as the lfs-subprovincial-moving-averages rule says.
+        word = (moving.group(1) or "").lower() or "several"
+        fr_word = _NUMBERS_FR.get(word, "plusieurs" if word == "several" else word)
+        notes.append(
+            pick(
+                lang,
+                f"{word.capitalize()}-month moving average, seasonally adjusted: each value "
+                f"averages {word} months, so consecutive values share most of them; say so "
+                "when you report a change.",
+                f"Moyenne mobile de {fr_word} mois, désaisonnalisée : chaque valeur couvre "
+                f"{fr_word} mois, et deux valeurs consécutives en partagent la plupart ; "
+                "dites-le en rapportant une variation.",
+            )
+        )
+    elif moving:
         word = (moving.group(1) or "").lower()
         if word:
             fr_word = _NUMBERS_FR.get(word, word)
@@ -362,7 +394,7 @@ def metadata_notes(
                     f"Unadjusted series; the table also has '{other}', usually the "
                     "headline for change from one period to the next.",
                     f"Série non désaisonnalisée ; le tableau a aussi « {other} », "
-                    "d'ordinaire le chiffre de référence d'une période à l'autre.",
+                    "d'ordinaire celle qu'on compare d'une période à l'autre.",
                 )
             )
     return notes, basis is not None

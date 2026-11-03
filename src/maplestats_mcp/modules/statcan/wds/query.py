@@ -10,28 +10,27 @@ query_sdmx, CanData's use of DuckDB); this is MapleStats' own implementation.
 
 The query is sandboxed, each rule checked by hand against duckdb 2.0.0:
 
-- One statement, of type SELECT (WITH ... SELECT, FROM-first and DESCRIBE
-  parse as SELECT): duckdb.extract_statements classifies DROP, INSERT, COPY,
-  ATTACH, SET, PRAGMA and the rest, so no keyword list is needed.
-- A fresh in-memory connection per call. After `obs` is loaded,
-  enable_external_access=false makes read_csv, read_text, glob, 'https://...'
-  and 's3://...' raise PermissionException, extension autoload/autoinstall are
-  off (LOAD httpfs raises), and lock_configuration=true stops a statement from
-  turning any of it back on.
-- The query runs in a worker thread and is interrupted after
-  query_time_limit() seconds, so a runaway cross join cannot hold the server.
-- At most QUERY_ROW_CAP rows are read back.
+- One statement, a pure SELECT (WITH ... SELECT, FROM-first and DESCRIBE
+  parse as SELECT), classified on a locked connection: extract_statements
+  names DROP, INSERT, COPY, ATTACH, SET, PRAGMA and the rest, and a walk of
+  json_serialize_sql's tree rejects a SELECT holding a data-modifying CTE
+  (`WITH x AS (DELETE FROM obs RETURNING *) SELECT ...`), which
+  extract_statements calls a SELECT.
+- It runs in a child process (shared/duck_sandbox.py, shared/duck_worker.py):
+  one thread, an address-space cap (Linux), killed at query_time_limit() plus
+  a startup allowance. In-process, DuckDB's memory_limit did not bound scalar
+  functions (`SELECT len(range(1000000000))` had the server killed) and the
+  interrupt did not stop them.
+- The child's connection has no file, network or extension access and its
+  configuration is locked, and it cannot spill to disk.
+- At most QUERY_ROW_CAP rows, QUERY_MAX_RESULT_CHARS characters of rows, and
+  QUERY_MAX_CELL_CHARS characters in one text cell come back.
+- DuckDB's messages are cut to their first line, with file paths removed.
 """
 
 from __future__ import annotations
 
-import math
-import threading
-from datetime import date, datetime
-from decimal import Decimal
 from typing import Any
-
-import anyio
 
 from maplestats_mcp import config
 from maplestats_mcp.modules.statcan.wds import client, constants, context
@@ -42,7 +41,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     VectorDataSet,
     VectorSeries,
 )
-from maplestats_mcp.shared import duck
+from maplestats_mcp.shared import duck_sandbox
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.limits import join_limits
@@ -75,17 +74,6 @@ _EXAMPLE = (
     "FROM obs GROUP BY ALL ORDER BY vector_id, year"
 )
 
-# Applied after `obs` is loaded and before the caller's SQL runs. The lock
-# must come last: once set, no statement can change a setting.
-_SANDBOX = (
-    "SET enable_progress_bar = false",
-    "SET autoinstall_known_extensions = false",
-    "SET autoload_known_extensions = false",
-    "SET allow_community_extensions = false",
-    "SET enable_external_access = false",
-    "SET lock_configuration = true",
-)
-
 
 def query_time_limit() -> float:
     """Seconds the SQL may run, kept well inside the server's tool timeout.
@@ -106,9 +94,7 @@ def _fix_hint() -> str:
 
 
 def check_sql(sql: str) -> str:
-    """The SQL to run, or InvalidInput when it is not exactly one SELECT."""
-    import duckdb
-
+    """The SQL to run, or InvalidInput when it is not exactly one pure SELECT."""
     text = (sql or "").strip()
     if not text:
         raise InvalidInput(
@@ -124,38 +110,42 @@ def check_sql(sql: str) -> str:
                 f"{constants.QUERY_MAX_SQL_CHARS}.",
             )
         )
+    problem = duck_sandbox.select_problem(text)
+    if problem is not None:
+        raise InvalidInput(_problem_message(*problem))
+    return text
+
+
+def _problem_message(kind: str, detail: str) -> str:
     allowed = client._m(
         "Only one read-only query is allowed: a single SELECT, or WITH ... SELECT, over `obs`.",
         "Une seule requête en lecture est permise : un SELECT, ou WITH ... SELECT, sur `obs`.",
     )
-    try:
-        statements = duckdb.extract_statements(text)
-    except duckdb.Error as exc:
-        raise InvalidInput(
-            client._m(
-                f"The SQL does not parse: {exc}. {_fix_hint()}",
-                f"Le SQL n'est pas valide : {exc}. {_fix_hint()}",
-            )
-        ) from exc
-    if len(statements) != 1:
-        raise InvalidInput(
-            client._m(
-                f"sql holds {len(statements)} statements. {allowed}",
-                f"sql contient {len(statements)} instructions. {allowed}",
-            )
+    if kind == "parse":
+        return client._m(
+            f"The SQL does not parse: {detail}. {_fix_hint()}",
+            f"Le SQL n'est pas valide : {detail}. {_fix_hint()}",
         )
-    kind = statements[0].type
-    if kind != duckdb.StatementType.SELECT:
-        name = str(getattr(kind, "name", kind))
-        raise InvalidInput(
-            client._m(
-                f"sql is a {name} statement. {allowed} No DROP, INSERT, UPDATE, COPY, ATTACH, "
-                "SET, PRAGMA or other statement runs.",
-                f"sql est une instruction {name}. {allowed} Aucun DROP, INSERT, UPDATE, COPY, "
-                "ATTACH, SET, PRAGMA ni autre instruction ne s'exécute.",
-            )
+    if kind == "count":
+        return client._m(
+            f"sql holds {detail} statements. {allowed}",
+            f"sql contient {detail} instructions. {allowed}",
         )
-    return text
+    if kind == "modifying":
+        return client._m(
+            f"sql changes data: it holds a data-modifying {detail} statement (in a WITH clause or subquery). "
+            f"{allowed} "
+            "Remove the INSERT, UPDATE, DELETE or MERGE and select from `obs` instead.",
+            f"sql modifie des données : il contient une instruction {detail} (dans une clause "
+            f"WITH ou une sous-requête). {allowed} Retirez l'INSERT, l'UPDATE, le DELETE ou le MERGE et "
+            "sélectionnez plutôt dans `obs`.",
+        )
+    return client._m(
+        f"sql is a {detail} statement. {allowed} No DROP, INSERT, UPDATE, COPY, ATTACH, "
+        "SET, PRAGMA or other statement runs.",
+        f"sql est une instruction {detail}. {allowed} Aucun DROP, INSERT, UPDATE, COPY, "
+        "ATTACH, SET, PRAGMA ni autre instruction ne s'exécute.",
+    )
 
 
 def citation(series: VectorSeries) -> str:
@@ -208,74 +198,103 @@ def _columns(series: list[VectorSeries]) -> list[list[Any]]:
     return columns
 
 
-def _cell(value: Any) -> QueryCell:
-    """A JSON-safe cell: dates as ISO text, decimals as floats, NaN as null."""
-    if value is None or isinstance(value, bool | int | str):
-        return value
-    if isinstance(value, float):
-        return value if math.isfinite(value) else None
-    if isinstance(value, Decimal):
-        return float(value)
-    if isinstance(value, datetime | date):
-        return value.isoformat()
-    return str(value)
+def _sandbox_error(error: duck_sandbox.SandboxError, seconds: float) -> InvalidInput:
+    """The child's failure as an InvalidInput that says what to change."""
+    kind, detail = error.kind, error.detail
+    memory_mb = config.get_query_memory_mb()
+    if kind == "timeout":
+        return InvalidInput(
+            client._m(
+                f"The SQL ran past the {seconds:.0f} s limit and was stopped. Aggregate "
+                "earlier, avoid cross joins, or narrow the vectors or periods.",
+                f"Le SQL a dépassé la limite de {seconds:.0f} s et a été arrêté. Agrégez "
+                "plus tôt, évitez les produits cartésiens, ou réduisez vecteurs ou périodes.",
+            )
+        )
+    if kind in ("memory", "crashed"):
+        return InvalidInput(
+            client._m(
+                f"The SQL needed more than the {memory_mb} MB a query may use and was stopped. "
+                "Do not build large lists or strings (range(), repeat(), list aggregates over "
+                "big inputs); aggregate the rows of `obs` instead.",
+                f"Le SQL a demandé plus que les {memory_mb} Mo permis à une requête et a été "
+                "arrêté. Ne construisez pas de grandes listes ni de longues chaînes (range(), "
+                "repeat(), agrégats de listes sur de gros volumes) ; agrégez plutôt les lignes "
+                "de `obs`.",
+            )
+        )
+    if kind == "too_large":
+        limit = constants.QUERY_MAX_RESULT_CHARS
+        limit_fr = f"{limit:,}".replace(",", " ")
+        return InvalidInput(
+            client._m(
+                f"The result passed {limit:,} characters and was stopped. Select fewer or "
+                "shorter columns, aggregate, or add a LIMIT.",
+                f"Le résultat a dépassé {limit_fr} caractères et a été arrêté. Sélectionnez "
+                "moins de colonnes ou des colonnes plus courtes, agrégez, ou ajoutez un LIMIT.",
+            )
+        )
+    if kind == "cell_too_large":
+        limit = constants.QUERY_MAX_CELL_CHARS
+        return InvalidInput(
+            client._m(
+                f"Column {detail!r} holds a value longer than {limit} characters. Return "
+                "shorter values: aggregate to numbers, or cut text with left(x, n).",
+                f"La colonne {detail!r} contient une valeur de plus de {limit} caractères. "
+                "Renvoyez des valeurs plus courtes : agrégez en nombres, ou coupez le texte "
+                "avec left(x, n).",
+            )
+        )
+    if kind == "permission":
+        return InvalidInput(
+            client._m(
+                f"The SQL tried to reach a file, URL or extension, which is disabled: {detail}. "
+                f"Only the table `obs` can be read. {_fix_hint()}",
+                f"Le SQL a tenté d'accéder à un fichier, une URL ou une extension, ce qui est "
+                f"désactivé : {detail}. Seule la table `obs` est lisible. {_fix_hint()}",
+            )
+        )
+    if kind == "statement":
+        problem, _, what = detail.partition(": ")
+        return InvalidInput(_problem_message(problem, what))
+    if kind == "sql":
+        return InvalidInput(
+            client._m(
+                f"The SQL failed in DuckDB: {detail}. {_fix_hint()}",
+                f"Le SQL a échoué dans DuckDB : {detail}. {_fix_hint()}",
+            )
+        )
+    return InvalidInput(
+        client._m(
+            f"The query process failed ({kind}: {detail}). Retry once; if it fails again, "
+            "simplify the SQL.",
+            f"Le processus de requête a échoué ({kind} : {detail}). Réessayez une fois ; en "
+            "cas de nouvel échec, simplifiez le SQL.",
+        )
+    )
 
 
-def _run(
+async def _run(
     series: list[VectorSeries], sql: str, row_cap: int, seconds: float
 ) -> tuple[list[str], list[str], list[list[QueryCell]], bool]:
-    """Load `obs`, lock the connection down, run `sql`; blocking, so run it in a thread."""
-    import duckdb
-
-    with duck.connect() as connection:
-        schema = ", ".join(f"{name} {kind}" for name, kind, _ in OBS_COLUMNS)
-        connection.execute(f"CREATE TABLE obs ({schema})")
-        # One INSERT of unnested column lists: executemany took 53 s for 30,000
-        # rows (duckdb 2.0.0, 2026-11-03), this takes 0.1 s.
-        unnest = ", ".join(
-            f"unnest(${i + 1}::{kind}[])" for i, (_, kind, _) in enumerate(OBS_COLUMNS)
+    """Load `obs` and run `sql` in a capped child process (shared/duck_sandbox.py)."""
+    table = duck_sandbox.Table(
+        name="obs",
+        columns=[(name, kind) for name, kind, _ in OBS_COLUMNS],
+        values=_columns(series),
+    )
+    try:
+        result = await duck_sandbox.run_query(
+            [table],
+            sql,
+            seconds=seconds,
+            row_cap=row_cap,
+            max_chars=constants.QUERY_MAX_RESULT_CHARS,
+            max_cell_chars=constants.QUERY_MAX_CELL_CHARS,
         )
-        connection.execute(f"INSERT INTO obs SELECT {unnest}", _columns(series))
-        for statement in _SANDBOX:
-            connection.execute(statement)
-        timer = threading.Timer(seconds, connection.interrupt)
-        timer.start()
-        try:
-            cursor = connection.execute(sql)
-            fetched = cursor.fetchmany(row_cap + 1)
-            description = cursor.description or []
-        except duckdb.InterruptException as exc:
-            raise InvalidInput(
-                client._m(
-                    f"The SQL ran past the {seconds:.0f} s limit and was stopped. Aggregate "
-                    "earlier, avoid cross joins, or narrow the vectors or periods.",
-                    f"Le SQL a dépassé la limite de {seconds:.0f} s et a été arrêté. Agrégez "
-                    "plus tôt, évitez les produits cartésiens, ou réduisez vecteurs ou périodes.",
-                )
-            ) from exc
-        except duckdb.PermissionException as exc:
-            raise InvalidInput(
-                client._m(
-                    f"The SQL tried to reach a file, URL or extension, which is disabled: {exc}. "
-                    f"Only the table `obs` can be read. {_fix_hint()}",
-                    f"Le SQL a tenté d'accéder à un fichier, une URL ou une extension, ce qui est "
-                    f"désactivé : {exc}. Seule la table `obs` est lisible. {_fix_hint()}",
-                )
-            ) from exc
-        except duckdb.Error as exc:
-            raise InvalidInput(
-                client._m(
-                    f"The SQL failed in DuckDB: {exc}. {_fix_hint()}",
-                    f"Le SQL a échoué dans DuckDB : {exc}. {_fix_hint()}",
-                )
-            ) from exc
-        finally:
-            timer.cancel()
-    names = [str(d[0]) for d in description]
-    types = [str(d[1]) for d in description]
-    truncated = len(fetched) > row_cap
-    rows = [[_cell(v) for v in row] for row in fetched[:row_cap]]
-    return names, types, rows, truncated
+    except duck_sandbox.SandboxError as exc:
+        raise _sandbox_error(exc, seconds) from exc
+    return result.columns, result.types, result.rows, result.truncated
 
 
 async def query_series(
@@ -338,18 +357,20 @@ async def query_series(
     described, context_note = await context.describe(list(data.series))
     seconds = query_time_limit()
     row_cap = constants.QUERY_ROW_CAP
-    names, types, rows, truncated = await anyio.to_thread.run_sync(
-        _run, described, text, row_cap, seconds
-    )
+    names, types, rows, truncated = await _run(described, text, row_cap, seconds)
     input_rows = sum(len(s.observations) for s in described)
     cap_note = client._m(
         f"result rows capped at {row_cap}"
         + (" (more were returned and cut)" if truncated else "")
-        + f"; query time limit {seconds:.0f} s; at most {constants.QUERY_MAX_VECTORS} vectors; "
-        "SQL is read-only (one SELECT) with no file, network or extension access",
+        + f" and {constants.QUERY_MAX_RESULT_CHARS:,} characters; query time limit "
+        f"{seconds:.0f} s and memory {config.get_query_memory_mb()} MB; at most "
+        f"{constants.QUERY_MAX_VECTORS} vectors; SQL is read-only (one SELECT) with no file, "
+        "network or extension access",
         f"résultat limité à {row_cap} lignes"
         + (" (d'autres ont été coupées)" if truncated else "")
-        + f" ; durée maximale de la requête {seconds:.0f} s ; au plus "
+        + f" et {constants.QUERY_MAX_RESULT_CHARS:,} caractères".replace(",", " ")
+        + f" ; durée maximale de la requête {seconds:.0f} s et mémoire "
+        f"{config.get_query_memory_mb()} Mo ; au plus "
         f"{constants.QUERY_MAX_VECTORS} vecteurs ; SQL en lecture seule (un SELECT), sans "
         "accès aux fichiers, au réseau ni aux extensions",
     )

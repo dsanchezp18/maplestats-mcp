@@ -354,6 +354,15 @@ async def test_compare_flags_mixed_units_in_canada(httpx_mock):
     assert result.mixed_units
 
 
+async def test_compare_with_a_province_reads_its_row_not_canada(httpx_mock):
+    # region defaults to "Canada"; province="ON" alone returned the national row.
+    _mock(httpx_mock)
+    result = await client.compare_occupations(["21232", "21231"], province="ON")
+    assert result.region_code == "ER35"
+    request = [r for r in httpx_mock.get_requests() if "datastore_search" in str(r.url)][-1]
+    assert _filters(request)["ER_Code_Code_RE"] == "ER35"
+
+
 async def test_list_regions_by_province(httpx_mock):
     _mock(httpx_mock)
     result = await client.list_regions("ON")

@@ -4,10 +4,12 @@ Each rule is a short caution, in English and French, attached to tools (by
 name prefix) and to StatCan tables (by 8-digit product id). shared/fitness.py
 indexes them; notes_for() returns the ones a tool call matches.
 
-Every rule rests on the official pages in its `sources`, read on 2026-10-27,
-and every product id was checked live that day with WDS getCubeMetadata (title
-and footnotes; tests/test_fitness.py pins the list). `checked` says what each
-source confirmed, so a later edit can re-read the same thing. A caution that
+Every rule rests on the official pages in its `sources`. The first rules were
+read on 2026-10-27, with every product id checked live that day with WDS
+getCubeMetadata (title and footnotes; tests/test_fitness.py pins the list);
+rules added or changed later were read on the date their `checked` gives
+(2026-11-02 and 2026-11-03 for most). `checked` says what each source
+confirmed and when, so a later edit can re-read the same thing. A caution that
 could not be confirmed from an official page is left out rather than written
 from memory: the point of these notes is that an assistant can trust them.
 
@@ -53,7 +55,8 @@ RULES: tuple[FitnessRule, ...] = (
             "The LFS is a household survey that counts employed people (a person with two "
             "jobs counts once), including the self-employed and agriculture; SEPH counts "
             "payroll jobs, so it leaves out the self-employed and agriculture, fishing and "
-            "trapping, private household services and religious organisations. LFS "
+            "trapping, private household services, religious organisations and military "
+            "personnel of the defence services. LFS "
             "estimates carry sampling error; preliminary SEPH estimates are revised. Compare "
             "trends over several months, not one month's change. For earnings in a detailed "
             "industry, such as provincial and territorial public administration (NAICS 912), "
@@ -66,7 +69,8 @@ RULES: tuple[FitnessRule, ...] = (
             "personnes occupées (une personne qui a deux emplois compte une fois), y compris "
             "les travailleurs autonomes et l'agriculture; l'EERH compte des emplois "
             "rémunérés, sans les travailleurs autonomes ni l'agriculture, la pêche et le "
-            "piégeage, les services aux ménages privés et les organisations religieuses. "
+            "piégeage, les services aux ménages privés, les organisations religieuses et le "
+            "personnel militaire des services de défense. "
             "Les estimations de l'EPA comportent une erreur d'échantillonnage; les "
             "estimations provisoires de l'EERH sont révisées. Comparez les tendances sur "
             "plusieurs mois, pas la variation d'un seul mois. Pour la rémunération d'une "
@@ -86,7 +90,8 @@ RULES: tuple[FitnessRule, ...] = (
             "several months; levels cannot be fully reconciled. LFS Guide 2025 section 8: "
             "multiple jobholders counted once in LFS, per job in SEPH; LFS includes "
             "self-employed, unpaid family workers, agriculture. SEPH table footnotes "
-            "(14-10-0201, -0220, -0222, -0223): industrial aggregate excludes agriculture, "
+            "(14-10-0201, -0220, -0222, -0223; 14-10-0223 re-read 2026-11-03): industrial "
+            "aggregate excludes agriculture, "
             "fishing and trapping, private household services, religious organisations and "
             "military personnel."
         ),
@@ -783,8 +788,9 @@ RULES: tuple[FitnessRule, ...] = (
             "on each row). Low and high are in most cases the 10th and 90th percentiles; "
             "median is the prevailing wage. Some cells are suppressed for quality or "
             "confidentiality, and some regions show the wage of their province or of Canada as "
-            "an approximation. Wages ignore experience, and some occupations are annual, not "
-            "hourly."
+            "an approximation. The LFS sample leaves out the three territories, some remote "
+            "regions and First Nations reserves. Wages ignore experience, and some occupations "
+            "are annual, not hourly."
         ),
         note_fr=(
             "Les salaires du Guichet-Emplois sont des estimations d'EDSC, et non un tableau de "
@@ -794,9 +800,11 @@ RULES: tuple[FitnessRule, ...] = (
             "données administratives : la source et la période de référence varient donc d'une "
             "cellule à l'autre (lisez data_source et reference_period sur chaque ligne). Les "
             "salaires bas et élevés correspondent le plus souvent aux 10e et 90e centiles; la "
-            "médiane est le salaire courant. Certaines cellules sont supprimées pour des "
+            "médiane est le salaire en vigueur. Certaines cellules sont supprimées pour des "
             "raisons de qualité ou de confidentialité, et certaines régions affichent le "
-            "salaire de leur province ou du Canada comme approximation. Les salaires ne "
+            "salaire de leur province ou du Canada comme approximation. L'échantillon de l'EPA "
+            "exclut les trois territoires, certaines régions éloignées et les réserves des "
+            "Premières Nations. Les salaires ne "
             "tiennent pas compte de l'expérience, et certaines professions sont annuelles, non "
             "horaires."
         ),
@@ -807,8 +815,9 @@ RULES: tuple[FitnessRule, ...] = (
             "Labour Force Survey, data may be suppressed for confidentiality or quality; other "
             "sources Small Area Estimation, EI program survey data, the Census, provincial and "
             "administrative data (CIHI, CMA); where wages cannot be determined, wages from "
-            "another region, the province or Canada may be used as an approximate value; LFS "
-            "excludes the territories and reserves; wages do not account for experience; annual "
+            "another region, the province or Canada may be used as an approximate value; the "
+            "LFS sample does not cover the three territories and some remote regions, and "
+            "excludes First Nations reserves (re-read 2026-11-03); wages do not account for experience; annual "
             "wages for occupations with many self-employed workers."
         ),
         tool_prefixes=(

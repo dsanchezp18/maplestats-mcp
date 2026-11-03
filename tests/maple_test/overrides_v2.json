@@ -1,1752 +1,2364 @@
 {
-  "arose26/A-02#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the SEPH NAICS 912 figure $1,883.03 for Aug 2026 (v1560358), matching the reference; annualized estimate labelled as its own.",
-    "false_claim": false
-  },
   "arose26/A-02#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave LFS 'Public administration' as a whole for Alberta ($46.96/h, 2025), clearly labelled as not provincial-only; the trap: SEPH publishes NAICS 912.",
-    "false_claim": false
-  },
-  "arose26/A-02#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the SEPH NAICS 912 figure $1,883.03 for Aug 2026 (v1560358), matching the reference, and noted the LFS tables lack the provincial split.",
-    "false_claim": false
+    "reason": "Review: All of public administration (LFS 14-10-0064, NAICS 91) for Alberta, clearly labelled as not provincial-only; SEPH publishes NAICS 912."
   },
   "arose26/A-03#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave $63,200 average and $45,500 median from 11-10-0091 (all persons); a different published series from the key's excluding-zeros $66,100 / $48,100.",
-    "false_claim": false
-  },
-  "arose26/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "arose26/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "arose26/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "arose26/C-05#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the unadjusted figures from 14-10-0371 (2.9%, 529,415), clearly labelled as unadjusted; the key is the seasonally adjusted 14-10-0432 series (2.8%, 507,220). Question-wide: same grade for every answer giving the labelled unadjusted figures.",
-    "false_claim": false
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
   },
   "arose26/C-14#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "arose26/C-14#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "arose26/C-14#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
-  "arose26/C-18#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave 399,133 (July 1, 2026) and 539,960 (July 1, 2025) for study permit holders only, exactly matching the key; the auto grader missed the match.",
-    "false_claim": false
+  "arose26/X-01#0": {
+    "referral": true
+  },
+  "arose26/X-01#1": {
+    "referral": true
+  },
+  "arose26/X-01#2": {
+    "referral": true
   },
   "arose26/X-02#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not retrieve the values and gave no figure; pointed to the ECCC source. Key is max 36.0, min 21.0 at Ottawa CDA (6105976).",
-    "false_claim": false
+    "reason": "Review: No figures; referred to ECCC.",
+    "referral": true
+  },
+  "arose26/X-02#1": {
+    "referral": true
+  },
+  "arose26/X-02#2": {
+    "referral": true
+  },
+  "arose26/X-03#0": {
+    "referral": true
+  },
+  "arose26/X-03#1": {
+    "referral": true
+  },
+  "arose26/X-03#2": {
+    "referral": true
   },
   "arose26/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "arose26/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "arose26/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "arose26/X-05#0": {
+    "referral": true
+  },
+  "arose26/X-05#1": {
+    "referral": true
+  },
+  "arose26/X-05#2": {
+    "referral": true
+  },
+  "arose26/X-06#0": {
+    "referral": true
+  },
+  "arose26/X-06#1": {
+    "referral": true
+  },
+  "arose26/X-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "arose26/X-07#0": {
+    "referral": true
+  },
+  "arose26/X-07#1": {
+    "referral": true
+  },
+  "arose26/X-07#2": {
+    "referral": true
   },
   "arose26/X-08#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "arose26/X-08#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "arose26/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
+  },
+  "arose26/X-10#0": {
+    "referral": true
+  },
+  "arose26/X-10#1": {
+    "referral": true
+  },
+  "arose26/X-10#2": {
+    "referral": true
+  },
+  "arose26/X-11#0": {
+    "referral": true
+  },
+  "arose26/X-11#1": {
+    "referral": true
+  },
+  "arose26/X-11#2": {
+    "referral": true
   },
   "arose26/X-12#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "false_claim": "Says the Federal Reserve's household debt service ratio includes some rent and lease payments; those are in the Fed's financial obligations ratio, not the DSR.",
+    "referral": true
+  },
+  "arose26/X-12#1": {
+    "referral": true
   },
   "arose26/X-12#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "arose26/X-13#0": {
+    "referral": true
+  },
+  "arose26/X-13#1": {
+    "referral": true
+  },
+  "arose26/X-13#2": {
+    "referral": true
+  },
+  "arose26/X-14#0": {
+    "referral": true
+  },
+  "arose26/X-14#1": {
+    "referral": true
+  },
+  "arose26/X-14#2": {
+    "referral": true
+  },
+  "arose26/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
   },
   "arose26/X-15#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not query the DPD and gave no status. Key: Dormant since 2026-07-24.",
-    "false_claim": false
+    "reason": "Review: Correct: says DIN 02471477 is Dormant (not marketed) per the DPD. Declining, even while listing Dormant among the possible statuses, is abstained: the grader matched the word Dormant in lists of possible statuses. Referral with no status: abstained (referral).",
+    "referral": true
+  },
+  "arose26/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "arose26/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "arose26/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "arose26/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "arose26/X-17#0": {
+    "referral": true
+  },
+  "arose26/X-17#1": {
+    "referral": true
+  },
+  "arose26/X-17#2": {
+    "referral": true
+  },
+  "arose26/X-18#0": {
+    "referral": true
+  },
+  "arose26/X-18#1": {
+    "referral": true
+  },
+  "arose26/X-18#2": {
+    "referral": true
+  },
+  "arose26/X-19#0": {
+    "referral": true
+  },
+  "arose26/X-19#1": {
+    "referral": true
+  },
+  "arose26/X-19#2": {
+    "referral": true
   },
   "arose26/X-20#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
   "arose26/X-20#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
   "arose26/X-20#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
   },
-  "arose26/X-21#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "arose26/X-21#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "arose26/X-21#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "arose26/X-22#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "arose26/X-22#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "arose26/X-22#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "canada_data_agent/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "canada_data_agent/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
+  "canada_data_agent/A-03#0": {
+    "false_claim": "Says the figures are in current dollars (not adjusted for inflation); table 11-10-0239 is in constant 2024 dollars."
   },
   "canada_data_agent/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named. Also says the figure is in current dollars; the CIS tables are in constant 2024 dollars.",
-    "false_claim": true
-  },
-  "canada_data_agent/C-05#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the unadjusted figures from 14-10-0371 (2.9%, 529,415), clearly labelled as unadjusted; the key is the seasonally adjusted 14-10-0432 series (2.8%, 507,220). Question-wide: same grade for every answer giving the labelled unadjusted figures.",
-    "false_claim": false
+    "false_claim": "Says the CIS figures are in current dollars; table 11-10-0190 is in constant 2024 dollars."
   },
   "canada_data_agent/C-14#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "canada_data_agent/C-14#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "canada_data_agent/C-14#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million).",
+    "false_claim": "Says the customs basis is the basis of the headline trade release; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+  },
+  "canada_data_agent/C-19#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: Derived 2.25% from the October Bank Rate; the target rose to 2.50% on October 29."
+  },
+  "canada_data_agent/C-19#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Derived 2.25% from the October Bank Rate; the target rose to 2.50% on October 29."
+  },
+  "canada_data_agent/C-19#2": {
+    "outcome": "hallucinated",
+    "reason": "Review: Saw 2.50% but called 2.25% the most likely answer; the target was 2.50% on October 30."
   },
   "canada_data_agent/C-20#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Said it could not get the October 30 yield; gave 3.62% for October 2026 from 10-10-0139, clearly labelled as not the October 30 value. Key is 3.51%.",
-    "false_claim": false
+    "reason": "Review: Gave a monthly October value, labelled as not the October 30 yield, and declined.",
+    "referral": true
+  },
+  "canada_data_agent/C-20#1": {
+    "referral": true
   },
   "canada_data_agent/C-20#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no October 30 figure; noted a single undated October value (3.62%) and declined to present it as October 30. Key is 3.51%.",
-    "false_claim": false
+    "reason": "Review: Gave a monthly October value, labelled as not the October 30 yield, and declined.",
+    "referral": true
+  },
+  "canada_data_agent/C-21#0": {
+    "false_claim": "Says the BCPI is not in a Statistics Canada table; StatCan republishes it in 10-10-0132-01.",
+    "referral": true
+  },
+  "canada_data_agent/C-21#1": {
+    "referral": true
+  },
+  "canada_data_agent/C-21#2": {
+    "false_claim": "Says the BCPI isn't published in Statistics Canada tables and gives its base as 2010=100; StatCan republishes it in 10-10-0132-01, base 1972=100.",
+    "referral": true
+  },
+  "canada_data_agent/C-23#0": {
+    "outcome": "partial",
+    "reason": "Review: Said Q3 is not published, then gave its own illustrative Q3 estimate (+0.4% q/q, about 1.5% annualized), labelled as unofficial."
+  },
+  "canada_data_agent/X-01#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-01#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-01#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-02#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-02#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-02#2": {
+    "referral": true
   },
   "canada_data_agent/X-03#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not reach the archived daily mean and gave no figure. Key is 4,570 m³/s.",
-    "false_claim": false
+    "reason": "Review: No figure; referred to the Water Survey of Canada.",
+    "referral": true
+  },
+  "canada_data_agent/X-03#1": {
+    "referral": true
   },
   "canada_data_agent/X-03#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not reach the archived daily mean and gave no figure. Key is 4,570 m³/s.",
-    "false_claim": false
+    "reason": "Review: No figure; referred to the Water Survey of Canada.",
+    "referral": true
   },
   "canada_data_agent/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "canada_data_agent/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "false_claim": "Gives Toronto Intl A's climate ID as 6158733; that is the Pearson station closed in 2013 (Toronto Intl A is 6158731).",
+    "referral": true
   },
   "canada_data_agent/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "canada_data_agent/X-05#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-05#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-05#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-06#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-06#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-06#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-07#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-07#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-07#2": {
+    "referral": true
   },
   "canada_data_agent/X-08#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "canada_data_agent/X-08#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "canada_data_agent/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
+  },
+  "canada_data_agent/X-10#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-10#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-10#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-11#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-11#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-11#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-12#0": {
+    "referral": true
   },
   "canada_data_agent/X-12#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "canada_data_agent/X-12#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-13#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-13#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-13#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-14#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-14#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-14#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "canada_data_agent/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "canada_data_agent/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "canada_data_agent/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "canada_data_agent/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "canada_data_agent/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "canada_data_agent/X-17#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-17#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-17#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-18#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-18#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-18#2": {
+    "referral": true
+  },
+  "canada_data_agent/X-19#0": {
+    "referral": true
+  },
+  "canada_data_agent/X-19#1": {
+    "referral": true
+  },
+  "canada_data_agent/X-19#2": {
+    "referral": true
   },
   "canada_data_agent/X-20#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
   },
   "canada_data_agent/X-20#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
   },
   "canada_data_agent/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
   },
   "canada_data_agent/X-23#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: its queries were rejected and it gave no figure. Key is 48.1% (557,970 of 1,160,890).",
-    "false_claim": false
+    "reason": "Review: Correct: 48.1% (557,970 of 1,160,890). A share within tolerance from another published tenure table with different counts (98-10-0243, 551,290 of 1,151,800), labelled: partial. A recollection flagged as unverified is graded on its value: wrong (outside the tolerance) is hallucinated; within it, abstained. No figure: abstained (referral)."
   },
   "candata_mcp/A-02#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave LFS 'Public administration' as a whole ($46.96/h, 2025), clearly labelled as covering all levels; SEPH has NAICS 912.",
-    "false_claim": false
-  },
-  "candata_mcp/A-02#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Named SEPH and gave $1,883.03 for Aug 2026 and $1,702.65 for 2025, matching the reference.",
-    "false_claim": false
-  },
-  "candata_mcp/A-03#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100, 2024, 11-10-0239) but not the median ($48,100), which the key requires.",
-    "false_claim": false
+    "reason": "Review: All of public administration (LFS 14-10-0064, NAICS 91) for Alberta, clearly labelled as not provincial-only; SEPH publishes NAICS 912."
   },
   "candata_mcp/A-03#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave $63,200 average and $45,500 median from 11-10-0091 (all persons, including zeros), clearly labelled; a defensible reading but not the key's excluding-zeros series ($66,100 / $48,100). Same grade for every answer giving the 11-10-0091 figures.",
-    "false_claim": false
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
   },
   "candata_mcp/A-03#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave $63,200 average and $45,500 median from 11-10-0091 (all persons, including zeros), clearly labelled; key is $66,100 / $48,100 excluding zeros.",
-    "false_claim": false
-  },
-  "candata_mcp/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "candata_mcp/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "candata_mcp/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "candata_mcp/C-05#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the unadjusted figures from 14-10-0371 (2.9%, 529,415), clearly labelled as unadjusted; the key is the seasonally adjusted 14-10-0432 series (2.8%, 507,220). Question-wide: same grade for every answer giving the labelled unadjusted figures.",
-    "false_claim": false
-  },
-  "candata_mcp/C-05#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the unadjusted figures from 14-10-0371 (2.9%, 529,415), clearly labelled as unadjusted; the key is the seasonally adjusted 14-10-0432 series (2.8%, 507,220). Question-wide: same grade for every answer giving the labelled unadjusted figures.",
-    "false_claim": false
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
   },
   "candata_mcp/C-14#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "candata_mcp/C-14#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "candata_mcp/C-14#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "candata_mcp/C-16#0": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the key's seasonally adjusted value 13,571,697 thousand (about $13.6 billion), clearly labelled, alongside the unadjusted $13.2 billion. Question-wide: answers giving both labelled figures are graded correct.",
-    "false_claim": false
+    "reason": "Review: Gave both figures, the seasonally adjusted 13,571,697 (thousand) labelled; the grader missed it written without its unit."
   },
   "candata_mcp/C-16#1": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the key's seasonally adjusted value 13,571,697 thousand (about $13.6 billion), clearly labelled, alongside the unadjusted $13.2 billion. Question-wide: answers giving both labelled figures are graded correct.",
-    "false_claim": false
+    "reason": "Review: Gave both figures, the seasonally adjusted 13,571,697 (thousand) labelled; the grader missed it written without its unit."
   },
   "candata_mcp/C-16#2": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the key's seasonally adjusted value 13,571,697 thousand (about $13.6 billion), clearly labelled, alongside the unadjusted $13.2 billion. Question-wide: answers giving both labelled figures are graded correct.",
-    "false_claim": false
+    "reason": "Review: Gave both figures, the seasonally adjusted 13,571,697 (thousand) labelled; the grader missed it written without its unit."
   },
-  "candata_mcp/C-18#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave 399,133 (July 1, 2026) and 539,960 (July 1, 2025) for study permit holders only, exactly matching the key; the auto grader missed the match.",
-    "false_claim": false
+  "candata_mcp/X-01#0": {
+    "referral": true
+  },
+  "candata_mcp/X-01#1": {
+    "referral": true
+  },
+  "candata_mcp/X-01#2": {
+    "referral": true
+  },
+  "candata_mcp/X-02#0": {
+    "referral": true
+  },
+  "candata_mcp/X-02#1": {
+    "referral": true
+  },
+  "candata_mcp/X-02#2": {
+    "referral": true
+  },
+  "candata_mcp/X-03#0": {
+    "referral": true
+  },
+  "candata_mcp/X-03#1": {
+    "referral": true
   },
   "candata_mcp/X-03#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not reach the archived daily mean and gave no figure. Key is 4,570 m³/s.",
-    "false_claim": false
+    "reason": "Review: No figure; referred to the Water Survey of Canada.",
+    "referral": true
   },
   "candata_mcp/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "candata_mcp/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "candata_mcp/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "candata_mcp/X-05#0": {
+    "referral": true
+  },
+  "candata_mcp/X-05#1": {
+    "referral": true
+  },
+  "candata_mcp/X-05#2": {
+    "referral": true
+  },
+  "candata_mcp/X-06#0": {
+    "referral": true
+  },
+  "candata_mcp/X-06#1": {
+    "referral": true
+  },
+  "candata_mcp/X-06#2": {
+    "referral": true
+  },
+  "candata_mcp/X-07#0": {
+    "referral": true
+  },
+  "candata_mcp/X-07#1": {
+    "referral": true
+  },
+  "candata_mcp/X-07#2": {
+    "referral": true
+  },
+  "candata_mcp/X-08#0": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
   },
   "candata_mcp/X-08#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "candata_mcp/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
+  },
+  "candata_mcp/X-10#0": {
+    "referral": true
+  },
+  "candata_mcp/X-10#1": {
+    "referral": true
+  },
+  "candata_mcp/X-10#2": {
+    "referral": true
+  },
+  "candata_mcp/X-11#0": {
+    "referral": true
   },
   "candata_mcp/X-11#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not reach BIS data and gave no figure. Key is 14.2%.",
-    "false_claim": false
+    "reason": "Review: No figure; referred to the BIS.",
+    "referral": true
+  },
+  "candata_mcp/X-11#2": {
+    "referral": true
   },
   "candata_mcp/X-12#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
   },
   "candata_mcp/X-12#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
   },
   "candata_mcp/X-12#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "candata_mcp/X-13#0": {
+    "referral": true
+  },
+  "candata_mcp/X-13#1": {
+    "referral": true
+  },
+  "candata_mcp/X-13#2": {
+    "referral": true
+  },
+  "candata_mcp/X-14#0": {
+    "referral": true
+  },
+  "candata_mcp/X-14#1": {
+    "referral": true
+  },
+  "candata_mcp/X-14#2": {
+    "referral": true
+  },
+  "candata_mcp/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
   },
   "candata_mcp/X-15#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not query the DPD and gave no status. Key: Dormant since 2026-07-24.",
-    "false_claim": false
+    "reason": "Review: Correct: says DIN 02471477 is Dormant (not marketed) per the DPD. Declining, even while listing Dormant among the possible statuses, is abstained: the grader matched the word Dormant in lists of possible statuses. Referral with no status: abstained (referral).",
+    "referral": true
+  },
+  "candata_mcp/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "candata_mcp/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "candata_mcp/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "candata_mcp/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "candata_mcp/X-17#0": {
+    "referral": true
+  },
+  "candata_mcp/X-17#1": {
+    "referral": true
+  },
+  "candata_mcp/X-17#2": {
+    "referral": true
+  },
+  "candata_mcp/X-18#0": {
+    "referral": true
+  },
+  "candata_mcp/X-18#1": {
+    "referral": true
+  },
+  "candata_mcp/X-18#2": {
+    "referral": true
+  },
+  "candata_mcp/X-19#0": {
+    "referral": true
+  },
+  "candata_mcp/X-19#1": {
+    "referral": true
+  },
+  "candata_mcp/X-19#2": {
+    "referral": true
   },
   "candata_mcp/X-20#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
   "candata_mcp/X-20#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
   },
   "candata_mcp/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
-  "maplestats-current/A-04#2": {
+  "maplestats/A-02#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave the key's Census household median ($96,000, 2020) with the unit named, but not the CIS figure ($96,600, 2024) the key also requires.",
-    "false_claim": false
-  },
-  "maplestats/A-03#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median ($48,100).",
-    "false_claim": false
-  },
-  "maplestats/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "maplestats/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "maplestats/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
+    "reason": "Review: All of public administration (SEPH NAICS 91, via the Alberta dashboard) for Alberta, clearly labelled as not provincial-only; NAICS 912 is published."
   },
   "maplestats/C-14#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIMT customs-basis, unadjusted figure ($52.19B), labelled as such; key is the balance-of-payments SA figure $54,346.5 million.",
-    "false_claim": false
+    "reason": "Review: Customs basis, unadjusted ($52.19 billion from CIMT), labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "maplestats/C-14#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIMT customs-basis, unadjusted figure ($52.19B), labelled as such; key is the balance-of-payments SA figure $54,346.5 million.",
-    "false_claim": false
+    "reason": "Review: Customs basis, unadjusted ($52.19 billion from CIMT), labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "maplestats/C-14#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIMT customs-basis, unadjusted figure ($52.19B), labelled as such; key is the balance-of-payments SA figure $54,346.5 million.",
-    "false_claim": false
+    "reason": "Review: Customs basis, unadjusted ($52.19 billion from CIMT), labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "maplestats/C-16#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave only the unadjusted value ($13.2 billion, v1675115467), clearly labelled; key is the seasonally adjusted 13,571,697 thousand.",
-    "false_claim": false
+    "reason": "Review: Only the unadjusted figure ($13.20 billion), labelled as unadjusted; the headline is seasonally adjusted ($13.57 billion)."
   },
   "maplestats/X-02#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave 35.1 / 20.8 °C from the co-located Ottawa CDA RCS station (6105978), clearly identified by ID; key is Ottawa CDA (6105976) max 36.0, min 21.0. Same grade for both answers using the RCS station.",
-    "false_claim": false
+    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 \u00b0C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 \u00b0C."
   },
   "maplestats/X-04#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Flagged that climate ID 6158733's record ends 2013-06-13 and gave no invented figure, but did not give the successor station's July 2024 total (215.4 mm at Toronto Intl A, 6158731). Same grade for every answer flagging the closure without the successor value.",
-    "false_claim": false
+    "reason": "Review: Flagged that 6158733 stopped reporting in 2013, without the successor station's July 2024 figure (215.4 mm)."
   },
-  "maplestats/X-21#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "maplestats/X-21#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "maplestats/X-21#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "maplestats/X-22#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "maplestats/X-22#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "maplestats/X-22#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "maplestats_after/A-04#0": {
+  "maplestats/X-04#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gives the Census 2021 household median ($96,000, 2020 income) with its unit named, matching the key, but omits the CIS 2024 figure for economic families and persons not in an economic family ($96,600). Per the A-04 precedent, either figure alone is partial.",
-    "false_claim": false
-  },
-  "maplestats_after/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gives the Census 2021 household median ($96,000, 2020 income) matching the key, but omits the CIS 2024 median of $96,600 for economic families and persons not in an economic family. Per the A-04 precedent, that is partial.",
-    "false_claim": false
-  },
-  "maplestats_after/C-11#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: The annualized rate of 3.3% matches the key and is labelled as the model's own calculation from Table 36-10-0104-01 levels, but the quarterly (non-annualized) rate of 0.8% is missing. Per the C-11 precedent, that is partial.",
-    "false_claim": false
+    "reason": "Review: Flagged that 6158733 stopped reporting in 2013, without the successor station's July 2024 figure (215.4 mm)."
   },
   "maplestats_after/X-02#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gives 35.1 / 20.8 °C against the key's 36.0 / 21.0 °C for Ottawa CDA (6105976), but the values come from the co-located Ottawa CDA RCS station, which the answer identifies as climate ID 6105978. Per the X-02 precedent, that is partial.",
-    "false_claim": false
+    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 \u00b0C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 \u00b0C."
   },
   "mcp_canada/A-01#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined to give a number; correctly pointed to 11-10-0135 and MBM. Key is 12.8%.",
-    "false_claim": false
-  },
-  "mcp_canada/A-02#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Run error; no answer.",
-    "false_claim": false
-  },
-  "mcp_canada/A-03#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median ($48,100).",
-    "false_claim": false
-  },
-  "mcp_canada/A-03#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median ($48,100).",
-    "false_claim": false
-  },
-  "mcp_canada/A-03#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median ($48,100).",
-    "false_claim": false
+    "reason": "Review: Correct: 12.8% (MBM, under 18, 2024). The all-ages rate given as context while the child rate is declined: abstained. No figure: abstained (referral when it points to the table)."
   },
   "mcp_canada/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named. Also says the figure is in current dollars; the CIS tables are in constant 2024 dollars.",
-    "false_claim": true
-  },
-  "mcp_canada/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "mcp_canada/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
+    "false_claim": "Says the CIS figure is in current dollars; table 11-10-0237 is in constant 2024 dollars."
   },
   "mcp_canada/A-05#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure, but said Alberta's rate is in 11-10-0090-01 and told the user to select Geography = Alberta; that table is Canada only.",
-    "false_claim": true
+    "reason": "Review: Declined; did not say no Alberta rate is published.",
+    "false_claim": "Points to an Alberta vector in table 11-10-0090-01 and tells the user to select Geography = Alberta; the table is Canada only."
+  },
+  "mcp_canada/C-01#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Swapped the two rates (Quebec 60.1%, Ontario 59.9%) and named Quebec higher."
+  },
+  "mcp_canada/C-13#0": {
+    "outcome": "partial",
+    "reason": "Review: Gave the unadjusted series ($79.22 billion, +0.02%), clearly labelled as not seasonally adjusted."
   },
   "mcp_canada/C-14#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
-  "mcp_canada/C-18#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave 399,133 (July 1, 2026) and 539,960 (July 1, 2025) for study permit holders only, exactly matching the key; the auto grader missed the match.",
-    "false_claim": false
+  "mcp_canada/C-14#1": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis, unadjusted ($52,185.1 million), labelled; the grader matched a June figure. The headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "mcp_canada/C-22#0": {
     "outcome": "correct",
-    "reason": "Blind hand review: Said October 2026 CPI is not yet published and gave September 2026 (3.1%) clearly labelled as the latest month.",
-    "false_claim": false
-  },
-  "mcp_canada/C-24#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Run error; no answer.",
-    "false_claim": false
+    "reason": "Review: Said October's release hasn't come out yet and gave September, labelled."
   },
   "mcp_canada/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC."
   },
   "mcp_canada/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure (feed values null) and did not flag the 2013 closure; pointed to the ECCC portal with a hedge ('may include data').",
-    "false_claim": false
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC."
   },
   "mcp_canada/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC."
+  },
+  "mcp_canada/X-05#0": {
+    "referral": true
+  },
+  "mcp_canada/X-05#1": {
+    "referral": true
+  },
+  "mcp_canada/X-05#2": {
+    "referral": true
+  },
+  "mcp_canada/X-06#0": {
+    "referral": true
+  },
+  "mcp_canada/X-06#1": {
+    "referral": true
+  },
+  "mcp_canada/X-06#2": {
+    "referral": true
+  },
+  "mcp_canada/X-07#0": {
+    "referral": true
+  },
+  "mcp_canada/X-07#1": {
+    "referral": true
+  },
+  "mcp_canada/X-07#2": {
+    "referral": true
   },
   "mcp_canada/X-08#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "mcp_canada/X-08#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "mcp_canada/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
+  },
+  "mcp_canada/X-10#0": {
+    "referral": true
+  },
+  "mcp_canada/X-10#1": {
+    "referral": true
+  },
+  "mcp_canada/X-10#2": {
+    "referral": true
+  },
+  "mcp_canada/X-11#0": {
+    "referral": true
+  },
+  "mcp_canada/X-11#1": {
+    "referral": true
+  },
+  "mcp_canada/X-11#2": {
+    "referral": true
+  },
+  "mcp_canada/X-12#0": {
+    "referral": true
+  },
+  "mcp_canada/X-12#1": {
+    "referral": true
   },
   "mcp_canada/X-12#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
-  },
-  "mcp_canada/X-20#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
-  },
-  "mcp_canada/X-20#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
-  },
-  "mcp_canada/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
-  },
-  "mcp_canada/X-21#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
   },
   "mcp_canada/X-21#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: its query returned no observations and it gave no figure. Key median is 40.4.",
-    "false_claim": false
-  },
-  "mcp_canada/X-21#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
+    "reason": "Review: Correct: 40.4 (the average age is reference only). No figure: abstained (referral when it points to StatCan)."
   },
   "mcp_canada/X-22#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined to give a figure (mentioned a rough recollection near $100,000 but explicitly did not offer it as the answer).",
-    "false_claim": false
+    "reason": "Review: Declined; a recollection near $100,000 was flagged as unchecked and not given as the answer."
   },
-  "mcp_statcan/A-02#0": {
+  "mcp_canada/X-24#0": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the SEPH NAICS 912 figure $1,883.03 for Aug 2026 from 14-10-0203 (v1560358), matching the reference (same grade for every answer citing that series).",
-    "false_claim": false
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
   },
-  "mcp_statcan/A-02#2": {
+  "mcp_canada/X-24#1": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the SEPH NAICS 912 figure $1,883.03 for Aug 2026 (v1560358), matching the reference.",
-    "false_claim": false
-  },
-  "mcp_statcan/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "mcp_statcan/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "mcp_statcan/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
   },
   "mcp_statcan/C-14#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "mcp_statcan/C-14#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "mcp_statcan/C-14#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
+  },
+  "mcp_statcan/C-19#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Derived 2.25% from the Bank Rate at October 28; the target rose to 2.50% on October 29."
+  },
+  "mcp_statcan/C-20#0": {
+    "referral": true
+  },
+  "mcp_statcan/C-20#1": {
+    "referral": true
+  },
+  "mcp_statcan/C-20#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-01#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-01#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-01#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-02#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-02#1": {
+    "false_claim": "Gives Ottawa CDA's climate ID as 6105978; that is Ottawa CDA RCS, and Ottawa CDA is 6105976.",
+    "referral": true
+  },
+  "mcp_statcan/X-02#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-03#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-03#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-03#2": {
+    "referral": true
   },
   "mcp_statcan/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "mcp_statcan/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "mcp_statcan/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "mcp_statcan/X-05#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-05#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-05#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-06#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-06#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "mcp_statcan/X-07#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-07#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-07#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-08#0": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
+  },
+  "mcp_statcan/X-08#1": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
   },
   "mcp_statcan/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
+  },
+  "mcp_statcan/X-10#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-10#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-10#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-11#0": {
+    "referral": true
   },
   "mcp_statcan/X-11#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Said it could not get the BIS figure and gave StatCan's household debt service ratio (14.67%, Q4 2024, 11-10-0065), clearly labelled as a different series; key is BIS 14.2%.",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Declined the BIS figure and gave Statistics Canada's own ratio (14.67%), labelled as a different measure; the question asks for the BIS series.",
+    "referral": true
+  },
+  "mcp_statcan/X-11#2": {
+    "referral": true
   },
   "mcp_statcan/X-12#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "mcp_statcan/X-12#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-12#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-13#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-13#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-13#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-14#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-14#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-14#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "mcp_statcan/X-15#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "mcp_statcan/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "mcp_statcan/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "mcp_statcan/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "mcp_statcan/X-17#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-17#1": {
+    "referral": true
   },
   "mcp_statcan/X-17#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not reach IRCC data and gave no figures. Key is 2,500 invitations, CRS 519.",
-    "false_claim": false
+    "reason": "Review: No figures; referred to IRCC.",
+    "referral": true
+  },
+  "mcp_statcan/X-18#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-18#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-18#2": {
+    "referral": true
+  },
+  "mcp_statcan/X-19#0": {
+    "referral": true
+  },
+  "mcp_statcan/X-19#1": {
+    "referral": true
+  },
+  "mcp_statcan/X-19#2": {
+    "referral": true
   },
   "mcp_statcan/X-20#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
   "mcp_statcan/X-20#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
   "mcp_statcan/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
-  "mcp_statcan/X-21#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "mcp_statcan/X-21#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "mcp_statcan/X-21#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "mcp_statcan/X-22#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "mcp_statcan/X-22#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "mcp_statcan/X-22#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
+  "mcp_statcan/X-23#0": {
+    "outcome": "partial",
+    "reason": "Review: Share 47.9% from table 98-10-0243 (551,290 of 1,151,800), a different tenure table; the key is 48.1% (557,970 of 1,160,890)."
   },
   "mcp_statcan/X-23#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave a 47.9% renter share (within ±0.2 pp of the key's 48.1%) but counts of 551,290 / 1,151,800 from the housing-indicators table 98-10-0243 (narrower universe), not the key's 557,970 / 1,160,890.",
-    "false_claim": false
+    "reason": "Review: Share 47.9% from table 98-10-0243 (551,290 of 1,151,800), a different tenure table; the key is 48.1% (557,970 of 1,160,890)."
+  },
+  "no_tools/A-01#0": {
+    "referral": true
+  },
+  "no_tools/A-01#1": {
+    "referral": true
+  },
+  "no_tools/A-01#2": {
+    "referral": true
+  },
+  "no_tools/A-02#1": {
+    "referral": true
+  },
+  "no_tools/A-02#2": {
+    "referral": true
+  },
+  "no_tools/A-03#0": {
+    "referral": true
+  },
+  "no_tools/A-03#1": {
+    "referral": true
+  },
+  "no_tools/A-03#2": {
+    "referral": true
+  },
+  "no_tools/A-04#0": {
+    "false_claim": "Says table 11-10-0237-01 gives median income of households by household size; it reports economic families and persons not in an economic family.",
+    "referral": true
+  },
+  "no_tools/A-04#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about $93,000 from memory (flagged as unconfirmed) as the 2021 Census household median; the Census figure is $96,000.",
+    "false_claim": "Says table 11-10-0237-01 reports household-level medians; it reports economic families and persons not in an economic family."
   },
   "no_tools/A-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only an unexecuted tool call.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/A-05#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure, but asserted poverty rates by disability status are published for the provinces including Alberta; they are not (11-10-0090 is Canada only).",
-    "false_claim": true
+    "false_claim": "Says the poverty rate by disability status is published for the provinces, including Alberta; 11-10-0090 is Canada only.",
+    "referral": true
   },
   "no_tools/A-05#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure, but claimed the CIS disability poverty table has provincial breakdowns and pointed to an Alberta selection in 11-10-0090; that table is Canada only.",
-    "false_claim": true
+    "false_claim": "Says table 11-10-0090-01 has provincial breakdowns and to set Geography to Alberta; it is Canada only.",
+    "referral": true
   },
   "no_tools/A-05#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure, but claimed the CIS disability poverty rate has provincial breakdowns and that the CSD reports a poverty rate by province; neither is published for Alberta.",
-    "false_claim": true
+    "false_claim": "Says the CIS publishes the poverty rate by disability status with provincial breakdowns and the CSD reports one by province; no Alberta rate is published.",
+    "referral": true
+  },
+  "no_tools/C-01#0": {
+    "referral": true
   },
   "no_tools/C-01#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only an unexecuted tool call.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-01#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-02#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only an unexecuted tool call.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-02#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only an unexecuted tool call.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-02#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-03#0": {
+    "referral": true
+  },
+  "no_tools/C-03#1": {
+    "referral": true
   },
   "no_tools/C-03#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only an unexecuted tool call.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-05#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-05#1": {
+    "false_claim": "Describes table 14-10-0371-01 as seasonally adjusted; it is the unadjusted monthly table (the adjusted one is 14-10-0432-01).",
+    "referral": true
   },
   "no_tools/C-06#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-06#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-06#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-07#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-07#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-07#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-08#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-08#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-08#2": {
+    "referral": true
   },
   "no_tools/C-09#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-09#1": {
+    "referral": true
   },
   "no_tools/C-09#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-10#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-10#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-10#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-11#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-12#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-12#1": {
+    "referral": true
   },
   "no_tools/C-12#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-13#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-13#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-13#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-14#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-14#1": {
+    "false_claim": "Says the headline figure in The Daily is seasonally adjusted, customs basis; Statistics Canada's monthly trade release is on a balance-of-payments basis.",
+    "referral": true
   },
   "no_tools/C-14#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-15#0": {
+    "referral": true
+  },
+  "no_tools/C-15#1": {
+    "referral": true
+  },
+  "no_tools/C-15#2": {
+    "referral": true
   },
   "no_tools/C-16#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-16#1": {
+    "referral": true
+  },
+  "no_tools/C-16#2": {
+    "referral": true
+  },
+  "no_tools/C-17#0": {
+    "referral": true
+  },
+  "no_tools/C-17#1": {
+    "referral": true
+  },
+  "no_tools/C-17#2": {
+    "false_claim": "Says Statistics Canada has not published British Columbia's July 1, 2026 estimate (due in December); it was released on 2026-09-23 (5,710,598)."
+  },
+  "no_tools/C-18#0": {
+    "referral": true
   },
   "no_tools/C-18#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-18#2": {
+    "referral": true
   },
   "no_tools/C-19#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-19#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-19#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-20#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-20#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-20#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/C-21#0": {
+    "referral": true
   },
   "no_tools/C-21#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-21#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-24#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/C-24#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-01#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-01#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (and stray text), with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-01#2": {
+    "referral": true
   },
   "no_tools/X-02#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-02#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-02#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-03#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-03#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-03#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
-  },
-  "no_tools/X-04#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Run error (timed out); no answer.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "no_tools/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only an unexecuted tool call, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-05#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave US$53,000-54,000 from memory (flagged as unconfirmed); the World Bank figure is US$54,848."
+  },
+  "no_tools/X-05#2": {
+    "referral": true
+  },
+  "no_tools/X-07#0": {
+    "referral": true
   },
   "no_tools/X-07#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-07#2": {
+    "referral": true
   },
   "no_tools/X-08#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-08#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-08#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-10#0": {
+    "referral": true
   },
   "no_tools/X-10#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-10#2": {
+    "referral": true
   },
   "no_tools/X-11#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-11#1": {
+    "referral": true
   },
   "no_tools/X-11#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-12#0": {
+    "false_claim": "Says the Federal Reserve's household debt service ratio includes rent and auto lease payments; those are in the financial obligations ratio, not the DSR.",
+    "referral": true
+  },
+  "no_tools/X-12#1": {
+    "false_claim": "Says the US household debt service ratio includes rent and auto lease payments; those are in the Fed's financial obligations ratio, not the DSR.",
+    "referral": true
   },
   "no_tools/X-12#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Said Canada was likely higher (right call) from unchecked memory ranges (about 14-15% vs about 11%), clearly caveated; no verified values and not the BIS 14.0% / 8.0%.",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: No verified figures; a direction from memory, labelled as unchecked.",
+    "referral": true
+  },
+  "no_tools/X-13#1": {
+    "referral": true
   },
   "no_tools/X-13#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only an unexecuted tool call.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-14#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Could not retrieve the record and gave no ingredient, strength or brand. Key is EXEMESTANE 25 mg (AROMASIN).",
-    "false_claim": false
+    "reason": "Review: No answer (lookups failed); referred to the DPD.",
+    "referral": true
+  },
+  "no_tools/X-14#1": {
+    "referral": true
+  },
+  "no_tools/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
   },
   "no_tools/X-15#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (some looping), with no figure or status.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-16#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (some looping), with no figure or status.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-16#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (some looping), with no figure or status.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
+  },
+  "no_tools/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "no_tools/X-17#0": {
+    "referral": true
+  },
+  "no_tools/X-17#2": {
+    "referral": true
   },
   "no_tools/X-18#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (some looping), with no figure or status.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is unexecuted tool calls."
+  },
+  "no_tools/X-18#1": {
+    "referral": true
+  },
+  "no_tools/X-18#2": {
+    "referral": true
   },
   "no_tools/X-19#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls (some looping), with no figure or status.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is unexecuted tool calls."
+  },
+  "no_tools/X-19#1": {
+    "referral": true
+  },
+  "no_tools/X-19#2": {
+    "referral": true
   },
   "no_tools/X-20#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
-  },
-  "no_tools/X-20#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Run error (timed out); no answer.",
-    "false_claim": false
+    "referral": true
   },
   "no_tools/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
+  },
+  "no_tools/X-21#0": {
+    "referral": true
   },
   "no_tools/X-21#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
   "no_tools/X-21#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: No answer: the output is only unexecuted tool calls, with no figure.",
-    "false_claim": false
+    "reason": "Review: No answer: the text is an unexecuted tool call."
   },
-  "no_tools/X-22#1": {
+  "no_tools/X-22#0": {
     "outcome": "hallucinated",
-    "reason": "Blind hand review: Gave about $98,000 from unchecked memory as the answer (with a confirm-before-citing caveat); key is $100,000.",
-    "false_claim": false
+    "reason": "Review: Gave about $98,000 from memory (flagged as unverified); the Census figure is $100,000."
+  },
+  "no_tools/X-22#2": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about $98,000 from memory (flagged as unverified); the Census figure is $100,000."
+  },
+  "no_tools/X-23#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave roughly 46-47% from memory (flagged as unverified); the census share is 48.1%."
+  },
+  "no_tools/X-23#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about 47% from memory (flagged as unverified); the census share is 48.1%."
+  },
+  "no_tools/X-23#2": {
+    "referral": true
   },
   "opencanada/A-01#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no child (under-18) rate; offered the all-ages MBM rate (11.6%) clearly labelled as not a child figure. Key is 12.8% (MBM, under 18, 2024).",
-    "false_claim": false
+    "reason": "Review: Correct: 12.8% (MBM, under 18, 2024). The all-ages rate given as context while the child rate is declined: abstained. No figure: abstained (referral when it points to the table)."
   },
   "opencanada/A-01#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no child rate; only the all-ages MBM rate (11.6%) clearly labelled as not the child figure. Key is 12.8%.",
-    "false_claim": false
-  },
-  "opencanada/A-02#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no public-administration figure; only all-industries Alberta earnings, clearly labelled.",
-    "false_claim": false
-  },
-  "opencanada/A-02#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure; correctly pointed to SEPH tables 14-10-0203/0204 and NAICS 912.",
-    "false_claim": false
-  },
-  "opencanada/A-02#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no public-administration figure; only all-industries averages clearly labelled as a rough reference.",
-    "false_claim": false
+    "reason": "Review: Correct: 12.8% (MBM, under 18, 2024). The all-ages rate given as context while the child rate is declined: abstained. No figure: abstained (referral when it points to the table)."
   },
   "opencanada/A-03#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no Alberta figure; described unresolved coordinate probes without claiming any as Alberta's.",
-    "false_claim": false
+    "reason": "Review: Declined; could not identify the Alberta row."
+  },
+  "opencanada/A-04#0": {
+    "false_claim": "Says Statistics Canada doesn't publish a household median; the 2021 Census Profile does (median total income of household, $96,000 for Alberta)."
   },
   "opencanada/A-05#1": {
     "outcome": "correct",
-    "reason": "Blind hand review: Said 11-10-0090 has a single (Canada) geography so no Alberta rate is published, gave no Alberta figure, and offered the national rate or a custom tabulation.",
-    "false_claim": false
-  },
-  "opencanada/C-05#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave unadjusted vacancies (529,415) and a self-computed 2.9% rate, both labelled; key is SA 2.8% and 507,220.",
-    "false_claim": false
-  },
-  "opencanada/C-05#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave unadjusted vacancies (529,415) and a self-computed 2.9% rate, both labelled; key is SA 2.8% and 507,220.",
-    "false_claim": false
-  },
-  "opencanada/C-05#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the unadjusted figures from 14-10-0371 (2.9%, 529,415), clearly labelled as unadjusted; the key is the seasonally adjusted 14-10-0432 series (2.8%, 507,220). Question-wide: same grade for every answer giving the labelled unadjusted figures. It also cited the SA rate 2.8% but not the SA vacancy count.",
-    "false_claim": false
-  },
-  "opencanada/C-09#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave 5.7% (index 168.1 to 177.6, the key's PEI values) but named Nova Scotia, from assumed coordinates it flagged as unverified; rate right, province wrong.",
-    "false_claim": false
+    "reason": "Review: Said the table has a single (Canada) geography and gave no Alberta figure."
   },
   "opencanada/C-13#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave real (constant 2017 dollar) sales of $54,075 million, +0.03%, clearly labelled as real rather than the current-dollar headline; key is $79.88 billion current dollars, +1.5%. Same grade for both answers.",
-    "false_claim": false
+    "reason": "Review: Gave real sales in 2017 dollars ($54,075 million, +0.03%), clearly labelled as real, not the current-dollar headline."
   },
   "opencanada/C-13#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave real (constant 2017 dollar) sales of $54,075 million, +0.03%, clearly labelled as real rather than the current-dollar headline; key is $79.88 billion current dollars, +1.5%. Same grade for both answers.",
-    "false_claim": false
+    "reason": "Review: Gave real sales in 2017 dollars ($54,075 million, +0.03%), clearly labelled as real, not the current-dollar headline."
+  },
+  "opencanada/C-13#2": {
+    "outcome": "partial",
+    "reason": "Review: Gave real sales in 2017 dollars ($54,075 million, +0.03%), clearly labelled as real, not the current-dollar headline."
+  },
+  "opencanada/C-18#1": {
+    "outcome": "abstained",
+    "reason": "Review: Listed eleven unlabelled rows and declined to say which is study permit only."
+  },
+  "opencanada/C-19#0": {
+    "false_claim": "Reads series V80691310 (the Bank Rate) as the overnight target, and so says the target was 2.50% from September 2; the target was 2.25% until October 28."
+  },
+  "opencanada/C-19#1": {
+    "false_claim": "Reads series V80691310 (the Bank Rate) as the overnight target, and so says the target was 2.50% from September 2; the target was 2.25% until October 28."
+  },
+  "opencanada/C-19#2": {
+    "false_claim": "Reads series V80691310 (the Bank Rate) as the overnight target, and so says the target was 2.50% from September 2; the target was 2.25% until October 28."
   },
   "opencanada/X-04#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Flagged that climate ID 6158733's record ends 2013-06-13 and gave no invented figure, but did not give the successor station's July 2024 total (215.4 mm at Toronto Intl A, 6158731). Same grade for every answer flagging the closure without the successor value.",
-    "false_claim": false
+    "reason": "Review: Flagged that 6158733's record ended in 2013, without the successor station's July 2024 figure (215.4 mm)."
   },
   "opencanada/X-04#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Flagged that climate ID 6158733's record ends 2013-06-13 and gave no invented figure, but did not give the successor station's July 2024 total (215.4 mm at Toronto Intl A, 6158731). Same grade for every answer flagging the closure without the successor value.",
-    "false_claim": false
+    "reason": "Review: Flagged that 6158733's record ended in 2013, without the successor station's July 2024 figure (215.4 mm)."
+  },
+  "opencanada/X-05#0": {
+    "referral": true
+  },
+  "opencanada/X-05#1": {
+    "referral": true
+  },
+  "opencanada/X-05#2": {
+    "referral": true
+  },
+  "opencanada/X-06#0": {
+    "referral": true
+  },
+  "opencanada/X-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "opencanada/X-06#2": {
+    "referral": true
+  },
+  "opencanada/X-07#0": {
+    "referral": true
+  },
+  "opencanada/X-07#1": {
+    "referral": true
+  },
+  "opencanada/X-07#2": {
+    "referral": true
   },
   "opencanada/X-08#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
   },
   "opencanada/X-08#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined to give a World Bank 2025 figure (said one may not be published) and offered StatCan's 2022 three-year estimate (81.65), clearly labelled as not 2025 and not World Bank.",
-    "false_claim": false
+    "referral": true
   },
   "opencanada/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined to give a World Bank 2025 figure (said one may not be published) and offered StatCan's 2022 three-year estimate (81.65), clearly labelled as not 2025 and not World Bank.",
-    "false_claim": false
+    "referral": true
   },
   "opencanada/X-09#1": {
-    "outcome": "hallucinated",
-    "reason": "Blind hand review: Said the overnight target was 5.00% on July 15 and 4.75% at end-July 2024; key is 4.75% and 4.50% (cut on July 24). The series it used runs 25 bp higher (consistent with the Bank Rate) but is presented as the overnight target. Same grade for both answers.",
-    "false_claim": true
+    "false_claim": "Presents series V80691310 (the Bank Rate, 25 bp above the target) as the target for the overnight rate."
   },
   "opencanada/X-09#2": {
-    "outcome": "hallucinated",
-    "reason": "Blind hand review: Said the overnight target was 5.00% on July 15 and 4.75% at end-July 2024; key is 4.75% and 4.50% (cut on July 24). The series it used runs 25 bp higher (consistent with the Bank Rate) but is presented as the overnight target. Same grade for both answers.",
-    "false_claim": true
+    "false_claim": "Presents series V80691310 (the Bank Rate, 25 bp above the target) as the target for the overnight rate."
+  },
+  "opencanada/X-10#0": {
+    "referral": true
+  },
+  "opencanada/X-10#1": {
+    "referral": true
+  },
+  "opencanada/X-10#2": {
+    "referral": true
+  },
+  "opencanada/X-11#0": {
+    "referral": true
+  },
+  "opencanada/X-11#1": {
+    "referral": true
+  },
+  "opencanada/X-11#2": {
+    "referral": true
+  },
+  "opencanada/X-12#0": {
+    "referral": true
   },
   "opencanada/X-12#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave an unconfirmed Canadian ratio only and declined the comparison.",
+    "referral": true
+  },
+  "opencanada/X-12#2": {
+    "referral": true
   },
   "opencanada/X-13#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Said the DPD lookup returned an empty record and gave no drug, company or strengths (suggested a possible typo). Key is PAXLOVID, Pfizer Canada ULC, 150 mg / 100 mg.",
-    "false_claim": false
+    "reason": "Review: No answer (empty lookup or timeouts); referred to the DPD."
   },
   "opencanada/X-13#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Said the DPD lookup returned an empty record and gave no drug, company or strengths (suggested a possible typo). Key is PAXLOVID, Pfizer Canada ULC, 150 mg / 100 mg.",
-    "false_claim": false
+    "reason": "Review: No answer (empty lookup or timeouts); referred to the DPD."
+  },
+  "opencanada/X-14#1": {
+    "false_claim": "Concludes from an empty lookup that the Drug Product Database has no product under DIN 02242705; it lists AROMASIN (exemestane 25 mg)."
   },
   "opencanada/X-15#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Confirmed the DIN is the 0.25/0.5 mg Ozempic pen but could not get its status and declined to guess. Key: Dormant since 2026-07-24.",
-    "false_claim": false
+    "reason": "Review: Correct: says DIN 02471477 is Dormant (not marketed) per the DPD. Declining, even while listing Dormant among the possible statuses, is abstained: the grader matched the word Dormant in lists of possible statuses. Referral with no status: abstained (referral)."
+  },
+  "opencanada/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses."
   },
   "opencanada/X-15#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Confirmed the DIN is the 0.25/0.5 mg Ozempic pen but could not get its status and declined to guess. Key: Dormant since 2026-07-24.",
-    "false_claim": false
+    "reason": "Review: Correct: says DIN 02471477 is Dormant (not marketed) per the DPD. Declining, even while listing Dormant among the possible statuses, is abstained: the grader matched the word Dormant in lists of possible statuses. Referral with no status: abstained (referral)."
   },
   "opencanada/X-16#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Named Sanofi Consumer Health Inc. as the company on record (the key's last holder) and explicitly did not claim it currently sells the product, but did not find that the DIN is Cancelled Post Market (2022-02-18). Same grade for both answers.",
-    "false_claim": false
+    "reason": "Review: Named the company on file (Sanofi Consumer Health) but could not confirm the status; the DIN is Cancelled Post Market."
   },
   "opencanada/X-16#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Named Sanofi Consumer Health Inc. as the company on record (the key's last holder) and explicitly did not claim it currently sells the product, but did not find that the DIN is Cancelled Post Market (2022-02-18). Same grade for both answers.",
-    "false_claim": false
+    "reason": "Review: Named the company on file (Sanofi Consumer Health) but could not confirm the status; the DIN is Cancelled Post Market."
+  },
+  "opencanada/X-16#2": {
+    "outcome": "partial",
+    "reason": "Review: Named the company on file (Sanofi Consumer Health) but could not confirm the status; the DIN is Cancelled Post Market."
+  },
+  "opencanada/X-17#0": {
+    "referral": true
+  },
+  "opencanada/X-17#1": {
+    "referral": true
+  },
+  "opencanada/X-17#2": {
+    "referral": true
+  },
+  "opencanada/X-18#0": {
+    "referral": true
+  },
+  "opencanada/X-18#1": {
+    "referral": true
+  },
+  "opencanada/X-18#2": {
+    "referral": true
+  },
+  "opencanada/X-19#0": {
+    "referral": true
+  },
+  "opencanada/X-19#1": {
+    "referral": true
+  },
+  "opencanada/X-19#2": {
+    "referral": true
   },
   "opencanada/X-20#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
   "opencanada/X-20#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
   },
   "opencanada/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
   },
-  "opencanada/X-21#2": {
+  "opencanada/X-24#2": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
+  },
+  "openmcp/A-02#1": {
+    "outcome": "partial",
+    "reason": "Review: All of public administration (SEPH NAICS 91) for Alberta, clearly labelled as not provincial-only; NAICS 912 is published."
+  },
+  "openmcp/A-03#0": {
+    "false_claim": "Says the figures are in current dollars (not adjusted for inflation); table 11-10-0239 is in constant 2024 dollars."
+  },
+  "openmcp/A-03#1": {
+    "false_claim": "Says the figures are in current dollars (not adjusted for inflation); table 11-10-0239 is in constant 2024 dollars."
+  },
+  "openmcp/A-03#2": {
+    "false_claim": "Says the figures are in current dollars (not adjusted for inflation); table 11-10-0239 is in constant 2024 dollars."
   },
   "openmcp/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named. Also says the figure is in current dollars; the CIS tables are in constant 2024 dollars.",
-    "false_claim": true
+    "false_claim": "Says the CIS figure is in current dollars; table 11-10-0237 is in constant 2024 dollars."
   },
   "openmcp/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named. Also says the figure is in current dollars; the CIS tables are in constant 2024 dollars.",
-    "false_claim": true
-  },
-  "openmcp/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "openmcp/C-05#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the unadjusted figures from 14-10-0371 (2.9%, 529,415), clearly labelled as unadjusted; the key is the seasonally adjusted 14-10-0432 series (2.8%, 507,220). Question-wide: same grade for every answer giving the labelled unadjusted figures.",
-    "false_claim": false
+    "false_claim": "Says the CIS figure is in current dollars; table 11-10-0190 is in constant 2024 dollars."
   },
   "openmcp/C-14#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only ($54,458.0 million SA; $52,185.1 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "openmcp/C-14#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
+  },
+  "openmcp/C-21#2": {
+    "false_claim": "States the index base as 2012=100; the BCPI is 1972=100."
   },
   "openmcp/X-02#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not retrieve the values and gave no figure; pointed to the ECCC source. Key is max 36.0, min 21.0 at Ottawa CDA (6105976).",
-    "false_claim": false
+    "reason": "Review: No figures (tool connection failed); referred to ECCC."
   },
   "openmcp/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag (lookups timed out); referred to ECCC."
   },
   "openmcp/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC."
+  },
+  "openmcp/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag: the 'closed' it mentions is a dropped tool connection, not the station's closure."
+  },
+  "openmcp/X-05#0": {
+    "referral": true
+  },
+  "openmcp/X-05#1": {
+    "referral": true
+  },
+  "openmcp/X-05#2": {
+    "referral": true
+  },
+  "openmcp/X-06#0": {
+    "referral": true
+  },
+  "openmcp/X-06#1": {
+    "referral": true
+  },
+  "openmcp/X-06#2": {
+    "referral": true
   },
   "openmcp/X-07#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: lookups timed out and it gave no figure. Key is 575.8 Mt.",
-    "false_claim": false
+    "reason": "Review: No figure (tool calls timed out); referred to the World Bank.",
+    "referral": true
+  },
+  "openmcp/X-07#2": {
+    "referral": true
   },
   "openmcp/X-08#0": {
+    "referral": true
+  },
+  "openmcp/X-08#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
   },
   "openmcp/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
+  },
+  "openmcp/X-10#0": {
+    "referral": true
+  },
+  "openmcp/X-11#0": {
+    "referral": true
   },
   "openmcp/X-11#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Said it could not get the BIS figure and gave StatCan's household debt service ratio (14.67%, Q4 2024, 11-10-0065), clearly labelled as a different series; key is BIS 14.2%.",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Declined the BIS figure and gave Statistics Canada's own ratio (14.67%), labelled as a different measure; the question asks for the BIS series.",
+    "referral": true
   },
   "openmcp/X-12#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
   },
   "openmcp/X-12#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
   },
   "openmcp/X-13#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: lookups timed out and it gave no drug, company or strengths. Key is PAXLOVID, Pfizer Canada ULC, 150 mg / 100 mg.",
-    "false_claim": false
+    "reason": "Review: No answer (empty lookup or timeouts); referred to the DPD."
   },
   "openmcp/X-15#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not query the DPD and gave no status. Key: Dormant since 2026-07-24.",
-    "false_claim": false
+    "reason": "Review: Correct: says DIN 02471477 is Dormant (not marketed) per the DPD. Declining, even while listing Dormant among the possible statuses, is abstained: the grader matched the word Dormant in lists of possible statuses. Referral with no status: abstained (referral)."
+  },
+  "openmcp/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses."
   },
   "openmcp/X-16#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: lookups returned nothing and it named no company or status. Key: Cancelled Post Market since 2022-02-18, last holder Sanofi Consumer Health Inc.",
-    "false_claim": false
+    "reason": "Review: No answer (lookups failed); referred to the DPD."
   },
   "openmcp/X-16#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: lookups returned nothing and it named no company or status. Key: Cancelled Post Market since 2022-02-18, last holder Sanofi Consumer Health Inc.",
-    "false_claim": false
+    "reason": "Review: No answer (lookups failed); referred to the DPD."
   },
   "openmcp/X-18#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: searches timed out and it gave no figures. Key is round 441, CRS 475, 3,500 invitations.",
-    "false_claim": false
+    "reason": "Review: No figures (searches timed out); referred to IRCC."
   },
-  "openmcp/X-21#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
+  "openmcp/X-22#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about $98,000 from memory (flagged as unverified); the Census figure is $100,000."
   },
-  "openmcp/X-21#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "openmcp/X-22#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "openmcp/X-22#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "pipeworx/A-02#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Connection failed; gave no figures but identified the right SEPH vectors.",
-    "false_claim": false
-  },
-  "pipeworx/A-02#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the SEPH NAICS 912 figure, $1,883.03 (Aug 2026), and 2025 annual $1,702.65 from 14-10-0204, matching the reference. Question-wide: citing the SEPH tables 14-10-0203/0204 for NAICS 912 counts as naming SEPH.",
-    "false_claim": false
-  },
-  "pipeworx/A-03#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median ($48,100).",
-    "false_claim": false
+  "openmcp/X-23#2": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave in the mid-40s percent from memory (flagged as unverified); the census share is 48.1%."
   },
   "pipeworx/A-03#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median; wrongly says the figure is in current dollars (11-10-0239 is in constant 2024 dollars).",
-    "false_claim": true
+    "false_claim": "Says the figures are in current dollars (not adjusted for inflation); table 11-10-0239 is in constant 2024 dollars."
   },
   "pipeworx/A-03#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median; wrongly says the figures are in current dollars (they are constant 2024 dollars).",
-    "false_claim": true
-  },
-  "pipeworx/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
+    "false_claim": "Says the figures are in current dollars (not adjusted for inflation); table 11-10-0239 is in constant 2024 dollars."
   },
   "pipeworx/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named. Also says the figure is in current dollars; the CIS tables are in constant 2024 dollars.",
-    "false_claim": true
+    "false_claim": "Says the CIS figure is in current dollars; table 11-10-0190 is in constant 2024 dollars."
   },
   "pipeworx/C-11#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave about 3.8% annualized (0.93% q/q) computed from monthly GDP at basic prices, clearly labelled as its own estimate, not the published figure; key is 3.3% annualized, 0.8% q/q (expenditure-based, 36-10-0104). Same grade for both answers doing this.",
-    "false_claim": false
+    "reason": "Review: Annualized its own average of monthly GDP by industry (3.8%), labelled as an estimate on a different basis from the official quarterly figure."
   },
   "pipeworx/C-11#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave about 3.8% annualized (0.93% q/q) computed from monthly GDP at basic prices, clearly labelled as its own estimate, not the published figure; key is 3.3% annualized, 0.8% q/q (expenditure-based, 36-10-0104). Same grade for both answers doing this.",
-    "false_claim": false
+    "reason": "Review: Annualized its own average of monthly GDP by industry (3.8%), labelled as an estimate on a different basis from the official quarterly figure."
+  },
+  "pipeworx/C-14#0": {
+    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis."
   },
   "pipeworx/C-14#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "pipeworx/C-14#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave customs-basis exports ($54.46B SA, $52.19B unadjusted), clearly labelled customs basis; key is the balance-of-payments SA figure $54,346.5 million. Question-wide: same partial grade for every labelled customs-basis answer.",
-    "false_claim": false
+    "reason": "Review: Customs basis only, labelled; the headline is the balance-of-payments basis ($54,346.5 million)."
   },
   "pipeworx/C-16#0": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the key's seasonally adjusted value 13,571,697 thousand (about $13.6 billion), clearly labelled, alongside the unadjusted $13.2 billion. Question-wide: answers giving both labelled figures are graded correct.",
-    "false_claim": false
+    "reason": "Review: Gave both figures, the seasonally adjusted 13,571,697 (thousand) labelled as the headline; the grader missed it written without its unit."
   },
   "pipeworx/C-16#1": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the key's seasonally adjusted value 13,571,697 thousand (about $13.6 billion), clearly labelled, alongside the unadjusted $13.2 billion. Question-wide: answers giving both labelled figures are graded correct.",
-    "false_claim": false
+    "reason": "Review: Gave both figures, the seasonally adjusted 13,571,697 (thousand) labelled; the grader missed it written without its unit."
   },
   "pipeworx/C-16#2": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the key's seasonally adjusted value 13,571,697 thousand (about $13.6 billion), clearly labelled, alongside the unadjusted $13.2 billion. Question-wide: answers giving both labelled figures are graded correct.",
-    "false_claim": false
+    "reason": "Review: Gave both figures, the seasonally adjusted $13,571,697 thousand labelled as the headline; the grader missed it written without its unit."
   },
   "pipeworx/X-02#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave 35.1 / 20.8 °C from the co-located Ottawa CDA RCS station (6105978), clearly identified by ID; key is Ottawa CDA (6105976) max 36.0, min 21.0. Same grade for both answers using the RCS station.",
-    "false_claim": false
+    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 \u00b0C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 \u00b0C."
+  },
+  "pipeworx/X-03#0": {
+    "referral": true
   },
   "pipeworx/X-03#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Declined: could not reach the archived daily mean and gave no figure. Key is 4,570 m³/s.",
-    "false_claim": false
+    "reason": "Review: No figure; referred to the Water Survey of Canada.",
+    "referral": true
+  },
+  "pipeworx/X-03#2": {
+    "referral": true
   },
   "pipeworx/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC.",
+    "referral": true
   },
   "pipeworx/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC.",
+    "referral": true
   },
   "pipeworx/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC.",
+    "referral": true
   },
-  "pipeworx/X-12#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Right call (Canada higher) but with StatCan 14.68% and the Fed's TDSP 11.32%, labelled as non-comparable sources, instead of the BIS ratios (14.0% and 8.0%). Same grade for both answers doing this.",
-    "false_claim": false
+  "pipeworx/X-17#0": {
+    "referral": true
   },
-  "pipeworx/X-12#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Right call (Canada higher) but with StatCan 14.68% and the Fed's TDSP 11.32%, labelled as non-comparable sources, instead of the BIS ratios (14.0% and 8.0%). Same grade for both answers doing this.",
-    "false_claim": false
+  "pipeworx/X-17#1": {
+    "referral": true
+  },
+  "pipeworx/X-17#2": {
+    "referral": true
+  },
+  "pipeworx/X-18#0": {
+    "referral": true
+  },
+  "pipeworx/X-18#1": {
+    "referral": true
+  },
+  "pipeworx/X-18#2": {
+    "referral": true
+  },
+  "pipeworx/X-19#0": {
+    "referral": true
+  },
+  "pipeworx/X-19#1": {
+    "referral": true
+  },
+  "pipeworx/X-19#2": {
+    "referral": true
   },
   "pipeworx/X-20#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
   },
   "pipeworx/X-20#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
   },
   "pipeworx/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
   },
-  "pipeworx/X-21#0": {
+  "pipeworx/X-24#0": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
   },
-  "pipeworx/X-21#1": {
+  "pipeworx/X-24#1": {
     "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "pipeworx/X-21#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "pipeworx/X-22#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "pipeworx/X-22#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "pipeworx/X-22#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
   },
   "statcan2/A-02#0": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave the SEPH NAICS 912 series (v1560358) but for July 2026 ($1,877.58) and called July the latest month, when August 2026 ($1,883.03) was published. Right source, stale period.",
-    "false_claim": true
+    "reason": "Review: Right series (SEPH NAICS 912, v1560358) but July 2026 ($1,877.58), not the latest month or the 2025 annual average.",
+    "false_claim": "Calls July 2026 the latest month available; August 2026 was published on 2026-10-29."
+  },
+  "statcan2/A-02#1": {
+    "false_claim": "Calls July 2026 the latest month; August 2026 was published on 2026-10-29."
   },
   "statcan2/A-02#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave the SEPH NAICS 912 series (v1560358) but for July 2026 ($1,877.58) from a mirror; August 2026 ($1,883.03) was published. Right source, stale period.",
-    "false_claim": false
-  },
-  "statcan2/A-03#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the key average ($66,100) but not the median ($48,100).",
-    "false_claim": false
+    "reason": "Review: Right series (SEPH NAICS 912, v1560358) but July 2026 ($1,877.58), not the latest month or the 2025 annual average."
   },
   "statcan2/A-03#1": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave $63,200 average from 11-10-0091 (all persons) and no median; a different published series from the key's $66,100 / $48,100.",
-    "false_claim": false
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
   },
   "statcan2/A-03#2": {
     "outcome": "partial",
-    "reason": "Blind hand review: Gave $63,200 average from 11-10-0091 (all persons) and no median; a different published series from the key's $66,100 / $48,100.",
-    "false_claim": false
-  },
-  "statcan2/A-04#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "statcan2/A-04#1": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
-  },
-  "statcan2/A-04#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave the CIS median $96,600 (2024) for economic families and persons not in an economic family, labelled as not strictly households, but not the key's headline Census household median ($96,000, 2020). Question-wide: same grade for every answer giving only the CIS figure with the unit named.",
-    "false_claim": false
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
   },
   "statcan2/C-01#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no September rates, only August clearly labelled, and allowed September may have been released; key is Ontario 60.1%, Quebec 59.9%.",
-    "false_claim": false
+    "reason": "Review: Its data copy ends in August 2026; gave August, labelled, and declined September."
   },
   "statcan2/C-01#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no September 2026 rates (said its data ended in August) and offered August figures clearly labelled; key is Ontario 60.1%, Quebec 59.9% (Ontario higher).",
-    "false_claim": false
+    "reason": "Review: Its data copy ends in August 2026; gave August, labelled, and declined September."
   },
   "statcan2/C-01#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no September rates, only August clearly labelled; but implied September was not yet released ('should appear in the next release') when it was published.",
-    "false_claim": true
+    "reason": "Review: Its data copy ends in August 2026; gave August, labelled, and declined September.",
+    "false_claim": "Says the September 2026 figures should appear in the next release; they were published on 2026-10-09."
+  },
+  "statcan2/C-02#0": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave September 2025 (14.6%) and August 2026 (12.9%, labelled), declined September 2026."
+  },
+  "statcan2/C-02#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave September 2025 (14.6%) and August 2026 (12.9%, labelled), declined September 2026."
+  },
+  "statcan2/C-02#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave September 2025 (14.6%) and August 2026 (12.9%, labelled), declined September 2026."
+  },
+  "statcan2/C-05#0": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in July 2026: gave July, labelled, and declined August."
+  },
+  "statcan2/C-05#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in July 2026: gave July, labelled, and declined August."
+  },
+  "statcan2/C-05#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in July 2026: gave July, labelled, and declined August."
+  },
+  "statcan2/C-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave the 12 months to August (3.0%), labelled, and declined September."
+  },
+  "statcan2/C-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave the 12 months to August (3.0%), labelled, and declined September."
+  },
+  "statcan2/C-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave the 12 months to August (3.0%), labelled, and declined September."
   },
   "statcan2/C-11#0": {
-    "outcome": "hallucinated",
-    "reason": "Blind hand review: Stated growth was 0.8% 'at an annualized rate'; 0.8% is the quarter-over-quarter change, the annualized rate is 3.3%, so the headline answer is mislabelled and wrong.",
-    "false_claim": true
+    "false_claim": "Presents the 0.8% quarter-over-quarter change as the annualized rate; annualized growth was 3.3%."
   },
   "statcan2/C-19#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no October 30 figure: its data ended September 25, 2026; reported 2.25% clearly labelled as that date's value and warned not to treat it as October's. Key is 2.50%.",
-    "false_claim": false
+    "reason": "Review: Its data copy ends on September 25: gave 2.25% labelled as September and declined October 30.",
+    "referral": true
   },
   "statcan2/C-19#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no October 30 figure: its data ended September 25, 2026; reported 2.25% clearly labelled as that date's value and warned not to treat it as October's. Key is 2.50%.",
-    "false_claim": false
+    "reason": "Review: Its data copy ends on September 25: gave 2.25% labelled as September and declined October 30.",
+    "referral": true
   },
   "statcan2/C-19#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no October 30 figure: its data ended September 25, 2026; reported 2.25% clearly labelled as that date's value and warned not to treat it as October's. Key is 2.50%.",
-    "false_claim": false
+    "reason": "Review: Its data copy ends on September 25: gave 2.25% labelled as September and declined October 30.",
+    "referral": true
+  },
+  "statcan2/C-20#0": {
+    "referral": true
+  },
+  "statcan2/C-20#1": {
+    "referral": true
+  },
+  "statcan2/C-20#2": {
+    "referral": true
+  },
+  "statcan2/C-21#0": {
+    "referral": true
+  },
+  "statcan2/C-21#1": {
+    "false_claim": "Says table 10-10-0132-01 is a different, older index and not the BCPI; it is the Bank of Canada's BCPI (Fisher index, US dollars, 1972=100) as republished by Statistics Canada.",
+    "referral": true
+  },
+  "statcan2/C-21#2": {
+    "referral": true
+  },
+  "statcan2/C-23#1": {
+    "false_claim": "Calls the Q1 and Q2 2026 changes (0.1%, 0.8%) annualized rates; they are quarter-over-quarter changes (Q2 annualized was 3.3%)."
+  },
+  "statcan2/X-01#0": {
+    "referral": true
+  },
+  "statcan2/X-01#1": {
+    "referral": true
+  },
+  "statcan2/X-01#2": {
+    "referral": true
+  },
+  "statcan2/X-02#0": {
+    "referral": true
+  },
+  "statcan2/X-02#1": {
+    "referral": true
+  },
+  "statcan2/X-02#2": {
+    "referral": true
+  },
+  "statcan2/X-03#0": {
+    "referral": true
+  },
+  "statcan2/X-03#1": {
+    "referral": true
+  },
+  "statcan2/X-03#2": {
+    "referral": true
   },
   "statcan2/X-04#0": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "statcan2/X-04#1": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
   },
   "statcan2/X-04#2": {
     "outcome": "abstained",
-    "reason": "Blind hand review: Gave no figure and did not flag that station 6158733 closed in 2013; told the user the July 2024 value for 6158733 can be read from ECCC, which is false (no data after 2013-06-13).",
-    "false_claim": true
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "statcan2/X-05#0": {
+    "referral": true
+  },
+  "statcan2/X-05#1": {
+    "referral": true
+  },
+  "statcan2/X-05#2": {
+    "referral": true
+  },
+  "statcan2/X-06#0": {
+    "referral": true
+  },
+  "statcan2/X-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "statcan2/X-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "statcan2/X-07#0": {
+    "referral": true
+  },
+  "statcan2/X-07#1": {
+    "referral": true
+  },
+  "statcan2/X-07#2": {
+    "referral": true
+  },
+  "statcan2/X-08#0": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
+  },
+  "statcan2/X-08#1": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
   },
   "statcan2/X-08#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of World Bank access and gave no 2025 figure; said only that a 2025 value 'may not exist yet', without establishing that it is unpublished (latest is 2024, 82.1). Question-wide: hedged 'may not be published' refusals are graded abstained, not correct.",
-    "false_claim": false
+    "referral": true
+  },
+  "statcan2/X-10#0": {
+    "referral": true
+  },
+  "statcan2/X-10#1": {
+    "referral": true
+  },
+  "statcan2/X-10#2": {
+    "referral": true
+  },
+  "statcan2/X-11#0": {
+    "referral": true
+  },
+  "statcan2/X-11#1": {
+    "referral": true
+  },
+  "statcan2/X-11#2": {
+    "referral": true
   },
   "statcan2/X-12#0": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "statcan2/X-12#1": {
+    "referral": true
   },
   "statcan2/X-12#2": {
-    "outcome": "partial",
-    "reason": "Blind hand review: Gave only Canada's StatCan debt service ratio (14.68%, 11-10-0065), clearly sourced, and no US figure or call; key uses BIS for both (Canada 14.0%, US 8.0%, Canada higher). Question-wide: StatCan-only answers are partial (related published figure, labelled).",
-    "false_claim": false
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "statcan2/X-13#0": {
+    "referral": true
+  },
+  "statcan2/X-13#1": {
+    "referral": true
+  },
+  "statcan2/X-13#2": {
+    "referral": true
+  },
+  "statcan2/X-14#0": {
+    "referral": true
+  },
+  "statcan2/X-14#1": {
+    "referral": true
+  },
+  "statcan2/X-14#2": {
+    "referral": true
+  },
+  "statcan2/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "statcan2/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "statcan2/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "statcan2/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "statcan2/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "statcan2/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "statcan2/X-17#0": {
+    "referral": true
+  },
+  "statcan2/X-17#1": {
+    "referral": true
+  },
+  "statcan2/X-17#2": {
+    "referral": true
+  },
+  "statcan2/X-18#0": {
+    "referral": true
+  },
+  "statcan2/X-18#1": {
+    "referral": true
+  },
+  "statcan2/X-18#2": {
+    "referral": true
+  },
+  "statcan2/X-19#0": {
+    "referral": true
+  },
+  "statcan2/X-19#1": {
+    "referral": true
+  },
+  "statcan2/X-19#2": {
+    "referral": true
   },
   "statcan2/X-20#0": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
+    "referral": true
   },
   "statcan2/X-20#1": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Declined for lack of access and gave no cut-off; did not say round #460 has not been held (latest is #453).",
-    "false_claim": false
+    "referral": true
   },
   "statcan2/X-20#2": {
-    "outcome": "abstained",
-    "reason": "Blind hand review: Gave no cut-off, but did not say round #460 has not been held (latest is #453 on 2026-10-28); told the user the round #460 cut-off can be found on IRCC's page, implying it exists. Question-wide: no X-20 answer recognized the round is unheld.",
-    "false_claim": true
-  },
-  "statcan2/X-21#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "statcan2/X-21#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave the median age 40.4 for Halifax CMA (2021, total gender), matching the key. Question-wide: the question asks only for the median, the average (41.4) is a trap value whose tolerance does not require it, so median-only answers are graded correct.",
-    "false_claim": false
-  },
-  "statcan2/X-22#0": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "statcan2/X-22#1": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
-  },
-  "statcan2/X-22#2": {
-    "outcome": "correct",
-    "reason": "Blind hand review: Gave $100,000 median total household income for Calgary CMA (income year 2020), matching the key. Question-wide: the question asks only for total income; the after-tax median (87,000) is a trap value the tolerance does not require, so these are graded correct.",
-    "false_claim": false
+    "referral": true
   }
 }

@@ -55,8 +55,9 @@ scores are read the same way. `--server-dir` serves a MapleStats checkout other 
 one (a frozen copy of `main`, for a fair before and after).
 
 The grader reads numbers and phrases from the text, so a correct answer worded oddly can
-be missed: read every grade that is not `correct`, and record a re-grade with its reason
-in `overrides.json` (`{"<arm>/<question id>": {"outcome": ..., "reason": ..., "false_claim": ...}}`).
+be missed: read every answer, not only the ones it did not mark `correct` (v2's review found
+answers wrongly passed too), and record a re-grade with its reason in `overrides.json`
+(`{"<arm>/<question id>[#<repeat>]": {"outcome": ..., "reason": ..., "false_claim": ..., "referral": ...}}`).
 
 ## First results, 2026-11-02
 
@@ -110,7 +111,9 @@ built to answer both:
   (24): the 2021 Census of Population, Environment and Climate Change Canada (climate
   stations, river flow), the World Bank, BIS, Health Canada's Drug Product Database and
   IRCC's Express Entry rounds. Results are reported for each half, so breadth shows
-  without being the whole score.
+  without being the whole score. The beyond sources were chosen from what MapleStats
+  covers; most other servers do not claim them, so that half measures coverage as much
+  as accuracy.
 - **Every question asked three times** (`run --repeat 3`), so the report gives the mean,
   the worst and best run, and how consistently a server answers the same question.
 - **Citation meta-metrics** for both versions: every cited StatCan vector or table and
@@ -135,85 +138,140 @@ uv run python -m tests.maple_test grade --version v2 --verify
 After the first runs, five *analyst* questions were added (A-01 to A-05), from an
 analyst's working week: child poverty for a province (the annual Canadian Income Survey
 has it), provincial public administration wages (only SEPH has NAICS 912; correct only
-when the answer uses SEPH), "average income" (the median belongs beside it), median
-household income (a household is a Census unit; the income survey counts economic
-families), and the poverty rate of people with disabilities in Alberta (not published:
+with SEPH's NAICS 912 figure), "average income" (the median belongs beside it), median
+household income (a household is a Census unit, so the Census median is correct; the income
+survey's economic-family median alone is partial), and the poverty rate of people with disabilities in Alberta (not published:
 11-10-0090 is Canada only). They are graded as their own group, so the 48-question
 halves stay comparable.
 
-## Version 2 results, 2026-11-03
+## Version 2 results, 2026-11-03 (re-graded)
 
 Eleven arms, every question asked three times with `claude-sonnet-5-5`; the MapleStats arm
-ran a frozen checkout (commit 298692b). Mean correct answers per run:
+ran a frozen checkout (commit 298692b). Mean correct answers per run, by half first:
 
-| Arm | Total (53) | Core (24) | Beyond (24) | Analyst (5) | False claims | Cost per question (USD) |
-| :-- | --: | --: | --: | --: | --: | --: |
-| **MapleStats** | **49.7** | 22.7 | **23.3** | 3.7 | **0** | 0.116 |
-| Pipeworx (StatCan and Bank of Canada servers) | 42 | 22.7 | 16.7 | 2.7 | 7 | 0.074 |
-| OpenMCP | 37.7 | 22 | 12 | 3.7 | 4 | 0.053 |
-| mcp-canada | 33 | 22 | 9.3 | 1.7 | 7 | 0.075 |
-| mcp-statcan | 33 | 22 | 7 | 4 | 6 | 0.034 |
-| statcan-mcp and bank-of-canada-mcp (Kole Harvey; arm `arose26`) | 33 | 22.7 | 7 | 3.3 | 6 | 0.022 |
-| OpenCanadaPublicDataMCP (nine federal servers) | 29 | 21.3 | 6 | 1.7 | 3 | 0.037 |
-| canada-data-agent | 28.7 | 20.7 | 4 | 4 | 5 | 0.026 |
-| CanData-MCP | 27.3 | 20.7 | 4 | 2.7 | 6 | 0.032 |
-| statcan2 | 19.3 | 8.7 | 8.3 | 2.3 | 8 | 0.059 |
-| No data tool | 6 | 2.3 | 2.7 | 1 | 5 | 0.013 |
+| Arm | Core (24) | Beyond (24) | Analyst (5) | Total (53) | Worst–best | False claims | Referrals | USD per question | Sources it claims |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: | :-- |
+| MapleStats | 22.7 | 22.7 | 3.3 | 48.7 | 48–49 | 0 | 0 | 0.116 | All six beyond publishers, StatCan, BoC |
+| Pipeworx (StatCan and Bank of Canada servers) | 22.7 | 17.3 | 2.7 | 42.7 | 41–44 | 4 | 18 | 0.074¹ | StatCan, BoC (its gateway also reaches other sources) |
+| OpenMCP | 22 | 11 | 3 | 36 | 29–41 | 6 | 16 | 0.053 | StatCan, BoC, open.canada.ca catalogue |
+| mcp-canada | 21.3 | 9 | 1 | 31.3 | 28–34 | 2 | 21 | 0.075 | StatCan, BoC, Canadian open-data portals |
+| mcp-statcan | 21.7 | 4.3 | 4 | 30 | 29–31 | 1 | 60 | 0.034 | StatCan |
+| statcan-mcp and bank-of-canada-mcp (Kole Harvey; arm `arose26`) | 22 | 4 | 3.3 | 29.3 | 28–31 | 1 | 57 | 0.022 | StatCan, BoC |
+| OpenCanadaPublicDataMCP (nine federal servers) | 21 | 4.3 | 1.7 | 27 | 25–29 | 7 | 33 | 0.037 | StatCan, BoC, Census, ECCC climate and hydrometric, Health Canada drugs |
+| canada-data-agent | 19.3 | 2 | 4 | 25.3 | 25–26 | 6 | 63 | 0.026 | StatCan |
+| CanData-MCP | 20.7 | 1.7 | 2.7 | 25 | 23–27 | 0 | 57 | 0.032 | StatCan, BoC |
+| statcan2 | 4.7 | 4.3 | 2.3 | 11.3 | 11–12 | 6 | 66 | 0.059 | Its own copy of StatCan tables (to August 2026) |
+| No data tool | 2 | 2 | 0 | 4 | 4 | 10 | 56 | 0.013 | None |
 
-False claims are counted over all three runs (a statement about the data that is
-verifiably false, such as "Statistics Canada publishes this by province"). No arm cited a
-StatCan vector or table that does not exist, except mcp-canada once. Full tables,
+¹ Pipeworx's `ask_pipeworx` tools (used in 92 of its 159 answers) run a model on Pipeworx's
+side; that cost is not in `total_cost_usd`, so its cost per question is understated.
+
+**Read the beyond half with care.** Its sources (the 2021 Census, ECCC, the World Bank, BIS,
+Health Canada's Drug Product Database, IRCC's Express Entry rounds) were chosen from what
+MapleStats covers, and most other arms do not claim them (last column). A low beyond score
+for a StatCan-only server measures scope, not quality; the core half is where the servers
+compete on the same sources. **False claims** are statements about the data that are
+verifiably false (a figure said to be published or not published when the opposite is true,
+a wrong unit, basis or coverage presented as fact), counted over all three runs.
+**Referrals** are answers that gave no figure and sent the user to another publisher's page,
+for a source the arm does not claim; they are counted apart, not as false claims. No arm
+cited a StatCan vector or table that does not exist, except mcp-canada once. Full tables,
 citation precision and per-question outcomes: [`results_v2.md`](results_v2.md).
 
 What it shows:
 
-- **On Statistics Canada's regular tables the servers are close.** Every tool-using arm
-  but statcan2 scores 20.7 to 22.7 of 24. v1's finding holds: on core questions the
-  leading servers are tied.
-- **The difference is everything else.** On the Census, ECCC, World Bank, BIS, Health
-  Canada and IRCC questions MapleStats answers 23.3 of 24; the next best is Pipeworx at
-  16.7, and most arms 4 to 9.
-- **The analyst traps split the field.** Household income was the hardest: every arm,
-  MapleStats included, gave the income survey's economic-family median as household
-  income. MapleStats with the caveats added after these questions (`maplestats-current`,
-  analyst questions only) scores 4.7 of 5.
-- **MapleStats costs the most per question** (USD 0.116 against 0.013 to 0.075): its
-  results carry more text. The payload cut made after these runs (about 45% fewer
-  characters for a search, data and plan sequence) is not in these figures.
+- **On Statistics Canada's regular tables the servers are close.** Every tool-using arm but
+  statcan2 scores 19.3 to 22.7 of 24; v1's finding holds.
+- **Beyond StatCan and the Bank of Canada, coverage decides.** MapleStats answers 22.7 of
+  24, Pipeworx 17.3, OpenMCP 11, the others 1.7 to 9. Most of that gap is that the other
+  servers do not cover those publishers.
+- **The analyst traps split the field,** but five questions is a small base: 1 to 4 of 5
+  across the tool-using arms, MapleStats 3.3.
+- **Cost per question rewards declining.** An answer that declines in one tool call is cheap;
+  the cheapest arms are the ones that answered least. MapleStats cost the most (USD 0.116),
+  because its results carried more text.
 
-After the fixes these questions showed, the same 53 questions were asked three times of
-MapleStats as merged (arm `maplestats_after`, commit 70dfe0d: smaller results, the
-caveats above, metadata notes and `check_answer`), with the same model and grading:
+### MapleStats after these runs (in-sample; not comparable)
 
-| Arm | Total (53) | Core (24) | Beyond (24) | Analyst (5) | False claims | Cost per question (USD) |
-| :-- | --: | --: | --: | --: | --: | --: |
-| MapleStats as tested above | 49.7 | 22.7 | 23.3 | 3.7 | 0 | 0.116 |
-| MapleStats as merged | **51.7** | **23.7** | **23.7** | **4.3** | 0 | **0.074** |
+After the runs, MapleStats was changed with these questions in view: caveats written for
+C-14 (trade basis), C-16 (permits) and the analyst questions after seeing the answers
+(commits 5d15f59, 605dfcd, 5a31394), smaller results, metadata notes and `check_answer`. The
+rule at the top of this file says no fix may be tuned on these questions without a new set to
+check it, so these rows are **in-sample**: they are not comparable with the other arms, and
+they do not show that accuracy rose in general. Measuring that needs a fresh question set.
 
-On the 48 core and beyond questions alone, cost per question fell from USD 0.107 to
-0.069 (36%), with about one more tool call per question (`check_answer`) and answers
-two seconds faster. The other arms were not re-run.
+| Run | Core (24) | Beyond (24) | Analyst (5) | Total (53) | USD per question |
+| :-- | --: | --: | --: | --: | --: |
+| MapleStats as tested above (298692b) | 22.7 | 22.7 | 3.3 | 48.7 | 0.116 |
+| MapleStats as merged (`maplestats_after`, 70dfe0d), in-sample | 24 | 23.3 | 5 | 52.3 | 0.074 |
+| MapleStats with the analyst caveats (`maplestats-current`, analyst only), in-sample | – | – | 5 | – | 0.175 |
 
-How it was graded: the regex grader first, then a blind hand review of the 346 answers it
-marked hallucinated or partial, or abstained on refusal and flag questions. The reviewer
-saw each answer beside the key without the arm's name and graded all answers to a
-question by one rule; every re-grade is in `overrides_v2.json` with its reason. The
-review changed outcomes for every arm, in both directions. It also fixed the key: X-21 and
-X-22 required a second value the question did not ask for (now reference values).
+The gains are on C-14, C-16, A-02, A-03 and A-04, the questions the caveats were written
+for, and on X-04. The cost comparison is valid, since cost does not depend on knowing the
+answers: on the 48 core and beyond questions, cost per question fell from USD 0.107 to 0.069
+(36%), with about half a tool call more per question (4.4 to 4.9) and answers two seconds
+faster. The other arms were not re-run.
 
-Notes on the arms:
+### How it was graded
 
-- statcan2 serves its own copy of StatCan data, which ended in August 2026, so it declined
-  most September questions.
-- OpenCanadaPublicDataMCP's servers do not start on a fresh install (their pyproject
-  allows mcp 2.x, which removed the FastMCP import they use); they were run with
-  `mcp[cli]<2`.
+The regex grader first, then a review of **every** answer in the v2 runs (1,923), one
+question at a time, with the arm's name hidden and the answers shuffled. Each question has
+one written rule applied to every arm; the rules and each re-grade with its reason are in
+`overrides_v2.json` (`"<arm>/<question id>#<repeat>"`, with `outcome`, `reason`,
+`false_claim` as text, and `referral`). Blinding was imperfect: many answers name their own
+scope ("my tools only reach Statistics Canada"), which reveals the kind of arm.
+
+The review changed 280 grades and fixed the key and the grader:
+
+- **Questions keyed to one reading.** X-12 does not name the BIS, so each country's own
+  series (Statistics Canada's 14.68%, the Federal Reserve's 11.32%), labelled, with the right
+  call, is correct. A-04: the Census household median ($96,000, income 2020) answers the
+  question as asked; the income survey's economic-family median alone is partial. C-03,
+  C-11, C-12 and X-24 required values the question did not ask for; those are now reference
+  values, as X-21 and X-22 already were.
+- **Flag questions need the figure.** Where the question asks for a figure (C-24, X-04, X-24,
+  A-02) a flag alone is partial, and A-02 is correct only with SEPH's NAICS 912 figure (the
+  latest month or the 2025 annual average); naming SEPH without it is abstained. X-04's flag
+  no longer matches a dropped tool connection ("connection closed").
+- **Grader bugs.** Numbers separated by ", " were read as one ("July 1, 2026, 399,133"), and
+  a status or a refusal word listed among possibilities ("marketed, cancelled or dormant")
+  passed X-15 and X-16; both are fixed or re-graded.
+- **One rule per question.** Examples: a declined answer that offered the previous month,
+  labelled, is abstained everywhere (it was sometimes graded correct because the old month
+  fell inside the tolerance); a figure recalled from memory and flagged as unverified is graded
+  on its value; unexecuted tool-call text (no-tools arm) is abstained.
+
+The no-tools arm often wrote out tool calls that never ran; those count as declined.
+
+### Setup and infrastructure
+
+- statcan2 serves its own copy of StatCan data, which ended in August 2026 (some tables in
+  July), so it declined most September questions.
+- OpenCanadaPublicDataMCP's servers do not start on a fresh install (their pyproject allows
+  mcp 2.x, which removed the FastMCP import they use); they were run with `mcp[cli]<2`.
 - canada-data-agent caches StatCan responses in PostgreSQL; a local database with its
   `http_cache` table was created, and its code was not changed.
-- OpenMCP's first run stopped at the two-hour job limit after 72 answers; the missing
-  answers were asked again with the same settings and recorded with their pass numbers.
-- With no tools, the model often wrote out tool calls that never ran; those count as
-  declined.
+- OpenMCP's first run stopped at the two-hour job limit after 72 answers; the missing answers
+  were asked again with the same settings and recorded with their pass numbers.
+- Pipeworx's connection dropped or asked to re-authenticate in 2 answers (A-02, A-04); they
+  stand as answered. mcp-canada (2), OpenMCP (3) and the no-tools arm (7) had run errors
+  (timeouts), graded abstained.
+
+### Versions
+
+| Arm | What ran |
+| :-- | :-- |
+| MapleStats | Frozen checkout 298692b; `maplestats_after` 70dfe0d |
+| OpenMCP | Local clone of opendatafyi/openmcp at 0756934 |
+| CanData-MCP | Local clone of the CanData monorepo at 0eded54 |
+| canada-data-agent | Local clone of gcode33/canada-data-agent at 6478ec0 |
+| OpenCanadaPublicDataMCP | Local clone at c0a9b49, with `mcp[cli]<2` |
+| Kole Harvey's statcan-mcp and bank-of-canada-mcp | `npx -y` (latest npm release at run time) |
+| mcp-canada | `uvx mcp-canada` (latest PyPI release at run time) |
+| mcp-statcan, Pipeworx, statcan2 | Hosted endpoints, as served on 2026-11-03 (no version exposed) |
+
+The npx and uvx arms used whatever release was latest on 2026-11-03; a re-run may get a
+different version.
 
 Third-party code was run from local clones or published packages outside this repository
 and is credited here, not copied: OpenMCP (opendatafyi), CanData-MCP (neobenjax,

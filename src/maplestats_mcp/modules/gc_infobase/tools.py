@@ -22,11 +22,12 @@ async def gc_infobase_list_files(query: str | None = None, lang: Lang = "en") ->
     departmental results indicators, or the inventory of federal
     organizations. `query` filters names; `lang="fr"` returns the French
     files.
-    Keywords: GC InfoBase, federal spending, Public Accounts, Main
-    Estimates, departmental results, FTE, programs, Treasury Board.
-    Mots-clés : InfoBase du GC, dépenses fédérales, Comptes publics, Budget
-    principal des dépenses, résultats ministériels, ETP, programmes, budget
-    fédéral.
+    Keywords: GC InfoBase, federal spending by department, Public Accounts,
+    Main Estimates, departmental results, FTE, employees, public servants,
+    programs, Treasury Board.
+    Mots-clés : InfoBase du GC, dépenses fédérales par ministère, Comptes
+    publics, Budget principal des dépenses, résultats ministériels, ETP,
+    effectifs, fonctionnaires, programmes, budget fédéral.
     """
     return await client.list_files(query, lang)
 
@@ -54,10 +55,18 @@ async def gc_infobase_query(
     rows, and provenance.limits names the French file). Amounts and
     counts come back as numbers (listed in numeric_columns); id and code
     columns stay text.
-    Keywords: federal spending, department budget, expenditures,
-    authorities, transfer payments, program spending, FTE, public accounts.
-    Mots-clés : dépenses fédérales, budget ministériel, autorisations,
-    paiements de transfert, dépenses de programme, ETP, comptes publics,
+    For a department's total spending or its number of employees, this is
+    the source; proactive disclosure (disclosure_) covers only contracts,
+    grants, travel and hospitality.
+    Keywords: federal government spending by department, how much a
+    department spent, department budget, expenditures, authorities,
+    transfer payments, program spending, FTE, full-time equivalents,
+    employees by department, number of public servants, headcount,
+    federal workforce, public accounts.
+    Mots-clés : dépenses fédérales, dépenses par ministère, combien un
+    ministère a dépensé, budget ministériel, autorisations, paiements de
+    transfert, dépenses de programme, ETP, équivalents temps plein,
+    effectifs, nombre de fonctionnaires, fonction publique, comptes publics,
     InfoBase du GC.
     """
     return await client.query(

@@ -27,23 +27,28 @@ CheckKind = Literal[
 class CitedFigure(BaseModel):
     """One figure the answer will report, and where it comes from."""
 
-    value: float | None = Field(
+    value: float | str | None = Field(
         default=None,
         description=(
-            "The number as the answer writes it (6.6, 2.06, 20512). Null when the answer "
-            "will say the figure is not published."
+            "The number as the answer writes it (6.6, 2.06, 20512); text ('6.50') keeps "
+            "trailing zeros. It is matched at its written precision: 170 means 169.5 to "
+            "170.5. Null when the answer will say the figure is not published."
         ),
     )
     unit: str | None = Field(
         default=None,
         description=(
             "As written: 'percent', 'thousands of persons', 'billion dollars', "
-            "'chained 2017 dollars', 'index'. A scale word (thousand, million, billion) "
-            "is applied to value."
+            "'chained 2017 dollars', 'index'. A scale word (thousand, million, billion; "
+            "in French milliard = 10^9, billion = 10^12) is applied to value."
         ),
     )
     period: str | None = Field(
-        default=None, description="Reference period: 2024, 2026-09, 2026-Q2 or 2026-09-01."
+        default=None,
+        description=(
+            "Reference period: 2024, 2026-09, 2026-Q2 or 2026-09-01. A year cited for a "
+            "monthly series is compared with that year's average."
+        ),
     )
     geography: str | None = Field(default=None, description="The place the figure is for.")
     vector_id: int | None = Field(
@@ -72,4 +77,8 @@ class AnswerCheck(BaseModel):
         description="Only what is wrong or must be said; empty when the figures check out."
     )
     checked: int = Field(description="Figures re-read from their source.")
+    notes: list[str] = Field(
+        default_factory=list,
+        description="Figures not checked (another source than StatCan or the Bank of Canada).",
+    )
     provenance: Provenance

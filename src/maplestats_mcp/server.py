@@ -480,21 +480,22 @@ How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
 plain-language query (English or French), then call_tool with its name.
-For a whole StatCan table, or hundreds of series, use
-wds_get_full_table_download (a CSV link, not the rows); the vector tools
-return every observation inline and suit a handful of series. Run the Python
-script it returns and read its summary.
+For a French question, pass lang='fr' to plan_query and every tool.
+For a handful of series use the vector tools (every observation inline);
+for averages, sums or rankings over a few series, wds_query_series (where the
+server offers it; off over HTTP by default) runs SQL server-side. For a whole StatCan table, or hundreds of series, use
+wds_get_full_table_download (a CSV link, not the rows) and offer the Python
+script it returns; run it only if the user agrees.
 Cite every figure you report: a StatCan series carries context.citation
 (table, vector, release date) to quote with each value's reference period;
 other results name their source in provenance.
 For a monthly StatCan headline (jobs, trade, permits, sales), report the
 seasonally adjusted series unless the question asks otherwise, and say which.
-After fetching data, offer the analyst scripts: reproduce_code (tool name
-and arguments) returns R, Python, Stata and Julia code, and an Excel Power
-Query, that retrieves and cleans the same data; reproduce_workbook returns
-the rows as a formatted Excel workbook. docs://catalogue describes every
-module in one bilingual line.
-Before replying with figures, call check_answer once and fix what it returns.
+After fetching data, offer reproduce_code (R, Python, Stata, Julia, Excel
+Power Query that re-fetch the same data) and reproduce_workbook (the rows as
+an Excel workbook). docs://catalogue describes every module in one bilingual line.
+Before replying, call check_answer with the StatCan and Bank of Canada
+figures you cite, and fix what it returns.
 Not published? Say so, give the closest published figure labelled, then public
 microdata (statcan_pumf_, own estimate), else a custom tabulation, RTRA or an
 RDC (approval or fee; MapleStats cannot run them).

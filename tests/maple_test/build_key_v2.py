@@ -109,10 +109,9 @@ def core() -> list[dict[str, Any]]:
             eval_type="numeric",
             question="How many jobs did Canada gain or lose in September 2026, according to the "
             "Labour Force Survey?",
-            expected={
-                "change_thousands": change,
-                "employment_sep_2026_thousands": emp["points"][SEP26][0],
-            },
+            expected={"change_thousands": change},
+            # The question asks for the change only; the level is kept for reference.
+            reference={"employment_sep_2026_thousands": emp["points"][SEP26][0]},
             headline=["change_thousands"],
             tolerance="±0.5 thousand; the sign must be right",
             citations=[cite(lfs, emp, SEP26, "1.3.1.1.1.1"), cite(lfs, emp, AUG26, "1.3.1.1.1.1")],
@@ -240,10 +239,9 @@ def core() -> list[dict[str, Any]]:
             eval_type="numeric",
             question="How fast did Canada's real GDP grow in the second quarter of 2026, at an "
             "annualized rate?",
-            expected={
-                "annualized_pct": round(((g2 / g1) ** 4 - 1) * 100, 1),
-                "quarterly_pct": pct(g2, g1),
-            },
+            expected={"annualized_pct": round(((g2 / g1) ** 4 - 1) * 100, 1)},
+            # The question asks for the annualized rate only.
+            reference={"quarterly_pct": pct(g2, g1)},
             headline=["annualized_pct"],
             tolerance="±0.1",
             citations=[
@@ -266,10 +264,11 @@ def core() -> list[dict[str, Any]]:
             question="By how much did Canada's retail sales change in August 2026 from July?",
             expected={
                 "change_pct": pct(retail["points"][AUG26][0], retail["points"][JUL26][0]),
-                "sales_aug_2026_dollars": _dollars(retail, AUG26, 1000),
             },
+            # The question asks for the change only; the level is kept for reference.
+            reference={"sales_aug_2026_dollars": _dollars(retail, AUG26, 1000)},
             headline=["change_pct"],
-            tolerance="±0.1; level ±0.1%",
+            tolerance="±0.1",
             citations=[
                 cite(20100056, retail, AUG26, "1.1.1.2"),
                 cite(20100056, retail, JUL26, "1.1.1.2"),
@@ -509,8 +508,11 @@ def core() -> list[dict[str, Any]]:
                 "starts_saar_sep_2026": starts["points"][SEP26][0] * 1000,
             },
             headline=[],
-            tolerance="Pass only if the annual-rate problem is stated",
+            tolerance="Correct: states the annual-rate problem and gives the rate itself; the "
+            "flag without the rate is partial",
             flag_pattern=r"annual(?:ized)? rate|already (?:an )?annual|SAAR|at annual rates?",
+            # The question asks for an estimate, so the honest answer includes the rate.
+            figure_required=True,
             citations=[cite(34100158, starts, SEP26, "1")],
             traps=["CMHC and StatCan publish monthly starts as a seasonally adjusted annual rate."],
         )

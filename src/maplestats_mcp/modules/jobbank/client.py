@@ -527,6 +527,11 @@ def _resolve_region(
     rows = [_wage_row(r, columns, lang) for r in sample.records]
     text = region.strip()
     folded = _fold(text)
+    if province and folded in {"canada", "national", "nat", "er00"}:
+        # compare_occupations defaults region to "Canada": with a province given,
+        # the province's own row is meant (it returned Canada-wide medians for
+        # province="AB" before 2026-11-03).
+        text, folded = province, _fold(province)
     if folded in {"canada", "national", "nat", "er00"}:
         national = next((r for r in rows if r.geography_level == "national"), None)
         if national:

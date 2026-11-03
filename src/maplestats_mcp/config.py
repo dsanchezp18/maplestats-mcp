@@ -308,6 +308,43 @@ def get_duckdb_memory_limit() -> str | None:
     return raw or None
 
 
+def get_duckdb_temp_dir() -> Path:
+    """The folder under which DuckDB spills past its memory limit.
+
+    DuckDB's default is `.tmp` in the working directory, which in the Docker
+    image is /app, owned by root, so spills failed there. Each connection gets
+    its own subfolder (shared/duck.py).
+    """
+    raw = os.environ.get("MAPLE_DUCKDB_TEMP_DIR", "").strip()
+    return Path(raw) if raw else Path(tempfile.gettempdir()) / "maplestats-duckdb"
+
+
+def get_duckdb_temp_max_bytes() -> int:
+    """Disk one DuckDB connection may spill to (MAPLE_DUCKDB_TEMP_MAX_GB, default 1)."""
+    value = _env_float("MAPLE_DUCKDB_TEMP_MAX_GB", 1.0)
+    return int(min(1024.0, max(0.1, value)) * 1024**3)
+
+
+def get_query_memory_mb() -> int:
+    """Memory one wds_query_series query may use, in MB (MAPLE_QUERY_MEMORY_MB, default 256).
+
+    The query runs in its own process whose address space is capped at its size
+    after loading `obs` plus this (Linux); DuckDB's memory_limit there is half of it.
+    """
+    value = _env_int("MAPLE_QUERY_MEMORY_MB", 256)
+    return min(8192, max(64, value))
+
+
+def get_query_max_concurrent() -> int:
+    """wds_query_series processes that may run at once (MAPLE_QUERY_MAX_CONCURRENT, default 2).
+
+    Each may use MAPLE_QUERY_MEMORY_MB on top of about 70 MB of its own; the
+    others wait for a free one inside their tool timeout.
+    """
+    value = _env_int("MAPLE_QUERY_MAX_CONCURRENT", 2)
+    return min(64, max(1, value))
+
+
 def get_ip_horizons_cache_dir() -> Path:
     """Where CIPO IP Horizons patent tables are kept as Parquet for queries.
 

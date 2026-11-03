@@ -852,7 +852,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "cachetools", specifier = ">=5.3.0" },
     { name = "defusedxml", specifier = ">=0.7.1" },
-    { name = "duckdb", specifier = ">=1.5.5" },
+    { name = "duckdb", specifier = ">=2.0.0" },
     { name = "fastmcp", specifier = ">=4.0.3,<4.3" },
     { name = "gtfs-realtime-bindings", specifier = ">=3.0.0" },
     { name = "h2", specifier = ">=4.1.0" },

@@ -4,11 +4,14 @@ The WDS and Valet reads are replaced by fakes holding values read live on
 2026-11-03: Canada's unemployment rate (v2062815, 14-10-0287) 6.4 for 2026-08
 and 6.5 for 2026-09, Alberta's member 10 in the same table, LFS employment
 21,104.8 thousand, 11-10-0090 (Canada only, Canadian Income Survey), the PEI
-2024 MBM rate flagged E in 11-10-0135, and 12-10-0011 exports unadjusted.
+2024 MBM rate flagged E in 11-10-0135, 12-10-0011 exports unadjusted, the CPI
+(v41690973, 18-10-0004) for each month of 2024 and 2026-09, and quarterly GDP
+(v62305783, 36-10-0104) 3,437,720 million for 2026-Q2.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from types import SimpleNamespace
 
@@ -25,7 +28,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     VectorSeries,
 )
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
 
 
 def _members(*names: tuple[int, str]) -> list[dict]:
@@ -34,13 +37,14 @@ def _members(*names: tuple[int, str]) -> list[dict]:
 
 LFS = {
     "productId": "14100287",
+    "cubeTitleEn": "Labour force characteristics by province, monthly, seasonally adjusted",
     "frequencyCode": 6,
     "surveyCode": ["3701"],
     "dimension": [
         {
             "dimensionPositionId": 1,
             "dimensionNameEn": "Geography",
-            "member": _members((1, "Canada"), (10, "Alberta")),
+            "member": _members((1, "Canada"), (7, "Ontario"), (10, "Alberta")),
         },
         {
             "dimensionPositionId": 2,
@@ -86,7 +90,46 @@ TRADE = {
     ],
     "footnote": [],
 }
-CUBES = {14100287: LFS, 11100090: DISABILITY, 12100011: TRADE, 14100223: LFS}
+CPI = {
+    "productId": "18100004",
+    "frequencyCode": 6,
+    "surveyCode": ["2301"],
+    "dimension": [
+        {
+            "dimensionPositionId": 1,
+            "dimensionNameEn": "Geography",
+            "member": _members((2, "Canada")),
+        },
+        {
+            "dimensionPositionId": 2,
+            "dimensionNameEn": "Products and product groups",
+            "member": _members((2, "All-items")),
+        },
+    ],
+    "footnote": [],
+}
+GDP = {
+    "productId": "36100104",
+    "frequencyCode": 9,
+    "surveyCode": ["1901"],
+    "dimension": [
+        {
+            "dimensionPositionId": 1,
+            "dimensionNameEn": "Geography",
+            "member": _members((1, "Canada")),
+        }
+    ],
+    "footnote": [],
+}
+CUBES = {
+    14100287: LFS,
+    11100090: DISABILITY,
+    12100011: TRADE,
+    14100223: LFS,
+    18100004: CPI,
+    36100104: GDP,
+}
+CPI_2024 = (158.3, 158.8, 159.8, 160.6, 161.5, 161.4, 162.1, 161.8, 161.1, 161.8, 161.8, 161.2)
 
 # vector -> (product id, coordinate, scalar code, unit, [(period, value, status, security)])
 SERIES = {
@@ -103,6 +146,23 @@ SERIES = {
     3: (11100090, "1", 0, "Percent", [(date(2024, 1, 1), None, 8, 0)]),
     87008868: (12100011, "1.0.0.1", 6, "Dollars", [(date(2026, 8, 1), 73826.3, 0, 0)]),
     9: (14100223, "1", 0, "Persons", [(date(2026, 8, 1), 18368488.0, 0, 0)]),
+    41690973: (
+        18100004,
+        "2.2",
+        0,
+        "2002=100",
+        [(date(2024, m + 1, 1), v, 0, 0) for m, v in enumerate(CPI_2024)]
+        + [(date(2026, 9, 1), 170.0, 0, 0)],
+    ),
+    # A monthly series with one month flagged E (status 7) in 2024.
+    12: (
+        14100287,
+        "1.7.0.0.0.1",
+        0,
+        "Percent",
+        [(date(2024, m, 1), 6.0, 7 if m == 3 else 0, 0) for m in range(1, 13)],
+    ),
+    62305783: (36100104, "1", 6, "Dollars", [(date(2026, 4, 1), 3437720.0, 0, 0)]),
 }
 
 
@@ -281,18 +341,78 @@ async def test_not_published_gives_the_access_ladder():
     for words in ("custom tabulation", "RTRA", "RDC", "MapleStats cannot run them"):
         assert words in fix
     assert "statcan_surveys_search_rdc_holdings" in fix
-    # Without a known gap, the next step is the PUMF codebook.
-    _, other = await _check(
+    # 11-10-0090 lacks Alberta for every question, but only disability poverty
+    # is known to be published nowhere else: low income is looked for in other tables.
+    problems, other = await _check(
         "What is the low income rate in Alberta?",
         {"value": 13.0, "period": "2024", "product_id": "11-10-0090", "coordinate": "1"},
     )
-    assert "statcan_pumf_get_codebook" in other.problems[0].fix
+    assert problems == [(0, "geography")]
+    assert "has no Alberta member" in other.problems[0].problem
+    assert "wds_search_cubes" in other.problems[0].fix
+    assert "custom tabulation" not in other.problems[0].fix
     _, french = await _check(
         "Taux de pauvreté des personnes handicapées en Alberta ?",
         {"value": 13.0, "period": "2024", "product_id": "11-10-0090", "coordinate": "1"},
         lang="fr",
     )
     assert "totalisation personnalisée" in french.problems[0].fix
+
+
+async def test_known_unpublished_without_a_pumf_gap_points_to_the_codebook(monkeypatch):
+    monkeypatch.setattr(client, "_KNOWN_UNPUBLISHED", {11100090: re.compile("low income")})
+    problems, result = await _check(
+        "What is the low income rate in Alberta?",
+        {"value": 13.0, "period": "2024", "product_id": "11-10-0090", "coordinate": "1"},
+    )
+    assert problems == [(0, "not_published")]
+    assert "statcan_pumf_get_codebook" in result.problems[0].fix
+
+
+async def test_a_place_another_table_has_is_not_called_unpublished():
+    # 14-10-0287 has no Toronto: 14-10-0459/0460 do (rule lfs-subprovincial-moving-averages).
+    problems, result = await _check(
+        "Unemployment rate in Toronto?",
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+    )
+    assert problems == [(0, "geography")]
+    problem = result.problems[0]
+    assert "Table 14-10-0287 has no Toronto member." in problem.problem
+    query = "wds_search_cubes 'Labour force characteristics census metropolitan area'"
+    assert query in problem.fix
+    assert "14-10-0459" in problem.fix and "lfs-subprovincial-moving-averages" in problem.fix
+    for words in ("custom tabulation", "RTRA", "not published and label"):
+        assert words not in problem.fix
+
+
+async def test_canadian_in_the_question_does_not_add_canada():
+    problems, result = await _check(
+        "What are the average weekly earnings of Canadian workers in Alberta?",
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+    )
+    assert problems == [(0, "geography")]
+    assert "(Alberta)" in result.problems[0].fix
+    problems, _ = await _check(
+        "What is the unemployment rate for Canadians?",
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+    )
+    assert problems == []
+
+
+async def test_each_figure_is_judged_against_its_own_place():
+    question = "Unemployment rate in Ontario and employment in Toronto?"
+    problems, result = await _check(
+        question,
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815, "geography": "Canada"},
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815, "geography": "Toronto"},
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+    )
+    assert problems == [(1, "geography"), (2, "geography")]
+    labelled, unlabelled = result.problems
+    assert "labelled Toronto" in labelled.problem and "no Toronto member" in labelled.problem
+    assert "Toronto" in unlabelled.problem and "Ontario" in unlabelled.problem
+    assert "coordinate 7.7.0.0.0.1 (Ontario)" in unlabelled.fix
+    assert "wds_search_cubes" in unlabelled.fix
 
 
 async def test_quality_flags():
@@ -333,8 +453,15 @@ async def test_surveys_a_rule_says_not_to_compare():
 
 
 async def test_figure_without_source_and_bad_input():
-    problems, _ = await _check("x", {"value": 1.0})
-    assert problems == [(0, "series")]
+    # Another source (CMHC rent) is not a problem to fix: a note says it was not checked.
+    problems, result = await _check("Rent in Toronto?", {"value": 2500, "unit": "dollars"})
+    assert problems == []
+    assert result.checked == 0
+    assert result.notes == [
+        "Figure 0 not checked: check_answer covers StatCan and Bank of Canada figures."
+    ]
+    problems, _ = await _check("x", {"value": "abc", "vector_id": 2062815})
+    assert problems == [(0, "value")]
     with pytest.raises(InvalidInput):
         await client.check_answer("x", [], False, "en")
     with pytest.raises(InvalidInput):
@@ -362,3 +489,122 @@ async def test_bank_of_canada_series(monkeypatch):
         "USD/CAD today?", {"value": 1.30, "period": "2026-10-01", "boc_series": "FXUSDCAD"}
     )
     assert problems == [(0, "value"), (0, "newer_period")]
+
+
+async def test_whole_numbers_are_precise_to_the_unit():
+    # 170 means 169.5 to 170.5: trailing zeros of a whole number are not rounding.
+    def wrong(value, published, unit=None):
+        figure = CitedFigure(value=value, unit=unit)
+        return client._value_problems(0, figure, published, 1, None, "2024", None, "en")
+
+    assert wrong(170, 174.9) and wrong(1000, 1400) and wrong(20000, 24000)
+    assert not wrong(170, 169.8) and not wrong(170, 170.0)
+    assert wrong("170.0", 169.8) and not wrong("170.0", 170.04)
+    assert not wrong("6.50", 6.5) and wrong("6.50", 6.54)
+    # A scale word does not widen the match beyond 5% of the value.
+    assert wrong(2, 2.4e6, "million") and not wrong(2, 2.05e6, "million")
+    assert not wrong(2.06, 2_056_453e6, "trillion dollars")
+    problems, _ = await _check(
+        "How many people are employed in Canada?",
+        {"value": 20000, "unit": "thousands of persons", "period": "2026-09", "vector_id": 2062811},
+    )
+    assert problems == [(0, "value")]
+    problems, _ = await _check(
+        "How many people are employed in Canada?",
+        {"value": "21,104.8", "unit": "thousands", "period": "2026-09", "vector_id": 2062811},
+    )
+    assert problems == []
+
+
+def test_number_text_and_scale_words_by_language():
+    assert client._number("2,06", "fr") == (2.06, 0.01)
+    assert client._number("2,056", "en") == (2056.0, 1.0)
+    assert client._number("1 234,5", "fr") == (1234.5, 0.1)
+    assert client._number(6.5, "en") == (6.5, 0.1)
+    with pytest.raises(ValueError):
+        client._number("n/a", "en")
+    assert client._scale_word("billion dollars", "en") == 1e9
+    assert client._scale_word("billions de dollars", "fr") == 1e12
+    assert client._scale_word("milliards de dollars", "fr") == 1e9
+    assert client._scale_word("milliers de milliards", "fr") == 1e12
+    assert client._scale_word("billions de milliards", "fr") == 1e21
+    assert client._scale_word("M$", "fr") == 1e6
+    assert client._scale_word("$M", "en") == 1e6
+    assert client._scale_word("m", "en") is None
+    assert client._scale_word("km", "en") is None
+
+
+async def test_french_billion_is_ten_to_the_twelfth():
+    problems, _ = await _check(
+        "PIB du Canada au deuxième trimestre 2026 ?",
+        {
+            "value": "3,44",
+            "unit": "billions de dollars",
+            "period": "2026-Q2",
+            "vector_id": 62305783,
+        },
+        lang="fr",
+    )
+    assert problems == []
+    problems, _ = await _check(
+        "Canada's GDP in 2026-Q2?",
+        {"value": 3.44, "unit": "trillion dollars", "period": "2026-Q2", "vector_id": 62305783},
+    )
+    assert problems == []
+
+
+async def test_a_year_cited_for_a_monthly_series_is_the_year():
+    problems, result = await _check(
+        "CPI in 2024?", {"value": 999, "period": "2024", "vector_id": 41690973}
+    )
+    assert problems == [(0, "value")]
+    assert result.problems[0].problem == (
+        "The 2024 average of the 12 published values (158.3 to 162.1) is 160.9, not 999."
+    )
+    assert "average of 12 values" in result.problems[0].fix
+    problems, _ = await _check(
+        "CPI in 2024?", {"value": 160.9, "period": "2024", "vector_id": 41690973}
+    )
+    assert problems == []
+    problems, result = await _check(
+        "CPI in 2024?", {"value": 161.2, "period": "2024", "vector_id": 41690973}
+    )
+    assert problems == [(0, "period")]
+    assert result.problems[0].problem == (
+        "161.2 is the value for 2024-12; the 2024 average is 160.9."
+    )
+    # The newer-period check works at the cited granularity: 2026 is newer than 2024.
+    problems, result = await _check(
+        "What is Canada's CPI?", {"value": 160.9, "period": "2024", "vector_id": 41690973}
+    )
+    assert problems == [(0, "newer_period")]
+    assert "2026-09 (170)" in result.problems[0].problem
+
+
+async def test_flags_are_read_for_every_month_of_a_cited_year():
+    problems, result = await _check(
+        "Unemployment rate in 2024", {"value": 6.0, "period": "2024", "vector_id": 12}
+    )
+    assert problems == [(0, "quality_flag")]
+    assert "2024-03" in result.problems[0].problem
+
+
+async def test_one_bad_vector_does_not_lose_the_others(monkeypatch):
+    real = context.series_info_raw
+
+    async def infos(ids):
+        # WDS answers HTTP 500 for the whole batch when one id does not exist.
+        if 999999999999 in ids:
+            raise UpstreamUnavailable("getSeriesInfoFromVector failed with HTTP 500.")
+        return await real(ids)
+
+    monkeypatch.setattr(context, "series_info_raw", infos)
+    problems, result = await _check(
+        "What is Canada's unemployment rate?",
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+        {"value": 1, "period": "2026-09", "vector_id": 999999999999},
+    )
+    assert problems == [(1, "series")]
+    assert result.checked == 1
+    with pytest.raises(UpstreamUnavailable):
+        await _check("x", {"value": 1, "vector_id": 999999999999})
