@@ -48,6 +48,13 @@ class Provenance(BaseModel):
         description="Any cap or truncation applied, e.g. 'rows capped at 500'.",
     )
     cached: bool = Field(description="Whether this result was served from MapleStats's cache.")
+    lang: str | None = Field(
+        default=None,
+        description=(
+            "The language MapleStats wrote this result's own text in ('en' or 'fr'): notes, "
+            "limits, caveats, labels. Values and the publisher's own text are as published."
+        ),
+    )
     schema_name: str = Field(
         description="Name of this result's schema, e.g. 'statcan.CubeSummary'."
     )

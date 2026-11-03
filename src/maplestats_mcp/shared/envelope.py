@@ -76,6 +76,7 @@ def make_provenance(
         coverage=coverage,
         limits=limits,
         cached=cached,
+        lang=lang,
         schema_name=schema_name,
         licence=terms,
         commercial_use=use,

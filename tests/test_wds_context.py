@@ -330,7 +330,12 @@ def test_error_hints_by_class_and_cause():
     assert isinstance(plain, UpstreamUnavailable) and isinstance(plain, ToolError)
     assert "Solution" in str(plain)
     assert "search_tools" in str(with_hint(NotFoundError("Unknown tool: 'x'"), "en"))
-    assert with_hint(NotFound("Fix: already said"), "en") is None
+    # A module's own fix is kept, and the code is added once.
+    coded = with_hint(NotFound("Fix: already said"), "en")
+    assert coded is not None and str(coded) == "[not_found] Fix: already said"
+    assert with_hint(coded, "en") is None
+    assert str(hinted).startswith("[not_found] ")
+    assert str(plain).startswith("[upstream_unavailable] ")
 
 
 def test_caveats_follow_the_result_tables():

@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from _smoke_common import skip_outage
+from _smoke_common import skip_outage, verdict
 
 from maplestats_mcp.modules.statcan.geo import client
 from maplestats_mcp.shared.errors import (
@@ -171,8 +171,7 @@ async def main() -> int:
     except (UpstreamError, UpstreamUnavailable) as exc:
         skip_outage("the StatCan geo service", exc)
 
-    print("\nSTATCAN GEO SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
-    return 0 if ok else 1
+    return verdict("STATCAN GEO", ok)
 
 
 if __name__ == "__main__":

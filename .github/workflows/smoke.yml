@@ -78,12 +78,46 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # The Maple Test answer keys rebuilt from the live sources. A failure means a
+  # person has to look: a published value was revised (population and wages
+  # are), or a trap no longer holds (a refused period has been released), or a
+  # source moved. The keys' own --check prints which question changed.
+  answer-keys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
+      - run: uv sync --locked
+      - name: Check the Maple Test keys against the sources
+        run: |
+          status=0
+          for key in build_key build_key_v2; do
+            echo "== tests.maple_test.$key --check"
+            uv run python -m "tests.maple_test.$key" --check 2>&1 | tee -a keys.log || status=1
+          done
+          exit $status
+        shell: bash -o pipefail {0}
+      - name: Summarize drift
+        if: failure()
+        run: |
+          {
+            echo "### Maple Test answer keys no longer match the sources"
+            echo '```'
+            grep -v '^\s*$' keys.log | tail -n 40 || echo "(no log captured)"
+            echo '```'
+            echo "Rebuild the key that drifted, read the diff, and re-grade the runs it affects."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # Opens one issue per breakage instead of relying on GitHub's default
   # email, which only reaches whoever last edited the cron line. Later
   # failing runs comment on the open issue rather than opening new ones.
   alert:
-    needs: smoke
-    if: ${{ always() && needs.smoke.result == 'failure' }}
+    needs: [smoke, answer-keys]
+    if: ${{ always() && (needs.smoke.result == 'failure' || needs.answer-keys.result == 'failure') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

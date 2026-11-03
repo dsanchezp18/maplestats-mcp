@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from _smoke_common import skip_outage
+from _smoke_common import skip_outage, verdict
 
 from maplestats_mcp.modules.nwt_stats import client, constants
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
@@ -102,8 +102,7 @@ async def main() -> int:
                     failures += fail("census age file has no rows")
     except (UpstreamError, UpstreamUnavailable) as exc:
         skip_outage(SOURCE, exc)
-    print("NWT STATS SMOKE TEST", "FAILED" if failures else "PASSED")
-    return 1 if failures else 0
+    return verdict("NWT STATS", not failures)
 
 
 if __name__ == "__main__":

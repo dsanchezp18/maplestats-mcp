@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from _smoke_common import skip_outage
+from _smoke_common import skip_outage, verdict
 
 from maplestats_mcp.modules.statcan.indicators import client
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
@@ -56,8 +56,7 @@ async def main() -> int:
     except (UpstreamError, UpstreamUnavailable) as exc:
         skip_outage(SOURCE, exc)
 
-    print("\nSTATCAN INDICATORS SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
-    return 0 if ok else 1
+    return verdict("STATCAN INDICATORS", ok)
 
 
 if __name__ == "__main__":

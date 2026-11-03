@@ -142,12 +142,40 @@ def hint_for(exc: BaseException, lang: str) -> str:
     return french_spacing(_FALLBACK[1]) if french else _FALLBACK[0]
 
 
+# A stable, machine-readable code for each error class, first in the message: an agent can
+# branch on "[not_found]" without parsing the sentence, and MCP clients show the text.
+# Most specific first, as in _HINTS.
+_CODES: tuple[tuple[type[BaseException], str], ...] = (
+    (DataLocked, "data_locked"),
+    (UpstreamUnavailable, "upstream_unavailable"),
+    (InvalidInput, "invalid_input"),
+    (NotFound, "not_found"),
+    (UpstreamError, "upstream_error"),
+    (NotFoundError, "unknown_tool"),
+)
+
+
+def error_code(exc: BaseException) -> str:
+    chain = _chain(exc)
+    for cls, code in _CODES:
+        if any(isinstance(item, cls) for item in chain):
+            return code
+    return "error"
+
+
 def with_hint(exc: BaseException, lang: str) -> BaseException | None:
-    """`exc` again with a next step appended, or None when it already has one."""
-    message = str(exc)
-    if any(marker in message for marker in _MARKERS):
+    """`exc` again with its code first and a next step last, or None when it has both.
+
+    call_tool runs its target through this middleware a second time; the code and the fix
+    are each added once.
+    """
+    message = str(exc).strip()
+    coded = message.startswith("[")
+    hinted = any(marker in message for marker in _MARKERS)
+    if coded and hinted:
         return None
-    text = f"{message.rstrip()} {hint_for(exc, lang)}".strip()
+    text = message if hinted else f"{message} {hint_for(exc, lang)}"
+    text = text if coded else f"[{error_code(exc)}] {text}"
     cls = type(exc)
     if isinstance(exc, ToolError):
         return cls(text)
@@ -159,7 +187,7 @@ def with_hint(exc: BaseException, lang: str) -> BaseException | None:
 
 
 class ErrorHintMiddleware(Middleware):
-    """Append a suggested fix, by error class, to any tool error that lacks one."""
+    """Put a code first and a suggested fix last on every tool error, each once."""
 
     async def on_call_tool(self, context: MiddlewareContext, call_next: CallNext) -> Any:
         try:
