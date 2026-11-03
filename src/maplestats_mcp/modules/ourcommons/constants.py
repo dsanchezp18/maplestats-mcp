@@ -31,8 +31,10 @@ ROLES_URL = _ByLang(
 STANDINGS_URL = _ByLang(
     SITE + "/Members/en/party-standings/XML", SITE_FR + "/deputes/fr/position-des-partis/XML"
 )
+# English moved from /Members/en/ministries to /members/en/ministry (found 2026-11-03 through
+# the French page's language switch); the open-data page still links the old address.
 MINISTRY_URL = _ByLang(
-    SITE + "/Members/en/ministries/XML", SITE_FR + "/deputes/fr/conseil-des-ministres/XML"
+    SITE + "/members/en/ministry/xml", SITE_FR + "/deputes/fr/conseil-des-ministres/XML"
 )
 OPEN_DATA_PAGE = SITE + "/en/open-data"
 
