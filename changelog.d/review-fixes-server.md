@@ -28,6 +28,6 @@
 
 ### Changed
 
-- CI tests Python 3.15, which both Docker images run since a Dependabot update; the package
-  lists 3.15 as supported. The release workflow refuses a tag on a commit that is not on
-  `main`.
+- CI runs the test suite in the Python 3.15 image that both Docker images use since a
+  Dependabot update, and the package lists 3.15 as supported. The release workflow refuses a
+  tag on a commit that is not on `main`.
