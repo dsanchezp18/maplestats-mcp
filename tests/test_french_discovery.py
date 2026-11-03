@@ -52,6 +52,7 @@ CASES = [
     # Plurals and missing accents, fixed by shared/search.py (2026-09-24).
     ("loyers", "cmhc_get_table_data"),
     ("code R reproductible script Stata", "reproduce_code"),
+    ("vérifier les chiffres de ma réponse", "check_answer"),
     (
         "rencontres de lobbyistes avec les ministères en Colombie-Britannique",
         "bc_lobbyists_search_activity_reports",
@@ -85,6 +86,9 @@ CASES = [
     ("tableaux de données SCHL caractéristiques des ménages", "cmhc_dt_list_tables"),
     ("fichier Excel des tableaux de données SCHL", "cmhc_dt_get_download_url"),
     ("dépenses fédérales comptes publics ministère", "gc_infobase_query"),
+    ("contrats fédéraux attribués à un fournisseur", "disclosure_search_contracts"),
+    ("frais de déplacement des ministres", "disclosure_search_travel"),
+    ("frais d'accueil des sous-ministres", "disclosure_search_hospitality"),
     ("débit des pipelines Régie de l'énergie", "cer_query_file"),
     ("enquête sur la consommation d'énergie des ménages", "nrcan_energy_use_list_products"),
     ("surdoses d'opioïdes décès par province", "phac_infobase_query"),

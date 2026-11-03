@@ -202,14 +202,14 @@ by a person
 
 ## What it covers
 
-380 tools in 75 modules. Run `docs://catalogue` for the full, bilingual list.
+395 tools in 78 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
 | Statistics Canada | `wds_`, `sdmx_`, `sdmx_space_`, `rdaas_`, `cimt_`, `statcan_*` | Tables and series, the extra SDMX spaces (energy information, shared data), classifications, Census Profiles 2001–2021, public use microdata (codebooks, weighted tables), merchandise trade by commodity (CIMT), open databases (LODE), The Daily, delta files, indicators, surveys, census geography |
 | Bank of Canada | `boc_` | Valet series, groups, observations |
 | CMHC | `cmhc_`, `cmhc_dt_` | Housing Market Information Portal and Excel data tables |
-| Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `cbsa_tariff_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `borealis_`, `isc_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, energy, mineral production, oceans, grain, forestry, immigration, border wait times, customs tariff rates, budgets, mergers, elections, earthquakes, university-library data tables, First Nation profiles, registered population and drinking water advisories |
+| Federal agencies | `eccc_`, `eccc_coverages_`, `eccc_datamart_`, `ised_*`, `gazette_`, `tc_recalls_`, `recalls_`, `cdc_`, `cfia_`, `fcac_`, `finance_`, `cihi_`, `phac_infobase_`, `hc_*`, `pmra_`, `pmprb_`, `gc_infobase_`, `disclosure_`, `cer_`, `nrcan_*`, `dfo_iwls_`, `cgc_`, `nfd_`, `ircc_*`, `cbsa_`, `cbsa_tariff_`, `pbo_`, `competition_bureau_`, `elections_results_`, `elections_financial_returns_`, `cra_digital_economy_registry_`, `earthquakes_`, `borealis_`, `isc_` | Weather, climate and gridded climate projections, pollutant releases and emissions (NPRI, GHGRP, NAPS), corporations and IP, regulations, recalls, dairy, animal disease, consumer banking, federal and provincial fiscal tables, health, drugs, natural health products, medical devices, adverse reactions, pesticides, spending, federal contracts, grants and travel and hospitality disclosures, energy, mineral production, oceans, grain, forestry, immigration, border wait times, customs tariff rates, budgets, mergers, elections, earthquakes, university-library data tables, First Nation profiles, registered population and drinking water advisories |
 | Wildland fire | `cwfis_`, `nrcan_nbac_`, `ab_wildfire_` | NRCan's Canadian Wildland Fire Information System (satellite hotspots, fire danger, weather stations), burned areas, and Alberta Wildfire's live fire status |
 | Electricity | `electricity_ontario_`, `electricity_quebec_`, `oeb_` | IESO (Ontario) demand, generation and prices; Hydro-Québec demand, generation and trade (CC BY-NC 4.0: credit Hydro-Québec, non-commercial use only); Ontario Energy Board datasets |
 | Parliament and elected officials | `ourcommons_`, `senate_`, `represent_` | MPs and their roles, party standings, Cabinet, Senate votes; elected officials and districts for a postal code via Open North's Represent (unofficial) |
@@ -228,8 +228,9 @@ Not covered: CAPP's Statistics Handbook, Petrinex and Payments Canada were
 not built, because their terms or download hosts do not permit automated
 access. CanadaBuys, OpenParliament.ca and the Toronto Transit Commission's
 own schedule download were removed for the same reason (the TTC schedule is
-still served from Statistics Canada's national transit database), and the
-Saskatchewan GeoHub portal was removed. The 2006-2016 census data tables and the 2016 Census Profile service were removed because Statistics Canada's www12 host answers automated clients with a bot challenge, 503 errors or timeouts (the 2021 profile and the WDS tables remain). Justice Laws (federal statutes and
+still served from Statistics Canada's national transit database). The
+City of Hamilton's portal and Niagara Open Data (niagaraopendata.ca) are left
+out because they answer automated requests with a Cloudflare challenge. The 2006-2016 census data tables and the 2016 Census Profile service were removed because Statistics Canada's www12 host answers automated clients with a bot challenge, 503 errors or timeouts (the 2021 profile and the WDS tables remain). Justice Laws (federal statutes and
 regulations) is out of scope, because legislation text is not data this
 server carries, and the Saskatchewan Bureau of Statistics' Provincial
 Economic Accounts were not built: they are under Crown copyright, for

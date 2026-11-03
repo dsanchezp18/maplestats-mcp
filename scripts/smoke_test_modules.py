@@ -1261,6 +1261,31 @@ STEPS: list[Step] = [
         {"election_type": "bogus"},
         expect_error="election_type",
     ),
+    # Answer check: a clean figure gives no problem (the CPI is never revised, and
+    # the question names its year, so no newer period is reported); a table
+    # published for Canada only, asked about Alberta, gives the not-published route.
+    Step(
+        "answer_check",
+        "check_answer",
+        {
+            "question": "What was Canada's CPI in January 2020?",
+            "figures": [
+                {"vector_id": 41690973, "value": 136.8, "unit": "index", "period": "2020-01"}
+            ],
+        },
+        lambda data: data["problems"] == [] and data["checked"] == 1,
+    ),
+    Step(
+        "answer_check",
+        "check_answer",
+        {
+            "question": "What is the poverty rate of persons with disabilities in Alberta?",
+            "figures": [
+                {"product_id": "11-10-0090", "coordinate": "1.1.1.1.4.2", "period": "2024"}
+            ],
+        },
+        lambda data: [p["check"] for p in data["problems"]] == ["not_published"],
+    ),
     # Query planner (no network; checks registration through the server)
     Step(
         "planner",

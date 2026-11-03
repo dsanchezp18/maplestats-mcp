@@ -351,6 +351,28 @@ FeatureServer/MapServer services live on a government domain
 checks for `/rest/services/` in the URL, not an `arcgis.com` domain, because
 of this. Verified against live responses.
 
+Removed on 2026-10-03 and added back on 2026-11-03 after the terms were read
+again:
+
+- saskatchewan.ca's Terms of Use (https://www.saskatchewan.ca/terms-of-use)
+  say they do not apply to sub-sites such as `SERVICENAME.saskatchewan.ca`, and
+  contain nothing on automated access. The GeoHub's API answers without a
+  challenge.
+- Item licences (all 129 datasets read 2026-11-03): 110 carry the Government
+  of Saskatchewan Standard Unrestricted Use Data Licence (Version 2.0)
+  (https://gisappl.saskatchewan.ca/Html5Ext/Resources/GOS_Standard_Unrestricted_Use_Data_Licence_v2.0.pdf),
+  which grants use "including for commercial purposes" with the attribution
+  "Contains information licensed under the Government of Saskatchewan Standard
+  Unrestricted Use Data Licence (Version 2.0)."; 12 the GeoBase Unrestricted
+  Use Licence / Open Government Licence - Canada; 3 only a disclaimer; 4 none.
+- Items without a licence fall back on saskatchewan.ca/copyright: "Unless
+  otherwise noted, materials may be reproduced for non-commercial purposes"
+  and commercial reproduction needs written permission. The portal's note says
+  so; results carry the per-record licence (`varies`).
+
+Smoke test passed 2026-11-03 (search, detail, File Geodatabase, Shapefile, CSV
+and Feature Service download links, feature query). Content is English-only.
+
 ## New Brunswick
 
 **Status:** Shipped.

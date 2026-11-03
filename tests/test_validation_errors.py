@@ -36,7 +36,7 @@ async def _error_text(name: str, arguments: dict, *, via_call_tool: bool) -> str
 )
 async def test_bad_arguments_are_one_clean_line(name, arguments, expected, via_call_tool):
     text = await _error_text(name, arguments, via_call_tool=via_call_tool)
-    assert text.startswith(f"Invalid input: {name}: ")
+    assert text.startswith(f"[invalid_input] Invalid input: {name}: ")
     assert expected in text
     assert "pydantic" not in text and "validation error" not in text
     assert "\n" not in text
@@ -54,7 +54,9 @@ async def test_french_call_gets_a_french_message():
     text = await _error_text(
         "fcac_search_credit_cards", {"province": "ZZ", "lang": "fr"}, via_call_tool=False
     )
-    assert text.startswith("Entrée invalide : fcac_search_credit_cards : province doit valoir")
+    assert text.startswith(
+        "[invalid_input] Entrée invalide : fcac_search_credit_cards : province doit valoir"
+    )
     assert "(reçu 'ZZ')" in text
 
 

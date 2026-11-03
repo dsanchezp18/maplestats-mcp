@@ -1,7 +1,7 @@
 """Live smoke test for every tool of statcan/wds: calls the real Web Data
 Service (not mocks), per AGENTS.md's "lesson from auditing the StatCan module".
 
-Each of the 13 wds_ tools has at least one step (and the SDMX data tools'
+Each of the 14 wds_ tools has at least one step (and the SDMX data tools'
 transforms and flags), and the regressions found by
 the 2026-10-02 live review are asserted against the real service: a changed
 series asked for by table + coordinate never comes from another table, an
@@ -23,7 +23,7 @@ from fastmcp import Client
 from mcp.types import TextContent
 
 from maplestats_mcp.modules.statcan.sdmx import tools as sdmx_tools
-from maplestats_mcp.modules.statcan.wds import client, tools, vintage
+from maplestats_mcp.modules.statcan.wds import client, leaves, tools, vintage
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.errors import DataLocked, InvalidInput, NotFound
 from maplestats_mcp.shared.http import new_client
@@ -83,6 +83,42 @@ async def main() -> int:
     )
     ok &= check(big.provenance.limits is not None, "metadata truncation is stated")
     ok &= await raises(NotFound, "unknown table is NotFound", client.get_cube_metadata(99999999))
+
+    # wds_get_leaf_members: the three hierarchies it was checked on (2026-11-03).
+    cpi_leaves = await leaves.get_leaf_members("18-10-0004", 2)
+    ok &= check(
+        cpi_leaves.selected_count > 200
+        and 2 not in cpi_leaves.member_ids  # All-items
+        and 284 in {x.member_id for x in cpi_leaves.flagged_leaves},  # All-items excl. food
+        "CPI product leaves, special aggregates set aside",
+        (cpi_leaves.selected_count, cpi_leaves.flagged_count),
+    )
+    cities = await leaves.get_leaf_members(CPI_PID, 1)
+    ok &= check(
+        16 in cities.member_ids and 14 not in cities.member_ids,  # Toronto, not Ontario
+        "CPI geography leaves are cities",
+        cities.geo_levels,
+    )
+    provinces = await leaves.get_leaf_members(14100287, 1)
+    ok &= check(
+        len(provinces.member_ids) == 10 and provinces.geo_levels == {"2": 10},
+        "LFS geography leaves are the 10 provinces",
+        provinces.member_ids_csv,
+    )
+    naics = await leaves.get_leaf_members(36100434, 4)
+    ok &= check(
+        1 not in naics.member_ids
+        and any("special_aggregate" in x.flags for x in naics.flagged_leaves),
+        "NAICS leaves without All industries or T-coded aggregates",
+        (naics.selected_count, naics.flagged_count),
+    )
+    by_key = await sdmx_tools.sdmx_get_data(
+        14100287, f"{provinces.sdmx_key_fragment}.7.1.1.1.1", last_n_observations=1
+    )
+    ok &= check(len(by_key.series) == 10, "leaf SDMX key fetches every province in one call")
+    ok &= await raises(
+        InvalidInput, "leaf members of a missing dimension", leaves.get_leaf_members(CPI_PID, 9)
+    )
 
     # wds_get_series_info: both directions, the extra fields, an unknown vector.
     by_vector = await client.get_series_info_from_vector(CPI_VECTOR)
@@ -150,6 +186,45 @@ async def main() -> int:
         vintage.get_series_as_of(18100004, "1.2", "2025-01-01"),
     )
 
+    # wds_query_series: annual averages of the CPI and the unemployment rate
+    # (v2062815) computed on the server; a DROP and a file read are refused.
+    # Placed before the changed-series steps, which return early overnight.
+    annual_sql = (
+        "SELECT vector_id, unit, year(ref_period) AS year, round(avg(value), 2) AS average, "
+        "count(*) AS months FROM obs GROUP BY ALL ORDER BY vector_id, year"
+    )
+    averages = await tools.wds_query_series(
+        [CPI_VECTOR, 2062815], annual_sql, start_ref_period="2023-01", end_ref_period="2025-12"
+    )
+    ok &= check(
+        len(averages.rows) == 6
+        and all(row[4] == 12 for row in averages.rows)
+        and all(s.citation.startswith("Statistics Canada") for s in averages.series),
+        "SQL annual averages of CPI and unemployment, 2023-2025",
+        averages.rows,
+    )
+    ok &= await raises(
+        InvalidInput, "SQL DROP is refused", tools.wds_query_series([CPI_VECTOR], "DROP TABLE obs")
+    )
+    ok &= await raises(
+        InvalidInput,
+        "SQL file read is refused",
+        tools.wds_query_series([CPI_VECTOR], "SELECT * FROM read_csv('/etc/passwd')"),
+    )
+    async with Client(mcp) as server:
+        result = await server.call_tool(
+            "call_tool",
+            {
+                "name": "wds_query_series",
+                "arguments": {"vector_ids": [CPI_VECTOR], "sql": "SELECT max(value) FROM obs"},
+            },
+            raise_on_error=False,
+        )
+        text = next((b.text for b in result.content if isinstance(b, TextContent)), "")
+        ok &= check(
+            not result.is_error and "rows" in json.loads(text), "server call wds_query_series"
+        )
+
     # wds_get_changed_series_list / wds_get_changed_series_data
     try:
         changed = await client.get_changed_series_list()
@@ -204,6 +279,23 @@ async def main() -> int:
     ok &= check(sdmx.download_url.startswith("https://"), "SDMX link", sdmx.download_url)
     ok &= await raises(
         NotFound, "unknown table has no download", client.get_full_table_download_csv(99999999)
+    )
+    # The summary scripts: members checked against the metadata, spelled as the
+    # French CSV spells them, and a member the table lacks refused.
+    filtered = await client.get_full_table_download_csv(
+        "34-10-0130", "fr", members={"geo": ["Montreal, Quebec"]}, start_period="2020"
+    )
+    python = filtered.scripts[0].code if filtered.scripts else ""
+    ok &= check(
+        [s.language for s in filtered.scripts] == ["python", "r"]
+        and "'montréal, québec'," in python
+        and "4. Summarize" in python,
+        "summary scripts keep the members asked for",
+    )
+    ok &= await raises(
+        InvalidInput,
+        "a member the table lacks is refused",
+        client.get_full_table_download_csv("34-10-0130", members={"Geography": ["Atlantis"]}),
     )
 
     # wds_get_code_sets: capped, one category, filter.

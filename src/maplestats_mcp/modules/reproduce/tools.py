@@ -21,6 +21,7 @@ async def reproduce_code(
     arguments: dict[str, Any],
     language: LanguageChoice = "all",
     lang: Literal["en", "fr"] = "en",
+    summary: bool = False,
 ) -> ReproductionCode:
     """Get R, Python, Stata, Julia or Excel Power Query code that refetches the same data.
 
@@ -44,14 +45,19 @@ async def reproduce_code(
     same way, and refreshes inside Excel, with nothing to install. notes
     say what a script cannot repeat and why a language is missing;
     language picks one; lang "fr" writes the notes and errors in French.
+    summary=True ends the R and Python scripts with a printed summary (row
+    and column counts, each column's distinct values, the first and last
+    rows) instead of leaving the frame to print: for a large result, run
+    the script and read that rather than passing the rows through the
+    conversation.
     Keywords: reproducible, R code, Python code, Stata do-file, Julia,
     Excel, Power Query, M query, script, cansim, download data,
-    replication, code generation.
+    replication, code generation, large table, summary.
     Mots-clés : reproductible, code R, code Python, Stata, Julia, Excel,
     Power Query, requête M, script, télécharger les données, réplication,
-    génération de code.
+    génération de code, grand tableau, résumé.
     """
-    return await client.reproduce(tool_name, arguments, language, lang)
+    return await client.reproduce(tool_name, arguments, language, lang, summary)
 
 
 @tool

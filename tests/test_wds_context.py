@@ -229,6 +229,11 @@ async def test_context_names_table_unit_and_members(httpx_mock):
         "Two bedroom units",
     ]
     assert rent.table_release_time == "2025-12-17T08:30"
+    assert rent.citation == (
+        "Statistics Canada. Table 34-10-0133-01, Canada Mortgage and Housing Corporation, "
+        "average rents for areas with a population of 10,000 and over. Vector v3823103. "
+        "Released 2025-12-17."
+    )
     assert any("current (nominal) dollars" in n for n in rent.notes)
     # The GT-08 trap: income is in constant dollars, rent in current dollars.
     assert income.unit == "2024 constant dollars"
@@ -248,6 +253,8 @@ async def test_context_in_french(httpx_mock):
     assert described.unit == "Dollars constants de 2024"
     assert described.table_url.startswith("https://www150.statcan.gc.ca/t1/tbl1/fr/")
     assert described.members[0].dimension == "Géographie"
+    assert described.citation is not None
+    assert described.citation.startswith("Statistique Canada. Tableau 11-10-0190-01")
 
 
 async def test_empty_window_states_the_series_span(httpx_mock):
@@ -323,7 +330,12 @@ def test_error_hints_by_class_and_cause():
     assert isinstance(plain, UpstreamUnavailable) and isinstance(plain, ToolError)
     assert "Solution" in str(plain)
     assert "search_tools" in str(with_hint(NotFoundError("Unknown tool: 'x'"), "en"))
-    assert with_hint(NotFound("Fix: already said"), "en") is None
+    # A module's own fix is kept, and the code is added once.
+    coded = with_hint(NotFound("Fix: already said"), "en")
+    assert coded is not None and str(coded) == "[not_found] Fix: already said"
+    assert with_hint(coded, "en") is None
+    assert str(hinted).startswith("[not_found] ")
+    assert str(plain).startswith("[upstream_unavailable] ")
 
 
 def test_caveats_follow_the_result_tables():

@@ -35,6 +35,62 @@ _STDLIB = {
 }
 
 
+# The "4. Summarize" section (Spec.summary). It prints what an analyst, or an
+# assistant running the script, needs to read the table without its rows: the
+# shape, each column's distinct values (a few shown), then a few rows of the
+# columns that vary. Columns with one value are listed but not repeated in
+# every row.
+_PY_SUMMARY = """\
+# Print a summary to read instead of the rows: the size, each column's
+# distinct values (the first few), then the first and last rows of the
+# columns that vary.
+
+print(f"{data.height:,} rows x {data.width} columns; download saved as {raw_path}")
+varying = []
+for column in data.columns:
+    if data.schema[column].is_nested():
+        print(f"- {column}: nested values")
+        continue
+    values = data[column].drop_nulls().unique(maintain_order=True)
+    if values.len() > 1:
+        varying.append(column)
+    if values.len() == 0:
+        detail = "all missing"
+    elif data.schema[column].is_numeric() and values.len() > 5:
+        detail = f"{values.min()} to {values.max()}"
+    else:
+        shown = [str(value)[:100] for value in values.head(5)]
+        detail = "; ".join(shown) + ("; ..." if values.len() > 5 else "")
+    print(f"- {column} ({values.len():,} distinct): {detail}")
+
+with pl.Config(tbl_rows=20, tbl_cols=-1, fmt_str_lengths=50, tbl_width_chars=200):
+    print(data.select(varying or data.columns))
+"""
+_R_SUMMARY = """\
+# Print a summary to read instead of the rows: the size, each column's
+# distinct values (the first few), then the first rows of the columns that
+# vary.
+
+cat(sprintf("%s rows x %d columns\\n", format(nrow(data), big.mark = ","), ncol(data)))
+varying <- character()
+for (column in names(data)) {
+  values <- unique(na.omit(data[[column]]))
+  if (length(values) > 1) varying <- c(varying, column)
+  detail <- if (length(values) == 0) {
+    "all missing"
+  } else if (is.numeric(values) && length(values) > 5) {
+    paste(min(values), "to", max(values))
+  } else {
+    shown <- substr(head(as.character(values), 5), 1, 100)
+    paste0(paste(shown, collapse = "; "), if (length(values) > 5) "; ..." else "")
+  }
+  cat(sprintf("- %s (%s distinct): %s\\n", column, format(length(values), big.mark = ","), detail))
+}
+
+print(as_tibble(data[if (length(varying)) varying else names(data)]), n = 20, width = 200)
+"""
+
+
 # User-supplied text (dataset ids, filter values, queries) reaches every
 # script. The helpers below keep it inert wherever it lands.
 #
@@ -101,6 +157,8 @@ def _header(prefix: str, spec: Spec, tool: str) -> str:
         "zip": "the unzipped files",
         "file": "the downloaded file",
     }.get(spec.kind, "the prepared table as `data`")
+    if spec.summary and spec.kind not in ("zip", "file"):
+        output += ", and a printed summary of it"
 
     def text(value: str) -> str:
         return comment_text(value, stata=prefix == "*")
@@ -143,6 +201,10 @@ def _r_filter(item: Filter) -> str:
     if item.op == "is":
         value = _quote(str(item.value).strip().lower())
         return f"str_to_lower(str_trim({columns[0]})) == {value}"
+    if item.op == "in":
+        # One value per line: member names run long ("Measure of core inflation ...").
+        values = ",\n".join(f"      {_quote(str(v).strip().lower())}" for v in item.value)
+        return f"str_to_lower(str_trim({columns[0]})) %in% c(\n{values}\n    )"
     if item.op == "starts":
         return f"str_starts(as.character({columns[0]}), fixed({_quote(str(item.value))}))"
     symbol = {"eq": "==", "ge": ">=", "le": "<="}[item.op]
@@ -433,6 +495,8 @@ def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
         )
     if spec.kind not in ("zip", "file"):
         packages.append("janitor")
+        if spec.summary:
+            packages.append("tibble")
         prepare.append("data <- data |>\n  clean_names()\n")
         specific = cleaning.specific("r", spec.source)
         if specific:
@@ -451,6 +515,8 @@ def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
     if spec.kind not in ("zip", "file"):
         check = f"stopifnot({_quote(spec.url + ' returned no rows')} = nrow(data) > 0)\n"
         sections += ["# 2. Check inputs ----\n", check, "# 3. Prepare data ----\n", *prepare]
+        if spec.summary:
+            sections += ["# 4. Summarize ----\n", _R_SUMMARY]
     return _join(*sections), sorted(set(packages))
 
 
@@ -474,6 +540,13 @@ def _py_filter(item: Filter) -> str:
         return (
             f"pl.col({item.columns[0]!r}).cast(pl.Utf8).str.strip_chars().str.to_lowercase()"
             f" == {str(item.value).strip().lower()!r}"
+        )
+    if item.op == "in":
+        # One value per line: member names run long ("Measure of core inflation ...").
+        values = "".join(f"            {str(v).strip().lower()!r},\n" for v in item.value)
+        return (
+            f"pl.col({item.columns[0]!r}).cast(pl.Utf8).str.strip_chars().str.to_lowercase()"
+            f".is_in(\n        [\n{values}        ]\n    )"
         )
     if item.op == "starts":
         return f"pl.col({item.columns[0]!r}).cast(pl.Utf8).str.starts_with({str(item.value)!r})"
@@ -742,6 +815,8 @@ def render_python(spec: Spec, tool: str) -> tuple[str, list[str]]:
     if spec.kind not in ("zip", "file"):
         check = f"assert data.height > 0, {json.dumps(spec.url + ' returned no rows')}\n"
         sections += ["# %% 2. Check inputs\n", check, "# %% 3. Prepare data\n", *prepare]
+        if spec.summary:
+            sections += ["# %% 4. Summarize\n", _PY_SUMMARY]
     return _join(*sections), packages
 
 
@@ -1060,6 +1135,9 @@ def _jl_filter(item: Filter) -> str:
     if item.op == "is":
         value = jl_quote(str(item.value).strip().lower())
         return f"lowercase(strip({cell(item.columns[0])})) == {value}"
+    if item.op == "in":
+        values = ", ".join(jl_quote(str(v).strip().lower()) for v in item.value)
+        return f"lowercase(strip({cell(item.columns[0])})) in ({values},)"
     if item.op == "starts":
         return f"startswith({cell(item.columns[0])}, {jl_quote(str(item.value))})"
     symbol = {"eq": "==", "ge": ">=", "le": "<="}[item.op]

@@ -55,7 +55,10 @@ RULES: tuple[FitnessRule, ...] = (
             "payroll jobs, so it leaves out the self-employed and agriculture, fishing and "
             "trapping, private household services and religious organisations. LFS "
             "estimates carry sampling error; preliminary SEPH estimates are revised. Compare "
-            "trends over several months, not one month's change."
+            "trends over several months, not one month's change. For earnings in a detailed "
+            "industry, such as provincial and territorial public administration (NAICS 912), "
+            "use SEPH (14-10-0203 monthly, 14-10-0204 annual) and say why: the LFS wage "
+            "table 14-10-0064 stops at broad sectors ('Public administration' as a whole)."
         ),
         note_fr=(
             "L'emploi de l'EPA et celui de l'EERH sont deux mesures différentes : n'en "
@@ -66,7 +69,11 @@ RULES: tuple[FitnessRule, ...] = (
             "piégeage, les services aux ménages privés et les organisations religieuses. "
             "Les estimations de l'EPA comportent une erreur d'échantillonnage; les "
             "estimations provisoires de l'EERH sont révisées. Comparez les tendances sur "
-            "plusieurs mois, pas la variation d'un seul mois."
+            "plusieurs mois, pas la variation d'un seul mois. Pour la rémunération d'une "
+            "industrie détaillée, comme les administrations publiques provinciales et "
+            "territoriales (SCIAN 912), prenez l'EERH (14-10-0203 mensuel, 14-10-0204 "
+            "annuel) et dites pourquoi : le tableau des salaires de l'EPA 14-10-0064 "
+            "s'arrête aux grands secteurs (« Administrations publiques » dans leur ensemble)."
         ),
         sources=(
             "https://www150.statcan.gc.ca/n1/pub/75-005-m/75-005-m2026001-eng.htm",
@@ -83,7 +90,7 @@ RULES: tuple[FitnessRule, ...] = (
             "fishing and trapping, private household services, religious organisations and "
             "military personnel."
         ),
-        product_ids=_LFS_TABLES + _SEPH_TABLES,
+        product_ids=_LFS_TABLES + _SEPH_TABLES + (14100064, 14100203, 14100204),
     ),
     FitnessRule(
         key="lfs-sampling-variability",
@@ -233,7 +240,14 @@ RULES: tuple[FitnessRule, ...] = (
             "November 2025 with thresholds back to 2020, and Canadian Income Survey "
             "releases no longer carry 2018-base estimates; Statistics Canada suggests its "
             "MBM Poverty Index for trends across bases. Small groups and the territories "
-            "have large sampling variability."
+            "have large sampling variability. The Canadian Income Survey (11-10-0135) is "
+            "annual for Canada and the provinces; for smaller areas use the 2021 Census "
+            "(LIM-AT, by age, in the Census Profile), which is 2020 income, a year raised by "
+            "pandemic benefits, and a different line. Rates by disability (11-10-0090) are "
+            "for Canada only: no province has a published rate. The Census's questions on "
+            "difficulties with daily activities only screen for the disability survey: "
+            "Statistics Canada releases them on special request and says they cannot "
+            "estimate disability."
         ),
         note_fr=(
             "Nommez le seuil et la base avec chaque taux : ils ne mesurent pas la même "
@@ -247,13 +261,23 @@ RULES: tuple[FitnessRule, ...] = (
             "diffusions de l'Enquête canadienne sur le revenu ne donnent plus d'estimations "
             "selon la base de 2018; Statistique Canada propose son indice de pauvreté de la "
             "MPC pour suivre une tendance d'une base à l'autre. Les petits groupes et les "
-            "territoires ont une forte variabilité d'échantillonnage."
+            "territoires ont une forte variabilité d'échantillonnage. L'Enquête canadienne "
+            "sur le revenu (11-10-0135) est annuelle pour le Canada et les provinces; pour "
+            "de plus petites régions, prenez le Recensement de 2021 (MFR-ApI, par âge, dans "
+            "le Profil du recensement), qui porte sur le revenu de 2020, une année gonflée "
+            "par les prestations liées à la pandémie, et sur un autre seuil. Les taux selon "
+            "l'incapacité (11-10-0090) ne sont publiés que pour le Canada : aucune province "
+            "n'a de taux publié. Les questions du Recensement sur les difficultés dans les "
+            "activités quotidiennes servent seulement de filtre pour l'enquête sur "
+            "l'incapacité : Statistique Canada les diffuse sur demande spéciale et précise "
+            "qu'elles ne permettent pas d'estimer l'incapacité."
         ),
         sources=(
             "https://www150.statcan.gc.ca/n1/pub/75f0002m/75f0002m2016002-eng.htm",
             "https://www150.statcan.gc.ca/n1/pub/75f0002m/75f0002m2025003-eng.htm",
             "https://www150.statcan.gc.ca/n1/daily-quotidien/251107/dq251107f-eng.htm",
             "https://www150.statcan.gc.ca/n1/daily-quotidien/260429/dq260429a-eng.htm",
+            "https://www12.statcan.gc.ca/census-recensement/2021/ref/dict/az/Definition-eng.cfm?ID=pop147",
         ),
         checked=(
             "75F0002M2016002: LICO from 1992 expenditure data; LIM below half the median "
@@ -265,7 +289,13 @@ RULES: tuple[FitnessRule, ...] = (
             "official since November 2025; LIM-AT at 50% of median adjusted after-tax "
             "income; sampling variability for small groups, caution for territories. WDS "
             "metadata for 11-10-0135: Low income lines dimension lists LIM-AT, LICO 1992 "
-            "base before and after tax, and MBM 2023, 2018, 2008 and 2000 bases."
+            "base before and after tax, and MBM 2023, 2018, 2008 and 2000 bases. "
+            "2026-11-03: 11-10-0090 Geography has the single member Canada (rate 12.6%, "
+            "persons with disabilities 15+, MBM 2023 base, 2024). 2021 Census Dictionary "
+            "pop147, read through a search result because www12 blocks automated clients: "
+            "activities-of-daily-living data 'available upon special request only', "
+            "minimum edits, responses cannot estimate disability because of 'false "
+            "positives'; they were the 2022 CSD sampling filter."
         ),
         product_ids=_LOW_INCOME_TABLES,
     ),
@@ -627,7 +657,12 @@ RULES: tuple[FitnessRule, ...] = (
             "family, and each person living alone or with non-relatives, once. Income of "
             "individuals (11-10-0238, 11-10-0239) is per person aged 15 and over and much "
             "lower. Use the unit the question asks for (household or family vs person) and "
-            "name it."
+            "name it. This survey has no household unit: a household (everyone in a dwelling) "
+            "is the Census unit, so for 'household income' give the 2021 Census Profile's "
+            "median total income of household (2020 income, raised by pandemic benefits) and "
+            "this table's figure as the recent alternative, naming each. Incomes are skewed, "
+            "so the median is the typical income: asked for 'average income', give the median "
+            "beside the average (these tables have both) and say which is which."
         ),
         note_fr=(
             "Le tableau 11-10-0190 est en dollars constants de sa dernière année de revenu "
@@ -637,7 +672,14 @@ RULES: tuple[FitnessRule, ...] = (
             "compte une fois chaque famille et chaque personne seule ou vivant avec des "
             "personnes non apparentées. Le revenu des particuliers (11-10-0238, 11-10-0239) "
             "est par personne de 15 ans et plus, et bien plus bas. Prenez l'unité que la "
-            "question demande (ménage ou famille, ou personne) et nommez-la."
+            "question demande (ménage ou famille, ou personne) et nommez-la. Cette enquête n'a "
+            "pas d'unité ménage : le ménage (toutes les personnes d'un logement) est l'unité "
+            "du Recensement; pour le « revenu des ménages », donnez le revenu total médian des "
+            "ménages du Profil du recensement de 2021 (revenu de 2020, gonflé par les "
+            "prestations liées à la pandémie) et le chiffre de ce tableau comme solution plus "
+            "récente, en nommant chacun. Les revenus sont asymétriques, la médiane est donc le "
+            "revenu typique : si l'on demande le « revenu moyen », donnez la médiane à côté de "
+            "la moyenne (ces tableaux ont les deux) et dites laquelle est laquelle."
         ),
         sources=(
             "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110019001",
@@ -650,8 +692,295 @@ RULES: tuple[FitnessRule, ...] = (
             "an economic family as one living alone or with unrelated others, and say 2022 "
             "onwards covers persons aged 15 and over. 11-10-0238 is 'Distribution of market, "
             "total and after-tax income of individuals'; 11-10-0239 is 'Income of "
-            "individuals by age group, gender and income source'."
+            "individuals by age group, gender and income source'. 2026-11-03: 11-10-0239 "
+            "Statistics members include 'Average income (excluding zeros)' and 'Median "
+            "income (excluding zeros)'; 11-10-0190 income concepts pair each average with a "
+            "median. Census Profile 2021 characteristic 229 'Median total income of household "
+            "in 2020 ($)', Alberta 96,000; 11-10-0190 Alberta median total income 2024 for "
+            "economic families and persons not in an economic family 96,600 (v96414571)."
         ),
         product_ids=(11100190, 11100238, 11100239),
+    ),
+    FitnessRule(
+        key="trade-basis",
+        title_en="Merchandise trade: customs or balance-of-payments basis",
+        title_fr="Commerce de marchandises : base douanière ou base de la balance des paiements",
+        note_en=(
+            "Table 12-10-0011 holds each trade flow twice, on a customs basis and on a "
+            "balance-of-payments basis, each unadjusted and seasonally adjusted. Statistics "
+            "Canada's monthly trade release reports the balance-of-payments basis, seasonally "
+            "adjusted, in millions of dollars: use that for a headline figure (exports, "
+            "imports or the balance, total or with a partner) unless the question names "
+            "another, and say which basis and adjustment you used. The CIMT database "
+            "(cimt_ tools) is customs basis and not seasonally adjusted: use it for detail "
+            "by product (HS code) or province, not for the headline total."
+        ),
+        note_fr=(
+            "Le tableau 12-10-0011 contient chaque flux deux fois, sur une base douanière et "
+            "sur la base de la balance des paiements, chacun non désaisonnalisé et "
+            "désaisonnalisé. Le communiqué mensuel de Statistique Canada sur le commerce "
+            "donne la base de la balance des paiements, désaisonnalisée, en millions de "
+            "dollars : prenez celle-là pour un chiffre principal (exportations, importations "
+            "ou solde, au total ou avec un partenaire), sauf si la question en nomme une "
+            "autre, et dites quelle base et quel ajustement vous avez pris. La base CIMT "
+            "(outils cimt_) est sur une base douanière et non désaisonnalisée : prenez-la "
+            "pour le détail par produit (code SH) ou par province, pas pour le total principal."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101",
+            "https://www150.statcan.gc.ca/n1/en/catalogue/65F0013X",
+        ),
+        checked=(
+            "WDS getCubeMetadata 2026-11-03 for 12-10-0011 'International merchandise trade "
+            "for all countries and by Principal Trading Partners, monthly': dimensions Trade "
+            "(Import, Export, Trade Balance), Basis (Customs, Balance of payments), Seasonal "
+            "adjustment (Unadjusted, Seasonally adjusted). Maple Test v2 C-14 (2026-11-03): "
+            "exports to the United States, August 2026, balance of payments seasonally "
+            "adjusted $54,346.5 million (v87008956); an answer from CIMT gave the customs, "
+            "unadjusted $52.19 billion."
+        ),
+        tool_prefixes=("cimt_",),
+        product_ids=(12100011,),
+    ),
+    FitnessRule(
+        key="building-permits-adjustment",
+        title_en="Building permits: seasonally adjusted headline",
+        title_fr="Permis de bâtir : chiffre principal désaisonnalisé",
+        note_en=(
+            "Table 34-10-0292 gives the value of permits four ways: unadjusted or seasonally "
+            "adjusted, in current or constant dollars. Statistics Canada's monthly release "
+            "reports the seasonally adjusted value in current dollars: lead with that unless "
+            "the question asks for another, and name the one you report. Values are in "
+            "thousands of dollars."
+        ),
+        note_fr=(
+            "Le tableau 34-10-0292 donne la valeur des permis de quatre façons : non "
+            "désaisonnalisée ou désaisonnalisée, en dollars courants ou constants. Le "
+            "communiqué mensuel de Statistique Canada donne la valeur désaisonnalisée en "
+            "dollars courants : donnez-la d'abord, sauf si la question en demande une autre, "
+            "et nommez celle que vous donnez. Les valeurs sont en milliers de dollars."
+        ),
+        sources=("https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410029201",),
+        checked=(
+            "WDS getCubeMetadata 2026-11-03 for 34-10-0292 'Building permits, by type of "
+            "structure and type of work': dimension 'Seasonal adjustment, value type' with "
+            "members Unadjusted, current; Seasonally adjusted, current; Unadjusted, constant "
+            "dollars; Seasonally adjusted, constant dollars. Maple Test v2 C-16: August 2026, "
+            "seasonally adjusted current $13,571,697 thousand (v1675119645), unadjusted "
+            "$13,199,762 thousand (v1675115467)."
+        ),
+        product_ids=(34100292,),
+    ),
+    FitnessRule(
+        key="jobbank-wage-estimates",
+        title_en="Job Bank wages: estimates from several sources, not a StatCan table",
+        title_fr="Salaires du Guichet-Emplois : estimations de plusieurs sources, pas un tableau de StatCan",
+        note_en=(
+            "Job Bank wages are ESDC estimates, not a Statistics Canada table. The main source "
+            "is the Labour Force Survey; where it is too thin ESDC uses Small Area Estimation, "
+            "Employment Insurance survey data, the Census or administrative data, so the source "
+            "and reference period differ between cells (read data_source and reference_period "
+            "on each row). Low and high are in most cases the 10th and 90th percentiles; "
+            "median is the prevailing wage. Some cells are suppressed for quality or "
+            "confidentiality, and some regions show the wage of their province or of Canada as "
+            "an approximation. Wages ignore experience, and some occupations are annual, not "
+            "hourly."
+        ),
+        note_fr=(
+            "Les salaires du Guichet-Emplois sont des estimations d'EDSC, et non un tableau de "
+            "Statistique Canada. La source principale est l'Enquête sur la population active; "
+            "lorsque l'échantillon est trop mince, EDSC utilise l'estimation pour petits "
+            "domaines, les données d'enquête de l'assurance-emploi, le Recensement ou des "
+            "données administratives : la source et la période de référence varient donc d'une "
+            "cellule à l'autre (lisez data_source et reference_period sur chaque ligne). Les "
+            "salaires bas et élevés correspondent le plus souvent aux 10e et 90e centiles; la "
+            "médiane est le salaire courant. Certaines cellules sont supprimées pour des "
+            "raisons de qualité ou de confidentialité, et certaines régions affichent le "
+            "salaire de leur province ou du Canada comme approximation. Les salaires ne "
+            "tiennent pas compte de l'expérience, et certaines professions sont annuelles, non "
+            "horaires."
+        ),
+        sources=("https://www.jobbank.gc.ca/trend-analysis/search-wages/wage-methodology",),
+        checked=(
+            "Job Bank 'Wage methodology' page, read 2026-11-03: low wage in most cases the 10th "
+            "percentile, high wage the 90th, median the prevailing wage; primary source the "
+            "Labour Force Survey, data may be suppressed for confidentiality or quality; other "
+            "sources Small Area Estimation, EI program survey data, the Census, provincial and "
+            "administrative data (CIHI, CMA); where wages cannot be determined, wages from "
+            "another region, the province or Canada may be used as an approximate value; LFS "
+            "excludes the territories and reserves; wages do not account for experience; annual "
+            "wages for occupations with many self-employed workers."
+        ),
+        tool_prefixes=(
+            "jobbank_get_wages",
+            "jobbank_compare_occupations",
+            "jobbank_search_occupations",
+        ),
+    ),
+    FitnessRule(
+        key="ircc-processing-times-snapshot",
+        title_en="IRCC processing times: current estimates, not a time series",
+        title_fr="Délais de traitement d'IRCC : estimations actuelles, pas une série chronologique",
+        note_en=(
+            "IRCC processing times are point-in-time estimates from its 'Check processing "
+            "times' tool, replaced when IRCC updates them (the page says weekly; permanent "
+            "residence times monthly), with no history kept: do not read them as a trend, and "
+            "quote the last-updated date. A time runs from receipt of a complete application to "
+            "a decision and varies with volumes and complexity; some are forward-looking "
+            "estimates for a new application, others reflect how long it took to process 80% "
+            "of past applications. An individual application can take longer."
+        ),
+        note_fr=(
+            "Les délais de traitement d'IRCC sont des estimations ponctuelles de son outil "
+            "« Vérifiez les délais de traitement », remplacées à chaque mise à jour (la page "
+            "indique chaque semaine; chaque mois pour la résidence permanente), sans "
+            "historique : ne les lisez pas comme une tendance, et citez la date de mise à jour. "
+            "Un délai court de la réception d'une demande complète jusqu'à la décision et varie "
+            "selon le volume et la complexité des demandes; certains sont des estimations "
+            "prospectives pour une nouvelle demande, d'autres reflètent le temps qu'il a fallu "
+            "pour traiter 80 % des demandes passées. Une demande donnée peut prendre plus de "
+            "temps."
+        ),
+        sources=(
+            (
+                "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/"
+                "check-processing-times.html"
+            ),
+        ),
+        checked=(
+            "IRCC 'Check processing times' page, read 2026-11-03: 'Updated weekly' next to the "
+            "last-update date; historical times are how long it took to process 80% of "
+            "applications; the processing time starts when IRCC receives a complete "
+            "application and ends with a decision; times vary with the type of application, "
+            "completeness, volumes and verification. flpt-en.json states flpt_interval "
+            "'monthly' for permanent residence and citizenship."
+        ),
+        tool_prefixes=("ircc_processing_get_time",),
+    ),
+    FitnessRule(
+        key="proactive-disclosure-amendments",
+        title_en="Proactive disclosure: amendment rows, values and reporting lags",
+        title_fr="Divulgation proactive : lignes de modification, valeurs et délais de publication",
+        note_en=(
+            "Each amendment to a contract or a grant or contribution is published as its own "
+            "row, and its value is the agreement's amended total, not the change: summing rows "
+            "counts an amended agreement several times (disclosure_summarize keeps each "
+            "agreement's latest row unless value_mode='all_rows'). Contract values are in "
+            "Canadian dollars with taxes and cover every year of a multi-year contract, so a "
+            "fiscal year's total is not that year's spending. Contracts are published by "
+            "quarter within a month of its end, and a late contract is added to its own past "
+            "quarter, so recent quarters grow after release; travel is published monthly and "
+            "hospitality quarterly. Rows are as each department entered them."
+        ),
+        note_fr=(
+            "Chaque modification d'un contrat ou d'une subvention ou contribution est publiée "
+            "comme une ligne distincte, et sa valeur est le total modifié de l'entente, non la "
+            "variation : additionner les lignes compte plusieurs fois une entente modifiée "
+            "(disclosure_summarize garde la ligne la plus récente de chaque entente, sauf avec "
+            "value_mode='all_rows'). La valeur des contrats est en dollars canadiens, taxes "
+            "comprises, et couvre toutes les années d'un contrat pluriannuel : le total d'un "
+            "exercice n'est donc pas la dépense de cet exercice. Les contrats sont publiés par "
+            "trimestre dans le mois qui suit sa fin, et un contrat déclaré en retard s'ajoute à "
+            "son trimestre passé : les trimestres récents augmentent après leur publication. "
+            "Les voyages sont publiés chaque mois et l'accueil chaque trimestre. Les lignes "
+            "sont telles que chaque ministère les a saisies."
+        ),
+        sources=(
+            "https://open.canada.ca/data/recombinant-published-schema/contracts.json",
+            "https://open.canada.ca/data/recombinant-published-schema/grants.json",
+            "https://open.canada.ca/data/recombinant-published-schema/travelq.json",
+            "https://open.canada.ca/data/recombinant-published-schema/hospitalityq.json",
+            "https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32763",
+        ),
+        checked=(
+            "Recombinant schemas linked as each package's Data Schema, read 2026-11-03. "
+            "contracts.json front matter: 'publicly disclose quarterly, within one month after "
+            "the close of each quarter, contracts entered into over $10K, and positive and "
+            "negative amendments over $10K'; 'A contract or amendment not reported in the "
+            "reporting period in which it was awarded should be included for that reporting "
+            "period'. contract_value: 'all contracts and all subsequent amendments', 'include "
+            "all applicable taxes', 'For a multi-year contract ... the total amount of the "
+            "contract for all years', 'For a contract amendment ... the amended contract "
+            "value'. grants.json amendment_number: 'Use 0 for original records. The first "
+            "amendment ... 1, then 2'; agreement_value: 'the total grant or contribution "
+            "value, and not the change in agreement value'. travelq.json: 'monthly travel "
+            "expense reports'; hospitalityq.json: 'quarterly hospitality expenses'. Live "
+            "datastore_search: amendment rows share procurement_id (contracts) or ref_number "
+            "(grants) with the original."
+        ),
+        tool_prefixes=("disclosure_",),
+    ),
+    FitnessRule(
+        key="lfs-subprovincial-moving-averages",
+        title_en="LFS below the province: three-month moving averages",
+        title_fr="EPA sous le niveau provincial : moyennes mobiles de trois mois",
+        note_en=(
+            "Below the province, LFS estimates are three-month moving averages, because a "
+            "single month's sample is too small: census metropolitan areas in 14-10-0459 "
+            "(seasonally adjusted) and 14-10-0458 (unadjusted), economic regions in "
+            "14-10-0462 (unadjusted). A month's value is the mean of that month and the two "
+            "before it: say so, and compare unadjusted values with the same months a year "
+            "earlier, not with the previous month. Only Montréal, Toronto and Vancouver have "
+            "single-month estimates (14-10-0460)."
+        ),
+        note_fr=(
+            "Sous le niveau provincial, les estimations de l'EPA sont des moyennes mobiles "
+            "de trois mois, car l'échantillon d'un seul mois est trop petit : régions "
+            "métropolitaines de recensement dans 14-10-0459 (désaisonnalisées) et 14-10-0458 "
+            "(non désaisonnalisées), régions économiques dans 14-10-0462 (non "
+            "désaisonnalisées). La valeur d'un mois est la moyenne de ce mois et des deux "
+            "précédents : dites-le, et comparez les valeurs non désaisonnalisées aux mêmes "
+            "mois un an plus tôt, pas au mois précédent. Seules Montréal, Toronto et "
+            "Vancouver ont des estimations mensuelles (14-10-0460)."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410045901",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410046201",
+            "https://www150.statcan.gc.ca/n1/pub/71-543-g/71-543-g2025001-eng.htm",
+        ),
+        checked=(
+            "WDS getAllCubesListLite 2026-11-03: 14-10-0458 'Labour force characteristics by "
+            "census metropolitan area, three-month moving average, unadjusted for "
+            "seasonality'; 14-10-0459 '..., three-month moving average, seasonally "
+            "adjusted'; 14-10-0460 '... by Montréal, Toronto and Vancouver census "
+            "metropolitan areas, monthly, seasonally adjusted'; 14-10-0462 '... by economic "
+            "region, three-month moving average, unadjusted for seasonality'; all to "
+            "2026-09."
+        ),
+        product_ids=(14100458, 14100459, 14100460, 14100462),
+    ),
+    FitnessRule(
+        key="ircc-counts-not-population",
+        title_en="IRCC counts are not population estimates",
+        title_fr="Les chiffres d'IRCC ne sont pas des estimations de la population",
+        note_en=(
+            "IRCC counts admissions and permits (documents issued or people admitted in a "
+            "month), not people living in Canada: one person can hold several permits, "
+            "permits expire, and people leave. For population growth or the number of "
+            "temporary residents, use Statistics Canada's demographic estimates: 17-10-0009 "
+            "(population, quarterly), 17-10-0040 (international migration components, "
+            "quarterly) and 17-10-0121 (non-permanent residents by type, quarterly)."
+        ),
+        note_fr=(
+            "IRCC compte des admissions et des permis (documents délivrés ou personnes "
+            "admises au cours d'un mois), pas des personnes qui vivent au Canada : une "
+            "personne peut détenir plusieurs permis, les permis expirent et des personnes "
+            "partent. Pour la croissance démographique ou le nombre de résidents "
+            "temporaires, utilisez les estimations démographiques de Statistique Canada : "
+            "17-10-0009 (population, trimestrielle), 17-10-0040 (composantes de la "
+            "migration internationale, trimestrielle) et 17-10-0121 (résidents non "
+            "permanents selon le type, trimestrielle)."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710012101",
+        ),
+        checked=(
+            "WDS getAllCubesListLite 2026-11-03: 17-10-0009 'Population estimates, "
+            "quarterly' (to 2026-07); 17-10-0040 'Estimates of the components of "
+            "international migration, quarterly' (to 2026-04); 17-10-0121 'Estimates of the "
+            "number of non-permanent residents by type, quarterly' (to 2026-07)."
+        ),
+        tool_prefixes=("ircc_monthly_",),
     ),
 )

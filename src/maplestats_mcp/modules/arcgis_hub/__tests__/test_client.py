@@ -324,8 +324,10 @@ async def test_upstream_5xx_becomes_upstream_error(httpx_mock):
 def test_portal_key_literal_matches_registry():
     assert set(get_args(PortalKey)) == set(constants.PORTALS)
     assert len(get_args(PortalKey)) == len(constants.PORTALS)
-    # The Saskatchewan GeoHub portal was removed on 2026-10-03.
-    assert "sk" not in constants.PORTALS
+    # The Saskatchewan GeoHub portal was removed on 2026-10-03 and added back on
+    # 2026-11-03; the City and the Region of Waterloo stay two portals.
+    assert "sk" in constants.PORTALS
+    assert constants.PORTALS["waterloo"].domain != constants.PORTALS["waterloo_region"].domain
 
 
 async def test_unknown_portal_raises_invalid_input():

@@ -11,11 +11,21 @@ repository (the answer key included) is in reach. Only the data access changes:
 - mcp_canada: ReyemTech's mcp-canada from PyPI (`uvx mcp-canada`)
 - openmcp: opendatafyi's OpenMCP, from a local clone with its catalogue (`--alts`)
 - candata_mcp: CanData's own server, from a local clone of their monorepo (`--alts`)
+- statcan2: statcan2.ca's hosted server (an independent rebuild of every StatCan table)
+- canada_data_agent: gcode33's canada-data-agent MCP server, from a local clone (`--alts`)
+- opencanada: OpenCanadaPublicDataMCP's federal servers that match the questions (statcan,
+  boc, census, ircc, immigration, dpd, eccc-weather, climate, hydrometric), from a local
+  clone (`--alts`)
 - no_tools: the model alone
 
 The local-clone arms read `--alts` (or MAPLE_TEST_ALTS): a folder holding `openmcp/`
 (cloned, `venv/` built, `catalog.duckdb` downloaded, per its README) and `candata/`
-(the Canadian-Open-Data-Agentic-Platform repo, `uv sync` run). Keep it outside this
+(the Canadian-Open-Data-Agentic-Platform repo, `uv sync` run) and
+`gcode33_canada-data-agent/` (`uv sync` run; it caches StatCan responses in PostgreSQL,
+so a database at its default DATABASE_URL needs the table from its
+migrations/0002_http_cache.sql), and `opencanada/` (the OpenCanadaPublicDataMCP repo, each
+of those servers with a `.venv` from `uv sync` plus `mcp[cli]<2`: their pyproject allows
+mcp 2.x, which removed the FastMCP import they use). Keep it outside this
 repository: it is third-party code.
 
 `ENABLE_TOOL_SEARCH=false` keeps MCP tools loaded up front: with built-in tools off, the
@@ -36,10 +46,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from tests.maple_test.grade import load_key
+from tests.maple_test.grade import SUITES, load_key
 
 HERE = Path(__file__).resolve().parent
-RUNS = HERE / "runs"
 REPO = HERE.parents[1]
 TIMEOUT_S = 600
 MAX_TURNS = 25
@@ -51,10 +60,26 @@ ARMS = (
     "mcp_canada",
     "openmcp",
     "candata_mcp",
+    "statcan2",
+    "canada_data_agent",
+    "opencanada",
     "no_tools",
 )
 
-PROMPT = """\
+OPENCANADA_SERVERS = (
+    "statcan",
+    "boc",
+    "census",
+    "ircc",
+    "immigration",
+    "dpd",
+    "eccc-weather",
+    "climate",
+    "hydrometric",
+)
+
+PROMPTS = {
+    "v1": """\
 You answer questions about Canadian economic and social statistics. Today is {today}.
 
 Use official sources: Statistics Canada and the Bank of Canada. With every figure, give \
@@ -62,11 +87,26 @@ the Statistics Canada table number (such as 14-10-0287-01) and vector (such as \
 v2062815), or the Bank of Canada series, and the reference period.
 
 If a figure does not exist or you cannot check it, say so instead of estimating. Keep \
-the answer short."""
+the answer short.""",
+    # v2 asks about publishers beyond StatCan and the Bank of Canada, so the prompt names
+    # them; it is otherwise the v1 prompt, and every arm gets the same one.
+    "v2": """\
+You answer questions about Canadian economic, social and environmental data. Today is \
+{today}.
+
+Use official sources: Statistics Canada, the Bank of Canada, and other federal, \
+provincial and municipal publishers. With every figure, give its source: for Statistics \
+Canada the table number (such as 14-10-0287-01) and vector (such as v2062815), for the \
+Bank of Canada the series, for any other publisher the dataset or page; and the \
+reference period.
+
+If a figure does not exist or you cannot check it, say so instead of estimating. Keep \
+the answer short.""",
+}
 
 
 def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, Any]:
-    if arm in ("openmcp", "candata_mcp") and alts is None:
+    if arm in ("openmcp", "candata_mcp", "canada_data_agent", "opencanada") and alts is None:
         raise SystemExit(f"--alts (or MAPLE_TEST_ALTS) is needed for the {arm} arm")
     if arm == "arose26":
         # Two sibling packages by the same author; a user covering both sources installs both.
@@ -96,6 +136,27 @@ def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, A
                 "env": {"PYTHONPATH": str(home / "packages" / "candata-mcp" / "src")},
             }
         }
+    if arm == "canada_data_agent":
+        assert alts is not None
+        home = alts / "gcode33_canada-data-agent"
+        return {
+            "canada": {"command": "uv", "args": ["run", "--directory", str(home), "canada-mcp"]}
+        }
+    if arm == "opencanada":
+        assert alts is not None
+        home = alts / "opencanada" / "servers" / "federal"
+        # The federal servers a user would install for these questions, not all 99: loading
+        # every server's tools at once would only bury the relevant ones.
+        names = OPENCANADA_SERVERS
+        return {
+            n.replace("-", "_"): {
+                "command": str(home / n / ".venv" / "bin" / "python"),
+                "args": [str(home / n / "main.py")],
+            }
+            for n in names
+        }
+    if arm == "statcan2":
+        return {"statcan2": {"type": "http", "url": "https://statcan2.ca/api/mcp"}}
     if arm == "maplestats":
         return {
             "maplestats": {
@@ -131,9 +192,15 @@ class Answer:
     tool_calls: list[str]
     is_error: bool
     response: str
+    repeat: int = 0
+    cost_usd: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
-def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> Answer:
+def ask(
+    arm: str, model: str, question: dict[str, Any], config: Path | None, version: str = "v1"
+) -> Answer:
     started = datetime.now(UTC)
     command = [
         "claude",
@@ -141,7 +208,7 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
         "--model",
         model,
         "--system-prompt",
-        PROMPT.format(today=started.date().isoformat()),
+        PROMPTS[version].format(today=started.date().isoformat()),
         "--tools",
         "",
         "--strict-mcp-config",
@@ -159,16 +226,20 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
         names = list(json.loads(config.read_text())["mcpServers"])
         command += ["--mcp-config", str(config), "--allowedTools", *[f"mcp__{n}" for n in names]]
     with tempfile.TemporaryDirectory() as empty:
-        proc = subprocess.run(
-            command,
-            input=question["question"],
-            capture_output=True,
-            text=True,
-            cwd=empty,
-            env={**os.environ, "ENABLE_TOOL_SEARCH": "false"},
-            timeout=TIMEOUT_S,
-            check=False,
-        )
+        try:
+            proc = subprocess.run(
+                command,
+                input=question["question"],
+                capture_output=True,
+                text=True,
+                cwd=empty,
+                env={**os.environ, "ENABLE_TOOL_SEARCH": "false"},
+                timeout=TIMEOUT_S,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            # One stuck answer must not end a run of hundreds; it is recorded as an error.
+            proc = subprocess.CompletedProcess(command, 124, "", f"timed out after {TIMEOUT_S}s")
     tools: list[str] = []
     calls: list[str] = []
     models: set[str] = set()
@@ -204,6 +275,9 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
         tool_calls=calls,
         is_error=error,
         response=response,
+        cost_usd=result.get("total_cost_usd"),
+        input_tokens=(result.get("usage") or {}).get("input_tokens"),
+        output_tokens=(result.get("usage") or {}).get("output_tokens"),
     )
 
 
@@ -214,11 +288,14 @@ def run(
     only: list[str] | None,
     label: str,
     alts: Path | None = None,
+    version: str = "v1",
+    repeat: int = 1,
 ) -> Path:
-    questions = [q for q in load_key() if not only or q["id"] in only]
-    RUNS.mkdir(exist_ok=True)
+    questions = [q for q in load_key(version) if not only or q["id"] in only]
+    runs = SUITES[version].runs
+    runs.mkdir(exist_ok=True)
     name = label or arm
-    out = RUNS / f"{datetime.now(UTC).date().isoformat()}_{name}_{model}.jsonl"
+    out = runs / f"{datetime.now(UTC).date().isoformat()}_{name}_{model}.jsonl"
     # A run is evidence: never overwrite one (a retry gets its own --label).
     if out.exists():
         raise SystemExit(f"{out.name} exists; pass --label to keep both runs")
@@ -231,11 +308,14 @@ def run(
             config = Path(tmp) / "mcp.json"
             config.write_text(json.dumps({"mcpServers": config_servers}))
         with out.open("w", encoding="utf-8") as fh:
-            for q in questions:
-                answer = ask(arm, model, q, config)
-                answer.arm = name
-                fh.write(json.dumps(asdict(answer), ensure_ascii=False) + "\n")
-                fh.flush()
-                state = "ERROR" if answer.is_error else f"{len(answer.tool_calls)} calls"
-                print(f"{q['id']} {name}: {state}, {answer.duration_s}s", file=sys.stderr)
+            # Whole passes, not each question three times in a row: a source that is down
+            # for a minute then costs one answer per pass, not three of one question.
+            for r in range(repeat):
+                for q in questions:
+                    answer = ask(arm, model, q, config, version)
+                    answer.arm, answer.repeat = name, r
+                    fh.write(json.dumps(asdict(answer), ensure_ascii=False) + "\n")
+                    fh.flush()
+                    state = "ERROR" if answer.is_error else f"{len(answer.tool_calls)} calls"
+                    print(f"{q['id']}#{r} {name}: {state}, {answer.duration_s}s", file=sys.stderr)
     return out

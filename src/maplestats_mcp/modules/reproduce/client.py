@@ -73,6 +73,9 @@ _IP_HORIZONS = ("ised_ip_horizons_get_patent", "ised_ip_horizons_search_patents"
 # excel is a Power Query M query (excel.py), rendered from the same Spec.
 RENDERERS = {**SCRIPT_RENDERERS, "excel": render_excel}
 ALL_LANGUAGES: list[Language] = ["r", "python", "stata", "julia", "excel"]
+# Spec.summary's printout exists in these only: they are what an assistant can
+# run and read back, and an analyst using the others reads the frame directly.
+SUMMARY_LANGUAGES: tuple[Language, ...] = ("python", "r")
 
 
 def _say(lang: str, english: str, french_text: str) -> str:
@@ -209,11 +212,32 @@ async def _spec(tool: str, args: dict[str, Any], lang: str = "en") -> Spec:
     return spec
 
 
+def render_scripts(
+    spec: Spec, tool: str, languages: list[Language]
+) -> tuple[list[Script], list[str]]:
+    """The scripts for a spec, and the languages that cannot read its source."""
+    scripts: list[Script] = []
+    skipped: list[str] = []
+    for script_language in languages:
+        rendered = (
+            RENDERERS[script_language](spec, tool)
+            if spec.kind != "none" and script_language in spec.languages
+            else None
+        )
+        if rendered is None:
+            skipped.append(script_language)
+            continue
+        code, packages = rendered
+        scripts.append(Script(language=script_language, code=code, packages=packages))
+    return scripts, skipped
+
+
 async def reproduce(
     tool: str,
     arguments: dict[str, Any],
     language: LanguageChoice = "all",
     lang: str = "en",
+    summary: bool = False,
 ) -> ReproductionCode:
     requested: list[Language] = (
         list(ALL_LANGUAGES) if language == "all" else [language]  # type: ignore[list-item]
@@ -277,20 +301,21 @@ async def reproduce(
             )
         ) from exc
 
-    scripts: list[Script] = []
-    skipped: list[str] = []
-    for script_language in requested:
-        rendered = (
-            RENDERERS[script_language](spec, tool)
-            if spec.kind != "none" and script_language in spec.languages
-            else None
-        )
-        if rendered is None:
-            skipped.append(script_language)
-            continue
-        code, packages = rendered
-        scripts.append(Script(language=script_language, code=code, packages=packages))
     notes = list(spec.notes)
+    if summary:
+        spec.summary = True
+        no_summary = [
+            name
+            for name in requested
+            if name not in SUMMARY_LANGUAGES and name in spec.languages and spec.kind != "none"
+        ]
+        requested = [name for name in requested if name not in no_summary]
+        if no_summary:
+            notes.append(
+                f"No {', '.join(no_summary)} script: the summary printout is written in R and "
+                "Python only; ask without summary for them."
+            )
+    scripts, skipped = render_scripts(spec, tool, requested)
     if skipped and spec.kind not in ("none",):
         reason = {
             "html_table": "Julia has no maintained HTML table reader",

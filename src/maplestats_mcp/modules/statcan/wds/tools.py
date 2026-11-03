@@ -13,7 +13,15 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.statcan.wds import client, constants, context, transforms, vintage
+from maplestats_mcp.modules.statcan.wds import (
+    client,
+    constants,
+    context,
+    leaves,
+    query,
+    transforms,
+    vintage,
+)
 from maplestats_mcp.modules.statcan.wds.client import CodeSetCategory
 from maplestats_mcp.modules.statcan.wds.schemas import (
     ChangedCubeList,
@@ -22,7 +30,9 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     CubeMetadata,
     CubeSummaryList,
     FullTableDownloadLink,
+    LeafMembers,
     SeriesInfo,
+    SeriesQueryResult,
     VectorData,
     VectorDataSet,
     VintageSeries,
@@ -119,8 +129,9 @@ async def wds_get_cube_metadata(
     the 8-digit productId or the table number (18-10-0004,
     18-10-0004-01). Large tables have thousands of members, so each
     dimension returns at most `member_limit` members (default 100) and
-    footnotes are capped at `footnote_limit`; provenance.limits says what
-    was cut. Narrow with `dimension` (a position, e.g. 1 for geography),
+    at most `footnote_limit` distinct footnotes come back (default 10; a
+    note WDS repeats under several ids comes once, with `same_text_ids`);
+    provenance.limits says what was cut. Narrow with `dimension` (a position, e.g. 1 for geography),
     `member_query` (words in a member name) and `member_offset`.
     Keywords: statcan, metadata, dimensions, members, productId, cube,
     structure, footnotes, wds, coordinate, table number.
@@ -136,6 +147,64 @@ async def wds_get_cube_metadata(
         member_limit=member_limit,
         member_offset=member_offset,
         footnote_limit=footnote_limit,
+    )
+
+
+@tool
+async def wds_get_leaf_members(
+    product_id: ProductId,
+    dimension: int | str,
+    under_member_id: int | None = None,
+    member_query: str | None = None,
+    include_flagged: bool = False,
+    limit: int = constants.LEAF_LIMIT_DEFAULT,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> LeafMembers:
+    """List only the lowest-level (leaf) members of one dimension of a
+    StatCan table, so a sum or ranking does not double-count totals and
+    subtotals.
+
+    Use for: adding up or ranking across provinces, industries or
+    product groups without the totals ("All industries", "All-items",
+    "Canada") and subtotals mixed in. A leaf is a member that is no
+    other member's parent. `dimension` is the position (1 is usually
+    Geography) or the dimension's name ("Geography", "Products"). `under_member_id` keeps the leaves below one member (a
+    NAICS sector, the CPI's "Food", a province), the reliable way to
+    take a branch: children rarely repeat the parent's name.
+    `member_query` filters leaf names. Leaves that may still double-count
+    go to flagged_leaves: names like totals, StatCan's T-coded special
+    aggregates ("Goods-producing industries", "Energy sector"), and
+    leaves outside the top-level member holding most leaves (CPI "All-
+    items excluding food"); include_flagged=True keeps them. Geography:
+    leaves are the lowest level present, so provinces are leaves of
+    Canada in the Labour Force Survey tables, but in the monthly CPI
+    table the leaves are cities, the provinces being their parents
+    (Whitehorse sits directly under Canada); geo_levels counts the levels,
+    and city leaves need not add up to a province. A dimension with no
+    parent links (age groups) makes every member a leaf. Returns
+    member_ids, a comma list, an SDMX '+' key fragment and full key for
+    sdmx_get_data (one call), and example coordinates for
+    wds_get_data_from_cube_coord. sdmx_get_key_for_dimension gives an
+    unfiltered leaf key only.
+    Keywords: statcan, leaf members, lowest level, avoid double counting,
+    exclude totals, subtotals, sum across provinces, rank industries,
+    NAICS detail, CPI components, hierarchy, dimension members, sdmx key,
+    coordinate.
+    Mots-clés : Statistique Canada, membres terminaux, niveau le plus fin,
+    éviter le double comptage, exclure les totaux, sous-totaux, somme des
+    provinces, classement des industries, détail SCIAN, composantes de
+    l'IPC, hiérarchie, membres de dimension, clé SDMX, coordonnée.
+    """
+    client.use_lang(lang)
+    return await leaves.get_leaf_members(
+        product_id,
+        dimension,
+        under_member_id=under_member_id,
+        member_query=member_query,
+        include_flagged=include_flagged,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -472,6 +541,52 @@ async def wds_get_data_by_reference_period_range(
 
 
 @tool
+async def wds_query_series(
+    vector_ids: list[int],
+    sql: str,
+    start_ref_period: str | None = None,
+    end_ref_period: str | None = None,
+    latest_n: int | None = None,
+    lang: Lang = "en",
+) -> SeriesQueryResult:
+    """Run one read-only SQL query over a few StatCan series on the server
+    and get back only its result: a sum, an average by year, a ranking, a
+    peak, a comparison between series, instead of every observation.
+
+    Use for: computing from StatCan vectors without adding up hundreds of
+    values yourself, e.g. the annual average CPI or unemployment rate, the
+    month with the highest value, provinces ranked by growth, the gap
+    between two series, a count of months above a threshold. The server
+    fetches up to 20 `vector_ids` for a window (`start_ref_period` and
+    `end_ref_period` as "YYYY-MM-DD" or "YYYY-MM", or `latest_n` periods,
+    default 12), loads them into a table `obs` and runs `sql` with DuckDB.
+    `obs` columns: vector_id, product_id, table_id, coordinate, ref_period
+    (DATE), value (unscaled: times scale_multiplier for the full figure),
+    scale_multiplier, decimals, status, symbol, release_time, series_title,
+    table_title, unit, scale, frequency, geography. Example: SELECT
+    vector_id, year(ref_period) AS year, avg(value) FROM obs GROUP BY ALL
+    ORDER BY ALL. Only one SELECT (or WITH ... SELECT) runs, with no file,
+    URL or extension access; at most 500 rows come back. Quote `series`
+    citations with the result.
+    Keywords: statcan, SQL, query, compute, calculate, aggregate, sum,
+    average, annual average, mean, group by, ranking, rank, top, maximum,
+    minimum, peak, compare series, DuckDB, analysis, vectors, server-side.
+    Mots-clés : Statistique Canada, requête SQL, calculer, calcul, agréger,
+    somme, moyenne, moyenne annuelle, regrouper, classement, classer,
+    maximum, minimum, sommet, comparer des séries, analyse, vecteurs,
+    calcul côté serveur.
+    """
+    client.use_lang(lang)
+    return await query.query_series(
+        vector_ids,
+        sql,
+        start_ref_period=start_ref_period,
+        end_ref_period=end_ref_period,
+        latest_n=latest_n,
+    )
+
+
+@tool
 async def wds_get_changed_series_list(lang: Lang = "en") -> ChangedSeriesList:
     """List StatCan series that changed (new release) today.
 
@@ -536,29 +651,52 @@ async def wds_get_changed_series_data(
 async def wds_get_full_table_download(
     product_id: ProductId,
     format: Literal["csv", "sdmx"] = "csv",
+    members: dict[str, list[str]] | None = None,
+    start_period: str | None = None,
+    end_period: str | None = None,
     lang: Lang = "en",
 ) -> FullTableDownloadLink:
     """Get the download URL for a full StatCan table as CSV (default) or
-    SDMX/XML (`format="sdmx"`).
+    SDMX/XML (`format="sdmx"`), with a script that summarizes it.
 
     Use for: bulk/offline analysis of an entire table rather than
     individual series, in CSV or SDMX format — hands back a URL, does
     not fetch the file. Also the way to get hundreds of series, or to
     reconcile a workbook of vector IDs against a published table: the
     CSV has a VECTOR column to join on, where the vector tools return
-    every observation inline. `lang` picks the CSV language edition. An
-    unknown table number is an error, not a dead link.
+    every observation inline. For CSV it also returns Python and R
+    scripts that download the file to data/raw/, keep the `members`
+    asked for ({"Geography": ["Canada", "Ontario"]}, dimension names as
+    in wds_get_cube_metadata) and the periods from `start_period` to
+    `end_period` (REF_DATE's form: 2020, 2020-01), then print only a
+    short summary. For a large table, run the Python script and reason
+    over its printout instead of pulling the rows into the conversation.
+    `lang` picks the CSV language edition. An unknown table number,
+    dimension or member is an error, not a dead link.
     Keywords: statcan, csv, sdmx, xml, download, full table, bulk,
     export, wds, Statistics Canada, vector column, join, reconcile,
-    hundreds of series, offline.
+    hundreds of series, offline, large table, summary script.
     Mots-clés : Statistique Canada, CSV, SDMX, XML, téléchargement, tableau
     complet, téléchargement en bloc, exportation, données complètes, fichier
-    du tableau, colonne VECTOR, jointure, rapprochement, centaines de séries.
+    du tableau, colonne VECTOR, jointure, rapprochement, centaines de séries,
+    grand tableau, script de résumé.
     """
     client.use_lang(lang)
     if format == "sdmx":
+        if members or start_period or end_period:
+            raise_error(
+                InvalidInput,
+                "error.invalid_input",
+                lang,
+                detail=(
+                    "wds_get_full_table_download: members, start_period and end_period filter "
+                    'the CSV scripts; format="sdmx" returns the link only.'
+                ),
+            )
         return await client.get_full_table_download_sdmx(product_id)
-    return await client.get_full_table_download_csv(product_id, lang)
+    return await client.get_full_table_download_csv(
+        product_id, lang, members, start_period, end_period
+    )
 
 
 @tool

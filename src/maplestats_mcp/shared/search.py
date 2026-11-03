@@ -280,73 +280,39 @@ def top_indices(scores: Sequence[float], k: int) -> list[int]:
     return [i for i in ranked[:k] if scores[i] > 0]
 
 
-# Every result model embeds the same Provenance schema, about 1.9 KB of field
-# descriptions once inlined, and search_tools returns five tools at a time:
-# 9.7 KB of a 22 KB answer on 2026-10-14 was five identical copies. The caller
-# needs the tool's input schema to build a call, not the wording of a block
-# that is the same everywhere, so search results carry this stub instead. The
-# tools' own schemas, and so every real result, are unchanged.
-PROVENANCE_STUB: dict[str, Any] = {
-    "type": "object",
-    "description": (
-        "Where the result came from, the same in every tool: source, url, queried_at, "
-        "cached and schema_name, plus as_of, freshness, coverage, limits, licence and "
-        "reproduce when known."
-    ),
-}
+# search_tools used to return each tool exactly as list_tools lists it. On
+# 2026-11-03 "unemployment rate by province" came back at 15.7 KB: about 7 KB
+# was five output schemas, which a caller never needs to build a call (the
+# result carries its own structured content), and about 3 KB was Keywords and
+# Mots-clés lines, which exist for the BM25 index above, not for the caller.
+# The index still reads the full docstring (`searchable_text`), so dropping
+# them from the answer leaves the ranking as it was.
+RESULT_FIELDS = ("name", "title", "description", "inputSchema", "annotations")
+
+# A Keywords or Mots-clés label starts the ranking-only tail of a docstring.
+# Most sit on their own line; a few run on from the last sentence.
+_KEYWORDS = re.compile(r"\s*\b(?:Keywords|Mots-clés)\s*:")
 
 
-PROVENANCE_REF = "#/$defs/Provenance"
-
-
-def _refers_to(node: Any, ref: str) -> bool:
-    """Whether any `$ref` anywhere inside `node` points at `ref`."""
-    if isinstance(node, dict):
-        return node.get("$ref") == ref or any(_refers_to(value, ref) for value in node.values())
-    if isinstance(node, list):
-        return any(_refers_to(value, ref) for value in node)
-    return False
-
-
-def _is_provenance(schema: Any, defs: dict[str, Any]) -> bool:
-    """The shared Provenance schema, inlined or as a `$ref` into `$defs`."""
-    if not isinstance(schema, dict):
-        return False
-    if schema.get("$ref") == PROVENANCE_REF:
-        return "schema_name" in defs.get("Provenance", {}).get("properties", {})
-    # Another field that happens to be called "provenance" keeps its own schema.
-    return "schema_name" in schema.get("properties", {})
+def caller_description(description: str | None) -> str | None:
+    """A tool's docstring without its Keywords and Mots-clés lines."""
+    if not description:
+        return description
+    match = _KEYWORDS.search(description)
+    return description[: match.start()].rstrip() if match else description
 
 
 def serialize_tools_compact(tools: Sequence[Tool]) -> list[dict[str, Any]]:
-    """Search results in list_tools format, with the Provenance schema collapsed.
+    """Search results in list_tools format, less what only ranking or validation reads.
 
-    The server's middleware inlines every `$ref` before results are built, so the
-    block normally arrives inline; the `$ref` form is handled too, for a transform
-    run without that middleware, and its now unused `$defs` entry is dropped.
+    Each result keeps the name, title, input schema and annotations, and the
+    description up to its Keywords line. The output schema is left out: the
+    tool's own definition keeps it, so real results are still checked against it.
     """
-    results = serialize_tools_for_output_json(tools)
-    for result in results:
-        schema = result.get("outputSchema")
-        if not isinstance(schema, dict):
-            continue
-        properties = schema.get("properties")
-        if not isinstance(properties, dict):
-            continue
-        defs = schema.get("$defs", {})
-        if _is_provenance(properties.get("provenance"), defs):
-            properties["provenance"] = dict(PROVENANCE_STUB)
-            if isinstance(defs, dict):
-                # Keep the definition while another field still points at it.
-                still_used = _refers_to(
-                    [
-                        {key: value for key, value in schema.items() if key != "$defs"},
-                        {key: value for key, value in defs.items() if key != "Provenance"},
-                    ],
-                    PROVENANCE_REF,
-                )
-                if not still_used:
-                    defs.pop("Provenance", None)
-                if not defs:
-                    schema.pop("$defs", None)
+    results = []
+    for full in serialize_tools_for_output_json(tools):
+        result = {key: full[key] for key in RESULT_FIELDS if key in full}
+        if "description" in result:
+            result["description"] = caller_description(result["description"])
+        results.append(result)
     return results

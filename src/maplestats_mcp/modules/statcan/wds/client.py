@@ -588,20 +588,26 @@ async def get_cube_metadata(
         )
 
     all_footnotes = list_or_empty(obj, "footnote")
-    footnotes = [
-        Footnote(
-            footnote_id=int(fn["footnoteId"]),
-            text_en=fn.get("footnotesEn", ""),
-            text_fr=fn.get("footnotesFr", ""),
-        )
-        for fn in all_footnotes[:footnote_limit]
-    ]
+    # WDS repeats one note under a new id for each member it applies to (the CPI
+    # table 18-10-0004 lists the same 1.6 KB note 17 times, checked 2026-11-03),
+    # and the ids are all a caller could tell them apart by. Each text comes back
+    # once, with the other ids, and the cap counts distinct texts.
+    distinct: dict[tuple[str, str], Footnote] = {}
+    for fn in all_footnotes:
+        key = (fn.get("footnotesEn", ""), fn.get("footnotesFr", ""))
+        if key in distinct:
+            distinct[key].same_text_ids.append(int(fn["footnoteId"]))
+        else:
+            distinct[key] = Footnote(
+                footnote_id=int(fn["footnoteId"]), text_en=key[0], text_fr=key[1]
+            )
+    footnotes = list(distinct.values())[:footnote_limit]
     limit_notes = list(cut)
-    if len(all_footnotes) > footnote_limit:
+    if len(distinct) > footnote_limit:
         limit_notes.append(
             _m(
-                f"footnotes: {footnote_limit} of {len(all_footnotes)}",
-                f"notes de bas de page : {footnote_limit} sur {len(all_footnotes)}",
+                f"footnotes: {footnote_limit} of {len(distinct)} distinct texts",
+                f"notes de bas de page : {footnote_limit} des {len(distinct)} textes distincts",
             )
         )
     limits = (
@@ -1267,18 +1273,92 @@ def _download_url(body: Any, method: str) -> str:
     return str(_unwrap_one(body, method)) if isinstance(body, dict) else str(body)
 
 
+async def _check_members(
+    pid: int, members: dict[str, list[str]], lang: str
+) -> dict[str, list[str]]:
+    """The members keyed by dimension name and spelled as the CSV spells them.
+
+    A dimension the table lacks would leave the script filtering a column that
+    does not exist. A member is checked, and its spelling taken from the
+    metadata (the script matches case but not accents), only when the metadata
+    lists the whole dimension: it is capped at MEMBER_LIMIT_MAX members.
+    """
+    metadata = await get_cube_metadata(pid, member_limit=constants.MEMBER_LIMIT_MAX)
+    checked: dict[str, list[str]] = {}
+    for name, given in members.items():
+        values: list[str] = [given] if isinstance(given, str) else list(given)
+        wanted = _fold(name.strip())
+        dimension = next(
+            (
+                d
+                for d in metadata.dimensions
+                if wanted in (_fold(d.dimension_name_en), _fold(d.dimension_name_fr))
+                or (d.dimension_position_id == 1 and wanted == "geo")
+            ),
+            None,
+        )
+        if dimension is None:
+            known = ", ".join(
+                d.dimension_name_en if lang == "en" else d.dimension_name_fr
+                for d in metadata.dimensions
+            )
+            raise InvalidInput(
+                _m(
+                    f"Table {pid} has no dimension {name!r}. Its dimensions: {known}.",
+                    f"Le tableau {pid} n'a pas de dimension {name!r}. Ses dimensions : {known}.",
+                )
+            )
+        if dimension.member_count == len(dimension.members):
+            spelled = {
+                _fold(label.strip()): label
+                for m in dimension.members
+                for label in [m.member_name_en if lang == "en" else m.member_name_fr]
+            }
+            unknown = [v for v in values if _fold(v.strip()) not in spelled]
+            values = [spelled.get(_fold(v.strip()), v) for v in values]
+            if unknown:
+                raise InvalidInput(
+                    _m(
+                        f"{', '.join(map(repr, unknown))} is not a member of {name!r} in table "
+                        f"{pid}; wds_get_cube_metadata lists the members.",
+                        f"{', '.join(map(repr, unknown))} n'est pas un membre de {name!r} dans le "
+                        f"tableau {pid} ; wds_get_cube_metadata donne la liste des membres.",
+                    )
+                )
+        # The CSV names its columns after the dimensions, in the file's
+        # language, except the geography, which is GEO (GÉO in French).
+        column = dimension.dimension_name_en if lang == "en" else dimension.dimension_name_fr
+        checked[column] = values
+    return checked
+
+
 async def get_full_table_download_csv(
-    product_id: int | str, lang: str = "en"
+    product_id: int | str,
+    lang: str = "en",
+    members: dict[str, list[str]] | None = None,
+    start_period: str | None = None,
+    end_period: str | None = None,
 ) -> FullTableDownloadLink:
+    # Lazy import: reproduce's builders reach other modules' code at import.
+    from maplestats_mcp.modules.reproduce.builders import full_table_spec
+    from maplestats_mcp.modules.reproduce.client import render_scripts
+
     method = "getFullTableDownloadCSV"
     pid = normalize_product_id(product_id)
     await _require_known_table(pid)
+    if members:
+        members = await _check_members(pid, members, lang)
+    # Built before the request so a bad period fails without a WDS call.
+    spec = full_table_spec(pid, lang, members, start_period, end_period)
+    spec.summary = True
+    scripts, _ = render_scripts(spec, "wds_get_full_table_download", ["python", "r"])
     data = await _get(method, path_suffix=f"/{pid}/{lang}")
     return FullTableDownloadLink(
         product_id=pid,
         format="csv",
         language=lang,
         download_url=_download_url(data, method),
+        scripts=scripts,
         provenance=make_provenance(
             source="statcan-wds",
             url=f"{constants.BASE_URL}{method}/{pid}/{lang}",

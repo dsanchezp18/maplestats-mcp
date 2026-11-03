@@ -64,9 +64,33 @@ VERIFIED_TABLES = {
     36100434: "Gross domestic product (GDP) at basic prices, by industry, monthly",
     98100001: "Population and dwelling counts: Canada, provinces and territories",
     98100002: "Population and dwelling counts: Canada and census subdivisions (municipalities)",
+    14100064: "Employee wages by industry, annual",
+    14100458: "Labour force characteristics by census metropolitan area, three-month moving "
+    "average, unadjusted for seasonality",
+    14100459: "Labour force characteristics by census metropolitan area, three-month moving "
+    "average, seasonally adjusted",
+    14100460: "Labour force characteristics by Montréal, Toronto and Vancouver census "
+    "metropolitan areas, monthly, seasonally adjusted",
+    14100462: "Labour force characteristics by economic region, three-month moving average, "
+    "unadjusted for seasonality",
+    14100203: "Average weekly earnings by industry, monthly, unadjusted for seasonality",
+    14100204: "Average weekly earnings by industry, annual",
+    12100011: "International merchandise trade for all countries and by Principal Trading "
+    "Partners, monthly",
+    34100292: "Building permits, by type of structure and type of work",
 }
 
-OFFICIAL_HOSTS = ("statcan.gc.ca", "bankofcanada.ca", "cmhc-schl.gc.ca")
+# open.canada.ca and tbs-sct.canada.ca: the Treasury Board publishes the proactive
+# disclosure schemas and guides there.
+OFFICIAL_HOSTS = (
+    "statcan.gc.ca",
+    "bankofcanada.ca",
+    "cmhc-schl.gc.ca",
+    "jobbank.gc.ca",
+    "canada.ca",
+    "open.canada.ca",
+    "tbs-sct.canada.ca",
+)
 
 
 def _keys(tool: str, arguments: dict) -> set[str]:
@@ -119,6 +143,7 @@ def test_match_by_tool_prefix():
     assert _keys("statcan_pumf_tabulate", {}) == {"pumf-weights-and-release"}
     assert _keys("cmhc_get_table_data", {}) == {"cmhc-rental-market-reliability"}
     assert _keys("cmhc_list_categories", {}) == set()
+    assert _keys("disclosure_summarize", {}) == {"proactive-disclosure-amendments"}
 
 
 @pytest.mark.parametrize(

@@ -9,9 +9,11 @@ from the user guide prose alone.
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from maplestats_mcp.modules.reproduce.schemas import Script
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.transform import TransformedSeries
 
@@ -83,6 +85,13 @@ class Footnote(BaseModel):
     footnote_id: int
     text_en: str
     text_fr: str
+    same_text_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "Other footnote ids with exactly this text, returned once here: WDS repeats one "
+            "note under a new id for each member it applies to."
+        ),
+    )
 
 
 class CubeMetadata(BaseModel):
@@ -167,6 +176,13 @@ class SeriesContext(BaseModel):
     """What a series measures, read from WDS metadata, so a value can be cited
     and checked without another call. In the call's language."""
 
+    citation: str | None = Field(
+        default=None,
+        description=(
+            "Ready to quote beside every value from this series: publisher, table number "
+            "and title, vector and release date. Add each value's reference period."
+        ),
+    )
     table_id: str = Field(description="The table number as StatCan prints it, e.g. 34-10-0133-01.")
     table_title: str | None = None
     table_url: str = Field(description="The table's page on statcan.gc.ca, for a citation.")
@@ -248,6 +264,47 @@ class VectorDataSet(BaseModel):
     provenance: Provenance
 
 
+QueryCell = str | int | float | bool | None
+
+
+class QuerySeries(BaseModel):
+    """One series loaded into the `obs` table of wds_query_series."""
+
+    vector_id: int
+    product_id: int
+    coordinate: str
+    observation_count: int = Field(description="Rows this series put in `obs`.")
+    citation: str = Field(
+        description=(
+            "Ready to quote beside any figure computed from this series: publisher, table, "
+            "vector. Add the reference period the figure covers."
+        )
+    )
+    context: SeriesContext | None = Field(
+        default=None,
+        description="Table, title, unit, members and reading notes; null if metadata failed.",
+    )
+
+
+class SeriesQueryResult(BaseModel):
+    """The result of one read-only SQL query over fetched WDS observations."""
+
+    sql: str = Field(description="The SQL as run against the table `obs`.")
+    columns: list[str] = Field(description="Result column names, in order.")
+    column_types: list[str] = Field(description="DuckDB type of each result column.")
+    rows: list[list[QueryCell]] = Field(
+        description="Result rows (dates as YYYY-MM-DD), at most the row cap in provenance.limits."
+    )
+    row_count: int = Field(description="Rows in `rows`.")
+    truncated: bool = Field(description="True when the query returned more rows than the cap.")
+    input_rows: int = Field(description="Observations loaded into `obs` before the query ran.")
+    series: list[QuerySeries]
+    failed: list[FailedVector] = Field(
+        default_factory=list, description="Vectors WDS could not serve; they are not in `obs`."
+    )
+    provenance: Provenance
+
+
 class CodeSetEntry(BaseModel):
     code: int
     # Nullable: uom code 0 ("no unit") legitimately has no description in
@@ -295,11 +352,105 @@ class ChangedSeriesList(BaseModel):
     provenance: Provenance
 
 
+LeafFlag = Literal["total_name", "special_aggregate", "outside_main_hierarchy"]
+
+
+class LeafMember(BaseModel):
+    """A member that is no other member's parent, in the call's language."""
+
+    member_id: int
+    member_name: str
+    parent_member_id: int | None = None
+    parent_name: str | None = None
+    classification_code: str | None = None
+    geo_level: int | None = Field(
+        default=None,
+        description="StatCan's geographic level (0 Canada, 2 province or territory, 503 CMA...).",
+    )
+    unit: str | None = Field(default=None, description="The member's unit of measure, if any.")
+    terminated: bool = Field(
+        default=False, description="StatCan no longer updates this member's series."
+    )
+    flags: list[LeafFlag] = Field(
+        default_factory=list,
+        description=(
+            "Why this leaf may still double-count: total_name (named like a total: 'Total', "
+            "'All ...', 'Canada'), special_aggregate (a StatCan T-coded aggregate such as "
+            "'Goods-producing industries'), outside_main_hierarchy (not under the top-level "
+            "member holding most leaves, e.g. CPI 'All-items excluding food')."
+        ),
+    )
+
+
+class TopLevelMember(BaseModel):
+    member_id: int
+    member_name: str
+    leaf_count: int = Field(description="Leaves under it (itself, when it has no children).")
+
+
+class LeafMembers(BaseModel):
+    """The lowest-level members of one dimension: the set to sum or rank over."""
+
+    product_id: int
+    dimension_position: int
+    dimension_name: str
+    member_count: int = Field(description="All members of the dimension.")
+    under_member_id: int | None = None
+    parent_count: int = Field(
+        description="Members left out because they are a parent (a total or subtotal) in scope."
+    )
+    leaf_count: int = Field(description="Leaves in scope matching member_query, flagged included.")
+    flagged_count: int = Field(description="Leaves among them that carry a flag.")
+    selected_count: int = Field(
+        description="Leaves in member_ids before limit/offset (flagged ones only with "
+        "include_flagged)."
+    )
+    leaves: list[LeafMember] = Field(description="The selected leaves (this page).")
+    flagged_leaves: list[LeafMember] = Field(
+        default_factory=list,
+        description="Leaves set aside because a flag says they may double-count; empty with "
+        "include_flagged.",
+    )
+    member_ids: list[int] = Field(description="The ids of `leaves`, in metadata order.")
+    member_ids_csv: str = Field(description="member_ids joined with commas.")
+    sdmx_key_fragment: str = Field(
+        description="member_ids joined with '+': the OR segment for this dimension in an "
+        "sdmx_get_data key."
+    )
+    sdmx_key: str = Field(
+        description="A full sdmx_get_data key with this dimension filled and the others empty "
+        "(wildcards): fill them with one member id each before calling."
+    )
+    example_coordinates: list[str] = Field(
+        default_factory=list,
+        description="wds_get_data_from_cube_coord coordinates for the first leaves, with every "
+        "other dimension at its first top-level member (usually its total).",
+    )
+    top_level_members: list[TopLevelMember] = Field(
+        default_factory=list,
+        description="The dimension's top-level members and their leaf counts: pick one as "
+        "under_member_id to keep a single hierarchy.",
+    )
+    geo_levels: dict[str, int] = Field(
+        default_factory=dict,
+        description="Selected leaves per geoLevel, for a geography dimension.",
+    )
+    notes: list[str] = Field(default_factory=list)
+    provenance: Provenance
+
+
 class FullTableDownloadLink(BaseModel):
     product_id: int
     format: str  # "csv" or "sdmx"
     language: str  # "en" or "fr"
     download_url: str
+    scripts: list[Script] = Field(
+        default_factory=list,
+        description="CSV only: Python and R scripts that download the zipped CSV to "
+        "data/raw/, keep the members and periods asked for, and print a short summary "
+        "(size, each column's values, the first and last rows) instead of the rows. Run "
+        "one and read its output rather than fetching the table's rows into the conversation.",
+    )
     provenance: Provenance
 
 

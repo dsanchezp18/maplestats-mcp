@@ -24,7 +24,7 @@ Kind = Literal[
     "none",  # nothing a script can fetch; notes say why
 ]
 
-Op = Literal["contains", "terms", "is", "starts", "eq", "ge", "le"]
+Op = Literal["contains", "terms", "is", "in", "starts", "eq", "ge", "le"]
 
 
 @dataclass
@@ -34,6 +34,7 @@ class Filter:
     contains: the text appears in the first column (case-insensitive).
     terms: every word of the text appears somewhere in the columns.
     is: the first column equals the text, ignoring case and outer spaces.
+    in: the same, for any of a list of texts (a table's members, say).
     starts: the first column starts with the text.
     eq, ge, le: compare the first column with a number or ISO date text.
     """
@@ -103,3 +104,8 @@ class Spec:
     languages: tuple[str, ...] = ("r", "python", "stata", "julia", "excel")
     notes: list[str] = field(default_factory=list)
     source: str = ""  # key into cleaning.SPECIFIC
+    # R and Python only: end with "4. Summarize", which prints the table's
+    # shape, each column's distinct values and a few rows instead of leaving
+    # the whole frame to print. An assistant runs the script and reads that,
+    # so a large table never passes through its context.
+    summary: bool = False

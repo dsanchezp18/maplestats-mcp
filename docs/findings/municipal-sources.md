@@ -682,6 +682,45 @@ Not added:
   datasets in the dataset collection.
 - Hamilton stays out (blocks automated requests, see the roadmap).
 
+## City of Waterloo, New Westminster and Niagara Open Data (2026-11-03)
+
+Checked live 2026-11-03, together with the Saskatchewan GeoHub (see
+[provincial sources](provincial-sources.md#saskatchewan)) and Hamilton (still
+blocked, see the roadmap). The portal URLs came from a list in a third-party
+project; each was checked here against the portal itself.
+
+- **City of Waterloo**, `data.waterloo.ca` (`portal="waterloo"`): the Hub
+  domain record names the City of Waterloo (org `ZpeBVw5o1kjit7LT`), not the
+  Region, whose portal stays `waterloo_region`. The dataset collection lists
+  435 items, but only 129 are the City's (owner `OpenData_Waterloo`); the site
+  also shows 133 Kitchener, 120 Region of Waterloo and 53 Cambridge items, under
+  those publishers' own licences. The City's items have an empty licence field;
+  the site's licence page (`/pages/open-data-licence`, read through the page's
+  ArcGIS item) is the Waterloo Open Data User Licence, adapted from the UK Open
+  Government Licence: "use the Information commercially", attribution optional
+  ("Contains information provided by the City of Waterloo under licence").
+  Smoke test passed (search, detail, CSV link, feature query).
+- **New Westminster**, `opendata.newwestcity.ca` (`portal="new_westminster"`):
+  the Hub site `36d443e65b7941759929ebf555059d03`, also reachable at its older
+  address `data-60320-newwestcity.opendata.arcgis.com` (the one the DCAT feed
+  of the third-party project used). Only the `all` collection exists: 169 items
+  (98 Feature Services, 40 Excel files, PDFs, apps), so searches default to
+  Feature Service. Terms of use (`/pages/terms-of-use`): Open Government
+  Licence - City of New Westminster v1.0, derived from OGL-BC 2.0, "including
+  for commercial purposes", attribution "Contains information licenced under
+  the Open Government Licence - City of New Westminster." 142 items state it;
+  19 state no licence. Smoke test passed (search, detail, download links,
+  feature query).
+- **Niagara Open Data**, `niagaraopendata.ca` (CKAN, per its pages and the CKAN
+  ecosystem listing): not added. Every request from this environment, the API
+  (`/api/3/action/status_show`, `package_search`), the home page and
+  `/robots.txt` alike, answered a Cloudflare challenge (HTTP 403 "Just a
+  moment"); a fetch from a second network answered 403 too. Neither the API
+  nor the licence page (`/pages/open-government-license-2-0-niagara-region`,
+  Open Government Licence 2.0 - Niagara Region per search results) could be
+  read. It would sit beside, not replace, the covered ArcGIS Hub portal
+  `niagara_region` (`open.niagararegion.ca`).
+
 ## Permits, licences, inspections and planning applications
 
 Checked live 2026-10-27, for the backlog items "permits and licensing data" and

@@ -1,0 +1,798 @@
+{
+ "18100004": {
+  "productId": "18100004",
+  "cansimId": "326-0020",
+  "cubeTitleEn": "Consumer Price Index, monthly, not seasonally adjusted",
+  "cubeTitleFr": "Indice des prix à la consommation mensuel, non désaisonnalisé",
+  "cubeStartDate": "1914-01-01",
+  "cubeEndDate": "2026-09-01",
+  "dimension": [
+   {
+    "dimensionPositionId": 1,
+    "dimensionNameEn": "Geography",
+    "dimensionNameFr": "Géographie",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 2,
+      "parentMemberId": null,
+      "memberNameEn": "Canada",
+      "memberNameFr": "Canada",
+      "classificationCode": "11124",
+      "geoLevel": 0,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 14,
+      "parentMemberId": 2,
+      "memberNameEn": "Ontario",
+      "memberNameFr": "Ontario",
+      "classificationCode": "35",
+      "geoLevel": 2,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 15,
+      "parentMemberId": 14,
+      "memberNameEn": "Ottawa-Gatineau, Ontario part, Ontario/Quebec",
+      "memberNameFr": "Ottawa-Gatineau, partie ontarienne, Ontario/Québec",
+      "classificationCode": "35505",
+      "geoLevel": 505,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 16,
+      "parentMemberId": 14,
+      "memberNameEn": "Toronto, Ontario",
+      "memberNameFr": "Toronto, Ontario",
+      "classificationCode": "535",
+      "geoLevel": 503,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 26,
+      "parentMemberId": 2,
+      "memberNameEn": "British Columbia",
+      "memberNameFr": "Colombie-Britannique",
+      "classificationCode": "59",
+      "geoLevel": 2,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 27,
+      "parentMemberId": 26,
+      "memberNameEn": "Vancouver, British Columbia",
+      "memberNameFr": "Vancouver, Colombie-Britannique",
+      "classificationCode": "933",
+      "geoLevel": 503,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 29,
+      "parentMemberId": 2,
+      "memberNameEn": "Whitehorse, Yukon",
+      "memberNameFr": "Whitehorse, Yukon",
+      "classificationCode": "6001009",
+      "geoLevel": 5,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 2,
+    "dimensionNameEn": "Products and product groups",
+    "dimensionNameFr": "Produits et groupes de produits",
+    "hasUom": true,
+    "member": [
+     {
+      "memberId": 2,
+      "parentMemberId": null,
+      "memberNameEn": "All-items",
+      "memberNameFr": "Ensemble",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 3,
+      "parentMemberId": 2,
+      "memberNameEn": "Food",
+      "memberNameFr": "Aliments",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 4,
+      "parentMemberId": 3,
+      "memberNameEn": "Food purchased from stores",
+      "memberNameFr": "Aliments achetés en magasin",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 21,
+      "parentMemberId": 4,
+      "memberNameEn": "Dairy products and eggs",
+      "memberNameFr": "Produits laitiers et oeufs",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 22,
+      "parentMemberId": 21,
+      "memberNameEn": "Dairy products",
+      "memberNameFr": "Produits laitiers",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 24,
+      "parentMemberId": 22,
+      "memberNameEn": "Butter",
+      "memberNameFr": "Beurre",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 26,
+      "parentMemberId": 22,
+      "memberNameEn": "Ice cream and related products",
+      "memberNameFr": "Crème glacée et produits connexes",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 28,
+      "parentMemberId": 21,
+      "memberNameEn": "Eggs",
+      "memberNameFr": "Oeufs",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 29,
+      "parentMemberId": 4,
+      "memberNameEn": "Bakery and cereal products (excluding baby food)",
+      "memberNameFr": "Produits de boulangerie et produits céréaliers (excluant les aliments pour bébés)",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 30,
+      "parentMemberId": 29,
+      "memberNameEn": "Bakery products",
+      "memberNameFr": "Produits de boulangerie",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 31,
+      "parentMemberId": 30,
+      "memberNameEn": "Bread, rolls and buns",
+      "memberNameFr": "Pain et petits pains",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 32,
+      "parentMemberId": 30,
+      "memberNameEn": "Cookies and crackers",
+      "memberNameFr": "Biscuits et craquelins",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 328,
+      "parentMemberId": 32,
+      "memberNameEn": "Crackers and crisp breads (2013=100)",
+      "memberNameFr": "Craquelins et pains secs (2013=100)",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 1,
+      "memberUomCode": 25
+     },
+     {
+      "memberId": 284,
+      "parentMemberId": null,
+      "memberNameEn": "All-items excluding food",
+      "memberNameFr": "Ensemble excluant les aliments",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 288,
+      "parentMemberId": null,
+      "memberNameEn": "Energy",
+      "memberNameFr": "Énergie",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 273,
+      "parentMemberId": null,
+      "memberNameEn": "Goods and services",
+      "memberNameFr": "Biens et services",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 1,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 274,
+      "parentMemberId": 273,
+      "memberNameEn": "Goods",
+      "memberNameFr": "Biens",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 275,
+      "parentMemberId": 274,
+      "memberNameEn": "Durable goods",
+      "memberNameFr": "Biens durables",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 282,
+      "parentMemberId": 273,
+      "memberNameEn": "Services",
+      "memberNameFr": "Services",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 283,
+      "parentMemberId": 282,
+      "memberNameEn": "Services excluding shelter services",
+      "memberNameFr": "Services excluant les services de logement",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 1,
+      "memberUomCode": 17
+     }
+    ]
+   }
+  ]
+ },
+ "14100287": {
+  "productId": "14100287",
+  "cansimId": "282-0087",
+  "cubeTitleEn": "Labour force characteristics, monthly, seasonally adjusted and trend-cycle",
+  "cubeTitleFr": "Caractéristiques de la population active, données mensuelles désaisonnalisées et la tendance-cycle",
+  "cubeStartDate": "1976-01-01",
+  "cubeEndDate": "2026-09-01",
+  "dimension": [
+   {
+    "dimensionPositionId": 1,
+    "dimensionNameEn": "Geography",
+    "dimensionNameFr": "Géographie",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Canada",
+      "memberNameFr": "Canada",
+      "classificationCode": "11124",
+      "geoLevel": 0,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 6,
+      "parentMemberId": 1,
+      "memberNameEn": "Quebec",
+      "memberNameFr": "Québec",
+      "classificationCode": "24",
+      "geoLevel": 2,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 7,
+      "parentMemberId": 1,
+      "memberNameEn": "Ontario",
+      "memberNameFr": "Ontario",
+      "classificationCode": "35",
+      "geoLevel": 2,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 10,
+      "parentMemberId": 1,
+      "memberNameEn": "Alberta",
+      "memberNameFr": "Alberta",
+      "classificationCode": "48",
+      "geoLevel": 2,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 2,
+    "dimensionNameEn": "Labour force characteristics",
+    "dimensionNameFr": "Caractéristiques de la population active",
+    "hasUom": true,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Population",
+      "memberNameFr": "Population",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 428
+     },
+     {
+      "memberId": 2,
+      "parentMemberId": 1,
+      "memberNameEn": "Labour force",
+      "memberNameFr": "Population active",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 428
+     },
+     {
+      "memberId": 3,
+      "parentMemberId": 2,
+      "memberNameEn": "Employment",
+      "memberNameFr": "Emploi",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 428
+     },
+     {
+      "memberId": 4,
+      "parentMemberId": 3,
+      "memberNameEn": "Full-time employment",
+      "memberNameFr": "Emploi à temps plein",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 428
+     },
+     {
+      "memberId": 5,
+      "parentMemberId": 3,
+      "memberNameEn": "Part-time employment",
+      "memberNameFr": "Emploi à temps partiel",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 428
+     },
+     {
+      "memberId": 6,
+      "parentMemberId": 2,
+      "memberNameEn": "Unemployment",
+      "memberNameFr": "Chômage",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 428
+     },
+     {
+      "memberId": 7,
+      "parentMemberId": null,
+      "memberNameEn": "Unemployment rate",
+      "memberNameFr": "Taux de chômage",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 239
+     },
+     {
+      "memberId": 8,
+      "parentMemberId": null,
+      "memberNameEn": "Participation rate",
+      "memberNameFr": "Taux d'activité",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 239
+     },
+     {
+      "memberId": 9,
+      "parentMemberId": null,
+      "memberNameEn": "Employment rate",
+      "memberNameFr": "Taux d'emploi",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 239
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 3,
+    "dimensionNameEn": "Gender",
+    "dimensionNameFr": "Genre",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Total - Gender",
+      "memberNameFr": "Total - Genre",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 2,
+      "parentMemberId": 1,
+      "memberNameEn": "Men+",
+      "memberNameFr": "Hommes+",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 3,
+      "parentMemberId": 1,
+      "memberNameEn": "Women+",
+      "memberNameFr": "Femmes+",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 4,
+    "dimensionNameEn": "Age group",
+    "dimensionNameFr": "Groupe d'âge",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "15 years and over",
+      "memberNameFr": "15 ans et plus",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 2,
+      "parentMemberId": null,
+      "memberNameEn": "15 to 24 years",
+      "memberNameFr": "15 à 24 ans",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 3,
+      "parentMemberId": null,
+      "memberNameEn": "15 to 19 years",
+      "memberNameFr": "15 à 19 ans",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 4,
+      "parentMemberId": null,
+      "memberNameEn": "20 to 24 years",
+      "memberNameFr": "20 à 24 ans",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 5,
+    "dimensionNameEn": "Statistics",
+    "dimensionNameFr": "Statistiques",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Estimate",
+      "memberNameFr": "Estimation",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 6,
+    "dimensionNameEn": "Data type",
+    "dimensionNameFr": "Type de données",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Seasonally adjusted",
+      "memberNameFr": "Désaisonnalisées",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   }
+  ]
+ },
+ "36100434": {
+  "productId": "36100434",
+  "cansimId": "379-0031",
+  "cubeTitleEn": "Gross domestic product (GDP) at basic prices, by industry, monthly",
+  "cubeTitleFr": "Produit intérieur brut (PIB) aux prix de base, par industries, mensuel",
+  "cubeStartDate": "1997-01-01",
+  "cubeEndDate": "2026-08-01",
+  "dimension": [
+   {
+    "dimensionPositionId": 1,
+    "dimensionNameEn": "Geography",
+    "dimensionNameFr": "Géographie",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Canada",
+      "memberNameFr": "Canada",
+      "classificationCode": "11124",
+      "geoLevel": 0,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 2,
+    "dimensionNameEn": "Seasonal adjustment",
+    "dimensionNameFr": "Désaisonnalisation",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Seasonally adjusted at annual rates",
+      "memberNameFr": "Désaisonnalisées au taux annuel",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 2,
+      "parentMemberId": null,
+      "memberNameEn": "Trading-day adjusted",
+      "memberNameFr": "Ajustées pour les jours ouvrables",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 3,
+    "dimensionNameEn": "Prices",
+    "dimensionNameFr": "Prix",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "Chained (2017) dollars",
+      "memberNameFr": "Dollars enchaînés (2017)",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 2,
+      "parentMemberId": null,
+      "memberNameEn": "2017 constant prices",
+      "memberNameFr": "Prix constants de 2017",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 4,
+    "dimensionNameEn": "North American Industry Classification System (NAICS)",
+    "dimensionNameFr": "Système de classification des industries de l'Amérique du Nord (SCIAN)",
+    "hasUom": true,
+    "member": [
+     {
+      "memberId": 1,
+      "parentMemberId": null,
+      "memberNameEn": "All industries",
+      "memberNameFr": "Ensemble des industries",
+      "classificationCode": "T001",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 2,
+      "parentMemberId": 1,
+      "memberNameEn": "Goods-producing industries",
+      "memberNameFr": "Industries productrices de biens",
+      "classificationCode": "T002",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 13,
+      "parentMemberId": 1,
+      "memberNameEn": "Information and communication technology sector",
+      "memberNameFr": "Secteur des technologies de l'information et des communications",
+      "classificationCode": "T013",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 14,
+      "parentMemberId": 13,
+      "memberNameEn": "Information and communication technology, manufacturing",
+      "memberNameFr": "Technologies de l'information et des communications, fabrication",
+      "classificationCode": "T014",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 15,
+      "parentMemberId": 13,
+      "memberNameEn": "Information and communication technology, services",
+      "memberNameFr": "Technologies de l'information et des communications, services",
+      "classificationCode": "T015",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 16,
+      "parentMemberId": 1,
+      "memberNameEn": "Energy sector",
+      "memberNameFr": "Secteur de l'énergie",
+      "classificationCode": "T016",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 20,
+      "parentMemberId": 1,
+      "memberNameEn": "Agriculture, forestry, fishing and hunting",
+      "memberNameFr": "Agriculture, foresterie, pêche et chasse",
+      "classificationCode": "11",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 24,
+      "parentMemberId": 20,
+      "memberNameEn": "Forestry and logging",
+      "memberNameFr": "Foresterie et exploitation forestière",
+      "classificationCode": "113",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 25,
+      "parentMemberId": 20,
+      "memberNameEn": "Fishing, hunting and trapping",
+      "memberNameFr": "Pêche, chasse et piégeage",
+      "classificationCode": "114",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 27,
+      "parentMemberId": 1,
+      "memberNameEn": "Mining, quarrying, and oil and gas extraction",
+      "memberNameFr": "Extraction minière, exploitation en carrière, et extraction de pétrole et de gaz",
+      "classificationCode": "21",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 28,
+      "parentMemberId": 27,
+      "memberNameEn": "Oil and gas extraction",
+      "memberNameFr": "Extraction de pétrole et de gaz",
+      "classificationCode": "211",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 29,
+      "parentMemberId": 28,
+      "memberNameEn": "Oil and gas extraction (except oil sands)",
+      "memberNameFr": "Extraction de pétrole et de gaz (à l'exception des sables bitumineux)",
+      "classificationCode": "21111",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     },
+     {
+      "memberId": 30,
+      "parentMemberId": 28,
+      "memberNameEn": "Oil sands extraction",
+      "memberNameFr": "Extraction de sables bitumineux",
+      "classificationCode": "21114",
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 81
+     }
+    ]
+   }
+  ]
+ }
+}

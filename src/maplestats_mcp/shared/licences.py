@@ -269,6 +269,8 @@ SOURCE_LICENCES: dict[str, str] = {
     "earthquakes-canada": OGL_CANADA,
     "gc-infobase": OGL_CANADA,
     "ircc-monthly": OGL_CANADA,
+    # Job Bank "Wages" dataset (ESDC) on open.canada.ca, licence ca-ogl-lgo.
+    "jobbank-wages": OGL_CANADA,
     "ised-corporations": OGL_CANADA,
     "ised-spectrum": OGL_CANADA,
     "ised-ip-horizons": OGL_CANADA,
@@ -279,6 +281,9 @@ SOURCE_LICENCES: dict[str, str] = {
     "nrcan-nbac": OGL_CANADA,
     "phac-infobase": OGL_CANADA,
     "pmra": OGL_CANADA,
+    # Proactive Publication packages on open.canada.ca: licence_id ca-ogl-lgo
+    # on all four (package_show, 2026-11-03).
+    "proactive-disclosure": OGL_CANADA,
     "recalls": OGL_CANADA,
     "tc-recalls": OGL_CANADA,
     # Federal web pages and services outside open.canada.ca
@@ -288,6 +293,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "fcac": CANADA_CA_TERMS,
     "gazette": CANADA_CA_TERMS,
     "ircc-express-entry": CANADA_CA_TERMS,
+    "ircc-processing-times": CANADA_CA_TERMS,
     "ised-cipo": CANADA_CA_TERMS,
     "nrcan-energy-use": CANADA_CA_TERMS,
     "pmprb": CANADA_CA_TERMS,

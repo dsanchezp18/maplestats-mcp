@@ -72,6 +72,13 @@ FR: dict[str, str] = {
     ),
     # Labour
     "Jobs, unemployment and wages": "Emploi, chômage et salaires",
+    "Job Bank wages for an occupation: query (job title or NOC code) gives the NOC 2021 code": (
+        "salaires du Guichet-Emplois pour une profession : query (titre d'emploi ou code CNP) "
+        "donne le code CNP 2021"
+    ),
+    "low, median and high wage of that NOC code by economic region or province": (
+        "salaires bas, médian et élevé de ce code CNP par région économique ou province"
+    ),
     "latest Labour Force Survey headline": (
         "derniers résultats principaux de l'Enquête sur la population active"
     ),
@@ -222,6 +229,13 @@ FR: dict[str, str] = {
         "interroger ce table_id avec year_from, year_to et des filtres"
     ),
     "Express Entry draws and CRS cutoffs": "rondes d'invitations d'Entrée express et seuils du SCG",
+    "IRCC's current processing time: application_type from "
+    "ircc_processing_list_application_types (work_extension, cec...), country "
+    "for visitor visas and permits from outside Canada": (
+        "délai de traitement actuel d'IRCC : application_type tiré de "
+        "ircc_processing_list_application_types (work_extension, cec...), country pour "
+        "les visas de visiteur et les permis demandés à l'étranger"
+    ),
     "StatCan population estimates of immigrants and NPRs": (
         "estimations de Statistique Canada de la population d'immigrants et de résidents "
         "non permanents"
@@ -393,7 +407,21 @@ FR: dict[str, str] = {
         "budgets des dépenses, Comptes publics, dépenses de programmes"
     ),
     "filter by organization and fiscal year": "filtrer par organisation et par exercice",
-    "grants and contributions: portal='federal'": "subventions et contributions : portal='federal'",
+    "federal contracts over $10,000 by vendor, department, fiscal year or value": (
+        "contrats fédéraux de plus de 10 000 $ par fournisseur, ministère, exercice ou valeur"
+    ),
+    "federal grants and contributions by recipient, program, province or riding": (
+        "subventions et contributions fédérales par bénéficiaire, programme, province ou "
+        "circonscription"
+    ),
+    "travel expenses of ministers and senior officials (name, title, department)": (
+        "frais de déplacement des ministres et des cadres supérieurs (nom, titre, ministère)"
+    ),
+    "totals by department, vendor, recipient or fiscal year: dataset='contracts', "
+    "'grants', 'travel' or 'hospitality'": (
+        "totaux par ministère, fournisseur, bénéficiaire ou exercice : dataset='contracts', "
+        "'grants', 'travel' ou 'hospitality'"
+    ),
     "Federal fiscal years run April to March; match them to calendar-year data explicitly.": (
         "L'exercice fédéral va d'avril à mars; faites-le correspondre explicitement aux "
         "données par année civile."
@@ -745,11 +773,13 @@ FR: dict[str, str] = {
     "a date window for a few known vectors, returned inline": (
         "une plage de dates pour quelques vecteurs connus, retournée directement"
     ),
-    "wds_get_full_table_download gives a link, not rows: fetch the file with your own "
-    "tools. A large table can hold hundreds of thousands of rows across every "
+    "wds_get_full_table_download gives a link, not rows, and a Python script that "
+    "downloads the file, keeps the members asked for and prints a summary: run it and "
+    "read that. A large table can hold hundreds of thousands of rows across every "
     "geography and measure, so filter after downloading.": (
-        "wds_get_full_table_download donne un lien, pas des lignes : récupérez le fichier avec "
-        "vos propres outils. Un grand tableau peut compter des centaines de milliers de lignes "
+        "wds_get_full_table_download donne un lien, pas des lignes, et un script Python qui "
+        "télécharge le fichier, garde les membres demandés et imprime un résumé : exécutez-le "
+        "et lisez ce résumé. Un grand tableau peut compter des centaines de milliers de lignes "
         "pour toutes les géographies et mesures; filtrez après le téléchargement."
     ),
     "The vector tools return every observation inline, several fields each: fine for a "
@@ -1396,8 +1426,9 @@ FR = {english: french_text(french) for english, french in FR.items()}
 # "search with portal='x' (...)": one rule for the many portal steps.
 _SEARCH = re.compile(r"^search with (portal=.+?)(?: \((.+)\))?$")
 _SEARCH_NOTES = {
-    "city data; no provincial portal is covered": (
-        "données municipales ; aucun portail provincial n'est couvert"
+    "city data": "données municipales",
+    "provincial GeoHub: geospatial layers only": (
+        "GeoHub provincial : couches géospatiales seulement"
     ),
     "no Nunavut portal is covered": "aucun portail du Nunavut n'est couvert",
     "the city publishes on Donnees Quebec": "la ville publie sur Données Québec",
@@ -1422,6 +1453,10 @@ GUIDANCE_FR = tuple(
             "sources différentes."
         ),
         "Si une étape ne trouve rien, utilisez search_tools avec l'objet de l'étape comme requête.",
+        (
+            "Avant de répondre, appelez check_answer une fois avec la question et les chiffres "
+            "que vous citerez."
+        ),
     )
 )
 LIMITS_FR = french_text(

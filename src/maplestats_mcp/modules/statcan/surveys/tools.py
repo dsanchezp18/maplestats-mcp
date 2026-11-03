@@ -29,8 +29,8 @@ async def statcan_surveys_search_surveys(
     (documents about surveys) and from statcan_daily_* (release
     bulletin) -- this is the master list of the surveys/programs
     themselves. An empty query returns the full directory. Keywords:
-    StatCan, survey, statistical program, survey directory, survey ID,
-    Statistics Canada, data source, survey list.
+    StatCan, survey, surveys Statistics Canada runs, statistical program,
+    survey directory, survey ID, Statistics Canada, data source, survey list.
     Mots-clés : Statistique Canada, enquête, programme statistique,
     répertoire des enquêtes, numéro d'enquête, source de données, liste des
     enquêtes, enquêtes statistiques.

@@ -55,6 +55,7 @@ _GUIDANCE = (
         "into one series."
     ),
     "If a step finds nothing, use search_tools with the step's purpose as the query.",
+    "Before replying, call check_answer once with the question and the figures you will cite.",
 )
 # A step whose purpose names the place asked about ("Alberta fires...") moves
 # ahead of national steps; "BC" is how purposes name British Columbia.
@@ -160,6 +161,17 @@ def _places(question: str, text: str, foreign: str | None = None) -> list[PlaceM
         label, steps = PROVINCES[key]
         places.append(PlaceMatch(place=label, kind="province", steps=_steps(steps)))
     return places
+
+
+def places_named(question: str) -> list[PlaceMatch]:
+    """The Canadian provinces and cities a question names (check_answer reads them)."""
+    text = _normalize(question)
+    return _places(question, text, _foreign_place(question, text))
+
+
+def normalize(text: str) -> str:
+    """Lower case, accents and punctuation stripped, as the planner matches text."""
+    return _normalize(text)
 
 
 def _foreign_place(question: str, text: str) -> str | None:

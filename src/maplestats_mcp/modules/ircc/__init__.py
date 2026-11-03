@@ -9,6 +9,9 @@ Two sub-sources:
   behind the 12 "Monthly IRCC Updates" datasets on open.canada.ca
   (organization "cic"), checked live 2026-09-25. CKAN only lists them and
   none is DataStore-active, so the tables are read and summed here.
+- Processing times (processing/): the undocumented JSON files behind
+  IRCC's "Check processing times" tool on canada.ca, checked live
+  2026-11-03. Point-in-time estimates, not a series.
 
 Other IRCC datasets (citizenship, ad hoc specialized datasets) stay
 reachable through ckan_search_datasets(portal="federal",
@@ -24,7 +27,12 @@ MODULE_DESCRIPTION = (
     "CMA, census subdivision, citizenship, category, occupation, age and "
     "gender; study and work permit holders; temporary-to-permanent "
     "transitions; Express Entry admissions and invitations; asylum "
-    "claimants. Counts are rounded to 5 and 1-4 suppressed. Other IRCC "
+    "claimants. Counts are rounded to 5 and 1-4 suppressed. "
+    "ircc_processing_: IRCC's current application processing times (visitor "
+    "visas, study and work permits from inside or outside Canada, by country "
+    "where they vary; Express Entry and other permanent residence programs; "
+    "sponsorship; refugees; citizenship; PR cards), point-in-time estimates "
+    "IRCC replaces weekly or monthly. Other IRCC "
     "datasets are reachable through the federal ckan_ tools filtered to "
     "organization:cic."
 )
@@ -38,6 +46,12 @@ MODULE_DESCRIPTION_FR = (
     "permis d'études et de travail; passages de résident temporaire à "
     "permanent; admissions et invitations Entrée express; demandeurs "
     "d'asile. Les nombres sont arrondis à 5 et ceux de 1 à 4 supprimés. "
+    "ircc_processing_ : délais de traitement actuels d'IRCC (visas de "
+    "visiteur, permis d'études et de travail demandés au Canada ou à "
+    "l'étranger, par pays lorsqu'ils varient; Entrée express et autres "
+    "programmes de résidence permanente; parrainage; réfugiés; citoyenneté; "
+    "cartes de RP), estimations ponctuelles qu'IRCC remplace chaque semaine "
+    "ou chaque mois. "
     "Les autres jeux de données d'IRCC sont accessibles via les outils "
     "fédéraux ckan_ filtrés sur organization:cic."
 )

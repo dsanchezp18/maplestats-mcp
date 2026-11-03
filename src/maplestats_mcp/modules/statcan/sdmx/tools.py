@@ -6,19 +6,27 @@ values you need rather than downloading a full table.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from fastmcp.tools import tool
 
 from maplestats_mcp.modules.statcan.sdmx import client
 from maplestats_mcp.modules.statcan.sdmx.schemas import SdmxData, SdmxOrKey, SdmxStructure
+from maplestats_mcp.modules.statcan.wds import auto_notes, context
 from maplestats_mcp.modules.statcan.wds import client as wds_client
-from maplestats_mcp.modules.statcan.wds import context
 from maplestats_mcp.modules.statcan.wds.transforms import TransformRequest
 from maplestats_mcp.shared.limits import join_limits
-from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform
+from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform, parse_period
 
 Lang = Literal["en", "fr"]
+
+
+def _first_day(period: str) -> date | None:
+    try:
+        return parse_period(period)[0]
+    except ValueError:
+        return None
 
 
 async def _described(data: SdmxData, lang: str) -> SdmxData:
@@ -30,7 +38,15 @@ async def _described(data: SdmxData, lang: str) -> SdmxData:
     wds_client.use_lang(lang)
     ids = [s.vector_id for s in data.series if s.vector_id]
     empty = {s.vector_id for s in data.series if s.vector_id and not s.observations}
-    found, note = await context.describe_vectors(ids, empty)
+    flags: dict[int, list[auto_notes.Flag]] = {}
+    for s in data.series:
+        if s.vector_id:
+            flags[s.vector_id] = [
+                (day, o.status_code, o.security_level_code)
+                for o in s.observations
+                if (o.status_code or o.security_level_code) and (day := _first_day(o.period))
+            ]
+    found, note = await context.describe_vectors(ids, empty, flags)
     series = [
         s.model_copy(update={"context": found.get(s.vector_id)}) if s.vector_id else s
         for s in data.series

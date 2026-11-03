@@ -47,7 +47,17 @@ def test_statcan_results_carry_the_open_licence_note(source, url):
     prov = make_provenance(source=source, url=url, cached=False, schema_name="t.M")
     assert prov.licence is not None
     assert "Statistics Canada Open Licence" in prov.licence
-    assert "endorsed" in prov.licence
+    assert "https://www.statcan.gc.ca/en/reference/licence" in prov.licence
+    assert "Source: Statistics Canada." in prov.licence
+
+
+def test_the_no_endorsement_rule_is_stated_once_for_every_licence():
+    # It was in every StatCan result's licence text; the server instructions,
+    # read once per session, now state it for all publishers.
+    from maplestats_mcp.server import SERVER_INSTRUCTIONS
+
+    flat = " ".join(SERVER_INSTRUCTIONS.split())
+    assert "never present adapted or summarised data as endorsed by the publisher" in flat
 
 
 def test_french_provenance_has_french_shared_phrases():
@@ -59,9 +69,9 @@ def test_french_provenance_has_french_shared_phrases():
         lang="fr",
     )
     assert prov.licence is not None
-    assert prov.licence.startswith("Source : Statistique Canada.")
+    assert prov.licence.startswith("Licence ouverte de Statistique Canada")
     assert "https://www.statcan.gc.ca/fr/reference/licence" in prov.licence
-    assert "approuvées par Statistique Canada" in prov.licence
+    assert "Source\u00a0: Statistique Canada." in prov.licence
     assert "reproduce_code" in prov.reproduce and "appelez" in prov.reproduce
 
 

@@ -39,6 +39,27 @@ PORTALS: dict[str, Portal] = {
         "Data MB (Manitoba)",
         bilingual_content=True,
     ),
+    # Removed on 2026-10-03 and added back on 2026-11-03 after its terms were
+    # read again: saskatchewan.ca's own Terms of Use say they do not apply to
+    # SERVICENAME.saskatchewan.ca sub-sites, and 110 of the 129 items carry the
+    # GOS Standard Unrestricted Use Data Licence v2.0, which allows commercial
+    # use. The 4 items with no licence fall back on saskatchewan.ca/copyright
+    # (non-commercial reproduction only), hence the note.
+    "sk": Portal(
+        "geohub.saskatchewan.ca",
+        "Saskatchewan GeoHub (Government of Saskatchewan)",
+        "GeoHub de la Saskatchewan (gouvernement de la Saskatchewan)",
+        note=(
+            "Provincial geospatial data. 129 datasets confirmed live 2026-11-03 (roads, forest "
+            "inventory, land cover, wildlife lands). Licences vary by item: 110 carry the "
+            "Government of Saskatchewan Standard Unrestricted Use Data Licence v2.0 "
+            "(https://gisappl.saskatchewan.ca/Html5Ext/Resources/"
+            "GOS_Standard_Unrestricted_Use_Data_Licence_v2.0.pdf; commercial use allowed, "
+            "attribution required), 12 GeoBase/Open Government Licence - Canada, and 4 none, "
+            "for which saskatchewan.ca/copyright allows non-commercial reproduction only. "
+            "Check each item's license_info."
+        ),
+    ),
     "pe": Portal(
         "data.princeedwardisland.ca",
         "Prince Edward Island open-data portal",
@@ -100,6 +121,20 @@ PORTALS: dict[str, Portal] = {
         "rowopendata-rmw.opendata.arcgis.com",
         "Region of Waterloo Open Data",
         "Données ouvertes de la région de Waterloo",
+    ),
+    "waterloo": Portal(
+        "data.waterloo.ca",
+        "City of Waterloo (Ontario) Open Data",
+        "Données ouvertes de la Ville de Waterloo (Ontario)",
+        note=(
+            "The City of Waterloo, Ontario, not the Region of Waterloo (portal "
+            "'waterloo_region'). 435 datasets confirmed live 2026-11-03, but the catalogue also "
+            "shows other Waterloo Region publishers' items: 129 are the City's own, 133 "
+            "Kitchener's, 120 the Region's and 53 Cambridge's (the item's owner says which). The "
+            "City's items carry no licence field; the site's Waterloo Open Data User Licence "
+            "(https://data.waterloo.ca/pages/open-data-licence) allows commercial use, "
+            "attribution optional. Other publishers' items carry their own licences."
+        ),
     ),
     "metro_vancouver": Portal(
         "open-data-portal-metrovancouver.hub.arcgis.com",
@@ -449,6 +484,22 @@ PORTALS: dict[str, Portal] = {
         "Données ouvertes de la Ville de Penticton",
         note="British Columbia. 136 datasets confirmed live 2026-10-02; City of Penticton Open Government Licence.",
     ),
+    "new_westminster": Portal(
+        "opendata.newwestcity.ca",
+        "City of New Westminster Open Data Portal",
+        "Portail de données ouvertes de la Ville de New Westminster",
+        note=(
+            "British Columbia. The same Hub site as data-60320-newwestcity.opendata.arcgis.com, "
+            "its older address. Only the "
+            "'all' collection exists (169 items, checked 2026-11-03), so searches default to "
+            "Feature Service (98 layers); pass item_type='Microsoft Excel' for its 40 "
+            "spreadsheets. Open Government Licence - City of New Westminster v1.0 "
+            "(https://opendata.newwestcity.ca/pages/terms-of-use), based on OGL-BC 2.0: "
+            "commercial use allowed with attribution."
+        ),
+        collection="all",
+        default_item_type="Feature Service",
+    ),
     "orangeville": Portal(
         "open-orangeville.hub.arcgis.com",
         "Town of Orangeville Open Data",
@@ -563,6 +614,36 @@ PORTALS: dict[str, Portal] = {
 # French text of each portal's `note`, for lang="fr". A unit test checks that
 # every portal with a note has one here.
 NOTES_FR: dict[str, str] = {
+    "sk": (
+        "Données géospatiales provinciales. 129 jeux de données confirmés le 2026-11-03 "
+        "(routes, inventaire forestier, couverture terrestre, terres fauniques). Les licences "
+        "varient selon l'élément : 110 relèvent de la Government of Saskatchewan Standard "
+        "Unrestricted Use Data Licence v2.0 "
+        "(https://gisappl.saskatchewan.ca/Html5Ext/Resources/"
+        "GOS_Standard_Unrestricted_Use_Data_Licence_v2.0.pdf ; usage commercial permis, "
+        "mention de la source obligatoire), 12 de GeoBase ou de la Licence du gouvernement "
+        "ouvert – Canada, et 4 n'en indiquent aucune : saskatchewan.ca/copyright n'y permet "
+        "alors que la reproduction non commerciale. Vérifiez le license_info de chaque élément."
+    ),
+    "waterloo": (
+        "La Ville de Waterloo (Ontario), pas la région de Waterloo (portail "
+        "« waterloo_region »). 435 jeux de données confirmés le 2026-11-03, mais le catalogue "
+        "affiche aussi ceux d'autres éditeurs de la région : 129 sont à la Ville, 133 à "
+        "Kitchener, 120 à la Région et 53 à Cambridge (le propriétaire de l'élément l'indique). "
+        "Les éléments de la Ville n'ont pas de champ de licence ; la Waterloo Open Data User "
+        "Licence du site (https://data.waterloo.ca/pages/open-data-licence) permet l'usage "
+        "commercial, la mention de la source étant facultative. Les éléments des autres "
+        "éditeurs portent leur propre licence."
+    ),
+    "new_westminster": (
+        "Colombie-Britannique. Le même site Hub que data-60320-newwestcity.opendata.arcgis.com, "
+        "son ancienne adresse. Seule la collection « all » existe (169 éléments, vérifié le "
+        "2026-11-03) : les recherches se limitent donc par défaut aux Feature Service (98 "
+        "couches) ; passez item_type='Microsoft Excel' pour ses 40 classeurs. Licence du "
+        "gouvernement ouvert – Ville de New Westminster v1.0 "
+        "(https://opendata.newwestcity.ca/pages/terms-of-use), fondée sur la licence de la "
+        "Colombie-Britannique 2.0 : usage commercial permis avec mention de la source."
+    ),
     "durham": (
         "Les éléments pointent vers une couche d'un MapServer commun de plus de 200 couches ; "
         "laissez layer_index vide pour que l'id de couche propre à l'élément soit utilisé."

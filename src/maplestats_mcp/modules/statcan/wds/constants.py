@@ -26,8 +26,24 @@ SEARCH_LIMIT_DEFAULT = 25
 SEARCH_LIMIT_MAX = 500
 MEMBER_LIMIT_DEFAULT = 100
 MEMBER_LIMIT_MAX = 2000
-FOOTNOTE_LIMIT_DEFAULT = 25
+# wds_get_leaf_members: 18-10-0004's 249 CPI leaves and 36-10-0434's 188 NAICS
+# leaves fit in one page; a census geography does not.
+LEAF_LIMIT_DEFAULT = 500
+# Footnotes, not members, made most of a metadata answer: 28.7 of 36.6 KB for
+# 14-10-0287 on 2026-11-03, each in English and French. The cap counts distinct
+# texts (client.get_cube_metadata merges repeats); footnote_limit raises it.
+FOOTNOTE_LIMIT_DEFAULT = 10
 CODE_SET_LIMIT_DEFAULT = 100
+
+# wds_query_series: the server runs one read-only SQL query over the fetched
+# observations and returns only its result. The vector cap keeps it a "handful
+# of series" tool (whole tables go to wds_get_full_table_download); 3,000
+# periods reaches back to 1914 for a monthly series (the CPI has 1,353).
+QUERY_MAX_VECTORS = 20
+QUERY_MAX_LATEST_N = 3000
+QUERY_ROW_CAP = 500
+QUERY_MAX_SQL_CHARS = 10_000
+QUERY_MAX_SECONDS = 20.0
 
 # The cube list is about 5 MB. Probed 2026-09-27 from GitHub runners: usually
 # under a second, but one runner took 31-70 s on every try, past the shared

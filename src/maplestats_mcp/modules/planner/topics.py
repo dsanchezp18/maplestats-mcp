@@ -314,6 +314,17 @@ TOPICS: tuple[Topic, ...] = (
                 "NAICS or NOC codes to name an industry or job",
                 ("industry", "occupation", "noc", "naics", "profession"),
             ),
+            PlanStep(
+                "jobbank_search_occupations",
+                "Job Bank wages for an occupation: query (job title or NOC code) gives the NOC "
+                "2021 code",
+                ("wage", "salary", "occupation", "job bank", "salaire", "guichet-emplois"),
+            ),
+            PlanStep(
+                "jobbank_get_wages",
+                "low, median and high wage of that NOC code by economic region or province",
+                ("wage", "salary", "economic region", "salaire", "guichet-emplois"),
+            ),
         ),
         (
             "LFS monthly estimates are survey based with sampling error; small areas use 3-month averages.",
@@ -592,6 +603,9 @@ TOPICS: tuple[Topic, ...] = (
             "permis d'etudes",
             "permis de travail",
             "entree express",
+            "processing time",
+            "delai de traitement",
+            "delais de traitement",
         ),
         (
             PlanStep(
@@ -604,6 +618,13 @@ TOPICS: tuple[Topic, ...] = (
                 "ircc_list_express_entry_rounds",
                 "Express Entry draws and CRS cutoffs",
                 ("express entry", "crs", "entree express"),
+            ),
+            PlanStep(
+                "ircc_processing_get_time",
+                "IRCC's current processing time: application_type from "
+                "ircc_processing_list_application_types (work_extension, cec...), country "
+                "for visitor visas and permits from outside Canada",
+                ("processing time", "how long", "delai de traitement", "delais de traitement"),
             ),
             PlanStep("wds_search_cubes", "StatCan population estimates of immigrants and NPRs"),
         ),
@@ -1027,6 +1048,12 @@ TOPICS: tuple[Topic, ...] = (
             "appel d'offres",
             "subvention",
             "contrat",
+            "proactive disclosure",
+            "divulgation proactive",
+            "travel expense*",
+            "hospitality expense*",
+            "frais de deplacement",
+            "frais d'accueil",
             "fiscal reference tables",
             "fiscal monitor",
             "federal deficit",
@@ -1058,7 +1085,41 @@ TOPICS: tuple[Topic, ...] = (
             ),
             PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
             PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
-            PlanStep("ckan_search_datasets", "grants and contributions: portal='federal'"),
+            PlanStep(
+                "disclosure_search_contracts",
+                "federal contracts over $10,000 by vendor, department, fiscal year or value",
+                (
+                    "contract",
+                    "procurement",
+                    "tender",
+                    "vendor",
+                    "contrat",
+                    "marche public",
+                    "fournisseur",
+                ),
+            ),
+            PlanStep(
+                "disclosure_search_grants",
+                "federal grants and contributions by recipient, program, province or riding",
+                ("grant", "transfer payment", "contribution", "subvention"),
+            ),
+            PlanStep(
+                "disclosure_search_travel",
+                "travel expenses of ministers and senior officials (name, title, department)",
+                (
+                    "travel expense*",
+                    "hospitality",
+                    "frais de deplacement",
+                    "frais d'accueil",
+                    "depenses de voyage",
+                ),
+            ),
+            PlanStep(
+                "disclosure_summarize",
+                "totals by department, vendor, recipient or fiscal year: dataset='contracts', "
+                "'grants', 'travel' or 'hospitality'",
+                ("top vendors", "total contract", "principaux fournisseurs"),
+            ),
             PlanStep(
                 "on_fir_search_lines",
                 "Ontario municipal finances (FIR): find the line code, query=<label words> "
@@ -1921,8 +1982,9 @@ STATCAN_TABLES = Topic(
     ),
     (
         (
-            "wds_get_full_table_download gives a link, not rows: fetch the file with your own "
-            "tools. A large table can hold hundreds of thousands of rows across every "
+            "wds_get_full_table_download gives a link, not rows, and a Python script that "
+            "downloads the file, keeps the members asked for and prints a summary: run it and "
+            "read that. A large table can hold hundreds of thousands of rows across every "
             "geography and measure, so filter after downloading."
         ),
         (
