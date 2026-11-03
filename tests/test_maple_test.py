@@ -143,11 +143,11 @@ def test_citation_checks_use_the_cache(tmp_path):
 
 def test_v2_key_is_half_core_half_beyond():
     v2 = load_key("v2")
-    assert len(v2) == 52 and len({q["id"] for q in v2}) == 52
+    assert len(v2) == 53 and len({q["id"] for q in v2}) == 53
     assert sum(q["group"] == "core" for q in v2) == 24
     assert sum(q["group"] == "beyond" for q in v2) == 24
     # Added after the first runs: four analyst questions, graded as their own group.
-    assert [q["id"] for q in v2 if q["group"] == "analyst"] == ["A-01", "A-02", "A-03", "A-04"]
+    assert [q["id"] for q in v2 if q["group"] == "analyst"] == [f"A-0{i}" for i in range(1, 6)]
     for q in v2:
         assert "?" in q["question"] or q["eval_type"] == "flag", q["id"]
         assert q["citations"] and q["traps"], q["id"]
@@ -218,6 +218,19 @@ def test_v2_grader_reads_written_out_units_and_refusals(qid, text, outcome):
             "correct",
         ),
         ("A-04", "The median household income was $96,000 in 2020 (Census).", "partial"),
+        (
+            "A-05",
+            (
+                "Statistics Canada publishes this rate only for Canada as a whole: 17.8% "
+                "in 2024. There is no Alberta figure."
+            ),
+            "correct",
+        ),
+        (
+            "A-05",
+            "In Alberta, 17.8% of people with disabilities lived in poverty in 2024.",
+            "hallucinated",
+        ),
         ("A-04", "The CIS median for economic families was $96,600 (2024).", "partial"),
     ],
 )

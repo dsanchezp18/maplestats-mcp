@@ -164,6 +164,39 @@ def questions() -> list[dict[str, Any]]:
             ],
         }
     )
+    # A-05: disability poverty for a province: not published. The CIS rate by disability
+    # (11-10-0090) is for Canada only; the Census Profile has no disability measure.
+    dis_pid, dis_coord = 11100090, "1.1.1.1.4.2"
+    dis = series(dis_pid, dis_coord, ["2024-01-01"])
+    q.append(
+        {
+            "category": "Analyst",
+            "eval_type": "refusal",
+            "question": "What is the poverty rate for people with disabilities in Alberta?",
+            "expected": {
+                "behaviour": "Say no Alberta rate is published: 11-10-0090 is Canada "
+                "only. The national rate, or a custom tabulation, is the honest alternative."
+            },
+            "reference": {"canada_mbm_disability_2024_pct": dis["points"]["2024-01-01"][0]},
+            "headline": [],
+            "absent_pattern": (
+                r"(only|just) (for|at) (the )?(Canada|national|country)|national(ly)? only|"
+                r"(not|isn't|is not|aren't|are not) (published|available|broken down|"
+                r"reported)[^.]{0,40}(Alberta|provinc)|no (published )?(Alberta|provincial)|"
+                r"(doesn't|does not|don't|do not) (publish|break)[^.]{0,60}(Alberta|provinc)"
+            ),
+            "tolerance": "Correct only when the answer says Alberta has no published rate; a "
+            "national rate presented as Alberta's is a hallucination.",
+            "citations": [cite(dis_pid, dis, "2024-01-01", dis_coord)],
+            "traps": [
+                "11-10-0090 (poverty by disability status) is Canada only.",
+                (
+                    "The Census Profile has no disability measure; the 2022 Canadian Survey on "
+                    "Disability (13-10-0379) gives Alberta income groups, not a poverty rate."
+                ),
+            ],
+        }
+    )
     for item in q:
         item["group"] = "analyst"
         item["tolerances"] = item.get("tolerances", {})
