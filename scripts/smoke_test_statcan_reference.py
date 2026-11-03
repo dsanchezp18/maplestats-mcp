@@ -7,6 +7,9 @@ assumptions are correct.
 A sustained HTTP 429 from www150.statcan.gc.ca (seen on GitHub runners, where
 many StatCan smoke jobs share IPs, even after the shared client's retries) is
 skipped rather than failed: it is StatCan's rate limit, not a module fault.
+Since 2026-10-29 every /n1/{lang}/type/ listing answers 404 or loops on
+redirects while StatCan's own menus still link them; the client raises
+UpstreamUnavailable for that, which is reported as SKIPPED, not FAILED.
 
 Usage:
     uv run python scripts/smoke_test_statcan_reference.py
@@ -17,8 +20,10 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import skip_outage, verdict
+
 from maplestats_mcp.modules.statcan.reference import client
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamError, UpstreamUnavailable
 
 
 async def main() -> int:
@@ -82,13 +87,15 @@ async def main() -> int:
         print(f"OK: search_data('logement', lang=fr) -> {data_fr.total_matched}")
         ok &= data_fr.total_matched > 0
     except UpstreamError as exc:
-        # Skip only a rate limit; assertion failures and other errors still fail.
+        # A rate limit is StatCan's, not ours; any other UpstreamError still fails.
         if "HTTP 429" not in str(exc):
-            raise
-        print(f"SKIP: StatCan rate-limited this runner ({exc}); the remaining checks did not run")
+            skip_outage("StatCan's reference catalogue", exc)
+        else:
+            skip_outage("StatCan's reference catalogue (HTTP 429)", UpstreamUnavailable(str(exc)))
+    except UpstreamUnavailable as exc:
+        skip_outage("StatCan's reference catalogue", exc)
 
-    print("\nSTATCAN REFERENCE SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
-    return 0 if ok else 1
+    return verdict("STATCAN REFERENCE", ok)
 
 
 if __name__ == "__main__":
