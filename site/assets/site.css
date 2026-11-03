@@ -4945,6 +4945,17 @@ html:not(.js) .chips {
   font-variant-numeric: tabular-nums;
 }
 
+/* Six columns of figures: narrower gutters so the table fits a phone. */
+.params.bench th,
+.params.bench td {
+  padding-right: 10px;
+}
+
+.params.bench th:last-child,
+.params.bench td:last-child {
+  padding-right: 0;
+}
+
 .faq p {
   margin: 0;
   color: var(--ink-2);

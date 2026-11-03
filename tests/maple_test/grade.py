@@ -19,7 +19,13 @@ Grading reads numbers and phrases out of the text, so it can miss a correct answ
 oddly. Every non-correct grade should be read by a person; re-grades go in the version's
 overrides file as {"<arm>/<question id>": {...}} (every repeat) or
 {"<arm>/<question id>#<repeat>": {...}} (one repeat), with "outcome", "reason" and
-optionally "false_claim", and are marked in the report.
+optionally "false_claim" (the claim, as text) and "referral", and are marked in the report.
+
+A false claim is a statement about the data that is verifiably false: that a figure is or
+is not published when the opposite is true, or a wrong unit, basis or coverage presented as
+fact. A referral (an answer that gives no figure and sends the user to another publisher's
+page, for a source the arm does not claim to cover) is counted separately, not as a false
+claim. Every v2 answer was read for both, not only the ones the grader missed.
 """
 
 from __future__ import annotations
@@ -69,8 +75,13 @@ TABLE = re.compile(r"\b\d{2}-\d{2}-\d{4}(?:-\d{2})?\b|\b\d{10}\b|\b\d{8}\b")
 # Vectors run from v1 (Canada's population, 17-10-0009) upward; the first version of this
 # pattern wanted four digits and missed v1, v12 and v15.
 VECTOR = re.compile(r"\bv\d{1,11}\b", re.IGNORECASE)
+# A thousands separator (comma, space or no-break space) must be followed by exactly three
+# digits. The pattern once took any run of digits, commas and spaces, so "July 1, 2026,
+# 399,133" read as one number and correct answers were graded hallucinated (v2 review).
 NUMBER = re.compile(
-    r"(?<![\w.])[-−–]?\$?\d[\d,  ]*(?:\.\d+)?(?:\s*(million|thousand|billion))?", re.IGNORECASE
+    r"(?<![\w.])[-−–]?\$?\d+(?:[,   ]\d{3}(?!\d))*(?:\.\d+)?"
+    r"(?:\s*(million|thousand|billion))?",
+    re.IGNORECASE,
 )
 SCALE = {"thousand": 1e3, "million": 1e6, "billion": 1e9}
 YEAR = re.compile(r"^(19|20)\d{2}$")
@@ -180,6 +191,23 @@ class Grade:
     citations: dict[str, Any] = field(default_factory=dict)
 
 
+def _alternative_matched(question: dict[str, Any], text: str) -> dict[str, Any] | None:
+    """The documented alternative answer whose values the text all states, if any.
+
+    A key lists `alternatives` when the question, as worded, has another published answer
+    (X-12 does not name the BIS, so each country's own series answers it too; A-02's
+    payroll-survey figure may be the latest month or the last annual average). An
+    alternative's `outcome` says what it earns: correct unless it says partial (A-04: the
+    income survey's median, which is not a household unit).
+    """
+    for alt in question.get("alternatives", []):
+        variant = {**question, "expected": alt["expected"]}
+        found = _matches(variant, text)
+        if found and all(found.values()):
+            return alt
+    return None
+
+
 def _matches(question: dict[str, Any], text: str) -> dict[str, bool]:
     seen = [abs(n) for n in numbers_in(text)]
     matched: dict[str, bool] = {}
@@ -252,10 +280,20 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
             flagged = bool(re.search(pattern, text, re.IGNORECASE))
         else:
             flagged = all(y in text for y in years) and bool(MISMATCH.search(text))
-        direct = all(matched.values()) if matched else False
-        if flagged or direct:
-            why = "flagged the mismatch" if flagged else "gave the published figure instead"
-            outcome, reason = "correct", why
+        # When the question asks for a figure, the key holds it (or documents an
+        # alternative), and a flag alone is not the whole answer: the flag passed on
+        # pattern alone until v2's review found flagged answers with no figure, or the
+        # wrong one, graded correct.
+        alternative = _alternative_matched(question, text)
+        has_figure = (all(matched.values()) if matched else False) or alternative is not None
+        if flagged and (has_figure or not question.get("figure_required")):
+            outcome, reason = "correct", "flagged the problem"
+        elif flagged:
+            # Naming the right source without a figure (A-02) is no answer at all.
+            outcome = question.get("flag_alone", "partial")
+            reason = "flagged the problem without the key's figure"
+        elif has_figure:
+            outcome, reason = "correct", "gave the published figure instead"
         elif figures:
             outcome, reason = "hallucinated", "did the misleading calculation without a flag"
         else:
@@ -277,8 +315,12 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
                 or re.search(rf"\*\*{re.escape(pattern)}\*\*", text)
             )
         headline_ok = all(matched.get(k, False) for k in question.get("headline", []))
+        alternative = _alternative_matched(question, text)
         if recall == 1.0 and right_call:
             outcome, reason = "correct", "all values within tolerance"
+        elif alternative and right_call:
+            outcome = alternative.get("outcome", "correct")
+            reason = f"values match the alternative: {alternative['label']}"
         elif recall >= 0.5 and headline_ok and right_call:
             outcome, reason = "partial", "missing or off: " + ", ".join(missing)
         elif declined and recall < 0.5:
@@ -332,6 +374,9 @@ def grade_runs(paths: list[Path], version: str = "v1", verify: bool = False) -> 
                 "run": {k: v for k, v in run.items() if k != "response"},
                 "grade": asdict(g),
                 "false_claim": o.get("false_claim"),
+                # Declined and pointed the user to another publisher's page for a source the
+                # arm does not cover: counted apart from false claims (v2 review).
+                "referral": bool(o.get("referral")),
                 "has_figures": bool(figures_in(run["response"])) and q["eval_type"] != "refusal",
                 "group": q.get("group", "core"),
             }
@@ -403,6 +448,7 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 if len(repeats) > 1
                 else None,
                 "false_claims": sum(bool(i["false_claim"]) for i in items),
+                "referrals": sum(bool(i.get("referral")) for i in items),
                 "table_coverage": round(mean(i["grade"]["table_coverage"] for i in items), 2),
                 "vector_coverage": round(mean(i["grade"]["vector_coverage"] for i in items), 2),
                 "ids_cited": cited,
@@ -449,11 +495,11 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         "| Arm | Correct | "
         + "".join(f"{g.capitalize()} | " for g in group_names if split)
         + ("Worst–best | Consistency | " if repeated else "")
-        + "Partial | Abstained | Hallucinated | False claims |",
+        + "Partial | Abstained | Hallucinated | False claims | Referrals |",
         "| :-- | --: | "
         + ("--: | " * len(group_names) if split else "")
         + ("--: | --: | " if repeated else "")
-        + "--: | --: | --: | --: |",
+        + "--: | --: | --: | --: | --: |",
     ]
     for s in summary:
         extra = (
@@ -478,7 +524,7 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         lines.append(
             f"| {s['arm']} | {s['correct']:g} | {halves}{extra}{s['partial']:g} "
             f"| {s['abstained']:g} "
-            f"| {s['hallucinated']:g} | {s['false_claims']} |"
+            f"| {s['hallucinated']:g} | {s['false_claims']} | {s.get('referrals', 0)} |"
         )
     lines += [
         "",

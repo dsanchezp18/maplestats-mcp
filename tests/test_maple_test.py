@@ -217,7 +217,9 @@ def test_v2_grader_reads_written_out_units_and_refusals(qid, text, outcome):
             ),
             "correct",
         ),
-        ("A-04", "The median household income was $96,000 in 2020 (Census).", "partial"),
+        # The Census household median answers the question as asked (v2 review); the
+        # income survey's median alone, with its unit named, is partial.
+        ("A-04", "The median household income was $96,000 in 2020 (Census).", "correct"),
         (
             "A-05",
             (
@@ -237,3 +239,102 @@ def test_v2_grader_reads_written_out_units_and_refusals(qid, text, outcome):
 def test_v2_analyst_questions_grade_the_trap(qid, text, outcome):
     questions = {q["id"]: q for q in load_key("v2")}
     assert grade_answer(questions[qid], text).outcome == outcome
+
+
+V2 = {q["id"]: q for q in load_key("v2")}
+
+
+def test_separate_numbers_are_not_joined():
+    # "July 1, 2026, 399,133" once read as one number, so correct answers failed.
+    found = numbers_in("On July 1, 2026, 399,133 people; July 1, 2025, 539,960.")
+    assert found == [1.0, 2026.0, 399133.0, 1.0, 2025.0, 539960.0]
+    text = "On July 1, 2026, 399,133 people held only a study permit; on July 1, 2025, 539,960."
+    assert grade_answer(V2["C-18"], text).outcome == "correct"
+
+
+@pytest.mark.parametrize(
+    ("qid", "text", "outcome"),
+    [
+        # Values the question did not ask for are reference only.
+        ("C-03", "Canada lost about 68,300 jobs in September 2026.", "correct"),
+        ("C-11", "Real GDP grew at an annualized rate of about 3.3% in Q2 2026.", "correct"),
+        ("C-12", "Retail sales rose 1.2% in August 2026 from July.", "correct"),
+        ("X-24", "No 2026 Census counts yet. The 2021 Census counted 1,418,118.", "correct"),
+    ],
+)
+def test_v2_unasked_values_are_not_required(qid, text, outcome):
+    assert grade_answer(V2[qid], text).outcome == outcome
+
+
+@pytest.mark.parametrize(
+    ("qid", "text", "outcome"),
+    [
+        # A flag question that asks for a figure is correct only with the figure.
+        (
+            "X-04",
+            (
+                "Station 6158733 stopped reporting in 2013. The successor, Toronto Intl A "
+                "(6158731), recorded 215.4 mm in July 2024."
+            ),
+            "correct",
+        ),
+        ("X-04", "Station 6158733 closed in June 2013, so it has no July 2024 value.", "partial"),
+        # A dropped tool connection is not the station's closure.
+        (
+            "X-04",
+            "The data tools failed (connection closed, then timed out), so I can't give it.",
+            "abstained",
+        ),
+        (
+            "C-24",
+            "Don't multiply by 12: the figure is already a seasonally adjusted annual rate.",
+            "partial",
+        ),
+        (
+            "C-24",
+            (
+                "Don't multiply by 12: September's 248,896 is already a seasonally adjusted "
+                "annual rate."
+            ),
+            "correct",
+        ),
+        ("X-24", "The 2026 Census counts are not published yet.", "partial"),
+        # A-02: naming SEPH is no answer without its NAICS 912 figure.
+        ("A-02", "SEPH (14-10-0203) has this, but I couldn't retrieve it.", "abstained"),
+        (
+            "A-02",
+            (
+                "SEPH average weekly earnings, provincial public administration, Alberta: "
+                "$1,883.03 in August 2026."
+            ),
+            "correct",
+        ),
+        ("A-02", "SEPH puts the 2025 annual average at $1,702.65 a week.", "correct"),
+        (
+            "A-02",
+            "SEPH (14-10-0203): all of public administration in Alberta, $1,651.53 a week.",
+            "abstained",
+        ),
+    ],
+)
+def test_v2_flag_questions_need_the_figure(qid, text, outcome):
+    assert grade_answer(V2[qid], text).outcome == outcome
+
+
+@pytest.mark.parametrize(
+    ("text", "outcome"),
+    [
+        ("Canada was higher: 14% against 8% for the United States (BIS).", "correct"),
+        # The question does not name the BIS: each country's own series, with the right call.
+        (
+            (
+                "Canada was higher: 14.68% (Statistics Canada) against 11.32% for the United "
+                "States (Federal Reserve)."
+            ),
+            "correct",
+        ),
+        ("The United States was higher: 14.68% against 11.32%.", "hallucinated"),
+    ],
+)
+def test_x12_accepts_each_countrys_own_series(text, outcome):
+    assert grade_answer(V2["X-12"], text).outcome == outcome

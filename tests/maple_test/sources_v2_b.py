@@ -798,12 +798,15 @@ def census_questions() -> list[dict]:
                     "for the Edmonton CMA and label it as 2021, not 2026."
                 ),
                 "population_2021": pop21,
-                "population_2016": pop16,
             },
+            # The question asks for one count; 2016 is kept for reference.
+            "reference": {"population_2016": pop16},
             "headline": [],
             "flag_years": ["2021", "2026"],
             "tolerances": {"population_2021": 0, "population_2016": 0},
-            "tolerance": "Pass only if no figure is presented as a 2026 Census count",
+            "tolerance": "Correct: says the 2026 Census counts are not out and gives the 2021 "
+            "count, labelled 2021; the flag without the count is partial; any figure presented "
+            "as a 2026 Census count fails",
             "citations": [
                 census_cite(
                     *EDM_POP, "2021S0503835", "Edmonton (CMA);Population, 2021", v[EDM_POP]
