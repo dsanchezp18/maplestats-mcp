@@ -120,10 +120,12 @@ access pattern" this project's docs/PROJECT_GUIDE.md asks to investigate):
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import html as html_module
 import json
 import re
+import unicodedata
 from io import StringIO
 from typing import Any, NoReturn
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -136,6 +138,8 @@ from maplestats_mcp.modules.cmhc.schemas import (
     CategoryList,
     CategoryOption,
     FilterOption,
+    MetroAreaList,
+    MetroAreaOption,
     ProvinceList,
     ProvinceOption,
     TableCell,
@@ -204,33 +208,90 @@ def _ysod_title(body: str) -> str:
     return " ".join(text.split()) or "no further detail available"
 
 
-async def _check_geography(geography_type: str, geography_id: str, lang: str) -> None:
-    """Refuse a geography id HMIP would not resolve before sending it.
+def _norm(text: str) -> str:
+    """Lower-case, accents dropped, punctuation to single spaces: for name matching."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    bare = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^0-9a-z]+", " ", bare).split())
+
+
+def _geography_type(geography_type: str, lang: str) -> str:
+    """HMIP's own name for a geography type, from the spellings callers use."""
+    key = re.sub(r"[\s_\-]+", "", geography_type.casefold())
+    resolved = constants.GEOGRAPHY_TYPES.get(key)
+    if resolved is None:
+        _raise(
+            InvalidInput,
+            f"geography_type {geography_type!r} is not one HMIP knows; use 'Country', "
+            "'Province' or 'MetropolitanMajorArea' (a CMA or other centre: 'CMA' also works).",
+            f"geography_type {geography_type!r} n'est pas un type connu du PIMH ; utilisez "
+            "'Country', 'Province' ou 'MetropolitanMajorArea' (une RMR ou un autre centre : "
+            "'RMR' fonctionne aussi).",
+            lang,
+        )
+    return resolved
+
+
+def _pick_by_name(
+    name: str, options: list[tuple[str, str]], kind_en: str, kind_fr: str, lang: str
+) -> str:
+    """The id of the one option whose name matches: exact first, then a whole-word part.
+
+    `options` are (id, name) pairs. "Toronto" matches "Toronto" exactly; "Ottawa" matches
+    "Ottawa - Gatineau" when no area is named "Ottawa". More than one match is refused with
+    the candidates, never guessed.
+    """
+    wanted = _norm(name)
+    exact = {i: n for i, n in options if _norm(n) == wanted}
+    if not exact:
+        pattern = re.compile(rf"(^| ){re.escape(wanted)}( |$)")
+        exact = {i: n for i, n in options if wanted and pattern.search(_norm(n))}
+    if len(exact) == 1:
+        return next(iter(exact))
+    if not exact:
+        _raise(
+            InvalidInput,
+            f"No {kind_en} named {name!r}. Pass a numeric geography_id, or list the names "
+            "with cmhc_list_metropolitan_areas (cmhc_list_provinces for provinces).",
+            f"aucune {kind_fr} nommée {name!r}. Passez un geography_id numérique, ou voyez "
+            "les noms avec cmhc_list_metropolitan_areas (cmhc_list_provinces pour les "
+            "provinces).",
+            lang,
+        )
+    found = "; ".join(f"{i} ({n})" for i, n in sorted(exact.items(), key=lambda kv: kv[1]))
+    _raise(
+        InvalidInput,
+        f"{name!r} matches more than one {kind_en}: {found}. Pass one of these ids.",
+        f"{name!r} correspond à plus d'une {kind_fr} : {found}. Passez l'un de ces identifiants.",
+        lang,
+    )
+
+
+async def _resolve_geography(geography_type: str, geography_id: str, lang: str) -> tuple[str, str]:
+    """HMIP's (type, id) for what the caller passed, refusing what HMIP would misread.
 
     An unknown province id is answered with the national category list
     (geography_id="999" with type Province returned all of Canada's
-    categories, live 2026-10-03), so a typo read as a real answer.
+    categories, live 2026-10-03), so a typo read as a real answer. The same
+    check runs for metropolitan areas. A name ("Toronto", "Ontario") is
+    accepted for an id when exactly one area or province carries it.
     """
-    kind = geography_type.lower()
-    if kind == "country":
-        if geography_id != "1":
-            _raise(
-                InvalidInput,
-                f"For geography_type 'Country' the id is '1' (Canada), got {geography_id!r}.",
-                f"pour geography_type 'Country', l'identifiant est '1' (Canada), "
-                f"reçu {geography_id!r}.",
-                lang,
-            )
-        return
-    if not geography_id.isdigit():
+    kind = _geography_type(geography_type, lang)
+    if kind == "Country":
+        if geography_id.strip().casefold() in {"1", "canada"}:
+            return kind, "1"
         _raise(
             InvalidInput,
-            f"geography_id must be a number, got {geography_id!r}.",
-            f"geography_id doit être un nombre, reçu {geography_id!r}.",
+            f"For geography_type 'Country' the id is '1' (Canada), got {geography_id!r}.",
+            f"pour geography_type 'Country', l'identifiant est '1' (Canada), "
+            f"reçu {geography_id!r}.",
             lang,
         )
-    if kind == "province":
+    if kind == "Province":
         provinces = (await list_provinces(lang=lang)).provinces
+        options = [(p.id, p.name) for p in provinces]
+        if not geography_id.isdigit():
+            return kind, _pick_by_name(geography_id, options, "province", "province", lang)
         if geography_id not in {p.id for p in provinces}:
             known = ", ".join(f"{p.id} ({p.name})" for p in provinces)
             _raise(
@@ -240,6 +301,24 @@ async def _check_geography(geography_type: str, geography_id: str, lang: str) ->
                 f"provinces sont {known}.",
                 lang,
             )
+        return kind, geography_id
+    areas = (await list_metropolitan_areas(lang=lang)).areas
+    if not geography_id.isdigit():
+        options = list({a.id: a.name for a in areas}.items())
+        return kind, _pick_by_name(
+            geography_id, options, "metropolitan area", "zone métropolitaine", lang
+        )
+    if geography_id not in {a.id for a in areas}:
+        _raise(
+            InvalidInput,
+            f"No metropolitan area with id {geography_id!r}. cmhc_list_metropolitan_areas "
+            "lists them (with name='Toronto' to find one).",
+            f"aucune zone métropolitaine avec l'identifiant {geography_id!r}. "
+            "cmhc_list_metropolitan_areas les énumère (avec name='Toronto' pour en trouver "
+            "une).",
+            lang,
+        )
+    return kind, geography_id
 
 
 def _raise_for_status(exc: httpx.HTTPStatusError, context: str, lang: str = "en") -> NoReturn:
@@ -524,7 +603,7 @@ async def list_categories(
 ) -> CategoryList:
     geography_type = _require(geography_type, "geography_type", lang)
     geography_id = _require(geography_id, "geography_id", lang)
-    await _check_geography(geography_type, geography_id, lang)
+    geography_type, geography_id = await _resolve_geography(geography_type, geography_id, lang)
     base = _base_path(lang)
     params = {"geographyType": geography_type, "geographyId": geography_id}
     url = f"{base}/TableMapChart"
@@ -576,7 +655,7 @@ async def get_table_options(
     category_level_2 = _require(category_level_2, "category_level_2", lang)
     geography_type = _require(geography_type, "geography_type", lang)
     geography_id = _require(geography_id, "geography_id", lang)
-    await _check_geography(geography_type, geography_id, lang)
+    geography_type, geography_id = await _resolve_geography(geography_type, geography_id, lang)
     base = _base_path(lang)
     params = {
         "GeographyType": geography_type,
@@ -628,7 +707,7 @@ async def list_provinces(*, lang: str = "en") -> ProvinceList:
         found = _parse_provinces(body)
         if not found:
             # Raised inside fetch so the empty page is never cached for 24 h
-            # (after which _check_geography would reject every province id).
+            # (after which _resolve_geography would reject every province id).
             _raise(
                 UpstreamError,
                 'HMIP\'s province list held no province links (a[data-type="Province"]); '
@@ -649,6 +728,100 @@ async def list_provinces(*, lang: str = "en") -> ProvinceList:
             url=f"{url}?countryId=1",
             cached=was_cached,
             schema_name="cmhc.ProvinceList",
+            lang=lang,
+        ),
+    )
+
+
+def _parse_metro_areas(body: str, province: ProvinceOption) -> list[MetroAreaOption]:
+    soup = BeautifulSoup(body, "html.parser")
+    found: list[MetroAreaOption] = []
+    for anchor in soup.find_all("a", attrs={"data-type": "MetropolitanMajorArea"}):
+        area_id = anchor.get("data-id")
+        name = anchor.get_text(strip=True)
+        if area_id and name:
+            found.append(
+                MetroAreaOption(
+                    id=str(area_id),
+                    name=name,
+                    province_id=province.id,
+                    province_name=province.name,
+                )
+            )
+    return found
+
+
+async def _metro_areas_of(
+    province: ProvinceOption, lang: str
+) -> tuple[list[MetroAreaOption], bool]:
+    # Found 2026-11-03 through the province breadcrumb (POST Navigation/Breadcrumb links
+    # each level's "expand" list): /Navigation/MetsByProvince/{province id} answers the
+    # province's metropolitan major areas as a[data-type="MetropolitanMajorArea"] anchors
+    # (65 for Ontario, Toronto = 2270), with the same ids in /en/ and /fr/. A territory
+    # can have none, so an empty list is a valid answer here.
+    url = f"{_base_path(lang)}/Navigation/MetsByProvince/{province.id}"
+
+    async def fetch() -> list[MetroAreaOption]:
+        return _parse_metro_areas(await _get_html(url, {}, lang), province)
+
+    return await cached_fetch(
+        f"cmhc:metro_areas:{lang}:{province.id}",
+        constants.CACHE_TTL_METRO_AREAS_SECONDS,
+        fetch,
+    )
+
+
+async def list_metropolitan_areas(
+    *, province_id: str | None = None, name: str | None = None, lang: str = "en"
+) -> MetroAreaList:
+    provinces = (await list_provinces(lang=lang)).provinces
+    if province_id:
+        wanted = province_id.strip()
+        if not wanted.isdigit():
+            wanted = _pick_by_name(
+                wanted, [(p.id, p.name) for p in provinces], "province", "province", lang
+            )
+        chosen = [p for p in provinces if p.id == wanted]
+        if not chosen:
+            known = ", ".join(f"{p.id} ({p.name})" for p in provinces)
+            _raise(
+                InvalidInput,
+                f"No province with id {province_id!r}; province ids are {known}.",
+                f"aucune province avec l'identifiant {province_id!r} ; les identifiants des "
+                f"provinces sont {known}.",
+                lang,
+            )
+    else:
+        chosen = provinces
+    # Read together: one by one, the 13 lists took 20 s cold (live 2026-11-03); the rate
+    # limiter still spaces the requests.
+    results = await asyncio.gather(*(_metro_areas_of(p, lang) for p in chosen))
+    areas = [area for found, _ in results for area in found]
+    all_cached = all(was_cached for _, was_cached in results)
+    if not areas and not province_id:
+        _raise(
+            UpstreamError,
+            "HMIP listed no metropolitan areas in any province "
+            '(a[data-type="MetropolitanMajorArea"]); the page layout may have changed.',
+            "le PIMH n'a énuméré aucune zone métropolitaine dans aucune province "
+            '(a[data-type="MetropolitanMajorArea"]) ; la mise en page a peut-être changé.',
+            lang,
+        )
+    if name and name.strip():
+        wanted_name = _norm(name)
+        pattern = re.compile(rf"(^| ){re.escape(wanted_name)}( |$)")
+        areas = [a for a in areas if pattern.search(_norm(a.name))]
+    url = f"{_base_path(lang)}/Navigation/MetsByProvince/" + (
+        chosen[0].id if len(chosen) == 1 else "{province_id}"
+    )
+    return MetroAreaList(
+        areas=areas,
+        total_count=len(areas),
+        provenance=make_provenance(
+            source="cmhc",
+            url=url,
+            cached=all_cached,
+            schema_name="cmhc.MetroAreaList",
             lang=lang,
         ),
     )
@@ -705,6 +878,58 @@ def _validate_filters(
             )
 
 
+def _is_field_code(value: str) -> bool:
+    return value.isdigit() or value.upper() == "TIMESERIES"
+
+
+async def _resolve_fields(
+    category_level_1: str,
+    category_level_2: str,
+    column_field: str,
+    row_field: str,
+    *,
+    geography_type: str,
+    geography_id: str,
+    lang: str,
+) -> tuple[str, str]:
+    """Field codes for labels a caller copied from cmhc_get_table_options.
+
+    The chat demo's model passed column_field="Bedroom Type" (live 2026-11-03), which
+    HMIP answers "Sequence contains no elements"; the code for it is "2". Codes pass
+    through untouched, so this costs a call (cached a day) only when a label is given.
+    """
+    if _is_field_code(column_field) and _is_field_code(row_field):
+        return column_field, row_field.upper() if not row_field.isdigit() else row_field
+    options = (
+        await get_table_options(
+            category_level_1,
+            category_level_2,
+            geography_type=geography_type,
+            geography_id=geography_id,
+            lang=lang,
+        )
+    ).field_options
+
+    def code(value: str, attr: str) -> str:
+        if _is_field_code(value):
+            return value.upper() if not value.isdigit() else value
+        for option in options:
+            if _norm(option.label) == _norm(value):
+                return getattr(option, attr)
+        listed = "; ".join(
+            f"{o.label} (column_field={o.column_field}, row_field={o.row_field})" for o in options
+        )
+        _raise(
+            InvalidInput,
+            f"{value!r} is not a field code or label of this table; the options are {listed}.",
+            f"{value!r} n'est ni un code ni un libellé de champ de ce tableau ; les options "
+            f"sont {listed}.",
+            lang,
+        )
+
+    return code(column_field, "column_field"), code(row_field, "row_field")
+
+
 async def get_table_data(
     category_level_1: str,
     category_level_2: str,
@@ -722,7 +947,16 @@ async def get_table_data(
     row_field = _require(row_field, "row_field", lang)
     geography_type = _require(geography_type, "geography_type", lang)
     geography_id = _require(geography_id, "geography_id", lang)
-    await _check_geography(geography_type, geography_id, lang)
+    geography_type, geography_id = await _resolve_geography(geography_type, geography_id, lang)
+    column_field, row_field = await _resolve_fields(
+        category_level_1,
+        category_level_2,
+        column_field,
+        row_field,
+        geography_type=geography_type,
+        geography_id=geography_id,
+        lang=lang,
+    )
     filters = filters or {}
     base = _base_path(lang)
 

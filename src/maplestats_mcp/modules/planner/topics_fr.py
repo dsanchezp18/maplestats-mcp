@@ -21,6 +21,11 @@ FR: dict[str, str] = {
     "CMHC starts, completions, rents and vacancy: category_level_1 and _2": (
         "Mises en chantier, achèvements, loyers et inoccupation de la SCHL : category_level_1 et _2"
     ),
+    "a city or CMA's geography_id (name=<the city>), passed with "
+    "geography_type='MetropolitanMajorArea'": (
+        "le geography_id d'une ville ou d'une RMR (name=<la ville>), à passer avec "
+        "geography_type='MetropolitanMajorArea'"
+    ),
     "column_field and row_field options for that category and geography": (
         "options column_field et row_field pour cette catégorie et cette géographie"
     ),

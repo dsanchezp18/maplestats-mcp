@@ -504,12 +504,13 @@ CRA's other bulk statistical exports.
 **Status:** Shipped.
 
 Housing Market Information Portal (HMIP, www03.cmhc-schl.gc.ca/hmip-pimh), a
-legacy ASP.NET MVC/Kendo UI portal with no JSON API: `cmhc_*`, 4 tools (list
-categories, get table options, list provinces, get table data) covering
+legacy ASP.NET MVC/Kendo UI portal with no JSON API: `cmhc_*`, 5 tools (list
+categories, get table options, list provinces, list metropolitan areas, get
+table data) covering
 Rental Market Survey vacancy rates/rents, new housing starts/completions,
 secondary rental market, seniors' rental housing, and
-population/core-housing-need indicators, for Canada and by province, as a
-time series or current cross-tab.
+population/core-housing-need indicators, for Canada, by province and by
+metropolitan area, as a time series or current cross-tab.
 
 No hardcoded table catalogue — categories and their valid breakdowns are
 discovered live from HMIP's own navigation, and each table's `TableId` is
@@ -522,9 +523,19 @@ HTTP 500 with an ASP.NET error page, not a clean 404; the CSV export is cp1252
 em-dash byte); a cell can hold a suppressed ("**") or not-applicable ("++")
 marker instead of a number;
 `lang` genuinely changes category names (not just prose) since HMIP's
-`/en/`/`/fr/` categories are different strings per language; only
-Canada/province-level geography is covered — no live CMA/city-level
-discovery endpoint was found despite several attempts.
+`/en/`/`/fr/` categories are different strings per language.
+
+City level (2026-11-03): the province breadcrumb (`POST
+/Navigation/Breadcrumb` with `id` and `geographyType`) links each level's
+"expand" list, which led to `/Navigation/MetsByProvince/{province id}`: a
+province's metropolitan major areas as `a[data-type="MetropolitanMajorArea"]`
+anchors (225 across Canada, 65 in Ontario, Toronto = 2270, Barrie = "0120"
+with its leading zero). HMIP's geography type name is `MetropolitanMajorArea`
+(code 3); `"CMA"`, `"Cma"`, `"Centre"` and `"Metro"` answer HTTP 500 ("Enum
+value '0' is invalid for type ... GeographyType"), so the module translates
+those names. Found after the chat demo's model failed the Toronto rent
+question by passing `geography_type="CMA"`, `geography_id="Toronto"` and
+`column_field="Bedroom Type"`; all three are now accepted.
 
 The separate `www.cmhc-schl.gc.ca` "Data Tables" Sitecore document catalogue
 is now also shipped (added 2026-09-19) as `cmhc_dt_*`, 3 more tools (list

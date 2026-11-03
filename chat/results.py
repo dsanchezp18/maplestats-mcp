@@ -157,14 +157,109 @@ def _valet_series(payload: dict[str, Any], caveats: list[str]) -> list[dict[str,
     return found
 
 
+_MONTHS = {
+    name: number
+    for number, names in enumerate(
+        (
+            ("january", "janvier"),
+            ("february", "fevrier", "février"),
+            ("march", "mars"),
+            ("april", "avril"),
+            ("may", "mai"),
+            ("june", "juin"),
+            ("july", "juillet"),
+            ("august", "aout", "août"),
+            ("september", "septembre"),
+            ("october", "octobre"),
+            ("november", "novembre"),
+            ("december", "decembre", "décembre"),
+        ),
+        start=1,
+    )
+    for name in names
+}
+
+
+def _cmhc_period(label: Any) -> str | None:
+    """ "2025 October" or "2025 octobre" as 2025-10-01, "2025" as 2025-01-01; else None."""
+    if not isinstance(label, str):
+        return None
+    parts = label.strip().split()
+    if not parts or not (len(parts[0]) == 4 and parts[0].isdigit()):
+        return None
+    if len(parts) == 1:
+        return f"{parts[0]}-01-01"
+    month = _MONTHS.get(parts[1].casefold()) if len(parts) == 2 else None
+    return f"{parts[0]}-{month:02d}-01" if month else None
+
+
+def _cmhc_series(payload: dict[str, Any], caveats: list[str]) -> list[dict[str, Any]]:
+    """CMHC HMIP tables (cmhc_get_table_data) with row_field TIMESERIES: one series per column.
+
+    A cross-tabulation (rows are provinces or centres, not periods) is left to the
+    Sources tab: its rows are not a time axis to chart.
+    """
+    if payload.get("row_field") != "TIMESERIES":
+        return []
+    rows = [r for r in payload.get("rows") or [] if isinstance(r, dict)]
+    periods = [_cmhc_period(r.get("period")) for r in rows]
+    if not rows or None in periods:
+        return []
+    provenance = payload.get("provenance") or {}
+    geography = payload.get("geography_name")
+    measure = payload.get("category_level_2")
+    found = []
+    for column in payload.get("columns") or []:
+        points = []
+        for row, period in zip(rows, periods, strict=True):
+            cell = (row.get("values") or {}).get(column)
+            if not isinstance(cell, dict):
+                continue
+            value = _number(cell.get("value"))
+            flag = cell.get("flag")
+            points.append(
+                {
+                    "period": period,
+                    "value": value,
+                    # a-d are reliability grades; a missing value keeps its marker ("**").
+                    "status": flag if value is None and isinstance(flag, str) else None,
+                }
+            )
+        if not any(p["value"] is not None for p in points):
+            continue
+        points.sort(key=lambda p: p["period"])
+        found.append(
+            {
+                "title": " · ".join(str(x) for x in (geography, measure, column) if x),
+                "vector_id": None,
+                "table_id": f"CMHC {payload.get('table_id')}",
+                "table_title": payload.get("table_name"),
+                "table_url": provenance.get("url"),
+                "unit": measure,
+                "scale": None,
+                "geography": geography,
+                "frequency": None,
+                "release": None,
+                "notes": [n for n in payload.get("notes") or [] if isinstance(n, str)][
+                    :3
+                ],
+                "caveats": caveats,
+                "points": points[-MAX_POINTS:],
+            }
+        )
+    return found
+
+
 def series_in(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """Every chartable series in one tool result (WDS, SDMX and Valet shapes)."""
+    """Every chartable series in one tool result (WDS, SDMX, Valet and CMHC shapes)."""
     provenance = (
         payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
     )
     caveats = [c for c in provenance.get("caveats") or [] if isinstance(c, str)]
     if isinstance(payload.get("series"), dict):
         return _valet_series(payload, caveats)
+    if isinstance(payload.get("rows"), list) and "columns" in payload:
+        return _cmhc_series(payload, caveats)
     items = (
         payload.get("series") if isinstance(payload.get("series"), list) else [payload]
     )

@@ -166,6 +166,33 @@ async def main() -> int:
         )
         ok = False
 
+    # City level (2026-11-03): HMIP's metropolitan major areas, a CMA alias, a name for
+    # the id and a field label, as the chat demo's model passed them for Toronto.
+    metros = await client.list_metropolitan_areas()
+    print(f"OK: list_metropolitan_areas -> {metros.total_count} areas")
+    ok &= metros.total_count > 100
+    toronto = await client.list_metropolitan_areas(name="Toronto", province_id="Ontario")
+    print(f"  Toronto -> {[(a.id, a.name) for a in toronto.areas]}")
+    ok &= any(a.id == "2270" for a in toronto.areas)
+    rents = await client.get_table_data(
+        "Primary Rental Market",
+        "Average Rent ($)",
+        "Bedroom Type",
+        "TIMESERIES",
+        geography_type="CMA",
+        geography_id="Toronto",
+    )
+    latest = rents.rows[-1] if rents.rows else None
+    two_bed = latest.values.get("2 Bedroom") if latest else None
+    print(f"  {rents.geography_name} two-bedroom rent, {latest and latest.period}: {two_bed}")
+    ok &= rents.geography_name == "Toronto" and two_bed is not None and two_bed.value is not None
+    try:
+        await client.list_categories(geography_type="CMA", geography_id="99999")
+        print("FAIL: list_categories(unknown CMA id) did not raise")
+        ok = False
+    except InvalidInput as exc:
+        print(f"OK: list_categories(unknown CMA id) raised InvalidInput: {exc}")
+
     print()
     print("CMHC SMOKE TEST PASSED" if ok else "CMHC SMOKE TEST FAILED")
     return 0 if ok else 1

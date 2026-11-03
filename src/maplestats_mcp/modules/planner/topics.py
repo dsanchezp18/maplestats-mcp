@@ -231,6 +231,11 @@ TOPICS: tuple[Topic, ...] = (
                 "CMHC starts, completions, rents and vacancy: category_level_1 and _2",
             ),
             PlanStep(
+                "cmhc_list_metropolitan_areas",
+                "a city or CMA's geography_id (name=<the city>), passed with "
+                "geography_type='MetropolitanMajorArea'",
+            ),
+            PlanStep(
                 "cmhc_get_table_options",
                 "column_field and row_field options for that category and geography",
             ),

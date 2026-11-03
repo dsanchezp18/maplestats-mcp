@@ -393,7 +393,10 @@
   function showAnswer(div, turn) {
     // Model text goes through the sanitiser; everything else is built from text nodes.
     div.innerHTML = DOMPurify.sanitize(marked.parse(turn.answer || "(no answer)"));
-    const panel = resultPanel(turn);
+    // A result the panel cannot draw must not take the answer text with it.
+    let panel = null;
+    try { panel = resultPanel(turn); }
+    catch (e) { panel = el("p", { class: "err", text: "The chart and table could not be drawn for this answer." }); }
     if (panel) div.append(panel);
     if (turn.tools_used && turn.tools_used.length) {
       div.append(el("details", { class: "calls" },
@@ -462,8 +465,13 @@
     const theme = localStorage.getItem(STORE + "-theme");
     if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
   } catch (e) { /* blocked */ }
-  turns = load();
-  turns.forEach(showTurn);
+  // One saved turn the page cannot show (saved by an older version) is dropped,
+  // not allowed to stop the rest of the history and the page from loading.
+  turns = load().filter((turn) => {
+    if (!turn || typeof turn.q !== "string" || typeof turn.answer !== "string") return false;
+    try { showTurn(turn); return true; } catch (e) { return false; }
+  });
+  save();
 
   // The website's example questions link here as ?q=...; ask it on arrival.
   // Every question is a billed model call, so only a link from the website itself
