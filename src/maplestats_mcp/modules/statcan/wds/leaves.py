@@ -75,6 +75,23 @@ def _int(value: Any) -> int | None:
         return None
 
 
+def _find_dimension(dims: list[dict[str, Any]], dimension: int | str) -> dict[str, Any] | None:
+    """A dimension by position (1, "1") or by its English or French name, accents ignored."""
+    wanted = _int(dimension)
+    if wanted is not None:
+        return next((d for d in dims if _int(d.get("dimensionPositionId")) == wanted), None)
+    name = " ".join(_fold(str(dimension)).split())
+    return next(
+        (
+            d
+            for d in dims
+            if name
+            in (_fold(d.get("dimensionNameEn") or ""), _fold(d.get("dimensionNameFr") or ""))
+        ),
+        None,
+    )
+
+
 def _name(member: dict[str, Any], fr: bool) -> str:
     return (member.get("memberNameFr") if fr else None) or member.get("memberNameEn") or ""
 
@@ -105,7 +122,7 @@ async def _unit_names() -> dict[int, tuple[str | None, str | None]]:
 
 async def get_leaf_members(
     product_id: int | str,
-    dimension: int,
+    dimension: int | str,
     *,
     under_member_id: int | None = None,
     member_query: str | None = None,
@@ -124,9 +141,12 @@ async def get_leaf_members(
     fr = _LANG.get() == "fr"
     cube, was_cached = await cube_metadata_raw(pid)
     dims = list_or_empty(cube, "dimension")
-    dim = next((d for d in dims if _int(d.get("dimensionPositionId")) == dimension), None)
+    dim = _find_dimension(dims, dimension)
     if dim is None:
-        positions = [_int(d.get("dimensionPositionId")) for d in dims]
+        positions = [
+            f"{_int(d.get('dimensionPositionId'))} {d.get('dimensionNameEn') or ''}".strip()
+            for d in dims
+        ]
         raise InvalidInput(
             _m(
                 f"Table {pid} has no dimension {dimension}; positions are {positions}. "
@@ -135,6 +155,7 @@ async def get_leaf_members(
                 f"wds_get_cube_metadata(product_id={pid}, member_limit=1) les nomme.",
             )
         )
+    dimension = _int(dim.get("dimensionPositionId")) or 0
     dim_name = (dim.get("dimensionNameFr") if fr else None) or dim.get("dimensionNameEn") or ""
     members = [m for m in list_or_empty(dim, "member") if _int(m.get("memberId")) is not None]
     by_id: dict[int, dict[str, Any]] = {int(m["memberId"]): m for m in members}

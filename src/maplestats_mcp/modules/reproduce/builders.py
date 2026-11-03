@@ -137,7 +137,12 @@ def table_member_filters(
                 f"{name} doit ressembler à 2020, 2020-01 ou 2020-01-15 (la forme de REF_DATE), "
                 f"reçu {value!r}.",
             )
-        filters.append(Filter(op, [period], str(value)))
+        text = str(value)
+        if op == "le":
+            # REF_DATE compares as text: "2025-03" > "2025", so an end of "2025" would drop
+            # 2025's months. Compare against the period's last day instead.
+            text += {4: "-12-31", 7: "-31"}.get(len(text), "")
+        filters.append(Filter(op, [period], text))
     return filters
 
 

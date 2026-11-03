@@ -49,7 +49,7 @@ async def test_summary_scripts_are_r_and_python_with_the_filters():
     assert "pl.col('GEO')" in python and "'canada'," in python
     assert f"{_MEASURE.lower()!r}," in python
     assert "pl.col('REF_DATE').cast(pl.Utf8) >= '2025-01'" in python
-    assert "pl.col('REF_DATE').cast(pl.Utf8) <= '2025-12'" in python
+    assert "pl.col('REF_DATE').cast(pl.Utf8) <= '2025-12-31'" in python
     assert 'str_to_lower(str_trim(`GEO`)) %in% c(\n      "canada"\n    )' in r
     # The summary comes last, after the cleaning, and prints instead of the frame.
     for text, mark in ((python, "# %% 4. Summarize"), (r, "# 4. Summarize ----")):
@@ -222,3 +222,16 @@ async def test_member_not_checked_when_the_metadata_is_capped(offline_wds):
         34100130, members={"Geography": ["Toronto, Ontario"]}
     )
     assert "'toronto, ontario'," in link.scripts[0].code
+
+
+@pytest.mark.parametrize(
+    ("end", "bound"),
+    [("2025", "2025-12-31"), ("2025-03", "2025-03-31"), ("2025-03-15", "2025-03-15")],
+)
+def test_end_period_keeps_the_whole_last_period(end, bound):
+    # REF_DATE compares as text, and "2025-03" > "2025": an end of 2025 must keep 2025's months.
+    spec = full_table_spec("18-10-0256-01", "en", None, None, end)
+    (last,) = [f for f in spec.filters if f.op == "le"]
+    assert last.value == bound
+    for kept in (end, end[:4] + "-12" if len(end) == 4 else end):
+        assert kept <= last.value

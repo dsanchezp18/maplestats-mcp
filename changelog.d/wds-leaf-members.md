@@ -6,6 +6,7 @@
   returns each leaf with its parent, the number of parents left out, the ids as a
   list and comma string, an SDMX `+` key fragment and full key for
   `sdmx_get_data`, and example coordinates for `wds_get_data_from_cube_coord`.
+  `dimension` takes the position or the name ("Geography", "Géographie").
   `under_member_id` keeps one branch (a NAICS sector, the CPI's "Food");
   `member_query` filters leaf names. Leaves that may still double-count are set
   aside in `flagged_leaves`: names that read as totals ("Canada" alone, "Total

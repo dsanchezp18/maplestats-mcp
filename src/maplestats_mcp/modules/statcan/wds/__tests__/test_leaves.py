@@ -103,6 +103,20 @@ async def test_cpi_geography_leaves_are_cities_not_provinces(httpx_mock):
     assert result.example_coordinates[0] == "15.2"
 
 
+@pytest.mark.parametrize("name", ["Geography", "  geography ", "Géographie", "geographie"])
+async def test_dimension_by_name_matches_the_position(httpx_mock, name):
+    _mock(httpx_mock, 18100004)
+    result = await leaves.get_leaf_members(18100004, name)
+    assert result.dimension_position == 1
+    assert result.member_ids == [15, 16, 27, 29]
+
+
+async def test_unknown_dimension_name_lists_the_names(httpx_mock):
+    _mock(httpx_mock, 18100004)
+    with pytest.raises(InvalidInput, match="1 Geography"):
+        await leaves.get_leaf_members(18100004, "Region")
+
+
 async def test_lfs_provinces_are_leaves_and_rates_are_set_aside(httpx_mock):
     _mock(httpx_mock, 14100287)
     geo = await leaves.get_leaf_members("14-10-0287", 1)

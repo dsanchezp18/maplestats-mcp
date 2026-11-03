@@ -152,7 +152,7 @@ async def wds_get_cube_metadata(
 @tool
 async def wds_get_leaf_members(
     product_id: ProductId,
-    dimension: int,
+    dimension: int | str,
     under_member_id: int | None = None,
     member_query: str | None = None,
     include_flagged: bool = False,
@@ -168,7 +168,7 @@ async def wds_get_leaf_members(
     product groups without the totals ("All industries", "All-items",
     "Canada") and subtotals mixed in. A leaf is a member that is no
     other member's parent. `dimension` is the position (1 is usually
-    Geography). `under_member_id` keeps the leaves below one member (a
+    Geography) or the dimension's name ("Geography", "Products"). `under_member_id` keeps the leaves below one member (a
     NAICS sector, the CPI's "Food", a province), the reliable way to
     take a branch: children rarely repeat the parent's name.
     `member_query` filters leaf names. Leaves that may still double-count
