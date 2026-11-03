@@ -6,7 +6,9 @@ and 6.5 for 2026-09, Alberta's member 10 in the same table, LFS employment
 21,104.8 thousand, 11-10-0090 (Canada only, Canadian Income Survey), the PEI
 2024 MBM rate flagged E in 11-10-0135, 12-10-0011 exports unadjusted, the CPI
 (v41690973, 18-10-0004) for each month of 2024 and 2026-09, and quarterly GDP
-(v62305783, 36-10-0104) 3,437,720 million for 2026-Q2.
+(v62305783, 36-10-0104) 3,437,720 million for 2026-Q2, and Quebec's CPI (v41691783)
+161.9, 162.6, 166.9 and 167.7 for 2025-08, 2025-09, 2026-08 and 2026-09. CMA is a
+made-up table with places whose names start alike (Victoria and Victoriaville).
 """
 
 from __future__ import annotations
@@ -98,7 +100,7 @@ CPI = {
         {
             "dimensionPositionId": 1,
             "dimensionNameEn": "Geography",
-            "member": _members((2, "Canada")),
+            "member": _members((2, "Canada"), (11, "Quebec")),
         },
         {
             "dimensionPositionId": 2,
@@ -121,7 +123,36 @@ GDP = {
     ],
     "footnote": [],
 }
+CMA = {
+    "productId": "14109999",
+    "frequencyCode": 6,
+    "surveyCode": ["3701"],
+    "dimension": [
+        {
+            "dimensionPositionId": 1,
+            "dimensionNameEn": "Geography",
+            # Victoriaville and Londonderry listed first: the fix must still name
+            # Victoria and London.
+            "member": _members(
+                (1, "Victoriaville, Quebec"),
+                (2, "Victoria, British Columbia"),
+                (3, "Londonderry, Nova Scotia"),
+                (4, "London, Ontario"),
+                (5, "Québec, Quebec"),
+                (6, "Quebec"),
+                (7, "British Columbia"),
+            ),
+        },
+        {
+            "dimensionPositionId": 2,
+            "dimensionNameEn": "Labour force characteristics",
+            "member": _members((1, "Unemployment rate")),
+        },
+    ],
+    "footnote": [],
+}
 CUBES = {
+    14109999: CMA,
     14100287: LFS,
     11100090: DISABILITY,
     12100011: TRADE,
@@ -163,6 +194,23 @@ SERIES = {
         [(date(2024, m, 1), 6.0, 7 if m == 3 else 0, 0) for m in range(1, 13)],
     ),
     62305783: (36100104, "1", 6, "Dollars", [(date(2026, 4, 1), 3437720.0, 0, 0)]),
+    41691783: (
+        18100004,
+        "11.2",
+        0,
+        "2002=100",
+        [
+            (date(2025, 8, 1), 161.9, 0, 0),
+            (date(2025, 9, 1), 162.6, 0, 0),
+            (date(2026, 8, 1), 166.9, 0, 0),
+            (date(2026, 9, 1), 167.7, 0, 0),
+        ],
+    ),
+    # One series per CMA member: Victoriaville 101 ... British Columbia 107.
+    **{
+        100 + m: (14109999, f"{m}.1", 0, "Percent", [(date(2026, 9, 1), 5.0, 0, 0)])
+        for m in range(1, 8)
+    },
 }
 
 
@@ -608,3 +656,124 @@ async def test_one_bad_vector_does_not_lose_the_others(monkeypatch):
     assert result.checked == 1
     with pytest.raises(UpstreamUnavailable):
         await _check("x", {"value": 1, "vector_id": 999999999999})
+
+
+QUEBEC_CPI = "What was the annual CPI inflation rate in Quebec in September 2026?"
+
+
+def _cpi(value, unit: str | None = "percent", period="2026-09", vector_id=41691783) -> dict:
+    return {
+        "value": value,
+        "unit": unit,
+        "period": period,
+        "geography": "Quebec",
+        "vector_id": vector_id,
+    }
+
+
+async def test_a_percent_is_checked_against_the_change_of_an_index():
+    # 167.7 / 162.6 = +3.1%: until 2026-11-03 the tool said "Use 167.7".
+    problems, result = await _check(QUEBEC_CPI, _cpi(3.1))
+    assert problems == [] and result.checked == 1
+    # The one-month change (167.7 / 166.9 = +0.5%) matches too.
+    problems, _ = await _check(QUEBEC_CPI, _cpi(0.5, "%"))
+    assert problems == []
+    problems, _ = await _check(
+        "Taux d'inflation annuel au Québec en septembre 2026 ?",
+        _cpi("3,1", "variation en pourcentage sur 12 mois"),
+        lang="fr",
+    )
+    assert problems == []
+    # No unit, but the question asks for a rate of inflation.
+    problems, _ = await _check(QUEBEC_CPI, _cpi(3.1, None))
+    assert problems == []
+
+
+async def test_a_wrong_percent_quotes_the_change_never_the_level():
+    problems, result = await _check(QUEBEC_CPI, _cpi(9.9))
+    assert problems == [(0, "value")]
+    problem = result.problems[0]
+    assert problem.problem == (
+        "The series is an index (2002=100), not a percent: its change to 2026-09 is 3.1% "
+        "from 2025-09 (12 months) and 0.5% from 2026-08, not 9.9%."
+    )
+    assert problem.fix.startswith("Use 3.1% (or 0.5%)")
+    assert "167.7" not in problem.problem + problem.fix
+    _, french = await _check(QUEBEC_CPI, _cpi("9,9", "pourcentage"), lang="fr")
+    shown = french.problems[0].model_copy()
+    shown.problem, shown.fix = (t.replace("\xa0", " ") for t in (shown.problem, shown.fix))
+    assert "3,1 % depuis 2025-09 (sur 12 mois)" in shown.problem
+    assert shown.fix.startswith("Utilisez 3,1 % (ou 0,5 %)")
+    # A level cited as a level is still read as a level.
+    problems, _ = await _check(QUEBEC_CPI, _cpi(167.7, "index"))
+    assert problems == []
+
+
+async def test_a_percent_without_the_earlier_period_is_a_note():
+    # 41690973 starts in 2024-01: neither 2023-01 nor 2023-12 is there.
+    problems, result = await _check(
+        "Canada's 12-month CPI change in January 2024?",
+        _cpi(2.9, period="2024-01", vector_id=41690973) | {"geography": None},
+    )
+    assert problems == []
+    assert any("2023-01" in note and "cannot be computed" in note for note in result.notes)
+
+
+async def test_a_percent_series_is_compared_as_it_is():
+    problems, result = await _check(
+        "What is Canada's unemployment rate?",
+        {"value": 6.9, "unit": "percent", "period": "2026-09", "vector_id": 2062815},
+    )
+    assert problems == [(0, "value")]
+    assert "is 6.5, not 6.9" in result.problems[0].problem
+
+
+async def test_places_match_whole_names():
+    problems, result = await _check(
+        "Unemployment rate in Victoria?", {"value": 5.0, "period": "2026-09", "vector_id": 101}
+    )
+    assert problems == [(0, "geography")]
+    assert "coordinate 2.1 (Victoria, British Columbia)" in result.problems[0].fix
+    problems, _ = await _check(
+        "Unemployment rate in Victoria?", {"value": 5.0, "period": "2026-09", "vector_id": 102}
+    )
+    assert problems == []
+    problems, result = await _check(
+        "Unemployment rate in London?", {"value": 5.0, "period": "2026-09", "vector_id": 103}
+    )
+    assert problems == [(0, "geography")]
+    assert "coordinate 4.1 (London, Ontario)" in result.problems[0].fix
+    problems, _ = await _check(
+        "Unemployment rate in London?", {"value": 5.0, "period": "2026-09", "vector_id": 104}
+    )
+    assert problems == []
+
+
+async def test_a_province_is_not_its_namesake_city():
+    problems, result = await _check(
+        "Unemployment rate in Quebec?", {"value": 5.0, "period": "2026-09", "vector_id": 105}
+    )
+    assert problems == [(0, "geography")]
+    assert "coordinate 6.1 (Quebec)" in result.problems[0].fix
+    problems, result = await _check(
+        "Unemployment rate in Quebec City?", {"value": 5.0, "period": "2026-09", "vector_id": 106}
+    )
+    assert problems == [(0, "geography")]
+    assert "coordinate 5.1 (Québec, Quebec)" in result.problems[0].fix
+
+
+async def test_a_city_and_its_province_asks_for_the_city():
+    assert client._asked_places("Unemployment rate in Victoria, BC?") == [("Victoria", "city")]
+    assert client._asked_places("Unemployment in Quebec City, Quebec?") == [("Quebec City", "city")]
+    question = "What is the unemployment rate in Victoria, BC?"
+    problems, result = await _check(question, {"value": 5.0, "period": "2026-09", "vector_id": 107})
+    assert problems == [(0, "geography")]
+    assert "coordinate 2.1 (Victoria, British Columbia)" in result.problems[0].fix
+    problems, _ = await _check(question, {"value": 5.0, "period": "2026-09", "vector_id": 102})
+    assert problems == []
+    # A label with the province is the city as well.
+    problems, _ = await _check(
+        "Unemployment rate?",
+        {"value": 5.0, "period": "2026-09", "vector_id": 107, "geography": "Victoria, BC"},
+    )
+    assert problems == [(0, "geography")]
