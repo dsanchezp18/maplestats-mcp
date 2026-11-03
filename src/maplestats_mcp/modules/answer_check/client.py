@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from maplestats_mcp.modules.answer_check.schemas import AnswerCheck, AnswerProblem, CitedFigure
@@ -46,18 +46,40 @@ from maplestats_mcp.shared.errors import (
     UpstreamUnavailable,
 )
 from maplestats_mcp.shared.fitness import rules_for
+from maplestats_mcp.shared.fitness_rules import RULES
 from maplestats_mcp.shared.i18n import normalize_lang, pick
 from maplestats_mcp.shared.json_utils import list_or_empty
-from maplestats_mcp.shared.transform import parse_period, period_end
+from maplestats_mcp.shared.transform import parse_period, period_end, period_label, period_start
 
 MAX_FIGURES = 20
 _SOFT = (NotFound, UpstreamError, UpstreamUnavailable, DataLocked, InvalidInput)
-_SCALE_WORDS = (
-    (re.compile(r"\btrillions?\b|\bbillions? de milliards?\b", re.IGNORECASE), 1e12),
-    (re.compile(r"\bbillions?\b|\bmilliards?\b|\bbn\b", re.IGNORECASE), 1e9),
-    (re.compile(r"\bmillions?\b|\bm\b", re.IGNORECASE), 1e6),
-    (re.compile(r"\bthousands?\b|\bmilliers?\b|\bmille\b|\bk\b", re.IGNORECASE), 1e3),
-)
+
+
+def _words(pattern: str) -> re.Pattern[str]:
+    return re.compile(pattern, re.IGNORECASE)
+
+
+# Scale words by language: a French "billion" is 10^12 (a milliard is 10^9),
+# so "2,06 billions de dollars" is 2.06 trillion. Every word in the unit counts
+# ("milliers de milliards" is 10^12). A bare "m" is metres, not millions: only
+# "M$" and "$M" are taken as the symbol. "milliard" is 10^9 in either language.
+_MILLIONS_SYMBOL = re.compile(r"(?<![A-Za-z])M\$|\$M(?![A-Za-z])")
+_SCALE_WORDS: dict[str, tuple[tuple[re.Pattern[str], float], ...]] = {
+    "en": (
+        (_words(r"\btrillions?\b"), 1e12),
+        (_words(r"\bbillions?\b|\bbn\b|\bmilliards?\b"), 1e9),
+        (_words(r"\bmillions?\b"), 1e6),
+        (_words(r"\bthousands?\b|\bk\b"), 1e3),
+    ),
+    "fr": (
+        (_words(r"\bbillions?\b"), 1e12),
+        (_words(r"\bmilliards?\b|\bG\$|\bMds?\$?"), 1e9),
+        (_words(r"\bmillions?\b"), 1e6),
+        (_words(r"\bmilliers?\b|\bmille\b|\bk\b"), 1e3),
+    ),
+}
+# A scale word is not a licence to round: "2 million" must not match 2.4 million.
+_MAX_RELATIVE_TOLERANCE = 0.05
 _FACTORS = (1e3, 1e6, 1e9, 1e-3, 1e-6, 1e-9, 100.0, 0.01)
 # Questions that ask for unadjusted data or a change a year apart, where an
 # unadjusted series is the right one.
@@ -85,6 +107,13 @@ _PUMF_GAPS: dict[str, tuple[re.Pattern[str], str, str, str]] = {
         "n'a aucune variable d'incapacité",
     ),
 }
+# Tables whose missing geographies no other table publishes, for questions
+# matching the pattern: only these lead to the "not published" ladder (PUMF,
+# custom tabulation, RTRA, RDC). Any other missing place is first looked for in
+# other tables. 11-10-0090 (poverty by disability status) is Canada only.
+_KNOWN_UNPUBLISHED: dict[int, re.Pattern[str]] = {
+    11100090: re.compile(r"disab|incapacit|handicap", re.IGNORECASE),
+}
 
 
 class _Ctx:
@@ -101,22 +130,56 @@ class _Ctx:
         self.members: list[tuple[dict, dict]] = []
 
 
-def _precision(value: float) -> float:
-    exponent = Decimal(repr(value)).normalize().as_tuple().exponent
-    return 10.0 ** int(exponent) if isinstance(exponent, int) else 1.0
+def _number(raw: float | str, lang: str) -> tuple[float, float]:
+    """(value, precision) of a cited number: 170 -> (170, 1), "2.060" -> (2.06, 0.001).
+
+    Zeros before the decimal point are significant: 170 is rounded to the unit
+    (until 2026-11-03 it counted as rounded to the ten, so 1000 matched 1400).
+    Text keeps the written precision ("6.50"), which a JSON number loses.
+    """
+    if isinstance(raw, str):
+        text = re.sub(r"[\s  $%]", "", raw)
+        if "," in text and "." in text:
+            # The separator written last is the decimal one: 1,234.5 or 1.234,5.
+            thousands = "," if text.rfind(",") < text.rfind(".") else "."
+            text = text.replace(thousands, "")
+        if "," in text and (lang == "fr" or not re.fullmatch(r"-?\d{1,3}(,\d{3})+", text)):
+            text = text.replace(",", ".")
+        text = text.replace(",", "")
+        try:
+            number = Decimal(text)
+        except ArithmeticError as exc:
+            raise ValueError(raw) from exc
+        if not number.is_finite():
+            raise ValueError(raw)
+        exponent = number.as_tuple().exponent
+        return float(number), 10.0 ** min(0, int(exponent)) if isinstance(exponent, int) else 1.0
+    if float(raw).is_integer():
+        return float(raw), 1.0
+    exponent = Decimal(repr(float(raw))).as_tuple().exponent
+    return float(raw), 10.0 ** int(exponent) if isinstance(exponent, int) else 1.0
 
 
-def _close(cited: float, published: float, precision: float) -> bool:
-    return abs(cited - published) <= precision / 2 + 1e-9 * max(1.0, abs(published))
+def _tolerance(cited: float, precision: float, word: float | None) -> float:
+    """Half the cited precision, in full units; capped when a scale word is used."""
+    tolerance = precision / 2
+    if word is not None:
+        tolerance = min(tolerance, _MAX_RELATIVE_TOLERANCE * abs(cited))
+    return tolerance * (word or 1)
 
 
-def _scale_word(unit: str | None) -> float | None:
+def _close(cited: float, published: float, tolerance: float) -> bool:
+    return abs(cited - published) <= tolerance + 1e-9 * max(1.0, abs(published))
+
+
+def _scale_word(unit: str | None, lang: str) -> float | None:
     if not unit:
         return None
-    for pattern, factor in _SCALE_WORDS:
+    factor = 1e6 if _MILLIONS_SYMBOL.search(unit) else 1.0
+    for pattern, scale in _SCALE_WORDS[normalize_lang(lang)]:
         if pattern.search(unit):
-            return factor
-    return None
+            factor *= scale
+    return None if factor == 1.0 else factor
 
 
 def _fmt(value: float) -> str:
@@ -151,10 +214,15 @@ def _geo_match(place: str, member_name: str) -> bool:
     return bool(label) and (label == head or head.startswith(label) or label in head)
 
 
-def _asked_places(question: str) -> list[str]:
-    places = [p.place for p in places_named(question)]
-    if _CANADA.search(_AGENCY.sub(" ", question)):
-        places.append("Canada")
+def _asked_places(question: str) -> list[tuple[str, str]]:
+    """(place, kind) the question names; Canada only when it names no province or city.
+
+    "Canadian workers in Alberta" asks about Alberta: until 2026-11-03 the word
+    "Canadian" added Canada, so a Canada series passed for it.
+    """
+    places = [(p.place, p.kind) for p in places_named(question)]
+    if not places and _CANADA.search(_AGENCY.sub(" ", question)):
+        places.append(("Canada", "country"))
     return places
 
 
@@ -250,44 +318,127 @@ async def _not_published(
     )
 
 
+def _place_kind(place: str) -> str:
+    named = places_named(place)
+    if named:
+        return named[0].kind
+    return "country" if _CANADA.search(place) else "place"
+
+
+def _pointer_tables(product_id: int, place: str, kind: str) -> list[tuple[str, list[str]]]:
+    """Fitness rules naming other tables of the same subject that cover `kind` places.
+
+    14-10-0287 (LFS by province) has no Toronto member; the rule
+    lfs-subprovincial-moving-averages names 14-10-0459 and 14-10-0460, which do.
+    """
+    subject = str(product_id)[:4]
+    words = {
+        "city": ("metropolitan", "economic region"),
+        "province": ("province", "provincial"),
+    }.get(kind, ())
+    found = []
+    for rule in RULES:
+        if product_id in rule.product_ids:
+            continue
+        tables = [p for p in rule.product_ids if str(p)[:4] == subject]
+        note = rule.note_en.lower()
+        if tables and (place.lower() in note or any(w in note for w in words)):
+            found.append((rule.key, [_table(p) for p in tables]))
+    return found
+
+
+def _elsewhere(ctx: _Ctx, place: str, kind: str, lang: str) -> str:
+    """Where to look for a place the cited table lacks: other tables first."""
+    assert ctx.cube is not None and ctx.product_id is not None
+    title = str(ctx.cube.get("cubeTitleFr" if lang == "fr" else "cubeTitleEn") or "")
+    subject = re.split(r" by |, | selon | par ", title, maxsplit=1)[0].strip() or title
+    geo_word = {
+        "city": pick(lang, " census metropolitan area", " région métropolitaine de recensement"),
+        "province": " province",
+    }.get(kind, "")
+    query = f"{subject}{geo_word}".strip()
+    pointers = "; ".join(
+        f"{', '.join(tables)} ({pick(lang, 'rule', 'règle')} {key})"
+        for key, tables in _pointer_tables(ctx.product_id, place, kind)
+    )
+    also = pick(lang, f" Known: {pointers}.", f" Connus : {pointers}.") if pointers else ""
+    return pick(
+        lang,
+        f"Find a table that has {place}: wds_search_cubes '{query}', then its "
+        f"Geography members (wds_get_cube_metadata).{also} Say it is not published only if "
+        "no table has it.",
+        f"Cherchez un tableau qui a {place} : wds_search_cubes « {query} », puis ses "
+        f"membres Géographie (wds_get_cube_metadata).{also} Dites qu'il n'est pas publié "
+        "seulement si aucun tableau ne l'a.",
+    )
+
+
 async def _check_geography(ctx: _Ctx, question: str, lang: str) -> list[AnswerProblem]:
+    """Each figure against its own place: its `geography`, else the places asked.
+
+    A figure labelled Canada in a question about Ontario and Toronto is a Canada
+    figure, not a wrong Toronto one (until 2026-11-03 the question's first place
+    was applied to every figure).
+    """
     geo = _geography(ctx)
     if geo is None or ctx.cube is None or ctx.product_id is None or ctx.coordinate is None:
         return []
     dim, member = geo
     series_geo = str(member.get("memberNameEn") or "")
-    asked = _asked_places(question)
-    if ctx.figure.geography:
-        asked = asked or [ctx.figure.geography]
-    if not asked or any(_geo_match(place, series_geo) for place in asked):
+    labelled = ctx.figure.geography
+    wanted = [(labelled, _place_kind(labelled))] if labelled else _asked_places(question)
+    if not wanted or any(_geo_match(place, series_geo) for place, _ in wanted):
         return []
-    place = asked[0]
     shown_geo = auto_notes.member_name(member, lang)
     table_members = list_or_empty(dim, "member")
-    target = next((m for m in table_members if _geo_match(place, str(m["memberNameEn"]))), None)
-    if target is None:
-        geos = [auto_notes.member_name(m, lang) for m in table_members]
-        return [await _not_published(ctx, place, geos, question, lang)]
-    coordinate = _swap(ctx.coordinate, int(dim["dimensionPositionId"]), int(target["memberId"]))
     table = _table(ctx.product_id)
-    return [
-        _problem(
-            ctx.index,
-            "geography",
-            pick(
-                lang,
-                f"The series is for {shown_geo}, but the question asks about {place}.",
-                f"La série porte sur {shown_geo}, mais la question vise {place}.",
-            ),
-            pick(
-                lang,
-                f"Use table {table}, coordinate {coordinate} "
-                f"({auto_notes.member_name(target, lang)}).",
-                f"Utilisez le tableau {table}, coordonnée {coordinate} "
-                f"({auto_notes.member_name(target, lang)}).",
-            ),
+    found: list[tuple[str, str, dict]] = []
+    missing: list[tuple[str, str]] = []
+    for place, kind in wanted:
+        target = next((m for m in table_members if _geo_match(place, str(m["memberNameEn"]))), None)
+        if target is None:
+            missing.append((place, kind))
+        else:
+            coordinate = _swap(
+                ctx.coordinate, int(dim["dimensionPositionId"]), int(target["memberId"])
+            )
+            found.append((place, coordinate, target))
+    known = _KNOWN_UNPUBLISHED.get(ctx.product_id)
+    if not found and known is not None and known.search(question):
+        geos = [auto_notes.member_name(m, lang) for m in table_members]
+        return [await _not_published(ctx, missing[0][0], geos, question, lang)]
+    names = ", ".join(place for place, _ in wanted)
+    problem = (
+        pick(
+            lang,
+            f"The series is for {shown_geo}, but the figure is labelled {labelled}.",
+            f"La série porte sur {shown_geo}, mais le chiffre est présenté pour {labelled}.",
         )
+        if labelled
+        else pick(
+            lang,
+            f"The series is for {shown_geo}, but the question asks about {names}.",
+            f"La série porte sur {shown_geo}, mais la question vise {names}.",
+        )
+    )
+    if missing:
+        absent = ", ".join(place for place, _ in missing)
+        problem += pick(
+            lang,
+            f" Table {table} has no {absent} member.",
+            f" Le tableau {table} n'a pas de membre {absent}.",
+        )
+    fixes = [
+        pick(
+            lang,
+            f"Use table {table}, coordinate {coordinate} ({auto_notes.member_name(t, lang)}).",
+            f"Utilisez le tableau {table}, coordonnée {coordinate} "
+            f"({auto_notes.member_name(t, lang)}).",
+        )
+        for _, coordinate, t in found
     ]
+    fixes += [_elsewhere(ctx, place, kind, lang) for place, kind in missing]
+    return [_problem(ctx.index, "geography", problem, " ".join(fixes))]
 
 
 def _check_adjustment(ctx: _Ctx, question: str, lang: str) -> list[AnswerProblem]:
@@ -385,21 +536,26 @@ def _value_problems(
     period: str,
     latest: tuple[str, float | None] | None,
     lang: str,
+    subject: tuple[str, str] | None = None,
 ) -> list[AnswerProblem]:
-    """Compare a cited value with the published one; [] when they agree."""
+    """Compare a cited value with the published one; [] when they agree.
+
+    `subject` (en, fr) replaces "The published value for <period>" in the message,
+    for a value computed from several periods (a year's average).
+    """
     assert figure.value is not None
-    cited = figure.value
-    word = _scale_word(figure.unit)
-    precision = _precision(cited)
+    cited, precision = _number(figure.value, lang)
+    word = _scale_word(figure.unit, lang)
+    tolerance = _tolerance(cited, precision, word)
     full = published * multiplier
     if word is not None:
-        if _close(cited * word, full, precision * word):
+        if _close(cited * word, full, tolerance):
             return []
         cited_full = cited * word
     else:
-        if _close(cited, full, precision):
+        if _close(cited, full, tolerance):
             return []
-        if multiplier != 1 and _close(cited, published, precision):
+        if multiplier != 1 and _close(cited, published, tolerance):
             scale_text = scale or f"x{_fmt(multiplier)}"
             return [
                 _problem(
@@ -420,7 +576,7 @@ def _value_problems(
             ]
         cited_full = cited
     for factor in _FACTORS:
-        if _close(cited_full * factor, full, precision * (word or 1) * factor):
+        if _close(cited_full * factor, full, tolerance * factor):
             return [
                 _problem(
                     index,
@@ -441,7 +597,7 @@ def _value_problems(
             ]
     if latest is not None and latest[1] is not None and latest[0] != period:
         other_full = latest[1] * multiplier
-        if _close(cited_full, other_full, precision * (word or 1)):
+        if _close(cited_full, other_full, tolerance):
             return [
                 _problem(
                     index,
@@ -460,14 +616,15 @@ def _value_problems(
             ]
     # In the answer's own scale ("561,381 millions"), so the fix can be pasted.
     shown = _fmt(full / word) + f" ({figure.unit})" if word else _fmt(full)
+    en, fr = subject or (f"The published value for {period}", f"La valeur publiée pour {period}")
     return [
         _problem(
             index,
             "value",
             pick(
                 lang,
-                f"The published value for {period} is {shown}, not {_fmt(cited)}.",
-                f"La valeur publiée pour {period} est {shown}, pas {_fmt(cited)}.",
+                f"{en} is {shown}, not {_fmt(cited)}.",
+                f"{fr} est {shown}, pas {_fmt(cited)}.",
             ),
             pick(
                 lang,
@@ -478,47 +635,159 @@ def _value_problems(
     ]
 
 
-def _flag_problem(index: int, row: ObservationRow, period: str, lang: str) -> AnswerProblem | None:
-    if row.security_level_code == auto_notes.SECURITY_SUPPRESSED or (
-        row.status_code == auto_notes.STATUS_TOO_UNRELIABLE
+def _flag_problems(
+    index: int, rows: list[ObservationRow], label: str, frequency: Any, lang: str
+) -> list[AnswerProblem]:
+    """E, F and x flags of every row the cited period covers (a year of months too).
+
+    One row is named by the cited `label`; several by their own periods.
+    """
+
+    def named(flagged: list[ObservationRow]) -> str:
+        if len(rows) == 1:
+            return label
+        shown = [auto_notes.format_period(r.ref_period, frequency) for r in flagged]
+        more = len(shown) - 3
+        return ", ".join(shown[:3]) + (
+            pick(lang, f" and {more} more", f" et {more} autres") if more > 0 else ""
+        )
+
+    suppressed = [r for r in rows if r.security_level_code == auto_notes.SECURITY_SUPPRESSED]
+    unreliable = [
+        r for r in rows if r.status_code == auto_notes.STATUS_TOO_UNRELIABLE and r not in suppressed
+    ]
+    caution = [
+        r
+        for r in rows
+        if r.status_code == auto_notes.STATUS_USE_WITH_CAUTION
+        and r not in suppressed
+        and r not in unreliable
+    ]
+    problems: list[AnswerProblem] = []
+    for flagged, what in (
+        (suppressed, pick(lang, "suppressed for confidentiality (x)", "confidentiel (x)")),
+        (unreliable, pick(lang, "too unreliable to be published (F)", "trop peu fiable (F)")),
     ):
-        what = (
-            pick(lang, "suppressed for confidentiality (x)", "confidentiel (x)")
-            if row.security_level_code == auto_notes.SECURITY_SUPPRESSED
-            else pick(lang, "too unreliable to be published (F)", "trop peu fiable (F)")
+        if flagged:
+            problems.append(
+                _problem(
+                    index,
+                    "quality_flag",
+                    pick(lang, f"{named(flagged)}: {what}.", f"{named(flagged)} : {what}.")
+                    if len(rows) > 1
+                    else pick(lang, f"{label} is {what}.", f"{label} est {what}."),
+                    pick(
+                        lang,
+                        "Do not report a figure: say it is not published and offer a broader "
+                        "group or another period.",
+                        "Ne donnez aucun chiffre : dites qu'il n'est pas publié et proposez un "
+                        "groupe plus large ou une autre période.",
+                    ),
+                )
+            )
+    if caution:
+        problems.append(
+            _problem(
+                index,
+                "quality_flag",
+                pick(
+                    lang,
+                    f"StatCan flags {named(caution)} 'use with caution' (E).",
+                    f"Statistique Canada marque {named(caution)} « à utiliser avec prudence » (E).",
+                ),
+                pick(lang, "Report it with that caveat.", "Citez-le avec cette mise en garde."),
+            )
         )
-        return _problem(
-            index,
-            "quality_flag",
-            pick(lang, f"{period} is {what}.", f"{period} est {what}."),
-            pick(
+    return problems
+
+
+def _coarse_value(
+    index: int,
+    figure: CitedFigure,
+    values: list[ObservationRow],
+    label: str,
+    frequency: Any,
+    scale: str | None,
+    lang: str,
+) -> list[AnswerProblem]:
+    """A value cited for a year (or quarter) of a finer series: its average or total
+    matches; one period's value is named as that period; else the average is given."""
+    assert figure.value is not None
+    cited = _fmt(_number(figure.value, lang)[0])
+    numbers = [r.value for r in values if r.value is not None]
+    multiplier = values[-1].scale_multiplier
+    average, total = sum(numbers) / len(numbers), sum(numbers)
+
+    def matches(published: float) -> bool:
+        return not _value_problems(index, figure, published, multiplier, None, label, None, lang)
+
+    if matches(average) or matches(total):
+        return []
+    # Half up, as StatCan rounds: 1930.2 / 12 = 160.85 is shown 160.9.
+    shown_average = float(
+        Decimal(str(round(average, 9))).quantize(
+            Decimal(1).scaleb(-values[-1].decimals), rounding=ROUND_HALF_UP
+        )
+    )
+    one = next((r for r in values if r.value is not None and matches(r.value)), None)
+    if one is not None:
+        period = auto_notes.format_period(one.ref_period, frequency)
+        mean = _fmt(shown_average * multiplier)
+        return [
+            _problem(
+                index,
+                "period",
+                pick(
+                    lang,
+                    f"{cited} is the value for {period}; the {label} average is {mean}.",
+                    f"{cited} est la valeur de {period} ; la moyenne de {label} est {mean}.",
+                ),
+                pick(
+                    lang,
+                    f"Cite it as {period}, or use {mean} as the {label} average.",
+                    f"Citez-la pour {period}, ou utilisez {mean} comme moyenne de {label}.",
+                ),
+            )
+        ]
+    word = _scale_word(figure.unit, lang) or 1
+    low, high = (_fmt(v * multiplier / word) for v in (min(numbers), max(numbers)))
+    count = len(numbers)
+    found = _value_problems(
+        index,
+        figure,
+        shown_average,
+        multiplier,
+        scale,
+        label,
+        None,
+        lang,
+        subject=(
+            f"The {label} average of the {count} published values ({low} to {high})",
+            f"La moyenne de {label} des {count} valeurs publiées ({low} à {high})",
+        ),
+    )
+    for problem in found:
+        if problem.check == "value":
+            problem.fix += pick(
                 lang,
-                "Do not report a figure: say it is not published and offer a broader group "
-                "or another period.",
-                "Ne donnez aucun chiffre : dites qu'il n'est pas publié et proposez un groupe "
-                "plus large ou une autre période.",
-            ),
-        )
-    if row.status_code == auto_notes.STATUS_USE_WITH_CAUTION:
-        return _problem(
-            index,
-            "quality_flag",
-            pick(
-                lang,
-                f"StatCan flags {period} 'use with caution' (E).",
-                f"Statistique Canada marque {period} « à utiliser avec prudence » (E).",
-            ),
-            pick(lang, "Report it with that caveat.", "Citez-le avec cette mise en garde."),
-        )
-    return None
+                f" Say it is the average of {count} values, or cite one period.",
+                f" Précisez que c'est la moyenne de {count} valeurs, ou citez une période.",
+            )
+    return found
 
 
 def _newer(
-    index: int, period: str, latest: tuple[str, float | None], question: str, lang: str
+    index: int,
+    period: str,
+    latest: tuple[str, float | None],
+    question: str,
+    lang: str,
+    key: str | None = None,
 ) -> AnswerProblem | None:
+    """`key` is the latest period at the cited granularity (2026 for 2026-09)."""
     latest_period, latest_value = latest
     # A question that names the cited year asks for that period on purpose.
-    if latest_period <= period or period[:4] in question:
+    if (key or latest_period) <= period or period[:4] in question:
         return None
     value = "" if latest_value is None else f" ({_fmt(latest_value)})"
     return _problem(
@@ -535,6 +804,33 @@ def _newer(
             f"Donnez {latest_period}, ou expliquez pourquoi {period} est retenu.",
         ),
     )
+
+
+async def _series_infos(ids: list[int]) -> dict[int, dict[str, Any]]:
+    """Series info for every id; one bad id must not lose the others.
+
+    WDS answers HTTP 500 for a whole getSeriesInfoFromVector batch when one id
+    does not exist (999999999999, checked live 2026-11-03), so a failed batch is
+    retried one id at a time and the ids that fail are left out (each gets a
+    `series` problem). Only when every id fails is it an outage, raised as such.
+    """
+    if not ids:
+        return {}
+    try:
+        return await context.series_info_raw(ids)
+    except _SOFT:
+        if len(ids) == 1:
+            raise
+    found: dict[int, dict[str, Any]] = {}
+    failure: Exception | None = None
+    for vector_id in ids:
+        try:
+            found.update(await context.series_info_raw([vector_id]))
+        except _SOFT as exc:
+            failure = exc
+    if not found and failure is not None:
+        raise failure
+    return found
 
 
 async def _resolve(ctxs: list[_Ctx], lang: str) -> list[AnswerProblem]:
@@ -558,7 +854,7 @@ async def _resolve(ctxs: list[_Ctx], lang: str) -> list[AnswerProblem]:
                 continue
             ctx.vector_id = info.vector_id
     ids = sorted({c.vector_id for c in ctxs if c.vector_id is not None})
-    infos = await context.series_info_raw(ids) if ids else {}
+    infos = await _series_infos(ids)
     for ctx in ctxs:
         if ctx.vector_id is None:
             continue
@@ -659,7 +955,6 @@ async def _check_statcan(ctxs: list[_Ctx], question: str, lang: str) -> list[Ans
                 )
             )
             continue
-        cited_period = auto_notes.format_period(start, frequency)
         try:
             window = await wds.get_data_from_vector_by_reference_period_range(
                 [ctx.vector_id], start.isoformat(), end.isoformat()
@@ -683,47 +978,59 @@ async def _check_statcan(ctxs: list[_Ctx], question: str, lang: str) -> list[Ans
                 )
             )
             continue
-        row = rows[-1]
-        flag = _flag_problem(ctx.index, row, cited_period, lang)
-        if flag is not None:
-            problems.append(flag)
-        if figure.value is not None and row.value is not None:
-            candidates = [r for r in rows if r.value is not None]
-            if not any(
-                not _value_problems(
-                    ctx.index,
-                    figure,
-                    r.value,
-                    r.scale_multiplier,
-                    None,
-                    cited_period,
-                    None,
-                    lang,
+        # A year cited for a monthly series covers twelve rows: it is labelled,
+        # compared (with their average) and checked for flags as the year, not
+        # as its first or last month (until 2026-11-03 "2024" read as "2024-01"
+        # and only December's value and flags were checked).
+        cited_ppy = parse_period(figure.period)[1]
+        coarse = cited_ppy is not None and auto_notes.format_period(
+            rows[0].ref_period, frequency
+        ) != period_label(start, cited_ppy)
+        cited_period = (
+            period_label(start, cited_ppy)
+            if coarse and cited_ppy is not None
+            else auto_notes.format_period(start, frequency)
+        )
+        flags = _flag_problems(ctx.index, rows, cited_period, frequency, lang)
+        problems.extend(flags)
+        values = [r for r in rows if r.value is not None]
+        scale = series_ctx.scale if series_ctx else None
+        if values and figure.value is not None:
+            if coarse:
+                problems.extend(
+                    _coarse_value(ctx.index, figure, values, cited_period, frequency, scale, lang)
                 )
-                for r in candidates
+            elif not any(
+                not _value_problems(
+                    ctx.index, figure, r.value, r.scale_multiplier, None, cited_period, None, lang
+                )
+                for r in values
                 if r.value is not None
             ):
+                last_row = values[-1]
+                assert last_row.value is not None
                 problems.extend(
                     _value_problems(
                         ctx.index,
                         figure,
-                        row.value,
-                        row.scale_multiplier,
-                        series_ctx.scale if series_ctx else None,
+                        last_row.value,
+                        last_row.scale_multiplier,
+                        scale,
                         cited_period,
                         latest,
                         lang,
                     )
                 )
-        elif row.value is None and flag is None:
+        elif not values and not flags:
+            status = rows[-1].status or ".."
             problems.append(
                 _problem(
                     ctx.index,
                     "period",
                     pick(
                         lang,
-                        f"No value is published for {cited_period} ({row.status or '..'}).",
-                        f"Aucune valeur n'est publiée pour {cited_period} ({row.status or '..'}).",
+                        f"No value is published for {cited_period} ({status}).",
+                        f"Aucune valeur n'est publiée pour {cited_period} ({status}).",
                     ),
                     pick(
                         lang,
@@ -732,8 +1039,14 @@ async def _check_statcan(ctxs: list[_Ctx], question: str, lang: str) -> list[Ans
                     ),
                 )
             )
-        if latest is not None and figure.value is not None:
-            newer = _newer(ctx.index, cited_period, latest, question, lang)
+        if latest is not None and latest_row is not None and figure.value is not None:
+            # Newer at the cited granularity: 2026-09 is not newer than "2026".
+            key = (
+                period_label(period_start(latest_row.ref_period, cited_ppy), cited_ppy)
+                if coarse and cited_ppy is not None
+                else latest[0]
+            )
+            newer = _newer(ctx.index, cited_period, latest, question, lang, key)
             if newer is not None:
                 problems.append(newer)
     return problems
@@ -901,29 +1214,46 @@ async def check_answer(
             )
         )
     problems: list[AnswerProblem] = []
+    notes: list[str] = []
     statcan: list[_Ctx] = []
     checked = 0
     for index, figure in enumerate(figures):
+        if figure.value is not None:
+            try:
+                _number(figure.value, lang)
+            except ValueError:
+                problems.append(
+                    _problem(
+                        index,
+                        "value",
+                        pick(
+                            lang,
+                            f"{figure.value!r} is not a number.",
+                            f"{figure.value!r} n'est pas un nombre.",
+                        ),
+                        pick(
+                            lang,
+                            "Pass the number as written, e.g. 6.5 or '2.06'.",
+                            "Passez le nombre tel qu'écrit, p. ex. 6.5 ou '2.06'.",
+                        ),
+                    )
+                )
+                continue
         if figure.vector_id is not None or (figure.product_id and figure.coordinate):
             statcan.append(_Ctx(index, figure))
         elif figure.boc_series:
             problems.extend(await _check_boc(index, figure, question, lang))
             checked += 1
         else:
-            problems.append(
-                _problem(
-                    index,
-                    "series",
-                    pick(
-                        lang,
-                        "The figure has no source id.",
-                        "Le chiffre n'a pas d'identifiant de source.",
-                    ),
-                    pick(
-                        lang,
-                        "Pass vector_id, product_id with coordinate, or boc_series.",
-                        "Passez vector_id, product_id avec coordinate, ou boc_series.",
-                    ),
+            # A figure from another source (CMHC, a provincial agency) is not a
+            # mistake to fix: it is outside what this tool re-reads.
+            notes.append(
+                pick(
+                    lang,
+                    f"Figure {index} not checked: check_answer covers StatCan and Bank of "
+                    "Canada figures.",
+                    f"Chiffre {index} non vérifié : check_answer couvre les chiffres de "
+                    "Statistique Canada et de la Banque du Canada.",
                 )
             )
     if statcan:
@@ -934,6 +1264,7 @@ async def check_answer(
     return AnswerCheck(
         problems=problems,
         checked=checked,
+        notes=notes,
         provenance=make_provenance(
             source="statcan-wds" if statcan else "boc",
             url=_WDS_URL if statcan else "https://www.bankofcanada.ca/valet/",
