@@ -40,6 +40,13 @@ CODE_SET_LIMIT_DEFAULT = 100
 # of series" tool (whole tables go to wds_get_full_table_download); 3,000
 # periods reaches back to 1914 for a monthly series (the CPI has 1,353).
 QUERY_MAX_VECTORS = 20
+
+# WDS refuses more than 300 objects in one list (HTTP 416, "The number of object in
+# the list exceeds the limit - 300", live 2026-11-03) and answers a vector id past a
+# 32-bit integer with HTTP 406 "JSON syntax error". Both are checked before the call,
+# so a caller gets a clear invalid_input instead of an upstream error to retry.
+WDS_MAX_LIST = 300
+MAX_VECTOR_ID = 2_147_483_647
 QUERY_MAX_LATEST_N = 3000
 QUERY_ROW_CAP = 500
 QUERY_MAX_SQL_CHARS = 10_000

@@ -30,3 +30,12 @@ async def test_server_advertises_an_icon():
 
     assert mcp.icons
     assert mcp.icons[0].src.startswith("data:image/png;base64,")
+
+
+async def test_every_response_carries_the_security_headers():
+    transport = httpx.ASGITransport(app=app)  # pyright: ignore[reportArgumentType]
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        for path in ("/health", "/favicon.png", "/no-such-page"):
+            response = await client.get(path)
+            assert response.headers["x-content-type-options"] == "nosniff", path
+            assert "max-age" in response.headers["strict-transport-security"], path

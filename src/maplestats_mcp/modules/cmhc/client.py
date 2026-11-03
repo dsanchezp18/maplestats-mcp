@@ -758,11 +758,26 @@ async def _metro_areas_of(
     # each level's "expand" list): /Navigation/MetsByProvince/{province id} answers the
     # province's metropolitan major areas as a[data-type="MetropolitanMajorArea"] anchors
     # (65 for Ontario, Toronto = 2270), with the same ids in /en/ and /fr/. A territory
-    # can have none, so an empty list is a valid answer here.
+    # can have none (Nunavut, 62): that answer is the empty
+    # <div class="MetropolitanMajorAreaContainer">. Any other page without anchors (a
+    # maintenance or error page served with HTTP 200) is raised inside fetch, so it is
+    # never cached for a day and valid ids are not refused meanwhile.
     url = f"{_base_path(lang)}/Navigation/MetsByProvince/{province.id}"
 
     async def fetch() -> list[MetroAreaOption]:
-        return _parse_metro_areas(await _get_html(url, {}, lang), province)
+        body = await _get_html(url, {}, lang)
+        found = _parse_metro_areas(body, province)
+        if not found and "MetropolitanMajorAreaContainer" not in body:
+            _raise(
+                UpstreamError,
+                f"HMIP's metropolitan area list for {province.name} held neither areas nor "
+                "its list container; the page layout may have changed or the site is down.",
+                f"la liste des zones métropolitaines du PIMH pour {province.name} ne "
+                "contenait ni zones ni son conteneur ; la mise en page a peut-être changé ou "
+                "le site est en panne.",
+                lang,
+            )
+        return found
 
     return await cached_fetch(
         f"cmhc:metro_areas:{lang}:{province.id}",
@@ -899,7 +914,7 @@ async def _resolve_fields(
     through untouched, so this costs a call (cached a day) only when a label is given.
     """
     if _is_field_code(column_field) and _is_field_code(row_field):
-        return column_field, row_field.upper() if not row_field.isdigit() else row_field
+        return column_field.upper(), row_field.upper()
     options = (
         await get_table_options(
             category_level_1,
@@ -912,7 +927,7 @@ async def _resolve_fields(
 
     def code(value: str, attr: str) -> str:
         if _is_field_code(value):
-            return value.upper() if not value.isdigit() else value
+            return value.upper()
         for option in options:
             if _norm(option.label) == _norm(value):
                 return getattr(option, attr)

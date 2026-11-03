@@ -323,7 +323,7 @@ PORTALS: dict[str, Portal] = {
     ),
     "burnaby": Portal(
         "data.burnaby.ca",
-        "City of Burnaby OpenData",
+        "City of Burnaby Open Data",
         "Données ouvertes de la Ville de Burnaby",
         note="British Columbia. 66 datasets confirmed live 2026-09-29.",
     ),

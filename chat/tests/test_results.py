@@ -235,3 +235,200 @@ def test_cmhc_cross_tabs_and_french_months():
     french = {**CMHC, "rows": [{**CMHC["rows"][0], "period": "2025 octobre"}]}
     points = results.collect([("cmhc_get_table_data", french)])["data"][0]["points"]
     assert points[0]["period"] == "2025-10-01"
+
+
+# wds_get_data_from_vectors([41690973], latest_n=3, transform="yoy_pct_change"),
+# trimmed: the CPI, all-items, Canada (shape of TransformedSeries in
+# src/maplestats_mcp/shared/transform.py; the server fetches 15 months so the
+# year-earlier level is there, and returns the 3 asked for).
+WDS_YOY = {
+    "series": [
+        {
+            "product_id": 18100004,
+            "coordinate": "2.2.0.0.0.0.0.0.0.0",
+            "vector_id": 41690973,
+            "context": {
+                "table_id": "18-10-0004-01",
+                "table_title": "Consumer Price Index, monthly, not seasonally adjusted",
+                "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401",
+                "series_title": "Canada;All-items",
+                "unit": "2002=100",
+                "scale": "units",
+                "frequency": "Monthly",
+                "geography": "Canada",
+                "notes": ["Not seasonally adjusted."],
+            },
+            "observations": [
+                {"ref_period": "2026-07-01", "value": 169.9, "status": "normal"},
+                {"ref_period": "2026-08-01", "value": 169.8, "status": "normal"},
+                {
+                    "ref_period": "2026-09-01",
+                    "value": 170.0,
+                    "status": "normal",
+                    "release_time": "2026-10-19T12:30:00Z",
+                },
+            ],
+            "transformed": {
+                "requested_transform": "yoy_pct_change",
+                "transform": "yoy_pct_change",
+                "frequency": "monthly",
+                "periods_per_year": 12,
+                "source_periods_per_year": 12,
+                "aggregation": None,
+                "window": None,
+                "formula": (
+                    "Computed by MapleStats: yoy_pct_change = 100 * (x_t / x_{t-12} - 1), "
+                    "t in months (the same period a year earlier, matched by date)"
+                ),
+                "unit": "percent",
+                "notes": [],
+                "points": [
+                    {
+                        "period": "2026-07",
+                        "ref_date": "2026-07-01",
+                        "level": 169.9,
+                        "value": 3.0321406913,
+                    },
+                    {
+                        "period": "2026-08",
+                        "ref_date": "2026-08-01",
+                        "level": 169.8,
+                        "value": 2.7848664649,
+                    },
+                    {
+                        "period": "2026-09",
+                        "ref_date": "2026-09-01",
+                        "level": 170.0,
+                        "value": 3.0927835052,
+                    },
+                ],
+            },
+        }
+    ],
+    "failed": [],
+    "provenance": {
+        "source": "statcan-wds",
+        "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
+        "coverage": "Computed by MapleStats from the published values (see each "
+        "series' transformed.formula); 15 periods was fetched so the lag reaches "
+        "back far enough, and the 3 requested are returned.",
+    },
+}
+
+
+def test_percent_change_is_charted_in_its_own_unit_before_the_levels():
+    yoy, levels = results.collect([("wds_get_data_from_vectors", WDS_YOY)])["data"]
+    assert yoy["title"] == "Canada · All-items (% change from a year earlier)"
+    assert yoy["unit"] == "percent" and yoy["scale"] is None
+    assert yoy["vector_id"] == "v41690973"
+    assert yoy["table_id"] == "18-10-0004-01"
+    assert [(p["period"], round(p["value"], 1)) for p in yoy["points"]] == [
+        ("2026-07-01", 3.0),
+        ("2026-08-01", 2.8),
+        ("2026-09-01", 3.1),
+    ]
+    assert yoy["notes"][0].startswith("Computed by MapleStats: yoy_pct_change")
+    assert "Not seasonally adjusted." in yoy["notes"]
+    # The published index stays, as a second series in its own unit.
+    assert levels["unit"] == "2002=100"
+    assert [p["value"] for p in levels["points"]] == [169.9, 169.8, 170.0]
+    assert "companion" not in levels and "transform" not in levels
+
+
+def test_percent_change_of_a_rate_from_sdmx_is_in_points():
+    sdmx = {
+        "dataflow_id": "DF_14100287",
+        "series": [
+            {
+                "series_key": {"Geography": "1"},
+                "vector_id": 2062815,
+                "context": {
+                    "unit": "Percentage",
+                    "series_title": "Canada;Unemployment rate",
+                },
+                "observations": [
+                    {"period": "2026-08", "value": 6.4},
+                    {"period": "2026-09", "value": 6.5},
+                ],
+                "transformed": {
+                    "requested_transform": "pct_change",
+                    "transform": "diff",
+                    "frequency": "monthly",
+                    "formula": "Computed by MapleStats: diff = x_t - x_{t-1}, t in months",
+                    "unit": "percentage points",
+                    "notes": ["The series is a percentage or rate: change in points."],
+                    "points": [
+                        {
+                            "period": "2026-08",
+                            "ref_date": "2026-08-01",
+                            "level": 6.4,
+                            "value": -0.1,
+                        },
+                        {
+                            "period": "2026-09",
+                            "ref_date": "2026-09-01",
+                            "level": 6.5,
+                            "value": 0.1,
+                        },
+                    ],
+                },
+            }
+        ],
+        "provenance": {"source": "statcan-sdmx", "url": "https://x/sdmx"},
+    }
+    diff, level = results.collect([("sdmx_get_data", sdmx)])["data"]
+    assert diff["unit"] == "percentage points"
+    assert diff["title"].endswith("(change from previous period)")
+    assert diff["notes"][:2] == [
+        "Computed by MapleStats: diff = x_t - x_{t-1}, t in months",
+        "The series is a percentage or rate: change in points.",
+    ]
+    assert [p["value"] for p in diff["points"]] == [-0.1, 0.1]
+    assert level["unit"] == "Percentage"
+
+
+def _yoy_series(vector):
+    item = json.loads(json.dumps(WDS_YOY["series"][0]))
+    item["vector_id"] = vector
+    return item
+
+
+def test_levels_give_way_to_computed_series_under_max_series():
+    some = {**WDS_YOY, "series": [_yoy_series(v) for v in range(1, 6)]}
+    data = results.collect([("wds_get_data_from_vectors", some)])["data"]
+    assert len(data) == results.MAX_SERIES
+    computed = [s for s in data if s["unit"] == "percent"]
+    assert len(computed) == 5  # every computed series, and levels while room is left
+    many = {**WDS_YOY, "series": [_yoy_series(v) for v in range(1, 9)]}
+    data = results.collect([("wds_get_data_from_vectors", many)])["data"]
+    assert len(data) == results.MAX_SERIES
+    assert all(s["unit"] == "percent" for s in data)
+
+
+def test_a_transform_without_values_keeps_the_levels_only():
+    item = _yoy_series(41690973)
+    for point in item["transformed"]["points"]:
+        point["value"] = None
+    (series,) = results.collect([("w", {**WDS_YOY, "series": [item]})])["data"]
+    assert series["unit"] == "2002=100"
+
+
+def test_bank_of_canada_transformed_series_are_charted():
+    valet = {
+        "series": {"V41690973": {"label": "CPI", "unit": "Index"}},
+        "observations": [{"ref_date": "2026-09-01", "values": {"V41690973": 170.0}}],
+        "transformed": {
+            "V41690973": {
+                "transform": "yoy_pct_change",
+                "formula": "Computed by MapleStats: yoy_pct_change = ...",
+                "unit": "percent",
+                "points": [
+                    {"period": "2026-09", "ref_date": "2026-09-01", "value": 3.09}
+                ],
+            }
+        },
+        "provenance": {"source": "boc", "url": "https://www.bankofcanada.ca/valet/x"},
+    }
+    yoy, level = results.collect([("boc_get_observations", valet)])["data"]
+    assert yoy["unit"] == "percent" and yoy["points"][0]["value"] == 3.09
+    assert level["unit"] == "Index"

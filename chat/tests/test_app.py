@@ -6,6 +6,9 @@
 # Outputs: pass/fail
 # ============================================================
 
+import asyncio
+import base64
+import hashlib
 import re
 from types import SimpleNamespace
 
@@ -19,6 +22,7 @@ import app as chat_app
 def reset_state(monkeypatch):
     chat_app._hits_by_client.clear()
     chat_app._daily_count["n"] = 0
+    chat_app._daily_tokens["n"] = 0
 
     async def fake_model(messages):
         return {"answer": "ok", "tools_used": []}
@@ -170,7 +174,8 @@ def test_deeply_nested_json_is_a_400_not_a_crash():
     assert response.status_code == 400
 
 
-def test_backend_failure_refunds_the_budget_and_logs_only_the_type(monkeypatch, caplog):
+def test_unexpected_error_stays_counted_and_logs_only_the_type(monkeypatch, caplog):
+    # Not a BackendFailure, so nothing says no model call was billed: no refund.
     async def failing_model(messages):
         raise RuntimeError("the secret question text")
 
@@ -178,8 +183,8 @@ def test_backend_failure_refunds_the_budget_and_logs_only_the_type(monkeypatch, 
     client = TestClient(chat_app.app)
     response = post(client, [{"role": "user", "content": "hi"}])
     assert response.status_code == 502
-    assert chat_app._daily_count["n"] == 0
-    assert chat_app._hits_by_client == {}
+    assert chat_app._daily_count["n"] == 1
+    assert len(chat_app._hits_by_client) == 1
     assert "RuntimeError" in caplog.text
     assert "secret question" not in caplog.text
 
@@ -310,8 +315,48 @@ def test_page_cannot_be_framed():
     # A framed page arriving with ?q= would spend a billed call per visitor.
     response = TestClient(chat_app.app).get("/?q=GDP")
     assert response.status_code == 200
-    assert response.headers["content-security-policy"] == "frame-ancestors 'none'"
+    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
     assert response.headers["x-frame-options"] == "DENY"
+
+
+def test_page_policy_allows_only_its_own_inline_script():
+    response = TestClient(chat_app.app).get("/")
+    page = (chat_app.STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    assert response.text == page
+    inline = re.findall(r"<script>(.*?)</script>", page, flags=re.DOTALL)
+    assert len(inline) == 1
+    digest = base64.b64encode(hashlib.sha256(inline[0].encode()).digest()).decode()
+    policy = dict(
+        part.strip().split(" ", 1)
+        for part in response.headers["content-security-policy"].split(";")
+    )
+    assert policy["default-src"] == "'self'"
+    assert policy["script-src"] == (
+        f"'self' https://cdnjs.cloudflare.com 'sha256-{digest}'"
+    )
+    assert "'unsafe-inline'" not in policy["script-src"]
+    assert policy["img-src"] == "'self' data:"
+    assert policy["connect-src"] == "'self'"
+    assert policy["base-uri"] == "'none'"
+    assert policy["form-action"] == "'self'"
+    assert policy["frame-ancestors"] == "'none'"
+
+
+def test_inline_script_hashes_skip_external_scripts():
+    page = '<script src="https://x/a.js"></script><script>alert(1)</script>'
+    digest = base64.b64encode(hashlib.sha256(b"alert(1)").digest()).decode()
+    assert chat_app.inline_script_hashes(page) == [f"'sha256-{digest}'"]
+
+
+@pytest.mark.parametrize("path", ["/", "/health", "/api/chat"])
+def test_every_response_carries_the_common_security_headers(path):
+    client = TestClient(chat_app.app)
+    if path == "/api/chat":
+        response = post(client, [{"role": "user", "content": "hi"}])
+    else:
+        response = client.get(path)
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
 
 
 @pytest.mark.parametrize(
@@ -364,9 +409,70 @@ def test_forwarded_for_is_ignored_unless_proxy_headers_are_trusted(monkeypatch):
 
 def test_forwarded_for_is_read_from_the_right_when_trusted(monkeypatch):
     monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", True)
+    monkeypatch.setattr(chat_app, "CLIENT_IP_HEADER", None)
     request = FakeRequest({"x-forwarded-for": "198.51.100.9, 192.0.2.1"})
     assert chat_app.client_address(request) == "192.0.2.1"
     assert chat_app.client_address(FakeRequest({})) == "203.0.113.5"
+
+
+def test_client_ip_header_comes_first_when_trusted(monkeypatch):
+    # Behind Cloudflare, the rightmost X-Forwarded-For entry can be a shared edge.
+    monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", True)
+    monkeypatch.setattr(chat_app, "CLIENT_IP_HEADER", "CF-Connecting-IP")
+    headers = {
+        "cf-connecting-ip": "198.51.100.23",
+        "x-forwarded-for": "198.51.100.23, 172.70.1.1",
+    }
+    assert chat_app.client_address(FakeRequest(headers)) == "198.51.100.23"
+    assert chat_app.client_address(
+        FakeRequest({"cf-connecting-ip": "2001:db8::1"})
+    ) == ("2001:db8::1")
+
+
+@pytest.mark.parametrize("value", ["", "not-an-address", "999.1.1.1"])
+def test_client_ip_header_falls_back_to_forwarded_for(monkeypatch, value):
+    monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", True)
+    monkeypatch.setattr(chat_app, "CLIENT_IP_HEADER", "CF-Connecting-IP")
+    headers = {"cf-connecting-ip": value, "x-forwarded-for": "198.51.100.9, 192.0.2.1"}
+    assert chat_app.client_address(FakeRequest(headers)) == "192.0.2.1"
+    assert chat_app.client_address(FakeRequest({})) == "203.0.113.5"
+
+
+def test_client_ip_header_is_ignored_unless_proxy_headers_are_trusted(monkeypatch):
+    monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", False)
+    monkeypatch.setattr(chat_app, "CLIENT_IP_HEADER", "CF-Connecting-IP")
+    request = FakeRequest({"cf-connecting-ip": "198.51.100.23"})
+    assert chat_app.client_address(request) == "203.0.113.5"
+
+
+def test_client_ip_header_separates_callers_behind_one_edge(monkeypatch):
+    monkeypatch.setattr(chat_app, "TRUST_PROXY_HEADERS", True)
+    monkeypatch.setattr(chat_app, "CLIENT_IP_HEADER", "CF-Connecting-IP")
+    monkeypatch.setattr(chat_app, "RATE_PER_HOUR", 1)
+    client = TestClient(chat_app.app)
+    body = {"messages": [{"role": "user", "content": "hi"}]}
+    statuses = [
+        client.post(
+            "/api/chat",
+            json=body,
+            headers={"cf-connecting-ip": ip, "x-forwarded-for": f"{ip}, 172.70.1.1"},
+        ).status_code
+        for ip in ("198.51.100.1", "198.51.100.2", "198.51.100.1")
+    ]
+    assert statuses == [200, 200, 429]
+
+
+@pytest.mark.parametrize(
+    ("environ", "expected"),
+    [
+        ({}, None),
+        ({"RENDER": "true"}, "CF-Connecting-IP"),
+        ({"RENDER": "true", "CHAT_CLIENT_IP_HEADER": ""}, None),
+        ({"CHAT_CLIENT_IP_HEADER": "True-Client-IP"}, "True-Client-IP"),
+    ],
+)
+def test_client_ip_header_default_follows_render(environ, expected):
+    assert chat_app.client_ip_header(environ) == expected
 
 
 def test_a_forged_header_cannot_dodge_the_limit_when_untrusted(monkeypatch):
@@ -472,3 +578,194 @@ def test_tool_errors_with_no_answer_point_to_the_data_server(monkeypatch):
         monkeypatch, [SimpleNamespace(content=blocks, stop_reason="end_turn")]
     )
     assert _ask()["answer"] == chat_app.DATA_SERVER_ANSWER
+
+
+# Token budget ----
+
+
+def _usage(**counts):
+    return SimpleNamespace(**counts)
+
+
+def test_anthropic_calls_add_their_tokens(monkeypatch):
+    usage = _usage(
+        input_tokens=1000,
+        output_tokens=200,
+        cache_creation_input_tokens=50,
+        cache_read_input_tokens=None,
+    )
+    paused = SimpleNamespace(content=[], stop_reason="pause_turn", usage=usage)
+    done = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="Answer")],
+        stop_reason="end_turn",
+        usage=usage,
+    )
+    _fake_anthropic(monkeypatch, [paused, done])
+    assert _ask()["answer"] == "Answer"
+    assert chat_app._daily_tokens["n"] == 2 * 1250
+
+
+def _fake_openai(monkeypatch, responses, call_tool=None):
+    """Make ask_openai_compatible see these responses and a fake MCP server."""
+    queue = list(responses)
+
+    class FakeCompletions:
+        async def create(self, **kwargs):
+            return queue.pop(0)
+
+    class FakeOpenAI:
+        chat = SimpleNamespace(completions=FakeCompletions())
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    class FakeMcp:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def list_tools(self):
+            return [SimpleNamespace(name="call_tool", description="", inputSchema={})]
+
+        async def call_tool(self, name, arguments, raise_on_error=False):
+            if call_tool:
+                return call_tool(name, arguments)
+            return SimpleNamespace(
+                content=[SimpleNamespace(text="{}")],
+                is_error=False,
+                structured_content=None,
+            )
+
+    monkeypatch.setattr(chat_app, "_openai_tools", [])
+    monkeypatch.setattr(chat_app, "AsyncOpenAI", lambda **kwargs: FakeOpenAI())
+    monkeypatch.setattr(chat_app, "Client", lambda url: FakeMcp())
+
+
+def _openai_reply(content, tool_calls=None, usage=None):
+    message = SimpleNamespace(
+        content=content,
+        tool_calls=tool_calls,
+        model_dump=lambda **kwargs: {"role": "assistant", "content": content},
+    )
+    return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=usage)
+
+
+def _tool_call():
+    return SimpleNamespace(
+        id="c1",
+        function=SimpleNamespace(name="call_tool", arguments='{"name": "x"}'),
+    )
+
+
+def test_openai_calls_add_their_tokens(monkeypatch):
+    usage = _usage(prompt_tokens=700, completion_tokens=30)
+    _fake_openai(
+        monkeypatch,
+        [
+            _openai_reply(None, [_tool_call()], usage),
+            _openai_reply("Done", None, usage),
+        ],
+    )
+    result = asyncio.run(
+        chat_app.ask_openai_compatible([{"role": "user", "content": "hi"}])
+    )
+    assert result["answer"] == "Done"
+    assert chat_app._daily_tokens["n"] == 2 * 730
+
+
+def test_spent_token_budget_refuses_before_the_model(monkeypatch):
+    monkeypatch.setattr(chat_app, "DAILY_TOKENS", 5000)
+    reached_model = []
+
+    async def costly_model(messages):
+        reached_model.append(messages)
+        chat_app.add_tokens(_usage(input_tokens=4000, output_tokens=1500))
+        return {"answer": "ok", "tools_used": []}
+
+    monkeypatch.setattr(chat_app, "ask_model", costly_model)
+    client = TestClient(chat_app.app)
+    body = [{"role": "user", "content": "hi"}]
+    assert post(client, body).status_code == 200
+    refused = post(client, body)
+    assert refused.status_code == 429
+    assert "budget" in refused.json()["error"]
+    assert len(reached_model) == 1
+    # The refused request was not counted against the question caps.
+    assert chat_app._daily_count["n"] == 1
+
+
+def test_token_budget_resets_with_the_day(monkeypatch):
+    monkeypatch.setattr(chat_app, "DAILY_TOKENS", 10)
+    chat_app._daily_tokens.update(day=chat_app.datetime(2020, 1, 1).date(), n=10**9)
+    assert chat_app.over_limit("203.0.113.9") is None
+    assert chat_app._daily_tokens["n"] == 0
+
+
+def test_usage_without_counts_adds_nothing():
+    chat_app.add_tokens(None)
+    chat_app.add_tokens(SimpleNamespace(input_tokens="12", output_tokens=True))
+    assert chat_app._daily_tokens["n"] == 0
+
+
+# Refunds after billed calls ----
+
+
+def test_anthropic_failure_after_the_call_is_billed(monkeypatch):
+    done = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="Answer")], stop_reason="end_turn"
+    )
+    _fake_anthropic(monkeypatch, [done])
+
+    def broken_collect(returned):
+        raise ValueError("bad result")
+
+    monkeypatch.setattr(chat_app.results, "collect", broken_collect)
+    with pytest.raises(chat_app.BackendFailure) as raised:
+        _ask()
+    assert raised.value.billed is True
+    assert isinstance(raised.value.__cause__, ValueError)
+
+
+def test_anthropic_failure_reading_the_answer_is_billed(monkeypatch):
+    # A block without .type breaks final_text after the call was billed.
+    done = SimpleNamespace(content=[object()], stop_reason="end_turn")
+    _fake_anthropic(monkeypatch, [done])
+    with pytest.raises(chat_app.BackendFailure) as raised:
+        _ask()
+    assert raised.value.billed is True
+
+
+def test_openai_failure_after_the_step_limit_is_billed(monkeypatch):
+    monkeypatch.setattr(chat_app, "MAX_TOOL_STEPS", 1)
+    _fake_openai(monkeypatch, [_openai_reply(None, [_tool_call()])])
+
+    def broken_collect(returned):
+        raise ValueError("bad result")
+
+    monkeypatch.setattr(chat_app.results, "collect", broken_collect)
+    with pytest.raises(chat_app.BackendFailure) as raised:
+        asyncio.run(chat_app.ask_openai_compatible([{"role": "user", "content": "hi"}]))
+    assert raised.value.billed is True
+
+
+def test_post_call_failure_is_not_refunded_end_to_end(monkeypatch):
+    done = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="Answer")], stop_reason="end_turn"
+    )
+    _fake_anthropic(monkeypatch, [done])
+    monkeypatch.setattr(chat_app, "PROVIDER", "anthropic")
+    monkeypatch.setattr(chat_app, "ask_model", chat_app.ask_anthropic)
+
+    def broken_collect(returned):
+        raise ValueError("bad result")
+
+    monkeypatch.setattr(chat_app.results, "collect", broken_collect)
+    response = post(TestClient(chat_app.app), [{"role": "user", "content": "hi"}])
+    assert response.status_code == 502
+    assert chat_app._daily_count["n"] == 1
+    assert len(chat_app._hits_by_client) == 1

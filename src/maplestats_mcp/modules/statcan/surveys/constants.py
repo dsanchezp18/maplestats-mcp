@@ -26,6 +26,14 @@ one numeric ID:
 SURVEY_LIST_URL_EN = "https://www150.statcan.gc.ca/n1/en/type/surveys"
 SURVEY_LIST_URL_FR = "https://www150.statcan.gc.ca/n1/fr/type/enquetes"
 
+# IMDB's alphabetical index of surveys and statistical programs, one page per letter
+# (index{letter}-eng.htm / -fra.htm), each linking p2SV.pl?Function=getSurvey&SDDS={id}:
+# the same ids as the directory, active and inactive. Read when the directory is down
+# (HTTP 404 since 2026-10-29); confirmed live 2026-11-03 (A: 57 surveys, C: 178).
+IMDB_INDEX_URL_EN = "https://www23.statcan.gc.ca/imdb-bmdi/pub/index{letter}-eng.htm"
+IMDB_INDEX_URL_FR = "https://www23.statcan.gc.ca/imdb-bmdi/pub/index{letter}-fra.htm"
+IMDB_INDEX_LETTERS = "abcdefghijklmnopqrstuvwxyz"
+
 IMDB_BASE_URL_EN = "https://www23.statcan.gc.ca/imdb/p2SV.pl"
 IMDB_BASE_URL_FR = "https://www23.statcan.gc.ca/imdb/p2SV_f.pl"
 

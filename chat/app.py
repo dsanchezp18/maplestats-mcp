@@ -11,9 +11,13 @@
 #          series and sources those calls returned (drawn by the page)
 # ============================================================
 
+import base64
+import hashlib
+import ipaddress
 import json
 import logging
 import os
+import re
 import time
 from collections import deque
 from collections.abc import Mapping
@@ -28,7 +32,7 @@ from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import ClientDisconnect, Request
-from starlette.responses import FileResponse, JSONResponse
+from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 import results
@@ -58,6 +62,9 @@ MAX_TOOL_STEPS = int(os.environ.get("CHAT_MAX_TOOL_STEPS", "8"))
 TOOL_RESULT_CHARS = int(os.environ.get("CHAT_TOOL_RESULT_CHARS", "20000"))
 RATE_PER_HOUR = int(os.environ.get("CHAT_RATE_PER_HOUR", "20"))
 DAILY_LIMIT = int(os.environ.get("CHAT_DAILY_LIMIT", "500"))
+# Input plus output tokens, summed from every model call's usage, across all
+# callers. The caps above count questions; this one counts what is billed.
+DAILY_TOKENS = int(os.environ.get("CHAT_DAILY_TOKENS", "3000000"))
 ALLOWED_ORIGINS = [
     origin for origin in os.environ.get("CHAT_ALLOWED_ORIGINS", "").split(",") if origin
 ]
@@ -77,6 +84,22 @@ def trusts_proxy_headers(environ: Mapping[str, str]) -> bool:
 
 
 TRUST_PROXY_HEADERS = trusts_proxy_headers(os.environ)
+
+
+def client_ip_header(environ: Mapping[str, str]) -> str | None:
+    """The header the outermost proxy sets to the caller's own address, if any.
+
+    Render's onrender.com hostnames sit behind Cloudflare, which sets
+    CF-Connecting-IP, so the default is that header when RENDER is set and none
+    elsewhere. CHAT_CLIENT_IP_HEADER overrides it; set it to an empty string to
+    turn it off. It is read only when proxy headers are trusted.
+    """
+    default = "CF-Connecting-IP" if environ.get("RENDER") else ""
+    name = environ.get("CHAT_CLIENT_IP_HEADER", default).strip()
+    return name or None
+
+
+CLIENT_IP_HEADER = client_ip_header(os.environ)
 
 SYSTEM_PROMPT = (
     "You answer questions about Canadian open data (Statistics Canada, provincial "
@@ -121,21 +144,63 @@ DATA_SERVER_ANSWER = (
 
 _hits_by_client: dict[str, deque[float]] = {}
 _daily_count: dict[str, Any] = {"day": datetime.now(UTC).date(), "n": 0}
+_daily_tokens: dict[str, Any] = {"day": datetime.now(UTC).date(), "n": 0}
 
 
 def client_address(request: Request) -> str:
     """Return the caller's address for the rate limit.
 
-    With CHAT_TRUST_PROXY_HEADERS on (the default on Render), read one hop from
-    the right of X-Forwarded-For: what the caller writes sits on the left and
-    can be forged, while the host's proxy appends the real address on the right
-    (same rule as the MCP server). With it off, the header is ignored, because
-    a service reached directly would let any caller choose its own bucket.
+    With CHAT_TRUST_PROXY_HEADERS on (the default on Render), first read
+    CHAT_CLIENT_IP_HEADER (CF-Connecting-IP on Render), which the outermost
+    proxy sets to the caller's own address; when it is absent or not an IP
+    address, read one hop from the right of X-Forwarded-For: what the caller
+    writes sits on the left and can be forged, while the host's proxy appends
+    the real address on the right (same rules as the MCP server). Behind
+    Cloudflare and Render's balancer, that rightmost entry can be a shared edge
+    address, which is why the dedicated header comes first. With proxy headers
+    off, both are ignored, because a service reached directly would let any
+    caller choose its own bucket.
     """
+    if TRUST_PROXY_HEADERS and CLIENT_IP_HEADER:
+        raw = request.headers.get(CLIENT_IP_HEADER.lower(), "")
+        try:
+            return str(ipaddress.ip_address(raw.split(",")[0].strip()))
+        except ValueError:
+            pass
     forwarded = request.headers.get("x-forwarded-for", "")
     if TRUST_PROXY_HEADERS and forwarded:
         return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
+
+
+def _tokens_today() -> dict[str, Any]:
+    today = datetime.now(UTC).date()
+    if _daily_tokens["day"] != today:
+        _daily_tokens.update(day=today, n=0)
+    return _daily_tokens
+
+
+def add_tokens(usage: Any) -> None:
+    """Add one model call's billed tokens (input, cached input and output).
+
+    Reads Anthropic's usage (input_tokens, output_tokens and the cache fields)
+    and the OpenAI-compatible one (prompt_tokens, completion_tokens). Never
+    raises: a response without usage adds nothing.
+    """
+    fields = (
+        "input_tokens",
+        "output_tokens",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+        "prompt_tokens",
+        "completion_tokens",
+    )
+    total = 0
+    for field in fields:
+        value = getattr(usage, field, None)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            total += value
+    _tokens_today()["n"] += total
 
 
 def over_limit(address: str) -> str | None:
@@ -146,6 +211,10 @@ def over_limit(address: str) -> str | None:
         _daily_count.update(day=today, n=0)
     if _daily_count["n"] >= DAILY_LIMIT:
         return "The demo has reached its daily limit. Please try again tomorrow."
+    if _tokens_today()["n"] >= DAILY_TOKENS:
+        return (
+            "The demo has used its model budget for today. Please try again tomorrow."
+        )
 
     # Drop every client whose hits have all aged out, so the table holds only
     # addresses seen in the last hour instead of every address ever seen.
@@ -217,7 +286,9 @@ class BackendFailure(Exception):
     """A backend error, with whether a model call had already completed.
 
     A completed call has been billed, so the request still counts against the
-    limits; only a failure before any call completed is given back.
+    limits; only a failure before any call completed is given back. Anything
+    raised after a billed call, including while reading its result, is
+    reported with billed=True.
     """
 
     def __init__(self, billed: bool) -> None:
@@ -251,6 +322,7 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
                     messages=conversation,
                 )
                 billed = True
+                add_tokens(getattr(response, "usage", None))
                 model_calls += 1
                 for block in response.content:
                     if block.type == "mcp_tool_use":
@@ -268,30 +340,30 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
                 if response.stop_reason != "pause_turn":
                     break
                 conversation.append({"role": "assistant", "content": response.content})
+
+        # Still inside the try: the calls above were billed, so a failure while
+        # reading their result must not be refunded.
+        answer = final_text(response.content)
+        # Counts and the stop reason only, never the question or the answer: enough
+        # to tell a step limit, a length limit and a data-server failure apart.
+        logger.info(
+            "Turn ended: stop_reason=%s, model calls %d, tool calls %d, "
+            "tool errors %d, answer %s",
+            response.stop_reason,
+            model_calls,
+            len(tools_used),
+            tool_errors,
+            "yes" if answer else "empty",
+        )
+        if response.stop_reason == "pause_turn":  # still working after the last resume
+            answer = answer or STEP_LIMIT_ANSWER
+        elif response.stop_reason == "max_tokens":
+            answer = answer + CUT_OFF_NOTE if answer else LENGTH_LIMIT_ANSWER
+        elif not answer and tool_errors:
+            answer = DATA_SERVER_ANSWER
+        return {"answer": answer, "tools_used": tools_used, **results.collect(returned)}
     except Exception as error:  # reported with whether it cost money
         raise BackendFailure(billed) from error
-
-    answer = final_text(response.content)
-    # Counts and the stop reason only, never the question or the answer: enough to
-    # tell a step limit, a length limit and a data-server failure apart in the logs.
-    logger.info(
-        "Turn ended: stop_reason=%s, model calls %d, tool calls %d, tool errors %d, "
-        "answer %s",
-        response.stop_reason,
-        model_calls,
-        len(tools_used),
-        tool_errors,
-        "yes" if answer else "empty",
-    )
-    if (
-        response.stop_reason == "pause_turn"
-    ):  # still working after MAX_TOOL_STEPS resumes
-        answer = answer or STEP_LIMIT_ANSWER
-    elif response.stop_reason == "max_tokens":
-        answer = answer + CUT_OFF_NOTE if answer else LENGTH_LIMIT_ANSWER
-    elif not answer and tool_errors:
-        answer = DATA_SERVER_ANSWER
-    return {"answer": answer, "tools_used": tools_used, **results.collect(returned)}
 
 
 _openai_tools: list[dict[str, Any]] = []
@@ -347,6 +419,7 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
                     tools=tools,
                 )
                 billed = True
+                add_tokens(getattr(response, "usage", None))
                 message = response.choices[0].message
                 if not message.tool_calls:
                     return {
@@ -377,14 +450,15 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
                             "content": text[:TOOL_RESULT_CHARS],
                         }
                     )
+
+        # Still inside the try, so a failure here is reported as billed.
+        return {
+            "answer": STEP_LIMIT_ANSWER,
+            "tools_used": tools_used,
+            **results.collect(returned),
+        }
     except Exception as error:  # reported with whether it cost money
         raise BackendFailure(billed) from error
-
-    return {
-        "answer": STEP_LIMIT_ANSWER,
-        "tools_used": tools_used,
-        **results.collect(returned),
-    }
 
 
 async def ask_model(messages: list[dict[str, str]]) -> dict[str, Any]:
@@ -492,8 +566,10 @@ async def chat(request: Request) -> JSONResponse:
             type(cause).__name__,
             getattr(cause, "status_code", None),
         )
-        # A failure after a billed call stays counted, so retries cannot dodge the caps.
-        if not (failure and failure.billed):
+        # Only a failure known to have happened before any billed call is given
+        # back. Anything else (a billed call, or an error whose cost is unknown)
+        # stays counted, so retries cannot dodge the caps.
+        if failure is not None and not failure.billed:
             refund(address)
         # An unknown model (404) or a rejected key (401, 403) is a fault of this
         # deployment, not a blip: "try again" would send people into a loop.
@@ -514,17 +590,88 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "provider": PROVIDER, "model": MODEL})
 
 
-# The page asks a ?q= question on arrival when the website links to it, and every
-# question is a billed model call. A page that framed it could spend the daily
-# budget from its own visitors' browsers, and so past the per-address limit.
-NO_FRAMING = {
-    "Content-Security-Policy": "frame-ancestors 'none'",
+# The page is read once, at startup, and served from memory, so the hash of its
+# inline script in the policy below always matches the bytes sent: editing the
+# page never needs a hand-copied hash, only a restart (which a deploy does).
+PAGE = (STATIC_DIR / "index.html").read_bytes()
+
+
+def inline_script_hashes(page: str) -> list[str]:
+    """CSP source expressions ('sha256-...') for every inline <script> in a page."""
+    bodies = re.findall(
+        r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", page, flags=re.DOTALL
+    )
+    return [
+        "'sha256-"
+        + base64.b64encode(hashlib.sha256(body.encode("utf-8")).digest()).decode()
+        + "'"
+        for body in bodies
+    ]
+
+
+def page_policy(page: str) -> str:
+    """The Content-Security-Policy for the page.
+
+    Scripts: this origin, the two pinned CDN files (which also carry SRI hashes)
+    and the page's own inline script by hash, so an injected <script> or event
+    handler in model output cannot run even if the sanitiser missed it. Styles
+    need 'unsafe-inline' for the page's <style> block. frame-ancestors 'none':
+    the page asks a ?q= question on arrival when the website links to it, and
+    every question is a billed model call, so a page that framed it could spend
+    the daily budget from its own visitors' browsers.
+    """
+    scripts = " ".join(
+        ["'self'", "https://cdnjs.cloudflare.com", *inline_script_hashes(page)]
+    )
+    return "; ".join(
+        [
+            "default-src 'self'",
+            f"script-src {scripts}",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data:",
+            "connect-src 'self'",
+            "base-uri 'none'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+        ]
+    )
+
+
+PAGE_HEADERS = {
+    "Content-Security-Policy": page_policy(PAGE.decode("utf-8")),
     "X-Frame-Options": "DENY",
 }
 
+# Sent on every response, the page and the JSON alike.
+COMMON_HEADERS = [
+    (b"x-content-type-options", b"nosniff"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+]
 
-async def index(request: Request) -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html", headers=NO_FRAMING)
+
+class SecurityHeaders:
+    """ASGI middleware that adds COMMON_HEADERS to every HTTP response."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Any) -> None:
+            if message["type"] == "http.response.start":
+                names = {key.lower() for key, _ in message.get("headers", [])}
+                extra = [(k, v) for k, v in COMMON_HEADERS if k not in names]
+                message["headers"] = [*message.get("headers", []), *extra]
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
+async def index(request: Request) -> Response:
+    return Response(PAGE, media_type="text/html; charset=utf-8", headers=PAGE_HEADERS)
 
 
 app = Starlette(
@@ -534,11 +681,12 @@ app = Starlette(
         Route("/api/chat", chat, methods=["POST"]),
     ],
     middleware=[
+        Middleware(SecurityHeaders),
         Middleware(
             CORSMiddleware,
             allow_origins=ALLOWED_ORIGINS,
             allow_methods=["POST"],
             allow_headers=["content-type"],
-        )
+        ),
     ],
 )

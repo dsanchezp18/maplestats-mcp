@@ -34,6 +34,7 @@ from typing import Any
 from maplestats_mcp.modules.answer_check.schemas import AnswerCheck, AnswerProblem, CitedFigure
 from maplestats_mcp.modules.boc import client as boc
 from maplestats_mcp.modules.planner.client import normalize, places_named
+from maplestats_mcp.modules.planner.places import PROVINCE_ALIASES, PROVINCE_CODES, PROVINCES
 from maplestats_mcp.modules.statcan.wds import auto_notes, context
 from maplestats_mcp.modules.statcan.wds import client as wds
 from maplestats_mcp.modules.statcan.wds.schemas import ObservationRow
@@ -49,7 +50,13 @@ from maplestats_mcp.shared.fitness import rules_for
 from maplestats_mcp.shared.fitness_rules import RULES
 from maplestats_mcp.shared.i18n import normalize_lang, pick
 from maplestats_mcp.shared.json_utils import list_or_empty
-from maplestats_mcp.shared.transform import parse_period, period_end, period_label, period_start
+from maplestats_mcp.shared.transform import (
+    parse_period,
+    period_end,
+    period_label,
+    period_start,
+    shift_months,
+)
 
 MAX_FIGURES = 20
 _SOFT = (NotFound, UpstreamError, UpstreamUnavailable, DataLocked, InvalidInput)
@@ -96,6 +103,24 @@ _CURRENT = re.compile(r"current|nominal|courant", re.IGNORECASE)
 _REAL = re.compile(r"constant|chained|real\b|r[ée]el|encha[iî]n", re.IGNORECASE)
 _DOLLAR = re.compile(r"\$|dollar", re.IGNORECASE)
 _WDS_URL = "https://www150.statcan.gc.ca/t1/wds/rest/"
+# A figure written as a percent or a change. Read against a series that is an
+# index or a level (CPI 2002=100, dollars, persons), it is a change of that
+# series, not its value: until 2026-11-03 a 3.1% Quebec inflation rate was told
+# to "Use 167.7", the index level.
+_PERCENT_UNIT = re.compile(
+    r"%|per ?cent|percentage|pourcentage|pour ?cent|\bpct\b|change|variation|growth|"
+    r"croissance|glissement|year[- ]over[- ]year|12[- ]month|12 mois|sur un an|"
+    r"\binflation|\btaux\b",
+    re.IGNORECASE,
+)
+_LEVEL_UNIT = re.compile(r"index|indice|dollar|\$|person|number|nombre|tonne", re.IGNORECASE)
+_CHANGE_QUESTION = re.compile(
+    r"inflation|\bchange|\bgrowth|\bgr[eo]w|increase|decrease|\brose\b|\bfell\b|"
+    r"year[- ]over[- ]year|12[- ]month|per ?cent|percentage|%|variation|hausse|baisse|"
+    r"croissance|augment|diminu|glissement|sur un an|pourcentage|pour ?cent",
+    re.IGNORECASE,
+)
+_PERCENT_SERIES = re.compile(r"percent|pourcent|%|\brate\b|\btaux\b", re.IGNORECASE)
 
 # Public use microdata files known, from their codebooks, to lack what a
 # question needs: survey code -> (question words, file, what is missing).
@@ -204,14 +229,59 @@ def _table(product_id: int) -> str:
     return context.table_number(product_id)[:-3]
 
 
-def _geo_head(name: str) -> str:
-    return normalize(name.split(",")[0])
+def _tokens(text: str) -> list[str]:
+    """Whole words of a place name, accents, case and punctuation dropped."""
+    return re.findall(r"[a-z0-9]+", normalize(re.sub(r"\([^)]*\)", " ", text)))
 
 
-def _geo_match(place: str, member_name: str) -> bool:
-    label = normalize(place).removesuffix(" city")
-    head = _geo_head(member_name)
-    return bool(label) and (label == head or head.startswith(label) or label in head)
+def _place_tokens(place: str) -> list[str]:
+    """'London (Ontario)' -> london, 'Quebec City' -> quebec, 'Victoria, BC' -> victoria."""
+    words = _tokens(place.split(",")[0])
+    return words[:-1] if len(words) > 1 and words[-1] == "city" else words
+
+
+def _contains(words: list[str], part: list[str]) -> bool:
+    size = len(part)
+    return any(words[i : i + size] == part for i in range(len(words) - size + 1))
+
+
+_REGION_NAMES = frozenset(tuple(_tokens(label)) for label, _ in PROVINCES.values()) | frozenset(
+    {("canada",)}
+)
+
+
+def _geo_match(place: str, member_name: str, kind: str = "place") -> bool:
+    """Whether a Geography member is the place, matched on whole words.
+
+    Until 2026-11-03 this was a prefix and substring test, so "Victoria" matched
+    "Victoriaville, Quebec", "London" matched "Londonderry", and the province
+    "Quebec" matched the CMA "Québec, Quebec". A province or Canada now matches
+    only a member that is that name alone; a city matches whole words of the
+    member's name before its comma ("Ottawa" in "Ottawa-Gatineau, Ontario part"),
+    never a member that is a province ("Quebec City" is not "Quebec").
+    """
+    label = _place_tokens(place)
+    if not label:
+        return False
+    whole = _tokens(member_name)
+    if kind in ("province", "country"):
+        return "," not in member_name and whole == label
+    if "," not in member_name and tuple(whole) in _REGION_NAMES:
+        return False
+    return _contains(_tokens(member_name.split(",")[0]), label)
+
+
+def _geo_exact(place: str, member_name: str) -> bool:
+    return _tokens(member_name.split(",")[0]) == _place_tokens(place)
+
+
+def _province_forms(label: str) -> set[str]:
+    """Every way a question can write a province: name, aliases, two-letter code."""
+    keys = {key for key, (name, _) in PROVINCES.items() if name == label}
+    forms = set(keys)
+    forms |= {alias for alias, key in PROVINCE_ALIASES.items() if key in keys}
+    forms |= {code.lower() for code, key in PROVINCE_CODES.items() if key in keys}
+    return {" ".join(_tokens(form)) for form in forms if _tokens(form)}
 
 
 def _asked_places(question: str) -> list[tuple[str, str]]:
@@ -219,8 +289,25 @@ def _asked_places(question: str) -> list[tuple[str, str]]:
 
     "Canadian workers in Alberta" asks about Alberta: until 2026-11-03 the word
     "Canadian" added Canada, so a Canada series passed for it.
+
+    A province written right after a city ("Victoria, BC", "London (Ontario)")
+    only says which city is meant: it is dropped, so a British Columbia figure
+    no longer passes for a Victoria question (until 2026-11-03 it did). A
+    province asked about on its own ("Ontario and Toronto") is kept.
     """
-    places = [(p.place, p.kind) for p in places_named(question)]
+    named = [(p.place, p.kind) for p in places_named(question)]
+    text = " ".join(_tokens(question))
+    cities = [" ".join(_place_tokens(place)) for place, kind in named if kind == "city"]
+    places = []
+    for place, kind in named:
+        if kind == "province" and cities:
+            forms = "|".join(re.escape(form) for form in sorted(_province_forms(place)))
+            qualified = forms and any(
+                re.search(rf"\b{re.escape(city)}(?: city)? (?:{forms})\b", text) for city in cities
+            )
+            if qualified:
+                continue
+        places.append((place, kind))
     if not places and _CANADA.search(_AGENCY.sub(" ", question)):
         places.append(("Canada", "country"))
     return places
@@ -387,7 +474,7 @@ async def _check_geography(ctx: _Ctx, question: str, lang: str) -> list[AnswerPr
     series_geo = str(member.get("memberNameEn") or "")
     labelled = ctx.figure.geography
     wanted = [(labelled, _place_kind(labelled))] if labelled else _asked_places(question)
-    if not wanted or any(_geo_match(place, series_geo) for place, _ in wanted):
+    if not wanted or any(_geo_match(place, series_geo, kind) for place, kind in wanted):
         return []
     shown_geo = auto_notes.member_name(member, lang)
     table_members = list_or_empty(dim, "member")
@@ -395,7 +482,13 @@ async def _check_geography(ctx: _Ctx, question: str, lang: str) -> list[AnswerPr
     found: list[tuple[str, str, dict]] = []
     missing: list[tuple[str, str]] = []
     for place, kind in wanted:
-        target = next((m for m in table_members if _geo_match(place, str(m["memberNameEn"]))), None)
+        # An exact name first: "Victoria" is "Victoria, British Columbia", whatever
+        # order the table lists its members in.
+        matching = [m for m in table_members if _geo_match(place, str(m["memberNameEn"]), kind)]
+        target = next(
+            (m for m in matching if _geo_exact(place, str(m["memberNameEn"]))),
+            matching[0] if matching else None,
+        )
         if target is None:
             missing.append((place, kind))
         else:
@@ -890,7 +983,168 @@ async def _resolve(ctxs: list[_Ctx], lang: str) -> list[AnswerProblem]:
     return problems
 
 
-async def _check_statcan(ctxs: list[_Ctx], question: str, lang: str) -> list[AnswerProblem]:
+def _percent_mode(figure: CitedFigure, series_unit: str | None, question: str) -> str | None:
+    """'unit' when the figure is written as a percent or a change, 'question' when
+    it has no unit and the question asks for a change; None when the figure is
+    a level, or the series itself is in percent (an unemployment rate)."""
+    if figure.value is None or (series_unit and _PERCENT_SERIES.search(series_unit)):
+        return None
+    said = (figure.unit or "").strip()
+    if said:
+        return "unit" if _PERCENT_UNIT.search(said) and not _LEVEL_UNIT.search(said) else None
+    return "question" if _CHANGE_QUESTION.search(question) else None
+
+
+def _percent_text(value: float, precision: float, lang: str) -> str:
+    places = max(1, -int(Decimal(str(precision)).adjusted())) if precision < 1 else 1
+    shown = Decimal(str(round(value, 9))).quantize(Decimal(1).scaleb(-places), ROUND_HALF_UP)
+    return pick(lang, f"{shown}%", f"{str(shown).replace('.', ',')} %")
+
+
+async def _percent_change(
+    ctx: _Ctx,
+    start: date,
+    ppy: int | None,
+    cited_period: str,
+    current: list[ObservationRow],
+    unit: str | None,
+    level_ok: bool,
+    lang: str,
+    notes: list[str],
+) -> list[AnswerProblem]:
+    """A percent figure read against an index or level series: compared with the
+    series' change over 12 months and over one period, never with its level.
+
+    `current` holds the rows of the cited period (one month, or the twelve of a
+    cited year, whose average is compared with the year before's). `level_ok`
+    accepts the level too, when nothing says the figure is a percent.
+    """
+    figure = ctx.figure
+    assert figure.value is not None and ctx.vector_id is not None
+    cited, precision = _number(figure.value, lang)
+    numbers = [r.value for r in current if r.value is not None]
+    if not numbers:
+        return []
+    multiplier = current[-1].scale_multiplier
+    if level_ok and any(
+        not _value_problems(ctx.index, figure, v, multiplier, None, cited_period, None, lang)
+        for v in [*numbers, sum(numbers) / len(numbers)]
+    ):
+        return []
+    what = (
+        pick(lang, "an index", "un indice")
+        if unit and re.search(r"=\s*100|index|indice", unit, re.IGNORECASE)
+        else pick(lang, "a level", "un niveau")
+    )
+    shown_unit = f" ({unit})" if unit else ""
+    if ppy is None and len(current) == 1 and ctx.cube is not None:
+        # A day cited for a monthly or quarterly series ("2026-09-01") is its period.
+        ppy = {6: 12, 9: 4, 12: 1}.get(int(ctx.cube.get("frequencyCode") or 0))
+    if ppy not in (1, 2, 4, 12):
+        notes.append(
+            pick(
+                lang,
+                f"Figure {ctx.index} not checked: it is a percent and the series is {what}; "
+                f"its change is computed for monthly, quarterly or annual periods only.",
+                f"Chiffre {ctx.index} non vérifié : c'est un pourcentage et la série est "
+                f"{what} ; sa variation n'est calculée que pour des mois, trimestres ou années.",
+            )
+        )
+        return []
+    assert ppy is not None
+    step = 12 // ppy
+    try:
+        history = await wds.get_data_from_vector_by_reference_period_range(
+            [ctx.vector_id],
+            shift_months(start, -12).isoformat(),
+            (start - timedelta(days=1)).isoformat(),
+        )
+        earlier = [o for s in history.series for o in s.observations if o.value is not None]
+    except _SOFT:
+        earlier = []
+    average = sum(numbers) / len(numbers)
+    # (months back, label of that period, change in percent or None when not published)
+    changes: list[tuple[int, str, float | None]] = []
+    for back in (12,) if step == 12 else (12, step):
+        lo = shift_months(start, -back)
+        hi = shift_months(lo, step) - timedelta(days=1)
+        before = [r.value for r in earlier if lo <= r.ref_period <= hi and r.value is not None]
+        label = period_label(lo, ppy)
+        if len(before) != len(numbers) or not sum(before):
+            changes.append((back, label, None))
+            continue
+        changes.append((back, label, (average / (sum(before) / len(before)) - 1) * 100))
+    known = [(back, label, change) for back, label, change in changes if change is not None]
+    missing = [label for _, label, change in changes if change is None]
+    if not known:
+        shown_missing = ", ".join(missing)
+        notes.append(
+            pick(
+                lang,
+                f"Figure {ctx.index} not checked: it is a percent and the series is {what}"
+                f"{shown_unit}, but {shown_missing} is not published, so its change to "
+                f"{cited_period} cannot be computed.",
+                f"Chiffre {ctx.index} non vérifié : c'est un pourcentage et la série est "
+                f"{what}{shown_unit}, mais {shown_missing} n'est pas publié ; sa variation "
+                f"en {cited_period} ne peut pas être calculée.",
+            )
+        )
+        return []
+    tolerance = precision / 2
+    if any(_close(cited, change, tolerance) for _, _, change in known):
+        return []
+    if missing:
+        notes.append(
+            pick(
+                lang,
+                f"Figure {ctx.index}: {', '.join(missing)} is not published, so only the change "
+                f"from {known[0][1]} was compared.",
+                f"Chiffre {ctx.index} : {', '.join(missing)} n'est pas publié ; seule la "
+                f"variation depuis {known[0][1]} a été comparée.",
+            )
+        )
+    parts = [
+        (
+            _percent_text(change, precision, lang),
+            pick(
+                lang,
+                f"{_percent_text(change, precision, lang)} from {label}"
+                + (" (12 months)" if back == 12 and step != 12 else ""),
+                f"{_percent_text(change, precision, lang)} depuis {label}"
+                + (" (sur 12 mois)" if back == 12 and step != 12 else ""),
+            ),
+        )
+        for back, label, change in known
+        if change is not None
+    ]
+    said = _percent_text(cited, precision, lang)
+    listed = pick(lang, " and ", " et ").join(text for _, text in parts)
+    others = "".join(pick(lang, f" (or {v})", f" (ou {v})") for v, _ in parts[1:])
+    return [
+        _problem(
+            ctx.index,
+            "value",
+            pick(
+                lang,
+                f"The series is {what}{shown_unit}, not a percent: its change to {cited_period} "
+                f"is {listed}, not {said}.",
+                f"La série est {what}{shown_unit}, pas un pourcentage : sa variation en "
+                f"{cited_period} est de {listed}, pas {said}.",
+            ),
+            pick(
+                lang,
+                f"Use {parts[0][0]}{others}, whichever change the question asks for, or check "
+                "the series and period.",
+                f"Utilisez {parts[0][0]}{others}, selon la variation demandée, ou vérifiez la "
+                "série et la période.",
+            ),
+        )
+    ]
+
+
+async def _check_statcan(
+    ctxs: list[_Ctx], question: str, lang: str, notes: list[str]
+) -> list[AnswerProblem]:
     problems = await _resolve(ctxs, lang)
     live = [c for c in ctxs if c.vector_id is not None]
     if not live:
@@ -918,9 +1172,35 @@ async def _check_statcan(ctxs: list[_Ctx], question: str, lang: str) -> list[Ans
         )
         problems.extend(await _check_geography(ctx, question, lang))
         problems.extend(_check_adjustment(ctx, question, lang))
-        problems.extend(_check_unit(ctx, series_ctx.unit if series_ctx else None, lang))
+        series_unit = series_ctx.unit if series_ctx else None
+        problems.extend(_check_unit(ctx, series_unit, lang))
+        percent = _percent_mode(figure, series_unit, question)
+        level_ok = percent == "question" or not series_unit
+        if percent and latest is not None:
+            # A percent is a change: a newer period is named without its level.
+            latest = (latest[0], None)
         if figure.period is None:
-            if figure.value is not None and latest_row is not None and latest_row.value is not None:
+            if percent and latest is not None and latest_row is not None:
+                try:
+                    _, latest_ppy = parse_period(latest[0])
+                except ValueError:
+                    latest_ppy = None
+                problems.extend(
+                    await _percent_change(
+                        ctx,
+                        latest_row.ref_period,
+                        latest_ppy,
+                        latest[0],
+                        [latest_row],
+                        series_unit,
+                        level_ok,
+                        lang,
+                        notes,
+                    )
+                )
+            elif (
+                figure.value is not None and latest_row is not None and latest_row.value is not None
+            ):
                 problems.extend(
                     _value_problems(
                         ctx.index,
@@ -996,7 +1276,21 @@ async def _check_statcan(ctxs: list[_Ctx], question: str, lang: str) -> list[Ans
         values = [r for r in rows if r.value is not None]
         scale = series_ctx.scale if series_ctx else None
         if values and figure.value is not None:
-            if coarse:
+            if percent:
+                problems.extend(
+                    await _percent_change(
+                        ctx,
+                        start,
+                        cited_ppy,
+                        cited_period,
+                        values,
+                        series_unit,
+                        level_ok,
+                        lang,
+                        notes,
+                    )
+                )
+            elif coarse:
                 problems.extend(
                     _coarse_value(ctx.index, figure, values, cited_period, frequency, scale, lang)
                 )
@@ -1257,7 +1551,7 @@ async def check_answer(
                 )
             )
     if statcan:
-        problems.extend(await _check_statcan(statcan, question, lang))
+        problems.extend(await _check_statcan(statcan, question, lang, notes))
         problems.extend(_check_combinations(statcan, summed, lang))
         checked += sum(1 for c in statcan if c.vector_id is not None)
     problems.sort(key=lambda p: (p.figure is None, p.figure or 0))

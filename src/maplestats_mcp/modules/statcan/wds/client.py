@@ -764,7 +764,35 @@ async def get_series_info_from_cube_pid_coord(product_id: int | str, coordinate:
     return _series_info(obj, "getSeriesInfoFromCubePidCoord")
 
 
+def _check_vector_ids(vector_ids: list[int]) -> None:
+    if not vector_ids:
+        raise InvalidInput(_m("vector_ids must not be empty.", "vector_ids ne doit pas être vide."))
+    if len(vector_ids) > constants.WDS_MAX_LIST:
+        raise InvalidInput(
+            _m(
+                f"WDS takes at most {constants.WDS_MAX_LIST} vectors per call, got "
+                f"{len(vector_ids)}; split them into several calls, or use "
+                "wds_get_full_table_download for a whole table.",
+                f"le WDS accepte au plus {constants.WDS_MAX_LIST} vecteurs par appel, reçu "
+                f"{len(vector_ids)} ; répartissez-les sur plusieurs appels, ou utilisez "
+                "wds_get_full_table_download pour un tableau entier.",
+            )
+        )
+    bad = [v for v in vector_ids if not 0 < v <= constants.MAX_VECTOR_ID]
+    if bad:
+        raise InvalidInput(
+            _m(
+                f"Vector ids are positive numbers below {constants.MAX_VECTOR_ID:,}; got "
+                f"{bad[:5]}. Write v41690973 as 41690973.",
+                f"les identifiants de vecteur sont des nombres positifs inférieurs à "
+                f"{constants.MAX_VECTOR_ID:,} ; reçu {bad[:5]}. Écrivez v41690973 ainsi : "
+                "41690973.",
+            )
+        )
+
+
 async def get_series_info_from_vector(vector_id: int) -> SeriesInfo:
+    _check_vector_ids([vector_id])
     items = await _post("getSeriesInfoFromVector", [{"vectorId": vector_id}])
     obj = _unwrap_one(items[0], "getSeriesInfoFromVector")
     return _series_info(obj, "getSeriesInfoFromVector")
@@ -985,8 +1013,7 @@ def _vector_data_set(
 async def get_data_from_vectors_and_latest_n_periods(
     vector_ids: list[int], latest_n: int
 ) -> VectorDataSet:
-    if not vector_ids:
-        raise InvalidInput(_m("vector_ids must not be empty.", "vector_ids ne doit pas être vide."))
+    _check_vector_ids(vector_ids)
     if latest_n < 1:
         raise InvalidInput(_m("latest_n must be 1 or more.", "latest_n doit être 1 ou plus."))
     method = "getDataFromVectorsAndLatestNPeriods"
@@ -1098,8 +1125,7 @@ async def get_bulk_vector_data_by_range(
     one-item list — confirmed live; wrapping it in a list also produces a 406.
     """
     method = "getBulkVectorDataByRange"
-    if not vector_ids:
-        raise InvalidInput(_m("vector_ids must not be empty.", "vector_ids ne doit pas être vide."))
+    _check_vector_ids(vector_ids)
     start = _release_datetime(start_release_datetime, "start_release_datetime", end=False)
     end = _release_datetime(end_release_datetime, "end_release_datetime", end=True)
     body = {
@@ -1119,8 +1145,7 @@ async def get_data_from_vector_by_reference_period_range(
     """`start_ref_period`/`end_ref_period` are `YYYY-MM-DD`; WDS rejects
     `YYYY-MM` with HTTP 406, so a month is widened to its first/last day."""
     method = "getDataFromVectorByReferencePeriodRange"
-    if not vector_ids:
-        raise InvalidInput(_m("vector_ids must not be empty.", "vector_ids ne doit pas être vide."))
+    _check_vector_ids(vector_ids)
     params = {
         "vectorIds": ",".join(str(v) for v in vector_ids),
         "startRefPeriod": _ref_period(start_ref_period, "start_ref_period", end=False),

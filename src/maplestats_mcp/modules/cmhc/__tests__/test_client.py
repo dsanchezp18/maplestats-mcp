@@ -623,3 +623,39 @@ async def test_field_labels_are_turned_into_codes(httpx_mock):
         await client.get_table_data(
             "Primary Rental Market", "Vacancy Rate (%)", "Bedrooms", "TIMESERIES"
         )
+
+
+async def test_metro_list_error_page_is_raised_and_not_cached(httpx_mock):
+    """An HTTP 200 page with no list container (maintenance) must not be cached for a day:
+    valid ids would be refused until it expired."""
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/ProvincesByCountry?countryId=1",
+        text=_PROVINCES_HTML,
+        is_reusable=True,
+    )
+    url_nl = f"{constants.BASE_URL}/en/Navigation/MetsByProvince/10"
+    httpx_mock.add_response(url=url_nl, text="<html><body>Down for maintenance</body></html>")
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/MetsByProvince/12",
+        text=_METROS_NS_HTML,
+        is_reusable=True,
+    )
+    with pytest.raises(UpstreamError, match="Newfoundland"):
+        await client.list_metropolitan_areas()
+    httpx_mock.add_response(url=url_nl, text=_METROS_NL_HTML)
+    result = await client.list_metropolitan_areas()
+    assert "0005" in {a.id for a in result.areas}
+
+
+async def test_empty_metro_list_container_is_a_valid_answer(httpx_mock):
+    # Live 2026-11-03: Nunavut answers the empty container.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/ProvincesByCountry?countryId=1",
+        text=_PROVINCES_HTML,
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/MetsByProvince/10",
+        text='<div class="MetropolitanMajorAreaContainer">\n</div>',
+    )
+    result = await client.list_metropolitan_areas(province_id="10")
+    assert result.areas == []

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+
+import httpx
 import pytest
 
 from maplestats_mcp.modules.statcan.surveys import client, constants
@@ -119,9 +122,46 @@ async def test_get_survey_metadata_not_found_page_answering_503_raises_at_once(h
     assert len(httpx_mock.get_requests()) == 2
 
 
-async def test_search_surveys_404_says_the_directory_is_unavailable(httpx_mock):
+_IMDB_INDEX_L = """
+<ul>
+<li><a href="https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&amp;SDDS=3701">Labour Force Survey (LFS)</a></li>
+<li><a href="https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&amp;SDDS=4400">Persons Not in the Labour Force, Survey of</a></li>
+<li><a href="https://www23.statcan.gc.ca/imdb-bmdi/pub/index-eng.htm">Alphabetical list</a></li>
+</ul>
+"""
+
+
+async def test_search_surveys_falls_back_to_the_imdb_index_when_the_directory_is_down(
+    httpx_mock,
+):
+    # Live 2026-11-03: the directory answers 404 (since 2026-10-29) while IMDB's
+    # alphabetical index lists the same ids, one page per letter.
     httpx_mock.add_response(url=constants.SURVEY_LIST_URL_EN, status_code=404)
-    with pytest.raises(UpstreamUnavailable, match="survey directory .* is unavailable"):
+    httpx_mock.add_response(url=constants.IMDB_INDEX_URL_EN.format(letter="l"), text=_IMDB_INDEX_L)
+    httpx_mock.add_response(
+        url=re.compile(r".*/imdb-bmdi/pub/index[a-km-z]-eng\.htm"),
+        status_code=404,
+        is_reusable=True,
+    )
+    result = await client.search_surveys("labour")
+    assert [(s.survey_id, s.name) for s in result.surveys] == [
+        (3701, "Labour Force Survey (LFS)"),
+        (4400, "Persons Not in the Labour Force, Survey of"),
+    ]
+    assert "imdb-bmdi" in result.provenance.url
+    assert "down" in (result.provenance.limits or "")
+
+
+async def test_search_surveys_says_both_lists_are_unavailable(httpx_mock):
+    httpx_mock.add_response(url=constants.SURVEY_LIST_URL_EN, status_code=404)
+    httpx_mock.add_exception(
+        httpx.ConnectTimeout("timed out"),
+        url=re.compile(r".*/imdb-bmdi/pub/index[a-z]-eng\.htm"),
+        is_reusable=True,
+    )
+    with pytest.raises(
+        UpstreamUnavailable, match="(?i)alphabetical index did not answer|try again"
+    ):
         await client.search_surveys()
 
 
