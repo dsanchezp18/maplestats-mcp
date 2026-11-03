@@ -106,3 +106,36 @@ def test_a_flat_month_can_be_said_in_words():
     e = q["expected"]
     text = f"Real GDP was essentially unchanged in August, at {e['gdp_aug_2026']:,.0f} million."
     assert grade_answer(q, text).outcome in {"correct", "partial"}
+
+
+def test_short_vector_ids_are_read():
+    from tests.maple_test.grade import VECTOR
+
+    assert VECTOR.findall("Canada is v1 and Alberta v15; LFS v2062815.") == [
+        "v1",
+        "v15",
+        "v2062815",
+    ]
+
+
+def test_citation_checks_use_the_cache(tmp_path):
+    from tests.maple_test.citations import Cache
+
+    cache = Cache(tmp_path / "checks.json")
+    cache.data = {
+        "vector:2062815": {"exists": True, "product_id": 14100287, "values": [6.5, 7.1]},
+        "vector:999": {"exists": False},
+        "vector:41690973": {"exists": True, "product_id": 18100004, "values": [170.0]},
+        "table:14100287": {"exists": True},
+        "valet:FXUSDCAD": {"exists": True, "values": [1.396]},
+    }
+    text = (
+        "6.5% (table 14-10-0287-01, vector v2062815); also v999 and v41690973; "
+        "USD/CAD 1.3960 (FXUSDCAD). Released 2026-10-09."
+    )
+    check = cache.check(text, [6.5, 1.396])
+    assert check.vectors_supporting == [2062815]
+    assert check.vectors_invented == [999]
+    assert check.vectors_off_table == [41690973]  # not in the one table cited
+    assert check.valet_supporting == ["FXUSDCAD"]
+    assert check.traceable and check.release_mentioned

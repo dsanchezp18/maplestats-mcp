@@ -40,9 +40,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -95,9 +114,34 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815,
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815,
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -135,12 +179,33 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v1"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -180,12 +245,36 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v12",
+          "v15"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            12,
+            15
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            12,
+            15
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -230,9 +319,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1566927590
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1566927590
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -274,9 +382,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41693271
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41693271
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100005
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -328,9 +455,36 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            108785714,
+            108785715
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            108785714,
+            108785715
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100256
+          ],
+          "tables_invented": [],
+          "valet": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "valet_supporting": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -374,9 +528,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -422,9 +595,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            87008984
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            87008984
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            12100011
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -469,9 +661,29 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            79311153,
+            1544290282
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            79311153
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100223
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -512,9 +724,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -556,9 +785,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "valet_supporting": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -593,9 +839,22 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -636,9 +895,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -683,9 +959,29 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287,
+            98100446
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -726,9 +1022,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -779,9 +1094,32 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -819,12 +1157,33 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v1"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -861,12 +1220,36 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v12",
+          "v15"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            12,
+            15
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            12,
+            15
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -908,9 +1291,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1566927590
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1566927590
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -950,9 +1352,27 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41690973
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            18100004,
+            18100005
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -989,9 +1409,28 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "valet_supporting": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1032,9 +1471,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1079,9 +1537,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            87008984
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            87008984
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            12100011
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1122,9 +1599,29 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            54027306
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            54027306
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100203,
+            14100222
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1164,9 +1661,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1212,9 +1726,28 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            39055
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            39055
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            10100139
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1250,9 +1783,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -1292,9 +1840,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -1340,9 +1905,29 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287,
+            98100400
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1379,9 +1964,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1419,9 +2023,30 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815,
+            2063004
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815,
+            2063004
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1453,12 +2078,33 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v1"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1496,12 +2142,36 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v12",
+          "v15"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            12,
+            15
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            12,
+            15
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1543,9 +2213,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1566927590
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1566927590
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1579,9 +2268,27 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41690973
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            18100004,
+            18100005
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1614,9 +2321,36 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41690973
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41690973
+          ],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "CPI_MEDIAN",
+            "CPI_TRIM",
+            "STATIC_TOTALCPICHANGE",
+            "V41690973"
+          ],
+          "valet_supporting": [
+            "CPI_MEDIAN",
+            "CPI_TRIM",
+            "STATIC_TOTALCPICHANGE",
+            "V41690973"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1656,9 +2390,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1698,9 +2451,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            87008984
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            87008984
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            12100011
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1737,9 +2509,28 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            54027306
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            54027306
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100222
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1775,9 +2566,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1813,9 +2621,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "valet_supporting": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1846,9 +2671,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -1884,9 +2724,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -1926,9 +2783,28 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -1970,9 +2846,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2026,9 +2921,28 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2063,12 +2977,33 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v1"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2106,9 +3041,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2149,9 +3099,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2187,9 +3152,32 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41690973
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41690973
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100004
+          ],
+          "tables_invented": [],
+          "valet": [
+            "V41690973"
+          ],
+          "valet_supporting": [
+            "V41690973"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2228,9 +3216,36 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            108785713,
+            108785714
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            108785713,
+            108785714
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100256
+          ],
+          "tables_invented": [],
+          "valet": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "valet_supporting": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2275,9 +3290,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2323,9 +3357,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            87008984
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            87008984
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            12100011
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2367,9 +3420,28 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            54027306
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            54027306
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100222
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2407,9 +3479,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2447,9 +3536,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "valet_supporting": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2482,9 +3588,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -2522,9 +3643,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -2575,9 +3713,29 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287,
+            98100485
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2626,9 +3784,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2679,9 +3856,34 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815,
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815,
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2732,12 +3934,33 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v1"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2788,12 +4011,36 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v12",
+          "v15"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            12,
+            15
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            12,
+            15
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2848,9 +4095,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1566927590
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1566927590
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2901,9 +4167,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41693271
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41693271
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100005
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -2957,9 +4242,30 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            108785714,
+            108785715
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            108785714,
+            108785715
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100256
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3010,9 +4316,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3060,9 +4385,34 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            1566910279,
+            1566910429,
+            1566910885,
+            1566911035
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1566910279,
+            1566910429,
+            1566910885,
+            1566911035
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            12100163
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3114,9 +4464,31 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1558664,
+            54026327
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1558664,
+            54026327
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100203,
+            14100220
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3169,9 +4541,32 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            111666248
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            111666248
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            33100036
+          ],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3224,9 +4619,28 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            39055
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            39055
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            10100139
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3275,9 +4689,28 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1594571783
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1594571783
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -3329,9 +4762,28 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            111666248
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            111666248
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            33100036
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -3384,9 +4836,29 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287,
+            98100400
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3415,9 +4887,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3444,9 +4935,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -3473,9 +4979,25 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            17100005,
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3502,9 +5024,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3531,9 +5068,25 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            17100009,
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3560,9 +5113,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            18100005
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3591,9 +5159,30 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            108785713,
+            108785714
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            108785713,
+            108785714
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100256
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3618,9 +5207,22 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3647,9 +5249,22 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3676,9 +5291,25 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            14100222,
+            14100223
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3707,9 +5338,24 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3738,9 +5384,24 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3767,9 +5428,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -3798,9 +5474,24 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -3827,9 +5518,26 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3874,9 +5582,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3932,9 +5659,34 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2063004,
+            2063193,
+            2063571,
+            2063949
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2063004,
+            2063193,
+            2063571,
+            2063949
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -3975,12 +5727,33 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v1"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4022,12 +5795,36 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v12",
+          "v15"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            12,
+            15
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            12,
+            15
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4074,9 +5871,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1566927590
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1566927590
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4121,9 +5937,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41693271
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41693271
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100005
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4170,9 +6005,34 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            108785714
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            108785714
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100256
+          ],
+          "tables_invented": [],
+          "valet": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "valet_supporting": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4218,9 +6078,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4266,9 +6145,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            87008984
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            87008984
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            12100011
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4317,9 +6215,29 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            79311153,
+            1544290282
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            79311153
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100223
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4364,9 +6282,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4411,9 +6346,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "valet_supporting": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4454,9 +6406,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -4501,9 +6468,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -4551,9 +6535,29 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287,
+            98100446
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4688,9 +6692,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4837,9 +6860,32 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2063004,
+            2063193,
+            2063571
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -4969,12 +7015,33 @@
         "tables_cited": [
           "17100009"
         ],
-        "vectors_cited": [],
+        "vectors_cited": [
+          "v1"
+        ],
         "table_coverage": 1.0,
-        "vector_coverage": 0.0,
-        "overridden": false
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -5109,9 +7176,24 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -5247,9 +7329,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            1566927590
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1566927590
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100121
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -5386,9 +7487,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            41693271
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41693271
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100005
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -5522,9 +7642,28 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "valet_supporting": [
+            "CPI_MEDIAN",
+            "CPI_TRIM"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -5659,9 +7798,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -5798,9 +7956,28 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            87008984
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            87008984
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            12100011
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -5933,9 +8110,28 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            1558664
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1558664
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100203
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -6070,9 +8266,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -6209,9 +8422,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "valet_supporting": [
+            "BD.CDN.10YR.DQ.YLD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     },
     {
       "run": {
@@ -6342,9 +8572,28 @@
         "vectors_cited": [],
         "table_coverage": 0.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [
+            65201210
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            65201210
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100434
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -6479,9 +8728,26 @@
         ],
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
-        "overridden": false
+        "overridden": false,
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": false
     },
     {
       "run": {
@@ -6617,9 +8883,29 @@
         "vectors_cited": [],
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
-        "overridden": true
+        "overridden": true,
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287,
+            98100446
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        }
       },
-      "false_claim": null
+      "false_claim": null,
+      "has_figures": true
     }
   ],
   "summary": [
@@ -6629,14 +8915,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 14,
       "partial": 1,
       "abstained": 0,
       "hallucinated": 0,
+      "correct_worst": 14,
+      "correct_best": 14,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 0.93,
-      "vector_coverage": 0.8,
+      "vector_coverage": 0.93,
+      "ids_cited": 22,
+      "citation_precision": 0.95,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 1.0,
+      "release_mentions": 0.0,
       "tool_calls": 4.3,
+      "seconds": 10.8,
+      "cost_usd": null,
       "errors": 0
     },
     {
@@ -6645,14 +8944,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 15,
       "partial": 0,
       "abstained": 0,
       "hallucinated": 0,
+      "correct_worst": 15,
+      "correct_best": 15,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 0.87,
-      "vector_coverage": 0.53,
+      "vector_coverage": 0.67,
+      "ids_cited": 18,
+      "citation_precision": 0.94,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 0.92,
+      "release_mentions": 0.73,
       "tool_calls": 4.1,
+      "seconds": 17.6,
+      "cost_usd": null,
       "errors": 0
     },
     {
@@ -6661,14 +8973,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 14,
       "partial": 1,
       "abstained": 0,
       "hallucinated": 0,
+      "correct_worst": 14,
+      "correct_best": 14,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 0.87,
-      "vector_coverage": 0.57,
+      "vector_coverage": 0.7,
+      "ids_cited": 20,
+      "citation_precision": 0.95,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 0.92,
+      "release_mentions": 0.47,
       "tool_calls": 4.3,
+      "seconds": 15.3,
+      "cost_usd": null,
       "errors": 0
     },
     {
@@ -6677,14 +9002,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 14,
       "partial": 1,
       "abstained": 0,
       "hallucinated": 0,
+      "correct_worst": 14,
+      "correct_best": 14,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 0.87,
-      "vector_coverage": 0.5,
+      "vector_coverage": 0.57,
+      "ids_cited": 16,
+      "citation_precision": 1.0,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 0.85,
+      "release_mentions": 0.53,
       "tool_calls": 6.7,
+      "seconds": 32.1,
+      "cost_usd": null,
       "errors": 0
     },
     {
@@ -6693,14 +9031,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 12,
       "partial": 2,
       "abstained": 1,
       "hallucinated": 0,
+      "correct_worst": 12,
+      "correct_best": 12,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 0.87,
-      "vector_coverage": 0.53,
+      "vector_coverage": 0.67,
+      "ids_cited": 25,
+      "citation_precision": 1.0,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 1.0,
+      "release_mentions": 0.47,
       "tool_calls": 5.1,
+      "seconds": 15.9,
+      "cost_usd": null,
       "errors": 0
     },
     {
@@ -6709,14 +9060,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 2,
       "partial": 0,
       "abstained": 13,
       "hallucinated": 0,
+      "correct_worst": 2,
+      "correct_best": 2,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 0.93,
       "vector_coverage": 0.37,
-      "tool_calls": 0.0,
+      "ids_cited": 7,
+      "citation_precision": 0.43,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 0.17,
+      "release_mentions": 0.47,
+      "tool_calls": 0,
+      "seconds": 8.7,
+      "cost_usd": null,
       "errors": 0
     },
     {
@@ -6725,14 +9089,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 15,
       "partial": 0,
       "abstained": 0,
       "hallucinated": 0,
+      "correct_worst": 15,
+      "correct_best": 15,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 1.0,
-      "vector_coverage": 0.77,
+      "vector_coverage": 0.9,
+      "ids_cited": 21,
+      "citation_precision": 0.95,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 1.0,
+      "release_mentions": 0.67,
       "tool_calls": 2.8,
+      "seconds": 36.2,
+      "cost_usd": null,
       "errors": 0
     },
     {
@@ -6741,14 +9118,27 @@
         "claude-sonnet-5-5"
       ],
       "run_date": "2026-11-02",
+      "questions": 15,
+      "repeats": 1,
       "correct": 12,
       "partial": 2,
       "abstained": 1,
       "hallucinated": 0,
+      "correct_worst": 12,
+      "correct_best": 12,
+      "consistency": null,
       "false_claims": 0,
       "table_coverage": 0.8,
-      "vector_coverage": 0.67,
+      "vector_coverage": 0.73,
+      "ids_cited": 17,
+      "citation_precision": 1.0,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 0.92,
+      "release_mentions": 0.13,
       "tool_calls": 2.9,
+      "seconds": 11.5,
+      "cost_usd": null,
       "errors": 0
     }
   ]

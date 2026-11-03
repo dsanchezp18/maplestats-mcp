@@ -36,10 +36,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from tests.maple_test.grade import load_key
+from tests.maple_test.grade import SUITES, load_key
 
 HERE = Path(__file__).resolve().parent
-RUNS = HERE / "runs"
 REPO = HERE.parents[1]
 TIMEOUT_S = 600
 MAX_TURNS = 25
@@ -54,7 +53,8 @@ ARMS = (
     "no_tools",
 )
 
-PROMPT = """\
+PROMPTS = {
+    "v1": """\
 You answer questions about Canadian economic and social statistics. Today is {today}.
 
 Use official sources: Statistics Canada and the Bank of Canada. With every figure, give \
@@ -62,7 +62,22 @@ the Statistics Canada table number (such as 14-10-0287-01) and vector (such as \
 v2062815), or the Bank of Canada series, and the reference period.
 
 If a figure does not exist or you cannot check it, say so instead of estimating. Keep \
-the answer short."""
+the answer short.""",
+    # v2 asks about publishers beyond StatCan and the Bank of Canada, so the prompt names
+    # them; it is otherwise the v1 prompt, and every arm gets the same one.
+    "v2": """\
+You answer questions about Canadian economic, social and environmental data. Today is \
+{today}.
+
+Use official sources: Statistics Canada, the Bank of Canada, and other federal, \
+provincial and municipal publishers. With every figure, give its source: for Statistics \
+Canada the table number (such as 14-10-0287-01) and vector (such as v2062815), for the \
+Bank of Canada the series, for any other publisher the dataset or page; and the \
+reference period.
+
+If a figure does not exist or you cannot check it, say so instead of estimating. Keep \
+the answer short.""",
+}
 
 
 def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, Any]:
@@ -131,9 +146,15 @@ class Answer:
     tool_calls: list[str]
     is_error: bool
     response: str
+    repeat: int = 0
+    cost_usd: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
-def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> Answer:
+def ask(
+    arm: str, model: str, question: dict[str, Any], config: Path | None, version: str = "v1"
+) -> Answer:
     started = datetime.now(UTC)
     command = [
         "claude",
@@ -141,7 +162,7 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
         "--model",
         model,
         "--system-prompt",
-        PROMPT.format(today=started.date().isoformat()),
+        PROMPTS[version].format(today=started.date().isoformat()),
         "--tools",
         "",
         "--strict-mcp-config",
@@ -159,16 +180,20 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
         names = list(json.loads(config.read_text())["mcpServers"])
         command += ["--mcp-config", str(config), "--allowedTools", *[f"mcp__{n}" for n in names]]
     with tempfile.TemporaryDirectory() as empty:
-        proc = subprocess.run(
-            command,
-            input=question["question"],
-            capture_output=True,
-            text=True,
-            cwd=empty,
-            env={**os.environ, "ENABLE_TOOL_SEARCH": "false"},
-            timeout=TIMEOUT_S,
-            check=False,
-        )
+        try:
+            proc = subprocess.run(
+                command,
+                input=question["question"],
+                capture_output=True,
+                text=True,
+                cwd=empty,
+                env={**os.environ, "ENABLE_TOOL_SEARCH": "false"},
+                timeout=TIMEOUT_S,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            # One stuck answer must not end a run of hundreds; it is recorded as an error.
+            proc = subprocess.CompletedProcess(command, 124, "", f"timed out after {TIMEOUT_S}s")
     tools: list[str] = []
     calls: list[str] = []
     models: set[str] = set()
@@ -204,6 +229,9 @@ def ask(arm: str, model: str, question: dict[str, Any], config: Path | None) -> 
         tool_calls=calls,
         is_error=error,
         response=response,
+        cost_usd=result.get("total_cost_usd"),
+        input_tokens=(result.get("usage") or {}).get("input_tokens"),
+        output_tokens=(result.get("usage") or {}).get("output_tokens"),
     )
 
 
@@ -214,11 +242,14 @@ def run(
     only: list[str] | None,
     label: str,
     alts: Path | None = None,
+    version: str = "v1",
+    repeat: int = 1,
 ) -> Path:
-    questions = [q for q in load_key() if not only or q["id"] in only]
-    RUNS.mkdir(exist_ok=True)
+    questions = [q for q in load_key(version) if not only or q["id"] in only]
+    runs = SUITES[version].runs
+    runs.mkdir(exist_ok=True)
     name = label or arm
-    out = RUNS / f"{datetime.now(UTC).date().isoformat()}_{name}_{model}.jsonl"
+    out = runs / f"{datetime.now(UTC).date().isoformat()}_{name}_{model}.jsonl"
     # A run is evidence: never overwrite one (a retry gets its own --label).
     if out.exists():
         raise SystemExit(f"{out.name} exists; pass --label to keep both runs")
@@ -231,11 +262,14 @@ def run(
             config = Path(tmp) / "mcp.json"
             config.write_text(json.dumps({"mcpServers": config_servers}))
         with out.open("w", encoding="utf-8") as fh:
-            for q in questions:
-                answer = ask(arm, model, q, config)
-                answer.arm = name
-                fh.write(json.dumps(asdict(answer), ensure_ascii=False) + "\n")
-                fh.flush()
-                state = "ERROR" if answer.is_error else f"{len(answer.tool_calls)} calls"
-                print(f"{q['id']} {name}: {state}, {answer.duration_s}s", file=sys.stderr)
+            # Whole passes, not each question three times in a row: a source that is down
+            # for a minute then costs one answer per pass, not three of one question.
+            for r in range(repeat):
+                for q in questions:
+                    answer = ask(arm, model, q, config, version)
+                    answer.arm, answer.repeat = name, r
+                    fh.write(json.dumps(asdict(answer), ensure_ascii=False) + "\n")
+                    fh.flush()
+                    state = "ERROR" if answer.is_error else f"{len(answer.tool_calls)} calls"
+                    print(f"{q['id']}#{r} {name}: {state}, {answer.duration_s}s", file=sys.stderr)
     return out

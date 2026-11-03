@@ -32,16 +32,37 @@ def main() -> int:
         help="folder with local clones for the openmcp and candata_mcp arms",
     )
     r.add_argument("--only", nargs="*", help="question ids, e.g. M-01 M-13")
+    r.add_argument("--version", choices=sorted(grade.SUITES), default="v1")
+    r.add_argument("--repeat", type=int, default=1, help="ask every question this many times")
     g = sub.add_parser("grade", help="grade every run file and write results.md")
     g.add_argument("runs", nargs="*", type=Path)
+    g.add_argument("--version", choices=sorted(grade.SUITES), default="v1")
+    g.add_argument(
+        "--verify", action="store_true", help="look up cited IDs the citation cache lacks"
+    )
     args = parser.parse_args()
     if args.command == "run":
-        print(run.run(args.arm, args.model, args.server_dir, args.only, args.label, args.alts))
+        print(
+            run.run(
+                args.arm,
+                args.model,
+                args.server_dir,
+                args.only,
+                args.label,
+                args.alts,
+                args.version,
+                args.repeat,
+            )
+        )
         return 0
-    report = grade.grade_runs(args.runs or sorted((HERE / "runs").glob("*.jsonl")))
-    (HERE / "results.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    (HERE / "results.md").write_text(grade.render(report), encoding="utf-8")
-    print("wrote tests/maple_test/results.md")
+    suite = grade.SUITES[args.version]
+    report = grade.grade_runs(
+        args.runs or sorted(suite.runs.glob("*.jsonl")), args.version, args.verify
+    )
+    suite.results.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    markdown = suite.results.with_suffix(".md")
+    markdown.write_text(grade.render(report, args.version), encoding="utf-8")
+    print(f"wrote {markdown.relative_to(HERE.parents[1])}")
     return 0
 
 
