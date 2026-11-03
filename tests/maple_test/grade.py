@@ -218,7 +218,10 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
     missing = [k for k, ok in matched.items() if not ok]
     figures = figures_in(text)
     declined = bool(DECLINE.search(text))
-    absent = bool(ABSENT.search(text))
+    # A refusal question can name its own wording for "this does not exist" (a cancelled
+    # drug, an Express Entry round not yet held), on top of the general phrases.
+    own = question.get("absent_pattern")
+    absent = bool(ABSENT.search(text)) or bool(own and re.search(own, text, re.IGNORECASE))
 
     if kind == "refusal":
         if absent:
@@ -247,7 +250,10 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
     else:
         pattern = question.get("answer_pattern")
         right_call = True
-        if pattern:
+        if pattern and question.get("answer_contains"):
+            # A name answer (a brand, a status): naming it is the call.
+            right_call = bool(re.search(rf"\b{re.escape(pattern)}\b", text, re.IGNORECASE))
+        elif pattern:
             right_call = bool(
                 re.search(
                     rf"{re.escape(pattern)}[^.\n]{{0,80}}{WINNER.pattern}", text, re.IGNORECASE

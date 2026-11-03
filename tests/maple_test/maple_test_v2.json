@@ -1,0 +1,1887 @@
+{
+  "benchmark": "maple_test_v2",
+  "built_at": "2026-11-03T00:09:44+00:00",
+  "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC",
+  "questions": [
+    {
+      "id": "C-01",
+      "category": "Labour",
+      "eval_type": "comparison",
+      "question": "Was the employment rate higher in Ontario or in Quebec in September 2026? Give both rates.",
+      "expected": {
+        "ontario_pct": 60.1,
+        "quebec_pct": 59.9
+      },
+      "headline": [
+        "ontario_pct",
+        "quebec_pct"
+      ],
+      "answer_pattern": "Ontario",
+      "tolerance": "Right province; each rate ±0.1",
+      "citations": [
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2063951",
+          "series_title": "Ontario;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "7.9.1.1.1.1",
+          "value": 60.1,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        },
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2063762",
+          "series_title": "Quebec;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "6.9.1.1.1.1",
+          "value": 59.9,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        }
+      ],
+      "traps": [
+        "The employment rate is not the participation rate or 100 minus unemployment."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-02",
+      "category": "Labour",
+      "eval_type": "numeric",
+      "question": "What was the youth unemployment rate (ages 15 to 24) in Canada in September 2026, and what was it a year earlier?",
+      "expected": {
+        "rate_sep_2026_pct": 13.0,
+        "rate_sep_2025_pct": 14.6
+      },
+      "headline": [
+        "rate_sep_2026_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2062842",
+          "series_title": "Canada;Unemployment rate;Total - Gender;15 to 24 years;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "1.7.1.2.1.1",
+          "value": 13.0,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        },
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2062842",
+          "series_title": "Canada;Unemployment rate;Total - Gender;15 to 24 years;Estimate;Seasonally adjusted",
+          "reference_period": "2025-09",
+          "coordinate": "1.7.1.2.1.1",
+          "value": 14.6,
+          "release_or_revision_date": "2026-04-10T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        }
+      ],
+      "traps": [
+        "Seasonally adjusted is the headline; ages 15 to 24, not 15 to 29."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-03",
+      "category": "Labour",
+      "eval_type": "numeric",
+      "question": "How many jobs did Canada gain or lose in September 2026, according to the Labour Force Survey?",
+      "expected": {
+        "change_thousands": -68.3,
+        "employment_sep_2026_thousands": 21104.8
+      },
+      "headline": [
+        "change_thousands"
+      ],
+      "tolerance": "±0.5 thousand; the sign must be right",
+      "citations": [
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2062811",
+          "series_title": "Canada;Employment;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-09",
+          "coordinate": "1.3.1.1.1.1",
+          "value": 21104.8,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        },
+        {
+          "table_id": "14-10-0287-01",
+          "vector_id": "v2062811",
+          "series_title": "Canada;Employment;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": "2026-08",
+          "coordinate": "1.3.1.1.1.1",
+          "value": 21173.1,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+        }
+      ],
+      "traps": [
+        "The LFS counts employed people (in thousands), not SEPH payroll jobs."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-04",
+      "category": "Labour",
+      "eval_type": "numeric",
+      "question": "What was the average hourly wage of employees in Canada in September 2026, and how much did it rise from a year earlier?",
+      "expected": {
+        "wage_sep_2026": 37.64,
+        "change_pct": 2.3
+      },
+      "headline": [
+        "wage_sep_2026"
+      ],
+      "tolerances": {
+        "wage_sep_2026": 0.005
+      },
+      "tolerance": "±0.005; ±0.1",
+      "citations": [
+        {
+          "table_id": "14-10-0063-01",
+          "vector_id": "v2132579",
+          "series_title": "Canada;Average hourly wage rate;Both full- and part-time employees;Total employees, all industries;Total - Gender;15 years and over",
+          "reference_period": "2026-09",
+          "coordinate": "1.2.1.1.1.1",
+          "value": 37.64,
+          "release_or_revision_date": "2026-10-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410006301"
+        },
+        {
+          "table_id": "14-10-0063-01",
+          "vector_id": "v2132579",
+          "series_title": "Canada;Average hourly wage rate;Both full- and part-time employees;Total employees, all industries;Total - Gender;15 years and over",
+          "reference_period": "2025-09",
+          "coordinate": "1.2.1.1.1.1",
+          "value": 36.78,
+          "release_or_revision_date": "2025-10-10T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410006301"
+        }
+      ],
+      "traps": [
+        "LFS wages are not seasonally adjusted, so compare with the same month a year earlier; SEPH average weekly earnings are a different measure."
+      ],
+      "group": "core"
+    },
+    {
+      "id": "C-05",
+      "category": "Labour",
+      "eval_type": "numeric",
+      "question": "What was Canada's job vacancy rate in August 2026, and how many vacant positions were there?",
+      "expected": {
+        "vacancy_rate_pct": 2.8,
+        "vacancies": 507220.0
+      },
+      "headline": [
+        "vacancy_rate_pct"
+      ],
+      "tolerance": "±0.1; vacancies ±0.1% (may be rounded)",
+      "citations": [
+        {
+          "table_id": "14-10-0432-01",
+          "vector_id": "v1481212147",
+          "series_title": "Canada;Job vacancy rate",
+          "reference_period": "2026-08",
+          "coordinate": "1.3",
+          "value": 2.8,
+          "release_or_revision_date": "2026-10-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
+        },
+        {
+          "table_id": "14-10-0432-01",
+          "vector_id": "v1481212145",
+          "series_title": "Canada;Job vacancies",
+          "reference_period": "2026-08",
+          "coordinate": "1.1",
+          "value": 507220.0,
+          "release_or_revision_date": "2026-10-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
+        }
+      ],
+      "traps": [
+        "Seasonally adjusted monthly estimates (14-10-0432), not the quarterly table."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-06",
+      "category": "Prices",
+      "eval_type": "numeric",
+      "question": "By how much did consumer prices (all-items CPI) in Canada change over the 12 months to September 2026?",
+      "expected": {
+        "allitems_yoy_pct": 3.1
+      },
+      "headline": [
+        "allitems_yoy_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41690973",
+          "series_title": "Canada;All-items",
+          "reference_period": "2026-09",
+          "coordinate": "2.2",
+          "value": 170.0,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        },
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41690973",
+          "series_title": "Canada;All-items",
+          "reference_period": "2025-09",
+          "coordinate": "2.2",
+          "value": 164.9,
+          "release_or_revision_date": "2025-10-21T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        }
+      ],
+      "traps": [
+        "Not seasonally adjusted (the official CPI); a 12-month change, not month over month."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-07",
+      "category": "Prices",
+      "eval_type": "numeric",
+      "question": "By how much did gasoline prices in Canada change over the 12 months to September 2026?",
+      "expected": {
+        "gasoline_yoy_pct": 27.8
+      },
+      "headline": [
+        "gasoline_yoy_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41691136",
+          "series_title": "Canada;Gasoline",
+          "reference_period": "2026-09",
+          "coordinate": "2.184",
+          "value": 267.6,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        },
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41691136",
+          "series_title": "Canada;Gasoline",
+          "reference_period": "2025-09",
+          "coordinate": "2.184",
+          "value": 209.4,
+          "release_or_revision_date": "2025-10-21T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        }
+      ],
+      "traps": [
+        "Not seasonally adjusted (the official CPI); a 12-month change, not month over month."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-08",
+      "category": "Prices",
+      "eval_type": "numeric",
+      "question": "By how much did prices of food purchased from stores in Canada change over the 12 months to September 2026?",
+      "expected": {
+        "food_yoy_pct": 1.7
+      },
+      "headline": [
+        "food_yoy_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41690975",
+          "series_title": "Canada;Food purchased from stores",
+          "reference_period": "2026-09",
+          "coordinate": "2.4",
+          "value": 198.3,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        },
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41690975",
+          "series_title": "Canada;Food purchased from stores",
+          "reference_period": "2025-09",
+          "coordinate": "2.4",
+          "value": 195.0,
+          "release_or_revision_date": "2025-10-21T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        }
+      ],
+      "traps": [
+        "Not seasonally adjusted (the official CPI); a 12-month change, not month over month."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-09",
+      "category": "Prices",
+      "eval_type": "comparison",
+      "question": "Which province had the highest 12-month CPI inflation in September 2026, and what was the rate?",
+      "expected": {
+        "top_rate_pct": 5.7
+      },
+      "headline": [
+        "top_rate_pct"
+      ],
+      "answer_pattern": "Prince Edward Island",
+      "tolerance": "Right province; rate ±0.1",
+      "citations": [
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41691379",
+          "series_title": "Prince Edward Island;All-items",
+          "reference_period": "2026-09",
+          "coordinate": "5.2",
+          "value": 177.6,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        },
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": "v41691379",
+          "series_title": "Prince Edward Island;All-items",
+          "reference_period": "2025-09",
+          "coordinate": "5.2",
+          "value": 168.1,
+          "release_or_revision_date": "2025-10-21T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        }
+      ],
+      "traps": [
+        "Compare the provinces' own 12-month changes, not index levels."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-10",
+      "category": "Prices",
+      "eval_type": "numeric",
+      "question": "What was CPI-common, the Bank of Canada's factor-model measure of core inflation, in September 2026?",
+      "expected": {
+        "cpi_common_pct": 2.4
+      },
+      "headline": [
+        "cpi_common_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "18-10-0256-01",
+          "vector_id": "v108785713",
+          "series_title": "Canada;Measure of core inflation based on a factor model, CPI-common (year-over-year percent change)",
+          "reference_period": "2026-09",
+          "coordinate": "1.1",
+          "value": 2.4,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810025601"
+        }
+      ],
+      "traps": [
+        "CPI-common is revised as the model is re-estimated; it is already a 12-month rate."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-11",
+      "category": "Output",
+      "eval_type": "numeric",
+      "question": "How fast did Canada's real GDP grow in the second quarter of 2026, at an annualized rate?",
+      "expected": {
+        "annualized_pct": 3.3,
+        "quarterly_pct": 0.8
+      },
+      "headline": [
+        "annualized_pct"
+      ],
+      "tolerance": "±0.1",
+      "citations": [
+        {
+          "table_id": "36-10-0104-01",
+          "vector_id": "v62305752",
+          "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
+          "reference_period": "2026-04",
+          "coordinate": "1.1.1.30",
+          "value": 2524127.0,
+          "release_or_revision_date": "2026-08-28T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
+        },
+        {
+          "table_id": "36-10-0104-01",
+          "vector_id": "v62305752",
+          "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
+          "reference_period": "2026",
+          "coordinate": "1.1.1.30",
+          "value": 2503604.0,
+          "release_or_revision_date": "2026-08-28T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
+        }
+      ],
+      "traps": [
+        "StatCan headlines the annualized rate; the quarter-over-quarter change is a quarter of it, roughly."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-12",
+      "category": "Output",
+      "eval_type": "numeric",
+      "question": "By how much did Canada's retail sales change in August 2026 from July?",
+      "expected": {
+        "change_pct": 1.2,
+        "sales_aug_2026_dollars": 74567349000
+      },
+      "headline": [
+        "change_pct"
+      ],
+      "tolerance": "±0.1; level ±0.1%",
+      "citations": [
+        {
+          "table_id": "20-10-0056-01",
+          "vector_id": "v1446859483",
+          "series_title": "Canada;Retail trade;Total retail sales;Seasonally adjusted",
+          "reference_period": "2026-08",
+          "coordinate": "1.1.1.2",
+          "value": 74567349.0,
+          "release_or_revision_date": "2026-10-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=2010005601"
+        },
+        {
+          "table_id": "20-10-0056-01",
+          "vector_id": "v1446859483",
+          "series_title": "Canada;Retail trade;Total retail sales;Seasonally adjusted",
+          "reference_period": "2026-07",
+          "coordinate": "1.1.1.2",
+          "value": 73684586.0,
+          "release_or_revision_date": "2026-10-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=2010005601"
+        }
+      ],
+      "traps": [
+        "Seasonally adjusted, in current dollars; StatCan's advance estimate for the next month is not in this table."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-13",
+      "category": "Output",
+      "eval_type": "numeric",
+      "question": "What were Canadian manufacturers' sales in August 2026, and how did they change from July?",
+      "expected": {
+        "sales_aug_2026_dollars": 79876565000,
+        "change_pct": 1.5
+      },
+      "headline": [
+        "sales_aug_2026_dollars"
+      ],
+      "tolerance": "level ±0.1%; change ±0.1",
+      "citations": [
+        {
+          "table_id": "16-10-0047-01",
+          "vector_id": "v800450",
+          "series_title": "Canada;Sales of goods manufactured (shipments);Seasonally adjusted;Manufacturing",
+          "reference_period": "2026-08",
+          "coordinate": "1.1.2.1",
+          "value": 79876565.0,
+          "release_or_revision_date": "2026-10-15T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1610004701"
+        },
+        {
+          "table_id": "16-10-0047-01",
+          "vector_id": "v800450",
+          "series_title": "Canada;Sales of goods manufactured (shipments);Seasonally adjusted;Manufacturing",
+          "reference_period": "2026-07",
+          "coordinate": "1.1.2.1",
+          "value": 78718193.0,
+          "release_or_revision_date": "2026-10-15T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1610004701"
+        }
+      ],
+      "traps": [
+        "Values are in thousands of dollars; seasonally adjusted."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-14",
+      "category": "Trade",
+      "eval_type": "numeric",
+      "question": "What was the value of Canada's merchandise exports to the United States in August 2026?",
+      "expected": {
+        "exports_us_aug_2026_dollars": 54346500000
+      },
+      "headline": [
+        "exports_us_aug_2026_dollars"
+      ],
+      "tolerance": "±0.1%",
+      "citations": [
+        {
+          "table_id": "12-10-0011-01",
+          "vector_id": "v87008956",
+          "series_title": "Canada;Export;Balance of payments;Seasonally adjusted;United States",
+          "reference_period": "2026-08",
+          "coordinate": "1.2.2.2.2",
+          "value": 54346.5,
+          "release_or_revision_date": "2026-10-06T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101"
+        }
+      ],
+      "traps": [
+        "Balance of payments basis, seasonally adjusted, in millions of dollars."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-15",
+      "category": "Housing",
+      "eval_type": "numeric",
+      "question": "What was Canada's seasonally adjusted annual rate of housing starts in September 2026?",
+      "expected": {
+        "starts_saar_sep_2026": 248896.0
+      },
+      "headline": [
+        "starts_saar_sep_2026"
+      ],
+      "tolerance": "±0.1%",
+      "citations": [
+        {
+          "table_id": "34-10-0158-01",
+          "vector_id": "v52300157",
+          "series_title": "Canada",
+          "reference_period": "2026-09",
+          "coordinate": "1",
+          "value": 248.896,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410015801"
+        }
+      ],
+      "traps": [
+        "The value is in thousands of units at an annual rate, not units started in the month."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-16",
+      "category": "Housing",
+      "eval_type": "numeric",
+      "question": "What was the total value of building permits issued in Canada in August 2026?",
+      "expected": {
+        "permits_aug_2026_dollars": 13571697000
+      },
+      "headline": [
+        "permits_aug_2026_dollars"
+      ],
+      "tolerance": "±0.1%",
+      "citations": [
+        {
+          "table_id": "34-10-0292-01",
+          "vector_id": "v1675119645",
+          "series_title": "Canada;Total residential and non-residential;Types of work, total;Value of permits;Seasonally adjusted, current",
+          "reference_period": "2026-08",
+          "coordinate": "1.1.1.1.2",
+          "value": 13571697.0,
+          "release_or_revision_date": "2026-10-14T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410029201"
+        }
+      ],
+      "traps": [
+        "Seasonally adjusted, current dollars, residential and non-residential."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-17",
+      "category": "Population",
+      "eval_type": "numeric",
+      "question": "What was British Columbia's population on July 1, 2026?",
+      "expected": {
+        "population": 5710598.0
+      },
+      "headline": [
+        "population"
+      ],
+      "tolerance": "Exact persons (rounded to the nearest thousand counts within 0.1%)",
+      "citations": [
+        {
+          "table_id": "17-10-0009-01",
+          "vector_id": "v3",
+          "series_title": "British Columbia",
+          "reference_period": "2026-07",
+          "coordinate": "11",
+          "value": 5710598.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
+        }
+      ],
+      "traps": [
+        "Quarterly estimates; July 1 is the reference date."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-18",
+      "category": "Population",
+      "eval_type": "numeric",
+      "question": "How many people in Canada held only a study permit on July 1, 2026, compared with a year earlier?",
+      "expected": {
+        "study_2026": 399133.0,
+        "study_2025": 539960.0
+      },
+      "headline": [
+        "study_2026"
+      ],
+      "tolerance": "Exact persons (within 0.1% if rounded)",
+      "citations": [
+        {
+          "table_id": "17-10-0121-01",
+          "vector_id": "v1566927598",
+          "series_title": "Canada;Study permit holders only",
+          "reference_period": "2026-07",
+          "coordinate": "1.9",
+          "value": 399133.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710012101"
+        },
+        {
+          "table_id": "17-10-0121-01",
+          "vector_id": "v1566927598",
+          "series_title": "Canada;Study permit holders only",
+          "reference_period": "2025-07",
+          "coordinate": "1.9",
+          "value": 539960.0,
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710012101"
+        }
+      ],
+      "traps": [
+        "'Study permit holders only' excludes people holding both a work and a study permit."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-19",
+      "category": "Markets",
+      "eval_type": "numeric",
+      "question": "What was the Bank of Canada's target for the overnight rate on October 30, 2026?",
+      "expected": {
+        "policy_rate_pct": 2.5
+      },
+      "headline": [
+        "policy_rate_pct"
+      ],
+      "tolerances": {
+        "policy_rate_pct": 0.005
+      },
+      "tolerance": "Exact",
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "V39079",
+          "reference_period": "2026-10-30",
+          "value": 2.5,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/V39079"
+        }
+      ],
+      "traps": [
+        "Valet dates the target from its effective date, the day after an announcement."
+      ],
+      "group": "core"
+    },
+    {
+      "id": "C-20",
+      "category": "Markets",
+      "eval_type": "numeric",
+      "question": "What was the 5-year Government of Canada benchmark bond yield on October 30, 2026?",
+      "expected": {
+        "yield_5y_pct": 3.51
+      },
+      "headline": [
+        "yield_5y_pct"
+      ],
+      "tolerances": {
+        "yield_5y_pct": 0.005
+      },
+      "tolerance": "±0.005",
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "BD.CDN.5YR.DQ.YLD",
+          "reference_period": "2026-10-30",
+          "value": 3.51,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/BD.CDN.5YR.DQ.YLD"
+        }
+      ],
+      "traps": [
+        "The benchmark yield, not a marketable bond's or the curve's."
+      ],
+      "group": "core"
+    },
+    {
+      "id": "C-21",
+      "category": "Markets",
+      "eval_type": "numeric",
+      "question": "What was the Bank of Canada commodity price index (BCPI, total) for September 2026?",
+      "expected": {
+        "bcpi": 747.71
+      },
+      "headline": [
+        "bcpi"
+      ],
+      "tolerances": {
+        "bcpi": 0.05
+      },
+      "tolerance": "±0.05",
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "M.BCPI",
+          "reference_period": "2026-09-01",
+          "value": 747.71,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/M.BCPI"
+        }
+      ],
+      "traps": [
+        "An index (1972=100), in US dollars; not a price."
+      ],
+      "group": "core"
+    },
+    {
+      "id": "C-22",
+      "category": "Unanswerable",
+      "eval_type": "refusal",
+      "question": "What was Canada's CPI inflation rate in October 2026?",
+      "expected": {
+        "behaviour": "Decline: the October 2026 CPI is not published yet; the latest month is 2026-09.",
+        "latest_month": "2026-09"
+      },
+      "headline": [],
+      "tolerance": "Pass only if no October 2026 figure is given",
+      "citations": [
+        {
+          "table_id": "18-10-0004-01",
+          "vector_id": null,
+          "reference_period": "2026-09",
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401"
+        }
+      ],
+      "traps": [
+        "A forecast, a nowcast or the September rate is not October's."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-23",
+      "category": "Unanswerable",
+      "eval_type": "refusal",
+      "question": "How much did Canada's real GDP grow in the third quarter of 2026?",
+      "expected": {
+        "behaviour": "Decline: Q3 2026 GDP is not published yet (due late November 2026); the latest quarter is 2026-04.",
+        "latest_quarter": "2026-04"
+      },
+      "headline": [],
+      "tolerance": "Pass only if no Q3 2026 figure is given",
+      "citations": [
+        {
+          "table_id": "36-10-0104-01",
+          "vector_id": null,
+          "reference_period": "2026-04",
+          "release_or_revision_date": "2026-08-28T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
+        }
+      ],
+      "traps": [
+        "Monthly GDP for July and August does not make a published Q3 figure."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "C-24",
+      "category": "Housing",
+      "eval_type": "flag",
+      "question": "Canada's housing starts figure for September 2026 is the latest monthly number. Multiply it by 12 to estimate how many homes will be started in a year.",
+      "expected": {
+        "behaviour": "Flag that the published figure is already a seasonally adjusted annual rate, so multiplying by 12 overstates starts twelvefold; give the rate itself.",
+        "starts_saar_sep_2026": 248896.0
+      },
+      "headline": [],
+      "tolerance": "Pass only if the annual-rate problem is stated",
+      "flag_pattern": "annual(?:ized)? rate|already (?:an )?annual|SAAR|at annual rates?",
+      "citations": [
+        {
+          "table_id": "34-10-0158-01",
+          "vector_id": "v52300157",
+          "series_title": "Canada",
+          "reference_period": "2026-09",
+          "coordinate": "1",
+          "value": 248.896,
+          "release_or_revision_date": "2026-10-19T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410015801"
+        }
+      ],
+      "traps": [
+        "CMHC and StatCan publish monthly starts as a seasonally adjusted annual rate."
+      ],
+      "group": "core",
+      "tolerances": {}
+    },
+    {
+      "id": "X-01",
+      "category": "Climate",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What was the mean temperature at the Toronto City weather station in July 2025, and how much precipitation fell there that month?",
+      "expected": {
+        "mean_temp_jul_2025_c": 24.4,
+        "total_precip_jul_2025_mm": 52.3
+      },
+      "headline": [
+        "mean_temp_jul_2025_c",
+        "total_precip_jul_2025_mm"
+      ],
+      "tolerances": {
+        "mean_temp_jul_2025_c": 0.06,
+        "total_precip_jul_2025_mm": 0.5
+      },
+      "tolerance": "Temperature ±0.1 °C (one decimal); precipitation ±0.5 mm",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "ECCC climate-monthly 6158355 (TORONTO CITY, STN_ID 31688)",
+          "reference_period": "2025-07",
+          "value": {
+            "MEAN_TEMPERATURE": 24.374193548387098,
+            "TOTAL_PRECIPITATION": 52.3
+          },
+          "release_or_revision_date": "2025-08-01 11:34:53",
+          "url": "https://api.weather.gc.ca/collections/climate-monthly/items?f=json&limit=100&CLIMATE_IDENTIFIER=6158355&LOCAL_YEAR=2025&LOCAL_MONTH=7",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "Toronto City (downtown, 6158355) is not Toronto Pearson / Toronto Intl A; the airport values differ.",
+        "The 1991-2020 normal is not the July 2025 observation."
+      ],
+      "source_id": "A-01"
+    },
+    {
+      "id": "X-02",
+      "category": "Climate",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What were the maximum and minimum temperatures recorded at the Ottawa CDA weather station on June 23, 2025?",
+      "expected": {
+        "max_temp_c": 36.0,
+        "min_temp_c": 21.0
+      },
+      "headline": [
+        "max_temp_c",
+        "min_temp_c"
+      ],
+      "tolerances": {
+        "max_temp_c": 0.05,
+        "min_temp_c": 0.05
+      },
+      "tolerance": "±0.05 °C (values are published to one decimal)",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "ECCC climate-daily 6105976 (OTTAWA CDA, STN_ID 4333)",
+          "reference_period": "2025-06-23",
+          "value": {
+            "MAX_TEMPERATURE": 36,
+            "MIN_TEMPERATURE": 21
+          },
+          "release_or_revision_date": null,
+          "url": "https://api.weather.gc.ca/collections/climate-daily/items?f=json&limit=100&CLIMATE_IDENTIFIER=6105976&LOCAL_DATE=2025-06-23",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "Ottawa CDA (6105976) is not the airport: Ottawa Intl A (6106001) recorded a different maximum that day, and the older Ottawa Macdonald-Cartier Int'l A (6106000) record is empty."
+      ],
+      "source_id": "A-02"
+    },
+    {
+      "id": "X-03",
+      "category": "Hydrometric",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What was the daily mean discharge of the Fraser River at Hope (station 08MF005) on June 16, 2024?",
+      "expected": {
+        "discharge_m3s": 4570.0
+      },
+      "headline": [
+        "discharge_m3s"
+      ],
+      "tolerances": {
+        "discharge_m3s": 10.0
+      },
+      "tolerance": "±10 m³/s (published to three significant figures)",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "ECCC hydrometric-daily-mean 08MF005 (FRASER RIVER AT HOPE)",
+          "reference_period": "2024-06-16",
+          "value": 4570.0,
+          "release_or_revision_date": null,
+          "url": "https://api.weather.gc.ca/collections/hydrometric-daily-mean/items?f=json&limit=100&STATION_NUMBER=08MF005&datetime=2024-06-16",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "Discharge (m³/s) is not water level (m).",
+        "A real-time provisional reading is not the archived daily mean."
+      ],
+      "source_id": "A-03"
+    },
+    {
+      "id": "X-04",
+      "category": "Climate",
+      "group": "beyond",
+      "eval_type": "flag",
+      "question": "How much precipitation was recorded in July 2024 at the Toronto Lester B. Pearson Int'l A weather station (climate ID 6158733)?",
+      "expected": {
+        "behaviour": "Flag that station 6158733 (Toronto Lester B. Pearson Int'l A) stopped reporting on 2013-06-13, so it has no July 2024 value; point to the successor station at the same airport, Toronto Intl A (climate ID 6158731), and give its figure.",
+        "station_last_date": "2013-06-13",
+        "successor_precip_jul_2024_mm": 215.4
+      },
+      "headline": [],
+      "tolerances": {
+        "successor_precip_jul_2024_mm": 0.5
+      },
+      "tolerance": "Pass only if the closure is stated (or the successor ID is named); successor value ±0.5 mm",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "ECCC climate-stations 6158733 (STN_ID 5097)",
+          "reference_period": "station record",
+          "value": {
+            "LAST_DATE": "2013-06-13 13:00:00",
+            "MLY_LAST_DATE": "2013-06-01 00:00:00"
+          },
+          "release_or_revision_date": null,
+          "url": "https://api.weather.gc.ca/collections/climate-stations/items?f=json&limit=100&CLIMATE_IDENTIFIER=6158733",
+          "retrieved_on": "2026-11-03"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "ECCC climate-monthly 6158733",
+          "reference_period": "2024",
+          "value": null,
+          "release_or_revision_date": null,
+          "url": "https://api.weather.gc.ca/collections/climate-monthly/items?f=json&limit=100&CLIMATE_IDENTIFIER=6158733&LOCAL_YEAR=2024",
+          "retrieved_on": "2026-11-03"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "ECCC climate-monthly 6158731 (TORONTO INTL A, STN_ID 51459)",
+          "reference_period": "2024-07",
+          "value": 215.4,
+          "release_or_revision_date": "2024-09-25 09:51:02",
+          "url": "https://api.weather.gc.ca/collections/climate-monthly/items?f=json&limit=100&CLIMATE_IDENTIFIER=6158731&LOCAL_YEAR=2024&LOCAL_MONTH=7",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "The old Pearson station ID closed in June 2013; any July 2024 number attributed to it is invented or taken silently from another station.",
+        "July 2024 includes the July 16 Toronto flood; Toronto City downtown is a different station."
+      ],
+      "flag_pattern": "clos(?:ed|ure)|discontinu|no longer report|stopped report|decommission|6158731|successor|replac",
+      "source_id": "A-04"
+    },
+    {
+      "id": "X-05",
+      "category": "International",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "According to the World Bank, what was Canada's GDP per capita in current US dollars in 2023?",
+      "expected": {
+        "gdp_per_capita_2023_usd": 54848
+      },
+      "headline": [
+        "gdp_per_capita_2023_usd"
+      ],
+      "tolerances": {
+        "gdp_per_capita_2023_usd": 274
+      },
+      "tolerance": "±0.5% (WDI vintage of the date recorded; WDI revises back years)",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "WDI NY.GDP.PCAP.CD (CAN)",
+          "reference_period": "2023",
+          "value": 54847.5370112652,
+          "release_or_revision_date": "2026-10-08",
+          "url": "https://api.worldbank.org/v2/country/CAN/indicator/NY.GDP.PCAP.CD?format=json&date=2018%3A2026&per_page=100",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "Current US$, not constant 2015 US$ or PPP.",
+        "Not GDP per capita in Canadian dollars from Statistics Canada."
+      ],
+      "source_id": "A-05"
+    },
+    {
+      "id": "X-06",
+      "category": "International",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What was Canada's total population in 2023 according to the World Bank's World Development Indicators?",
+      "expected": {
+        "population_2023": 40049088
+      },
+      "headline": [
+        "population_2023"
+      ],
+      "tolerances": {
+        "population_2023": 50000
+      },
+      "tolerance": "±50,000 people (accept '40.0 million' or '40.05 million')",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "WDI SP.POP.TOTL (CAN)",
+          "reference_period": "2023",
+          "value": 40049088.0,
+          "release_or_revision_date": "2026-10-08",
+          "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.POP.TOTL?format=json&date=2018%3A2026&per_page=100",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "WDI midyear population, not Statistics Canada's July 1 or quarterly estimate (which can differ slightly).",
+        "Not the 2021 Census count."
+      ],
+      "source_id": "A-06"
+    },
+    {
+      "id": "X-07",
+      "category": "International",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What were Canada's total CO2 emissions, excluding land use (LULUCF), in 2022 according to the World Bank?",
+      "expected": {
+        "co2_2022_mt": 575.8
+      },
+      "headline": [
+        "co2_2022_mt"
+      ],
+      "tolerances": {
+        "co2_2022_mt": 1.0
+      },
+      "tolerance": "±1 Mt CO2e",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "WDI EN.GHG.CO2.MT.CE.AR5 (CAN)",
+          "reference_period": "2022",
+          "value": 575.8352,
+          "release_or_revision_date": "2026-10-08",
+          "url": "https://api.worldbank.org/v2/country/CAN/indicator/EN.GHG.CO2.MT.CE.AR5?format=json&date=2018%3A2026&per_page=100",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "CO2 only, not total greenhouse gases (Canada's National Inventory total GHG is about 700 Mt).",
+        "Excluding LULUCF; per-capita figure (t/person) is a different indicator."
+      ],
+      "source_id": "A-07"
+    },
+    {
+      "id": "X-08",
+      "category": "Unanswerable",
+      "group": "beyond",
+      "eval_type": "refusal",
+      "question": "What was life expectancy at birth in Canada in 2025, according to the World Bank?",
+      "expected": {
+        "behaviour": "Decline: the WDI has no 2025 value for Canada's life expectancy at birth (SP.DYN.LE00.IN) as of 2026-10-08. The latest year is 2024; offering that figure, clearly labelled, is fine.",
+        "latest_year": "2024",
+        "latest_value_years": 82.1
+      },
+      "headline": [],
+      "tolerances": {
+        "latest_value_years": 0.1
+      },
+      "tolerance": "Pass only if no 2025 figure is given",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "WDI SP.DYN.LE00.IN (CAN)",
+          "reference_period": "2025",
+          "value": null,
+          "release_or_revision_date": "2026-10-08",
+          "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.DYN.LE00.IN?format=json&date=2018%3A2026&per_page=100",
+          "retrieved_on": "2026-11-03"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "WDI SP.DYN.LE00.IN (CAN)",
+          "reference_period": "2024",
+          "value": 82.1080487804878,
+          "release_or_revision_date": "2026-10-08",
+          "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.DYN.LE00.IN?format=json&date=2018%3A2026&per_page=100",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "A Statistics Canada or UN projection is not a WDI value.",
+        "The 2024 value must not be passed off as 2025."
+      ],
+      "source_id": "A-08"
+    },
+    {
+      "id": "X-09",
+      "category": "Finance",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What was the Bank of Canada's policy interest rate on July 15, 2024, and what was it at the end of July 2024?",
+      "expected": {
+        "rate_2024_07_15_pct": 4.75,
+        "rate_2024_07_31_pct": 4.5
+      },
+      "headline": [
+        "rate_2024_07_15_pct",
+        "rate_2024_07_31_pct"
+      ],
+      "tolerances": {
+        "rate_2024_07_15_pct": 0.01,
+        "rate_2024_07_31_pct": 0.01
+      },
+      "tolerance": "Exact to the quarter point",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "BIS WS_CBPOL D.CA (target for the overnight rate, daily)",
+          "reference_period": "2024-07-15",
+          "value": 4.75,
+          "release_or_revision_date": null,
+          "url": "https://stats.bis.org/api/v1/data/WS_CBPOL/D.CA?startPeriod=2024-07-15&endPeriod=2024-07-31&format=csv",
+          "retrieved_on": "2026-11-03"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "BIS WS_CBPOL D.CA (target for the overnight rate, daily)",
+          "reference_period": "2024-07-31",
+          "value": 4.5,
+          "release_or_revision_date": null,
+          "url": "https://stats.bis.org/api/v1/data/WS_CBPOL/D.CA?startPeriod=2024-07-15&endPeriod=2024-07-31&format=csv",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "The Bank cut by 25 bp on July 24, 2024, so the two dates differ.",
+        "The overnight target, not the bank rate (25 bp higher) or the prime rate."
+      ],
+      "source_id": "A-09"
+    },
+    {
+      "id": "X-10",
+      "category": "Finance",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "By how much did Canadian residential property prices change, year over year in nominal terms, in the fourth quarter of 2025 (BIS selected property price series)?",
+      "expected": {
+        "nominal_yoy_2025q4_pct": -3.4
+      },
+      "headline": [
+        "nominal_yoy_2025q4_pct"
+      ],
+      "tolerances": {
+        "nominal_yoy_2025q4_pct": 0.1
+      },
+      "tolerance": "±0.1 percentage point; sign must be negative",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "BIS WS_SPP Q.CA.N.771 (nominal, year-on-year % change)",
+          "reference_period": "2025-Q4",
+          "value": -3.3818,
+          "release_or_revision_date": null,
+          "url": "https://stats.bis.org/api/v1/data/WS_SPP/Q.CA.N.771+628?startPeriod=2024-Q4&endPeriod=2025-Q4&format=csv",
+          "retrieved_on": "2026-11-03"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "BIS WS_SPP Q.CA.N.628 (nominal index, 2010=100)",
+          "reference_period": "2024-Q4/2025-Q4",
+          "value": {
+            "2024-Q4": 209.0034,
+            "2025-Q4": 201.9353
+          },
+          "release_or_revision_date": null,
+          "url": "https://stats.bis.org/api/v1/data/WS_SPP/Q.CA.N.771+628?startPeriod=2024-Q4&endPeriod=2025-Q4&format=csv",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "Nominal, not the real (CPI-deflated) series, which fell more.",
+        "Year over year, not quarter over quarter."
+      ],
+      "source_id": "A-10"
+    },
+    {
+      "id": "X-11",
+      "category": "Finance",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What was the debt service ratio of Canadian households in the fourth quarter of 2024, as published by the BIS?",
+      "expected": {
+        "household_dsr_2024q4_pct": 14.2
+      },
+      "headline": [
+        "household_dsr_2024q4_pct"
+      ],
+      "tolerances": {
+        "household_dsr_2024q4_pct": 0.05
+      },
+      "tolerance": "±0.05 (published to one decimal, % of income)",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "BIS WS_DSR Q.CA.H (households and NPISHs)",
+          "reference_period": "2024-Q4",
+          "value": 14.2,
+          "release_or_revision_date": null,
+          "url": "https://stats.bis.org/api/v1/data/WS_DSR/Q.CA.H?startPeriod=2024-Q4&endPeriod=2024-Q4&format=csv",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "Households and NPISHs (H), not the private non-financial sector (P), which is about 25%.",
+        "BIS DSR is not Statistics Canada's household debt service ratio (different definition)."
+      ],
+      "source_id": "A-11"
+    },
+    {
+      "id": "X-12",
+      "category": "Finance",
+      "group": "beyond",
+      "eval_type": "comparison",
+      "question": "Which had the higher household debt service ratio in the fourth quarter of 2025, Canada or the United States, and what were the two ratios?",
+      "expected": {
+        "answer": "Canada",
+        "canada_dsr_2025q4_pct": 14.0,
+        "us_dsr_2025q4_pct": 8.0
+      },
+      "headline": [
+        "canada_dsr_2025q4_pct",
+        "us_dsr_2025q4_pct"
+      ],
+      "tolerances": {
+        "canada_dsr_2025q4_pct": 0.05,
+        "us_dsr_2025q4_pct": 0.05
+      },
+      "answer_pattern": "Canada",
+      "tolerance": "Correct country; ratios ±0.05",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "BIS WS_DSR Q.CA.H (households and NPISHs)",
+          "reference_period": "2025-Q4",
+          "value": 14.0,
+          "release_or_revision_date": null,
+          "url": "https://stats.bis.org/api/v1/data/WS_DSR/Q.CA+US.H?startPeriod=2025-Q4&endPeriod=2025-Q4&format=csv",
+          "retrieved_on": "2026-11-03"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "BIS WS_DSR Q.US.H (households and NPISHs)",
+          "reference_period": "2025-Q4",
+          "value": 8.0,
+          "release_or_revision_date": null,
+          "url": "https://stats.bis.org/api/v1/data/WS_DSR/Q.CA+US.H?startPeriod=2025-Q4&endPeriod=2025-Q4&format=csv",
+          "retrieved_on": "2026-11-03"
+        }
+      ],
+      "traps": [
+        "Use the BIS series for both countries (same methodology), not the Federal Reserve's own DSR.",
+        "Households, not the private non-financial sector."
+      ],
+      "source_id": "A-12"
+    },
+    {
+      "id": "X-13",
+      "category": "Health products",
+      "group": "beyond",
+      "eval_type": "comparison",
+      "question": "What drug has the Canadian DIN 02524031, which company holds it, and what are the strengths of its active ingredients?",
+      "expected": {
+        "answer": "PAXLOVID",
+        "company": "PFIZER CANADA ULC",
+        "nirmatrelvir_mg": 150.0,
+        "ritonavir_mg": 100.0
+      },
+      "headline": [
+        "nirmatrelvir_mg",
+        "ritonavir_mg"
+      ],
+      "tolerances": {
+        "nirmatrelvir_mg": 0,
+        "ritonavir_mg": 0
+      },
+      "answer_pattern": "PAXLOVID",
+      "tolerance": "Brand PAXLOVID and company PFIZER CANADA ULC; strengths exact (mg per tablet)",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02524031",
+          "reference_period": "2026-11-03",
+          "value": "PAXLOVID",
+          "release_or_revision_date": "2026-10-28",
+          "url": "https://health-products.canada.ca/api/drug/drugproduct/?din=02524031&lang=en&type=json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02524031",
+          "reference_period": "2026-11-03",
+          "value": "NIRMATRELVIR 150 MG; RITONAVIR 100 MG",
+          "release_or_revision_date": null,
+          "url": "https://health-products.canada.ca/api/drug/activeingredient/?id=101307&lang=en&type=json"
+        }
+      ],
+      "traps": [
+        "Two different tablets in one co-pack: 150 mg nirmatrelvir and 100 mg ritonavir are per tablet, not per dose (a dose is two nirmatrelvir tablets plus one ritonavir).",
+        "The company is Pfizer Canada ULC, not Pfizer Inc."
+      ],
+      "answer_contains": true,
+      "source_id": "B-01"
+    },
+    {
+      "id": "X-14",
+      "category": "Health products",
+      "group": "beyond",
+      "eval_type": "comparison",
+      "question": "What is the active ingredient in the product with DIN 02242705, at what strength, and under what brand name is it sold?",
+      "expected": {
+        "answer": "EXEMESTANE",
+        "brand_name": "AROMASIN",
+        "strength_mg": 25.0
+      },
+      "headline": [
+        "strength_mg"
+      ],
+      "tolerances": {
+        "strength_mg": 0
+      },
+      "answer_pattern": "EXEMESTANE",
+      "tolerance": "Ingredient EXEMESTANE (AROMASIN); strength exact in mg per tablet",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02242705",
+          "reference_period": "2026-11-03",
+          "value": "AROMASIN",
+          "release_or_revision_date": "2025-03-22",
+          "url": "https://health-products.canada.ca/api/drug/drugproduct/?din=02242705&lang=en&type=json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02242705",
+          "reference_period": "2026-11-03",
+          "value": "EXEMESTANE 25 MG",
+          "release_or_revision_date": null,
+          "url": "https://health-products.canada.ca/api/drug/activeingredient/?id=66502&lang=en&type=json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02242705",
+          "reference_period": "2026-11-03",
+          "value": "Marketed",
+          "release_or_revision_date": "2004-11-16",
+          "url": "https://health-products.canada.ca/api/drug/status/?id=66502&lang=en&type=json"
+        }
+      ],
+      "traps": [
+        "Generic exemestane products have other DINs; the question is about this DIN only."
+      ],
+      "answer_contains": true,
+      "source_id": "B-02"
+    },
+    {
+      "id": "X-15",
+      "category": "Health products",
+      "group": "beyond",
+      "eval_type": "comparison",
+      "question": "Is the Ozempic pen that delivers 0.25 mg or 0.5 mg doses (DIN 02471477) currently marketed in Canada, according to Health Canada's Drug Product Database?",
+      "expected": {
+        "answer": "Dormant",
+        "status_date": "2026-07-24",
+        "sibling_din_02471469_status": "Marketed"
+      },
+      "headline": [],
+      "tolerances": {},
+      "answer_pattern": "Dormant",
+      "tolerance": "Must say the status is Dormant (not marketed) since 2026-07-24",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02471477",
+          "reference_period": "2026-11-03",
+          "value": "Dormant",
+          "release_or_revision_date": "2026-07-24",
+          "url": "https://health-products.canada.ca/api/drug/status/?id=96059&lang=en&type=json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02471477",
+          "reference_period": "2026-11-03",
+          "value": "OZEMPIC - DISPENSES 0.25 MG OR 0.5 MG DOSES. MULTIDOSE PREFILLED PEN. 1.5 ML SOLUTION",
+          "release_or_revision_date": "2026-09-22",
+          "url": "https://health-products.canada.ca/api/drug/drugproduct/?din=02471477&lang=en&type=json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02471469",
+          "reference_period": "2026-11-03",
+          "value": "Marketed",
+          "release_or_revision_date": "2018-02-22",
+          "url": "https://health-products.canada.ca/api/drug/status/?id=96058&lang=en&type=json"
+        }
+      ],
+      "traps": [
+        "The 1 mg Ozempic pen (DIN 02471469) is still Marketed; answering 'Ozempic is marketed' conflates the two DINs.",
+        "Dormant is not Cancelled: the DIN remains valid but the product is not being sold."
+      ],
+      "answer_contains": true,
+      "source_id": "B-03"
+    },
+    {
+      "id": "X-16",
+      "category": "Health products",
+      "group": "beyond",
+      "eval_type": "refusal",
+      "question": "Which company currently sells Zantac 75 mg (DIN 02230287) in Canada?",
+      "expected": {
+        "behaviour": "Say that no company currently sells it: DIN 02230287 (ZANTAC, RANITIDINE (RANITIDINE HYDROCHLORIDE) 75 mg) has status 'Cancelled Post Market' since 2022-02-18. The last holder was SANOFI CONSUMER HEALTH INC.",
+        "status": "Cancelled Post Market",
+        "status_date": "2022-02-18",
+        "last_holder": "SANOFI CONSUMER HEALTH INC"
+      },
+      "headline": [],
+      "tolerances": {},
+      "tolerance": "Pass only if the answer says the product is cancelled / no longer marketed; naming the last holder alone as the current seller fails",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02230287",
+          "reference_period": "2026-11-03",
+          "value": "Cancelled Post Market",
+          "release_or_revision_date": "2022-02-18",
+          "url": "https://health-products.canada.ca/api/drug/status/?id=49044&lang=en&type=json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "DIN 02230287",
+          "reference_period": "2026-11-03",
+          "value": "SANOFI CONSUMER HEALTH INC",
+          "release_or_revision_date": "2025-03-22",
+          "url": "https://health-products.canada.ca/api/drug/drugproduct/?din=02230287&lang=en&type=json"
+        }
+      ],
+      "traps": [
+        "The DPD still returns the product record and a company name for cancelled DINs; the status endpoint must be checked.",
+        "Ranitidine products were withdrawn after the 2019 NDMA impurity findings; every Zantac DIN in the DPD is cancelled."
+      ],
+      "absent_pattern": "cancel+ed|no longer (?:sold|marketed|available|on the market)|discontinued|not (?:currently )?marketed|withdrawn|nobody|no one|no company",
+      "source_id": "B-04"
+    },
+    {
+      "id": "X-17",
+      "category": "Immigration",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "In Express Entry round #449, how many invitations to apply were issued and what was the minimum CRS score?",
+      "expected": {
+        "invitations": 2500,
+        "crs_cutoff": 519
+      },
+      "headline": [
+        "invitations",
+        "crs_cutoff"
+      ],
+      "tolerances": {
+        "invitations": 0,
+        "crs_cutoff": 0
+      },
+      "tolerance": "Exact",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "Round 449",
+          "reference_period": "2026-10-15",
+          "value": {
+            "invitations": 2500,
+            "crs_cutoff": 519
+          },
+          "release_or_revision_date": null,
+          "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+        }
+      ],
+      "traps": [
+        "Round 449 was a Canadian Experience Class draw on 2026-10-15; the PNP round two days earlier (#448) had a much higher cut-off."
+      ],
+      "source_id": "B-05"
+    },
+    {
+      "id": "X-18",
+      "category": "Immigration",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What was the CRS cut-off in the last Express Entry draw for healthcare and social services occupations held before the end of September 2026, and how many people were invited?",
+      "expected": {
+        "round_number": 441,
+        "crs_cutoff": 475,
+        "invitations": 3500
+      },
+      "headline": [
+        "crs_cutoff",
+        "invitations"
+      ],
+      "tolerances": {
+        "round_number": 0,
+        "crs_cutoff": 0,
+        "invitations": 0
+      },
+      "tolerance": "Exact; round #441 on 2026-09-04",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "Round 441",
+          "reference_period": "2026-09-04",
+          "value": {
+            "invitations": 3500,
+            "crs_cutoff": 475
+          },
+          "release_or_revision_date": null,
+          "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+        }
+      ],
+      "traps": [
+        "The physicians-with-Canadian-work-experience draw (#440, 2026-09-03) is a separate category, not the healthcare and social services draw.",
+        "An earlier healthcare draw (#422, 2026-06-25) had the same cut-off but 4,000 invitations."
+      ],
+      "source_id": "B-06"
+    },
+    {
+      "id": "X-19",
+      "category": "Immigration",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "How many Canadian Experience Class draws did IRCC hold in September 2026, and how many invitations did they issue in total?",
+      "expected": {
+        "cec_rounds": 3,
+        "total_invitations": 6000,
+        "lowest_crs_cutoff": 518
+      },
+      "headline": [
+        "cec_rounds",
+        "total_invitations"
+      ],
+      "tolerances": {
+        "cec_rounds": 0,
+        "total_invitations": 0,
+        "lowest_crs_cutoff": 0
+      },
+      "tolerance": "Exact",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "Round 439",
+          "reference_period": "2026-09-01",
+          "value": {
+            "invitations": 2000,
+            "crs_cutoff": 521
+          },
+          "release_or_revision_date": null,
+          "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "Round 443",
+          "reference_period": "2026-09-15",
+          "value": {
+            "invitations": 2000,
+            "crs_cutoff": 519
+          },
+          "release_or_revision_date": null,
+          "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "Round 446",
+          "reference_period": "2026-09-29",
+          "value": {
+            "invitations": 2000,
+            "crs_cutoff": 518
+          },
+          "release_or_revision_date": null,
+          "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+        }
+      ],
+      "traps": [
+        "Count only the Canadian Experience Class draws, not the PNP, healthcare, physicians or senior-manager draws held the same month."
+      ],
+      "source_id": "B-07"
+    },
+    {
+      "id": "X-20",
+      "category": "Immigration",
+      "group": "beyond",
+      "eval_type": "refusal",
+      "question": "What was the CRS cut-off in Express Entry round #460?",
+      "expected": {
+        "behaviour": "Decline: round #460 has not been held. The latest round is #453 on 2026-10-28 (Transport Occupations, 2026-Version 2, 150 invitations, CRS 477).",
+        "latest_round": 453,
+        "latest_round_date": "2026-10-28"
+      },
+      "headline": [],
+      "tolerances": {
+        "latest_round": 0
+      },
+      "tolerance": "Pass only if no cut-off is given for round #460",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "Round 453",
+          "reference_period": "2026-10-28",
+          "value": {
+            "invitations": 150,
+            "crs_cutoff": 477
+          },
+          "release_or_revision_date": null,
+          "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+        }
+      ],
+      "traps": [
+        "Do not give a projection or the latest round's cut-off as round 460's."
+      ],
+      "absent_pattern": "(?:has(?:n't| not)|have(?:n't| not)|not) (?:yet )?(?:been )?held|(?:has(?:n't| not)|not) (?:yet )?taken place|no (?:such )?round|(?:does(?:n't| not)|did(?:n't| not)) (?:yet )?exist|not (?:yet )?happened",
+      "source_id": "B-08"
+    },
+    {
+      "id": "X-21",
+      "category": "Census",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What was the median age in the Halifax census metropolitan area in the 2021 Census?",
+      "expected": {
+        "median_age_years": 40.4,
+        "average_age_years": 41.4
+      },
+      "headline": [
+        "median_age_years"
+      ],
+      "tolerances": {
+        "median_age_years": 0.1,
+        "average_age_years": 0.1
+      },
+      "tolerance": "±0.1 year; Halifax CMA, total gender",
+      "citations": [
+        {
+          "table_id": "98-10-0020-01",
+          "vector_id": "2021S0503205",
+          "series_title": "Halifax (CMA), N.S.;2021;Median age;Total - Gender",
+          "coordinate": "12.1.128.1.0.0.0.0.0.0",
+          "reference_period": "2021",
+          "value": 40.4,
+          "release_or_revision_date": "2022-04-27T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods"
+        },
+        {
+          "table_id": "98-10-0020-01",
+          "vector_id": "2021S0503205",
+          "series_title": "Halifax (CMA), N.S.;2021;Average age;Total - Gender",
+          "coordinate": "12.1.127.1.0.0.0.0.0.0",
+          "reference_period": "2021",
+          "value": 41.4,
+          "release_or_revision_date": "2022-04-27T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods"
+        }
+      ],
+      "traps": [
+        "Median age, not average age (the average is higher).",
+        "Halifax CMA and the Halifax Regional Municipality (CSD) are different geographies with different values."
+      ],
+      "source_id": "B-09"
+    },
+    {
+      "id": "X-22",
+      "category": "Census",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "According to the 2021 Census, what was the median total income of households in the Calgary metropolitan area?",
+      "expected": {
+        "median_total_household_income_2020_dollars": 100000.0,
+        "median_after_tax_household_income_2020_dollars": 87000.0
+      },
+      "headline": [
+        "median_total_household_income_2020_dollars"
+      ],
+      "tolerances": {
+        "median_total_household_income_2020_dollars": 0,
+        "median_after_tax_household_income_2020_dollars": 0
+      },
+      "tolerance": "Exact (rounded census figure); income year 2020; Calgary CMA",
+      "citations": [
+        {
+          "table_id": "98-10-0061-01",
+          "vector_id": "2021S0503825",
+          "series_title": "Calgary (CMA), Alta.;Total household type;Total dwelling type;Median total income of households ($) (2020)",
+          "coordinate": "123.1.1.2.0.0.0.0.0.0",
+          "reference_period": "2021",
+          "value": 100000.0,
+          "release_or_revision_date": "2023-03-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods"
+        },
+        {
+          "table_id": "98-10-0061-01",
+          "vector_id": "2021S0503825",
+          "series_title": "Calgary (CMA), Alta.;Total household type;Total dwelling type;Median after-tax income of households ($) (2020)",
+          "coordinate": "123.1.1.3.0.0.0.0.0.0",
+          "reference_period": "2021",
+          "value": 87000.0,
+          "release_or_revision_date": "2023-03-29T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods"
+        }
+      ],
+      "traps": [
+        "The 2021 Census reports income for calendar year 2020.",
+        "Total income, not after-tax income; household, not individual or economic-family income.",
+        "Calgary CMA, not the City of Calgary (CSD)."
+      ],
+      "source_id": "B-10"
+    },
+    {
+      "id": "X-23",
+      "category": "Census",
+      "group": "beyond",
+      "eval_type": "numeric",
+      "question": "What share of households in the City of Toronto rented their home in 2021, according to the census?",
+      "expected": {
+        "renter_share_pct": 48.1,
+        "renter_households": 557970.0,
+        "total_households": 1160890.0
+      },
+      "headline": [
+        "renter_share_pct"
+      ],
+      "tolerances": {
+        "renter_share_pct": 0.2,
+        "renter_households": 100,
+        "total_households": 100
+      },
+      "tolerance": "Share ±0.2 pp; counts ±100 (random rounding); City of Toronto CSD 3520005",
+      "citations": [
+        {
+          "table_id": "98-10-0232-01",
+          "vector_id": "2021A00053520005",
+          "series_title": "Toronto (C) CSD;Renter;Number of private households",
+          "coordinate": "2386.1.1.1.1.3.0.0.0.0",
+          "reference_period": "2021",
+          "value": 557970.0,
+          "release_or_revision_date": "2022-09-21T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods"
+        },
+        {
+          "table_id": "98-10-0232-01",
+          "vector_id": "2021A00053520005",
+          "series_title": "Toronto (C) CSD;Total - Tenure;Number of private households",
+          "coordinate": "2386.1.1.1.1.1.0.0.0.0",
+          "reference_period": "2021",
+          "value": 1160890.0,
+          "release_or_revision_date": "2022-09-21T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods"
+        }
+      ],
+      "traps": [
+        "City of Toronto (CSD), not the Toronto CMA, where the renter share is much lower.",
+        "Share of households, not of people."
+      ],
+      "source_id": "B-11"
+    },
+    {
+      "id": "X-24",
+      "category": "Census",
+      "group": "beyond",
+      "eval_type": "flag",
+      "question": "What is the population of the Edmonton metropolitan area in 2026, according to the census?",
+      "expected": {
+        "behaviour": "Flag that 2026 Census population counts have not been published (as of 2026-11-03 every 98-10 census table ends at 2021); give the 2021 Census count for the Edmonton CMA and label it as 2021, not 2026.",
+        "population_2021": 1418118.0,
+        "population_2016": 1321441.0
+      },
+      "headline": [],
+      "flag_years": [
+        "2021",
+        "2026"
+      ],
+      "tolerances": {
+        "population_2021": 0,
+        "population_2016": 0
+      },
+      "tolerance": "Pass only if no figure is presented as a 2026 Census count",
+      "citations": [
+        {
+          "table_id": "98-10-0005-01",
+          "vector_id": "2021S0503835",
+          "series_title": "Edmonton (CMA);Population, 2021",
+          "coordinate": "126.1.0.0.0.0.0.0.0.0",
+          "reference_period": "2021",
+          "value": 1418118.0,
+          "release_or_revision_date": "2022-02-09T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "getAllCubesListLite",
+          "reference_period": "2026-11-03",
+          "value": "525 98-series cubes, none ending after 2021",
+          "release_or_revision_date": null,
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getAllCubesListLite"
+        }
+      ],
+      "traps": [
+        "Census Day 2026 has passed but its results are not yet released; a 2021 count or a demographic estimate must not be passed off as the 2026 Census.",
+        "Edmonton CMA, not the City of Edmonton."
+      ],
+      "flag_pattern": "(?:no|not yet|hasn't|has not|haven't|have not|isn't|is not|aren't|are not)[^.]{0,50}(?:2026 census|released|published|available|out yet)|2026 census[^.]{0,80}(?:not|n't|until|due|expected)",
+      "source_id": "B-12"
+    }
+  ]
+}

@@ -139,3 +139,32 @@ def test_citation_checks_use_the_cache(tmp_path):
     assert check.vectors_off_table == [41690973]  # not in the one table cited
     assert check.valet_supporting == ["FXUSDCAD"]
     assert check.traceable and check.release_mentioned
+
+
+def test_v2_key_is_half_core_half_beyond():
+    v2 = load_key("v2")
+    assert len(v2) == 48 and len({q["id"] for q in v2}) == 48
+    assert sum(q["group"] == "core" for q in v2) == 24
+    assert sum(q["group"] == "beyond" for q in v2) == 24
+    for q in v2:
+        assert "?" in q["question"] or q["eval_type"] == "flag", q["id"]
+        assert q["citations"] and q["traps"], q["id"]
+        numeric = {
+            k
+            for k, v in q["expected"].items()
+            if isinstance(v, int | float) and not isinstance(v, bool)
+        }
+        if q["group"] == "beyond":
+            assert numeric <= set(q["tolerances"]), q["id"]
+
+
+def test_name_answers_and_own_refusal_wording():
+    v2 = {q["source_id"]: q for q in load_key("v2") if q.get("source_id")}
+    brand = v2["B-01"]
+    right = f"DIN 02524031 is {brand['answer_pattern']}, 150 mg and 100 mg."
+    assert grade_answer(brand, right).outcome == "correct"
+    assert grade_answer(brand, "DIN 02524031 is Lagevrio, 150 mg and 100 mg.").outcome != "correct"
+    cancelled = v2["B-04"]
+    said = "No one: Zantac 75 mg was cancelled after it left the market in 2022."
+    assert grade_answer(cancelled, said).outcome == "correct"
+    assert grade_answer(v2["B-08"], "Round #460 has not been held yet.").outcome == "correct"

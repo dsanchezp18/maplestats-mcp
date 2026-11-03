@@ -99,6 +99,39 @@ coverage of other sources; a larger second version is planned for that.
 - Seventeen automatic grades were wrong and are re-graded by hand; the reasons are in
   `overrides.json`.
 
+## Version 2 (November 2026)
+
+v1 is fifteen questions on StatCan tables and Bank of Canada series only, run once per
+server: a one-answer gap is noise, and it cannot show coverage of other sources. v2 is
+built to answer both:
+
+- **48 questions in two halves.** *Core* (24): Statistics Canada's regular data tables
+  and Bank of Canada Valet series, where most Canadian data servers compete. *Beyond*
+  (24): the 2021 Census of Population, Environment and Climate Change Canada (climate
+  stations, river flow), the World Bank, BIS, Health Canada's Drug Product Database and
+  IRCC's Express Entry rounds. Results are reported for each half, so breadth shows
+  without being the whole score.
+- **Every question asked three times** (`run --repeat 3`), so the report gives the mean,
+  the worst and best run, and how consistently a server answers the same question.
+- **Citation meta-metrics** for both versions: every cited StatCan vector or table and
+  Bank of Canada series is looked up (`grade --verify`, cached in `citation_checks.json`)
+  for invented IDs, IDs cited beside the wrong table, and IDs that actually hold a figure
+  the answer states (precision, traceability).
+- Traps in both halves: unreleased periods (October 2026 CPI, Q3 2026 GDP, a 2025 World
+  Bank value, an Express Entry round not yet held), a cancelled drug, a closed weather
+  station, an annual rate presented as a monthly count, and a 2026 figure asked of the
+  2021 Census.
+
+The key is `maple_test_v2.json`, built by `build_key_v2.py` (core) and `key_v2_beyond.py`
+(beyond, from `sources_v2_a.py` and `sources_v2_b.py`); every value is read from the
+publisher's own API with httpx, never through MapleStats.
+
+```bash
+uv run python -m tests.maple_test.build_key_v2 --check
+uv run python -m tests.maple_test run --version v2 --repeat 3 --arm maplestats
+uv run python -m tests.maple_test grade --version v2 --verify
+```
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP
