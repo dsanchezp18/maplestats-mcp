@@ -68,6 +68,28 @@ class ProvinceList(BaseModel):
     provenance: Provenance
 
 
+class MetroAreaOption(BaseModel):
+    """One HMIP metropolitan major area: a CMA, a census agglomeration or a smaller centre."""
+
+    id: str = Field(
+        description='Pass as geography_id with geography_type="MetropolitanMajorArea". '
+        'Keep it as text: some ids start with zero ("0120").'
+    )
+    name: str
+    province_id: str
+    province_name: str
+
+
+class MetroAreaList(BaseModel):
+    geography_type: str = Field(
+        default="MetropolitanMajorArea",
+        description="The geography_type to pass with these ids.",
+    )
+    areas: list[MetroAreaOption]
+    total_count: int
+    provenance: Provenance
+
+
 class TableCell(BaseModel):
     """One value in a table row.
 

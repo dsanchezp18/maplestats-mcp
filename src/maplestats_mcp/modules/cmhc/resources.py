@@ -67,7 +67,10 @@ cmhc_get_table_data.
   (geography_type="Country", geography_id="1").
 - Call cmhc_list_provinces for province-level ids, then pass
   geography_type="Province" with that id.
-- CMA/city-level geography is not yet supported by this module.
+- For a city or CMA, call cmhc_list_metropolitan_areas (name="Toronto")
+  and pass geography_type="MetropolitanMajorArea" ("CMA" also works)
+  with that id: Toronto is "2270". The name itself is accepted as
+  geography_id when exactly one area carries it.
 """
 
 _GOTCHAS_DOC = """\
@@ -118,11 +121,12 @@ _GOTCHAS_DOC = """\
   "Marché locatif primaire" in French, both resolving to the same
   underlying table). A value returned with `lang="en"` will not resolve
   anything when passed to a tool called with `lang="fr"`.
-- **Only Canada and province-level geography are supported.** CMA/city-
-  level geography ids exist in HMIP but no live-confirmed discovery
-  endpoint was found for them (a few plausible endpoint names were
-  tried and none worked) - geography_type/geography_id must currently
-  be "Country"/"1" or a province id from cmhc_list_provinces.
+- **HMIP's name for a CMA is "MetropolitanMajorArea".** It answers
+  geography_type="CMA" with an error, so this module translates "CMA",
+  "metro", "centre" and similar names. Its metropolitan areas also
+  include census agglomerations and smaller centres (225 in all,
+  2026-11-03); cmhc_list_metropolitan_areas lists them. Some ids start
+  with zero ("0120" is Barrie): pass them as text.
 - **`cmhc_get_table_options` never passes column_field/row_field back
   to HMIP** - doing so narrows HMIP's own response to a partial slice
   around whatever was passed in, rather than the full set of valid
@@ -227,8 +231,11 @@ faire le lien.
 - Appelez cmhc_list_provinces pour obtenir les identifiants des
   provinces, puis passez geography_type="Province" avec cet
   identifiant.
-- La géographie des RMR et des municipalités n'est pas encore prise en
-  charge par ce module.
+- Pour une ville ou une RMR, appelez cmhc_list_metropolitan_areas
+  (name="Montréal") et passez geography_type="MetropolitanMajorArea"
+  ("RMR" fonctionne aussi) avec cet identifiant : Montréal est "1060".
+  Le nom lui-même est accepté comme geography_id quand une seule zone
+  le porte.
 """
 
 _GOTCHAS_DOC_FR = """\
@@ -290,12 +297,13 @@ _GOTCHAS_DOC_FR = """\
   « Marché locatif primaire » en français, les deux menant au même
   tableau). Une valeur retournée avec `lang="en"` ne donne rien quand on
   la passe à un outil appelé avec `lang="fr"`.
-- **Seuls le Canada et les provinces sont pris en charge.** Des
-  identifiants de RMR et de municipalités existent dans le HMIP, mais
-  aucun point d'accès de découverte confirmé en direct n'a été trouvé
-  (quelques noms plausibles ont été essayés sans succès) :
-  geography_type et geography_id doivent donc être "Country"/"1" ou un
-  identifiant de province tiré de cmhc_list_provinces.
+- **Le PIMH nomme une RMR « MetropolitanMajorArea ».** Il répond par
+  une erreur à geography_type="CMA" ; ce module traduit donc « CMA »,
+  « RMR », « ville », « centre » et des noms semblables. Ses zones
+  métropolitaines comprennent aussi des agglomérations de recensement
+  et de plus petits centres (225 en tout, 2026-11-03) ;
+  cmhc_list_metropolitan_areas les énumère. Certains identifiants
+  commencent par zéro (« 0120 » est Barrie) : passez-les en texte.
 - **cmhc_get_table_options ne renvoie jamais column_field ni row_field
   au HMIP.** Le faire réduit la réponse du HMIP à une tranche partielle
   autour de ce qui a été passé, au lieu de l'ensemble des options

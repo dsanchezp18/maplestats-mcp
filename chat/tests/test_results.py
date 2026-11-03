@@ -177,3 +177,61 @@ def test_bank_of_canada_series_are_charted():
     (series,) = results.collect([("boc_get_observations", valet)])["data"]
     assert series["unit"] == "Percent" and series["vector_id"] == "V39079"
     assert [p["value"] for p in series["points"]] == [2.25, 2.5]
+
+
+# cmhc_get_table_data for Toronto's average rents, trimmed (shape as served 2026-11-03).
+CMHC = {
+    "table_id": "2.2.11",
+    "table_name": "Historical Average Rents by Bedroom Type",
+    "geography_name": "Toronto",
+    "category_level_1": "Primary Rental Market",
+    "category_level_2": "Average Rent ($)",
+    "column_field": "2",
+    "row_field": "TIMESERIES",
+    "columns": ["2 Bedroom", "Total"],
+    "rows": [
+        {
+            "period": "2025 October",
+            "values": {
+                "2 Bedroom": {"value": 2045.0, "flag": "a"},
+                "Total": {"value": 1849.0, "flag": "a"},
+            },
+        },
+        {
+            "period": "2019 October",
+            "values": {
+                "2 Bedroom": {"value": 1563.0, "flag": "a"},
+                "Total": {"value": None, "flag": "**"},
+            },
+        },
+    ],
+    "notes": ["Source: CMHC Rental Market Survey"],
+    "provenance": {
+        "source": "cmhc",
+        "url": "https://www03.cmhc-schl.gc.ca/hmip-pimh/en/TableMapChart/ExportTable",
+    },
+}
+
+
+def test_cmhc_time_series_become_one_series_per_column():
+    out = results.collect([("cmhc_get_table_data", CMHC)])
+    two_bed, total = out["data"]
+    assert two_bed["title"] == "Toronto · Average Rent ($) · 2 Bedroom"
+    assert [(p["period"], p["value"]) for p in two_bed["points"]] == [
+        ("2019-10-01", 1563.0),
+        ("2025-10-01", 2045.0),
+    ]
+    assert total["points"][0] == {"period": "2019-10-01", "value": None, "status": "**"}
+    assert out["sources"][0]["source"] == "cmhc"
+
+
+def test_cmhc_cross_tabs_and_french_months():
+    cross = {
+        **CMHC,
+        "row_field": "21",
+        "rows": [{**CMHC["rows"][0], "period": "Ontario"}],
+    }
+    assert results.collect([("cmhc_get_table_data", cross)])["data"] == []
+    french = {**CMHC, "rows": [{**CMHC["rows"][0], "period": "2025 octobre"}]}
+    points = results.collect([("cmhc_get_table_data", french)])["data"][0]["points"]
+    assert points[0]["period"] == "2025-10-01"

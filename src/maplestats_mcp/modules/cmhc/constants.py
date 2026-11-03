@@ -25,6 +25,39 @@ RATE_LIMIT_CAPACITY = 5.0
 # inventories (confirmed live) -- cached like boc's series/group lists.
 CACHE_TTL_CATEGORIES_SECONDS = 24 * 60 * 60  # 24h
 CACHE_TTL_PROVINCES_SECONDS = 24 * 60 * 60  # 24h
+CACHE_TTL_METRO_AREAS_SECONDS = 24 * 60 * 60  # 24h
+
+# HMIP's own geography type names, keyed by the spellings callers use. Confirmed live
+# 2026-11-03 on TableMatchingCriteria with Toronto (id 2270): "MetropolitanMajorArea" and
+# its code "3" resolve; "CMA", "Cma", "Centre" and "Metro" answer HTTP 500, because HMIP
+# reads an unknown name as enum value 0 ("Enum value '0' is invalid for type ...
+# GeographyType"). Keys are compared lower-cased with spaces, hyphens and underscores
+# removed. "ca" (census agglomeration) is included because HMIP lists CAs among its
+# metropolitan major areas (Barrie, Brantford, Cobourg).
+GEOGRAPHY_TYPES = {
+    "country": "Country",
+    "canada": "Country",
+    "pays": "Country",
+    "1": "Country",
+    "province": "Province",
+    "territory": "Province",
+    "territoire": "Province",
+    "2": "Province",
+    "metropolitanmajorarea": "MetropolitanMajorArea",
+    "cma": "MetropolitanMajorArea",
+    "ca": "MetropolitanMajorArea",
+    "censusmetropolitanarea": "MetropolitanMajorArea",
+    "censusagglomeration": "MetropolitanMajorArea",
+    "metropolitanarea": "MetropolitanMajorArea",
+    "metropolitan": "MetropolitanMajorArea",
+    "metro": "MetropolitanMajorArea",
+    "centre": "MetropolitanMajorArea",
+    "center": "MetropolitanMajorArea",
+    "city": "MetropolitanMajorArea",
+    "rmr": "MetropolitanMajorArea",
+    "ville": "MetropolitanMajorArea",
+    "3": "MetropolitanMajorArea",
+}
 
 # A category's valid ColumnField/RowField combinations change rarely.
 CACHE_TTL_TABLE_OPTIONS_SECONDS = 24 * 60 * 60  # 24h
