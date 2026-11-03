@@ -562,6 +562,14 @@ SOURCES: dict[str, Source] = {
     ),
     "gazette": Source("Canada Gazette", "Gazette du Canada", "national", domain="government"),
     "gc_infobase": Source("GC InfoBase", "InfoBase du GC", "national", domain="money"),
+    "proactive_disclosure": Source(
+        "Proactive disclosure: contracts, grants and contributions, travel and hospitality",
+        "Divulgation proactive : contrats, subventions et contributions, voyages et accueil",
+        "national",
+        "Proactive disclosure",
+        "Divulgation proactive",
+        domain="money",
+    ),
     "ircc": Source(
         "Immigration, Refugees and Citizenship Canada",
         "Immigration, Réfugiés et Citoyenneté Canada",

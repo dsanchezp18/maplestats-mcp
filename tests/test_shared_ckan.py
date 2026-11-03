@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -30,6 +32,22 @@ async def test_action_unwraps_successful_envelope(httpx_mock):
     )
     result = await action(_CONFIG, "site_read")
     assert result is True
+
+
+async def test_action_with_a_json_body_posts_it(httpx_mock):
+    # A datastore_search filter listing every day of a range does not fit in a URL.
+    httpx_mock.add_response(
+        url="https://example.invalid/api/3/action/datastore_search",
+        method="POST",
+        json={"help": "h", "success": True, "result": {"records": []}},
+    )
+    days = [f"2025-01-{n:02d}" for n in range(1, 32)]
+    body = {"resource_id": "r", "filters": {"start_date": days}}
+    result = await action(_CONFIG, "datastore_search", json_body=body)
+    assert result == {"records": []}
+    request = httpx_mock.get_request()
+    assert request.method == "POST"
+    assert json.loads(request.content) == body
 
 
 async def test_action_uses_the_portal_timeout(httpx_mock):

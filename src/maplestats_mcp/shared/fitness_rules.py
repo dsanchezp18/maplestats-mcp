@@ -841,4 +841,57 @@ RULES: tuple[FitnessRule, ...] = (
         ),
         tool_prefixes=("ircc_processing_get_time",),
     ),
+    FitnessRule(
+        key="proactive-disclosure-amendments",
+        title_en="Proactive disclosure: amendment rows, values and reporting lags",
+        title_fr="Divulgation proactive : lignes de modification, valeurs et délais de publication",
+        note_en=(
+            "Each amendment to a contract or a grant or contribution is published as its own "
+            "row, and its value is the agreement's amended total, not the change: summing rows "
+            "counts an amended agreement several times (disclosure_summarize keeps each "
+            "agreement's latest row unless value_mode='all_rows'). Contract values are in "
+            "Canadian dollars with taxes and cover every year of a multi-year contract, so a "
+            "fiscal year's total is not that year's spending. Contracts are published by "
+            "quarter within a month of its end, and a late contract is added to its own past "
+            "quarter, so recent quarters grow after release; travel is published monthly and "
+            "hospitality quarterly. Rows are as each department entered them."
+        ),
+        note_fr=(
+            "Chaque modification d'un contrat ou d'une subvention ou contribution est publiée "
+            "comme une ligne distincte, et sa valeur est le total modifié de l'entente, non la "
+            "variation : additionner les lignes compte plusieurs fois une entente modifiée "
+            "(disclosure_summarize garde la ligne la plus récente de chaque entente, sauf avec "
+            "value_mode='all_rows'). La valeur des contrats est en dollars canadiens, taxes "
+            "comprises, et couvre toutes les années d'un contrat pluriannuel : le total d'un "
+            "exercice n'est donc pas la dépense de cet exercice. Les contrats sont publiés par "
+            "trimestre dans le mois qui suit sa fin, et un contrat déclaré en retard s'ajoute à "
+            "son trimestre passé : les trimestres récents augmentent après leur publication. "
+            "Les voyages sont publiés chaque mois et l'accueil chaque trimestre. Les lignes "
+            "sont telles que chaque ministère les a saisies."
+        ),
+        sources=(
+            "https://open.canada.ca/data/recombinant-published-schema/contracts.json",
+            "https://open.canada.ca/data/recombinant-published-schema/grants.json",
+            "https://open.canada.ca/data/recombinant-published-schema/travelq.json",
+            "https://open.canada.ca/data/recombinant-published-schema/hospitalityq.json",
+            "https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32763",
+        ),
+        checked=(
+            "Recombinant schemas linked as each package's Data Schema, read 2026-11-03. "
+            "contracts.json front matter: 'publicly disclose quarterly, within one month after "
+            "the close of each quarter, contracts entered into over $10K, and positive and "
+            "negative amendments over $10K'; 'A contract or amendment not reported in the "
+            "reporting period in which it was awarded should be included for that reporting "
+            "period'. contract_value: 'all contracts and all subsequent amendments', 'include "
+            "all applicable taxes', 'For a multi-year contract ... the total amount of the "
+            "contract for all years', 'For a contract amendment ... the amended contract "
+            "value'. grants.json amendment_number: 'Use 0 for original records. The first "
+            "amendment ... 1, then 2'; agreement_value: 'the total grant or contribution "
+            "value, and not the change in agreement value'. travelq.json: 'monthly travel "
+            "expense reports'; hospitalityq.json: 'quarterly hospitality expenses'. Live "
+            "datastore_search: amendment rows share procurement_id (contracts) or ref_number "
+            "(grants) with the original."
+        ),
+        tool_prefixes=("disclosure_",),
+    ),
 )

@@ -1048,6 +1048,12 @@ TOPICS: tuple[Topic, ...] = (
             "appel d'offres",
             "subvention",
             "contrat",
+            "proactive disclosure",
+            "divulgation proactive",
+            "travel expense*",
+            "hospitality expense*",
+            "frais de deplacement",
+            "frais d'accueil",
             "fiscal reference tables",
             "fiscal monitor",
             "federal deficit",
@@ -1079,7 +1085,41 @@ TOPICS: tuple[Topic, ...] = (
             ),
             PlanStep("gc_infobase_list_files", "Estimates, Public Accounts, program spending"),
             PlanStep("gc_infobase_query", "filter by organization and fiscal year"),
-            PlanStep("ckan_search_datasets", "grants and contributions: portal='federal'"),
+            PlanStep(
+                "disclosure_search_contracts",
+                "federal contracts over $10,000 by vendor, department, fiscal year or value",
+                (
+                    "contract",
+                    "procurement",
+                    "tender",
+                    "vendor",
+                    "contrat",
+                    "marche public",
+                    "fournisseur",
+                ),
+            ),
+            PlanStep(
+                "disclosure_search_grants",
+                "federal grants and contributions by recipient, program, province or riding",
+                ("grant", "transfer payment", "contribution", "subvention"),
+            ),
+            PlanStep(
+                "disclosure_search_travel",
+                "travel expenses of ministers and senior officials (name, title, department)",
+                (
+                    "travel expense*",
+                    "hospitality",
+                    "frais de deplacement",
+                    "frais d'accueil",
+                    "depenses de voyage",
+                ),
+            ),
+            PlanStep(
+                "disclosure_summarize",
+                "totals by department, vendor, recipient or fiscal year: dataset='contracts', "
+                "'grants', 'travel' or 'hospitality'",
+                ("top vendors", "total contract", "principaux fournisseurs"),
+            ),
             PlanStep(
                 "on_fir_search_lines",
                 "Ontario municipal finances (FIR): find the line code, query=<label words> "

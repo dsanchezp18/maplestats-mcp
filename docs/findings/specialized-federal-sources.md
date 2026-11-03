@@ -862,7 +862,46 @@ statistics, Canada …
 
 ## Proactive Disclosure (government-wide)
 
-**Status:** Shipped (via `ckan_*` + `ckan_datastore_search`).
+**Status:** Shipped (`disclosure_*` for contracts, grants and contributions,
+travel and hospitality; the other tables via `ckan_datastore_search`).
+
+**Dedicated module, 2026-11-03.** `modules/proactive_disclosure/` (6 tools,
+prefix `disclosure_`) reads the four government-wide DataStore tables that
+every department reports into: contracts over $10,000 (package
+`d8f85d91-7dec-4fd1-8055-483b77225d8b`, resource
+`fac950c0-00d5-4ec1-a4d3-9cbebf98a305`, 1,335,858 rows), grants and
+contributions (`432527ab-7aac-45b5-81d6-7597107a7013` /
+`1d15a62f-5656-49ad-8c88-f40ce689d831`, 1,382,940), travel expenses
+(`009f9a49-c2d9-4d29-a6d4-1a228da335ce` /
+`8282db2a-878f-475c-af10-ad56aa8fa72c`, 157,101) and hospitality expenses
+(`b9f51ef4-4605-4ef2-8231-62a2edda1b54` /
+`7b301f1a-2a7a-48bd-9ea9-e0ac4a5313ed`, 68,679), all OGL - Canada. The ids
+were first noted from the MIT-licensed OpenCanadaPublicDataMCP project and
+verified live with `package_show` and `datastore_search`; no code was taken
+from it. Confirmed live that day:
+
+- `datastore_search_sql` is not enabled ("Action name not known"), and
+  `datastore_search` now returns at most 1,000 rows per call (it was 32,000
+  in September). Totals are therefore summed by the module from a scan of
+  the matching rows' needed columns only, capped at 100,000 rows (one
+  fiscal year of contracts for all departments, 87,236 rows, took 40-70 s
+  eight pages at a time; twelve at a time drew enough timeouts to open the
+  shared circuit breaker).
+- Every column is `text`, amounts included, so value ranges and value sorts
+  are applied after a narrow scan; ISO dates sort correctly as text.
+- `q` as a `{column: words}` object is a per-column full-text match that
+  works on these 1.3-million-row tables (a plain-string `q` does not); a
+  POST with a JSON body takes a filter list of thousands of values, so a
+  date range is sent as the exact list of its days.
+- `distinct=true` returns an incomplete set (2 of the 3 disclosure groups).
+- Amendments are separate rows restating the agreement's whole value
+  (contracts share `procurement_id`, grants `ref_number`); summing every
+  contract row for PSPC in 2024-2025 gives $28.2B over 7,086 rows against
+  $14.9B over 6,000 contracts at their latest value.
+- Data quality seen in passing: a `reporting_period` of `"1"`, grant start
+  dates of 1899-12-30 (a spreadsheet's zero date), contract dates in the
+  future, and one person's name written "Last, First" and "First Last" in
+  the same department.
 
 Requested directly 2026-09-20. Government of Canada proactive-disclosure
 publications (contracts over $10,000, travel and hospitality expenses,

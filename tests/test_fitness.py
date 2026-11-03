@@ -72,12 +72,16 @@ VERIFIED_TABLES = {
     34100292: "Building permits, by type of structure and type of work",
 }
 
+# open.canada.ca and tbs-sct.canada.ca: the Treasury Board publishes the proactive
+# disclosure schemas and guides there.
 OFFICIAL_HOSTS = (
     "statcan.gc.ca",
     "bankofcanada.ca",
     "cmhc-schl.gc.ca",
     "jobbank.gc.ca",
     "canada.ca",
+    "open.canada.ca",
+    "tbs-sct.canada.ca",
 )
 
 
@@ -131,6 +135,7 @@ def test_match_by_tool_prefix():
     assert _keys("statcan_pumf_tabulate", {}) == {"pumf-weights-and-release"}
     assert _keys("cmhc_get_table_data", {}) == {"cmhc-rental-market-reliability"}
     assert _keys("cmhc_list_categories", {}) == set()
+    assert _keys("disclosure_summarize", {}) == {"proactive-disclosure-amendments"}
 
 
 @pytest.mark.parametrize(

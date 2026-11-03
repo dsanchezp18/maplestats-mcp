@@ -281,6 +281,9 @@ SOURCE_LICENCES: dict[str, str] = {
     "nrcan-nbac": OGL_CANADA,
     "phac-infobase": OGL_CANADA,
     "pmra": OGL_CANADA,
+    # Proactive Publication packages on open.canada.ca: licence_id ca-ogl-lgo
+    # on all four (package_show, 2026-11-03).
+    "proactive-disclosure": OGL_CANADA,
     "recalls": OGL_CANADA,
     "tc-recalls": OGL_CANADA,
     # Federal web pages and services outside open.canada.ca

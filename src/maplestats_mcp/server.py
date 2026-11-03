@@ -542,7 +542,9 @@ Sources, by tool-name prefix:
   ircc_processing_ (current application processing times), jobbank_
   (Job Bank wages by occupation and economic region, ESDC),
   cra_digital_economy_registry_, cra_charities_ (registered charities, directors),
-  gc_infobase_ (federal spending, FTEs),
+  gc_infobase_ (federal spending, FTEs), disclosure_ (proactive
+  disclosure: contracts over $10,000, grants and contributions, travel and
+  hospitality of ministers and senior officials; search and totals),
   cihi_ (health-system indicators), phac_infobase_ (surveillance files),
   nrcan_geo_ (geocoding, place names), nrcan_energy_use_, nrcan_nbac_
   (burned areas), nrcan_minerals_ (annual mineral production by

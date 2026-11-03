@@ -26,7 +26,7 @@ import httpx
 
 from maplestats_mcp.shared.envelope import raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
-from maplestats_mcp.shared.http import api_get
+from maplestats_mcp.shared.http import api_get, api_post
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.upstream_text import (
     clean_detail,
@@ -120,18 +120,25 @@ async def action(
     params: dict[str, Any] | None = None,
     *,
     lang: str = "en",
+    json_body: dict[str, Any] | None = None,
 ) -> Any:
     """Call one CKAN Action API method and unwrap its `{"help","success",
     "result"}` envelope, raising a typed error instead of returning one.
 
     `lang="fr"` gives the error messages in French; the English ones are
-    unchanged.
+    unchanged. `json_body` sends the call as a POST with a JSON body instead
+    of a GET (CKAN accepts both for every action): a `datastore_search`
+    filter listing hundreds of values does not fit in a URL (confirmed on
+    open.canada.ca 2026-11-03, where a POST with 4,000 listed dates works).
     """
     context = f"{config.source}:{method}"
     await _limiter(config).acquire()
     url = f"{config.base_url}{method}"
     try:
-        data = await api_get(url, params=params, timeout=config.timeout)
+        if json_body is not None:
+            data = await api_post(url, json_body=json_body, timeout=config.timeout)
+        else:
+            data = await api_get(url, params=params, timeout=config.timeout)
     except httpx.HTTPStatusError as exc:
         _raise_for_status_error(exc, context, lang)
     except httpx.HTTPError as exc:

@@ -407,7 +407,21 @@ FR: dict[str, str] = {
         "budgets des dépenses, Comptes publics, dépenses de programmes"
     ),
     "filter by organization and fiscal year": "filtrer par organisation et par exercice",
-    "grants and contributions: portal='federal'": "subventions et contributions : portal='federal'",
+    "federal contracts over $10,000 by vendor, department, fiscal year or value": (
+        "contrats fédéraux de plus de 10 000 $ par fournisseur, ministère, exercice ou valeur"
+    ),
+    "federal grants and contributions by recipient, program, province or riding": (
+        "subventions et contributions fédérales par bénéficiaire, programme, province ou "
+        "circonscription"
+    ),
+    "travel expenses of ministers and senior officials (name, title, department)": (
+        "frais de déplacement des ministres et des cadres supérieurs (nom, titre, ministère)"
+    ),
+    "totals by department, vendor, recipient or fiscal year: dataset='contracts', "
+    "'grants', 'travel' or 'hospitality'": (
+        "totaux par ministère, fournisseur, bénéficiaire ou exercice : dataset='contracts', "
+        "'grants', 'travel' ou 'hospitality'"
+    ),
     "Federal fiscal years run April to March; match them to calendar-year data explicitly.": (
         "L'exercice fédéral va d'avril à mars; faites-le correspondre explicitement aux "
         "données par année civile."
