@@ -255,7 +255,10 @@ def get_query_series_enabled() -> bool:
     (`SELECT len(range(1000000000))`) could exhaust a small instance's memory, and
     the time limit does not interrupt a single long operator. Local installs keep it.
     """
-    raw = os.environ.get("MAPLE_QUERY_SERIES", "1").strip().lower()
+    # Off by default when serving HTTP, so a hosted server is safe even if its
+    # service settings never pick up MAPLE_QUERY_SERIES; on for local (stdio) use.
+    default = "0" if get_transport() == "http" else "1"
+    raw = os.environ.get("MAPLE_QUERY_SERIES", default).strip().lower()
     return raw not in {"0", "false", "no", "off"}
 
 

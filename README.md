@@ -287,7 +287,7 @@ error that says when to retry, instead of waiting for another timeout. The
 | `MAPLE_BREAKER` | `1` | Pause requests to an upstream host after repeated failures; `0` sends every request |
 | `MAPLE_BREAKER_FAILURES` / `MAPLE_BREAKER_WINDOW_SECONDS` / `MAPLE_BREAKER_COOLDOWN_SECONDS` | `5` / `300` / `60` | Failures in a row, within the window, that pause a host, and how long before one probe request is sent |
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
-| `MAPLE_QUERY_SERIES` | `1` | `0` hides `wds_query_series` (server-side SQL); the hosted server sets it, since one query could use more memory than a small instance has |
+| `MAPLE_QUERY_SERIES` | `1` locally, `0` over HTTP | `0` hides `wds_query_series` (server-side SQL): off by default when serving HTTP, since one query could use more memory than a small instance has |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
 | `MAPLE_CLIENT_IP_HEADER` | unset | Header the outermost proxy sets to the caller's own address (Cloudflare's `CF-Connecting-IP`), used for the per-client rate limit when `MAPLE_TRUST_PROXY_HEADERS` is on; set it only when every request passes through that proxy |
 | `MAPLE_DUCKDB_MEMORY_LIMIT` | unset | Memory limit for DuckDB queries over downloaded files (patents, open databases, microdata), such as `256MB`; beyond it DuckDB spills to the temporary folder. Set it on a small hosted instance |
