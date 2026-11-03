@@ -244,7 +244,10 @@ RULES: tuple[FitnessRule, ...] = (
             "annual for Canada and the provinces; for smaller areas use the 2021 Census "
             "(LIM-AT, by age, in the Census Profile), which is 2020 income, a year raised by "
             "pandemic benefits, and a different line. Rates by disability (11-10-0090) are "
-            "for Canada only: no province has a published rate."
+            "for Canada only: no province has a published rate. The Census's questions on "
+            "difficulties with daily activities only screen for the disability survey: "
+            "Statistics Canada releases them on special request and says they cannot "
+            "estimate disability."
         ),
         note_fr=(
             "Nommez le seuil et la base avec chaque taux : ils ne mesurent pas la même "
@@ -264,13 +267,17 @@ RULES: tuple[FitnessRule, ...] = (
             "le Profil du recensement), qui porte sur le revenu de 2020, une année gonflée "
             "par les prestations liées à la pandémie, et sur un autre seuil. Les taux selon "
             "l'incapacité (11-10-0090) ne sont publiés que pour le Canada : aucune province "
-            "n'a de taux publié."
+            "n'a de taux publié. Les questions du Recensement sur les difficultés dans les "
+            "activités quotidiennes servent seulement de filtre pour l'enquête sur "
+            "l'incapacité : Statistique Canada les diffuse sur demande spéciale et précise "
+            "qu'elles ne permettent pas d'estimer l'incapacité."
         ),
         sources=(
             "https://www150.statcan.gc.ca/n1/pub/75f0002m/75f0002m2016002-eng.htm",
             "https://www150.statcan.gc.ca/n1/pub/75f0002m/75f0002m2025003-eng.htm",
             "https://www150.statcan.gc.ca/n1/daily-quotidien/251107/dq251107f-eng.htm",
             "https://www150.statcan.gc.ca/n1/daily-quotidien/260429/dq260429a-eng.htm",
+            "https://www12.statcan.gc.ca/census-recensement/2021/ref/dict/az/Definition-eng.cfm?ID=pop147",
         ),
         checked=(
             "75F0002M2016002: LICO from 1992 expenditure data; LIM below half the median "
@@ -282,7 +289,13 @@ RULES: tuple[FitnessRule, ...] = (
             "official since November 2025; LIM-AT at 50% of median adjusted after-tax "
             "income; sampling variability for small groups, caution for territories. WDS "
             "metadata for 11-10-0135: Low income lines dimension lists LIM-AT, LICO 1992 "
-            "base before and after tax, and MBM 2023, 2018, 2008 and 2000 bases."
+            "base before and after tax, and MBM 2023, 2018, 2008 and 2000 bases. "
+            "2026-11-03: 11-10-0090 Geography has the single member Canada (rate 12.6%, "
+            "persons with disabilities 15+, MBM 2023 base, 2024). 2021 Census Dictionary "
+            "pop147, read through a search result because www12 blocks automated clients: "
+            "activities-of-daily-living data 'available upon special request only', "
+            "minimum edits, responses cannot estimate disability because of 'false "
+            "positives'; they were the 2022 CSD sampling filter."
         ),
         product_ids=_LOW_INCOME_TABLES,
     ),

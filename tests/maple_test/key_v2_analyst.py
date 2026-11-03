@@ -194,6 +194,10 @@ def questions() -> list[dict[str, Any]]:
                     "The Census Profile has no disability measure; the 2022 Canadian Survey on "
                     "Disability (13-10-0379) gives Alberta income groups, not a poverty rate."
                 ),
+                (
+                    "The Census difficulty questions (activities of daily living) only screen "
+                    "for that survey: released on special request, and not a disability measure."
+                ),
             ],
         }
     )
