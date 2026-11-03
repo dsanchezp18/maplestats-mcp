@@ -26,7 +26,7 @@ async def jobbank_search_occupations(
 ) -> OccupationSearchResult:
     """Find occupations (NOC 2021 codes) in Job Bank's wage data, with the national median wage.
 
-    Use for: turning a job title ("software engineer", "infirmière", "electrician")
+    Use for: turning a job title ("electrician", "infirmière", "welder")
     into the five-digit NOC 2021 code the other jobbank_ tools take, or listing
     the occupations under a NOC prefix ("2123", "31"). Words must all appear in
     the English or French title (accents and case ignored); digits match code
@@ -54,7 +54,7 @@ async def jobbank_get_wages(
 ) -> OccupationWages:
     """Get Job Bank's low, median and high wages for one occupation, by economic region.
 
-    Use for: "what does a software engineer (NOC 21231) earn in Toronto",
+    Use for: "what does an electrician (NOC 72200) earn in Toronto",
     prevailing wages for an occupation across Canada, a province or one
     economic region, and LMIA or job-offer wage benchmarks. `noc` is a
     five-digit NOC 2021 code (find it with jobbank_search_occupations).
@@ -88,16 +88,16 @@ async def jobbank_compare_occupations(
 
     Use for: side-by-side low, median and high wages of 2 to 25 occupations
     (NOC 2021 codes) in Canada, a province or one economic region, e.g.
-    software engineers vs developers vs data scientists in Toronto. `region`
+    electricians vs plumbers vs carpenters in Calgary. `region`
     takes a name or code like jobbank_get_wages ("Calgary", "ER4830", "QC",
     "Canada"); `province` narrows an ambiguous name ("Northeast" exists in
     Ontario and BC). mixed_units is true when some occupations are paid
     annually and others hourly: those medians are not comparable as is.
     Keywords: Job Bank, compare wages, occupations, salary comparison, median
-    wage, economic region, NOC, career choice, pay gap, ESDC.
+    wage, economic region, NOC, career choice, ESDC.
     Mots-clés : Guichet-Emplois, comparer les salaires, professions,
     comparaison salariale, salaire médian, région économique, CNP, choix de
-    carrière, écart de rémunération, EDSC.
+    carrière, EDSC.
     """
     return await client.compare_occupations(nocs, region, province, release_year, lang)
 
