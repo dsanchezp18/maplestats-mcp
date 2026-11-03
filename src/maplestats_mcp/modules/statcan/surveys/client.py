@@ -25,6 +25,7 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 
 from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
+from maplestats_mcp.modules.statcan.reference.constants import REFERER
 from maplestats_mcp.modules.statcan.surveys import constants
 from maplestats_mcp.modules.statcan.surveys.schemas import (
     RdcHolding,
@@ -49,7 +50,8 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
-_client = new_client(follow_redirects=True)
+# Every request sends a Referer: see statcan/reference/constants.py, REFERER.
+_client = new_client(follow_redirects=True, headers={"Referer": REFERER})
 # StatCan's own 404 page, where IMDB redirects an unknown survey id.
 _NOT_FOUND_PAGE = "srvmsg404"
 _warmed_list_langs: set[str] = set()

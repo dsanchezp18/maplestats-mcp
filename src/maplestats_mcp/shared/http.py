@@ -191,6 +191,7 @@ def new_client(
     http2: bool = True,
     follow_redirects: bool = False,
     verify: ssl.SSLContext | bool = True,
+    headers: dict[str, str] | None = None,
 ) -> httpx.AsyncClient:
     """A module-owned client, for the few sources the shared singleton cannot serve.
 
@@ -199,16 +200,17 @@ def new_client(
     not leak into other sources), redirect following, or `http2=False`
     (CRA's registry page, see its client.py), or a `verify` context that
     adds an intermediate certificate a server fails to send (CIPO's
-    opic-cipo.ca, see ised/ip_horizons/client.py). It keeps the project's
-    identifying User-Agent and the `http2=True` default that StatCan's
-    network path requires (see this module's docstring).
+    opic-cipo.ca, see ised/ip_horizons/client.py), or extra `headers` a
+    source requires (StatCan's /n1/ listings, see statcan/reference). It keeps
+    the project's identifying User-Agent and the `http2=True` default that
+    StatCan's network path requires (see this module's docstring).
     """
     return BreakerClient(
         timeout=timeout,
         http2=http2,
         follow_redirects=follow_redirects,
         verify=verify,
-        headers=_DEFAULT_HEADERS,
+        headers={**_DEFAULT_HEADERS, **(headers or {})},
         event_hooks=_HOOKS,
     )
 
