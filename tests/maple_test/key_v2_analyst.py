@@ -82,9 +82,9 @@ def questions() -> list[dict[str, Any]]:
                 "seph_awe_2025": annual["points"]["2025-01-01"][0],
             },
             "headline": [],
-            "flag_pattern": r"SEPH|Survey of Employment, Payrolls and Hours|EERH|payroll survey",
-            "tolerance": "Correct only when the answer names SEPH (the payroll survey), which "
-            "has NAICS 912; the figures are listed for reference.",
+            "flag_pattern": r"SEPH|Survey of Employment, Payrolls and Hours|EERH|payroll survey|14-10-020[34]",
+            "tolerance": "Correct only when the answer uses SEPH (names it, or cites its tables "
+            "14-10-0203/0204 for NAICS 912); the figures are listed for reference.",
             "citations": [
                 cite(m_pid, monthly, "2026-08-01", coord),
                 cite(a_pid, annual, "2025-01-01", coord),

@@ -663,9 +663,12 @@ def census_questions() -> list[dict]:
             "group": "beyond",
             "eval_type": "numeric",
             "question": "What was the median age in the Halifax census metropolitan area in the 2021 Census?",
-            "expected": {"median_age_years": med, "average_age_years": avg},
+            # The average is the trap, not a second answer: kept for reference only, so an
+            # answer giving the median alone is correct (hand review, 2026-11-03).
+            "expected": {"median_age_years": med},
+            "reference": {"average_age_years": avg},
             "headline": ["median_age_years"],
-            "tolerances": {"median_age_years": 0.1, "average_age_years": 0.1},
+            "tolerances": {"median_age_years": 0.1},
             "tolerance": "±0.1 year; Halifax CMA, total gender",
             "citations": [
                 census_cite(
@@ -697,15 +700,11 @@ def census_questions() -> list[dict]:
             "group": "beyond",
             "eval_type": "numeric",
             "question": "According to the 2021 Census, what was the median total income of households in the Calgary metropolitan area?",
-            "expected": {
-                "median_total_household_income_2020_dollars": inc,
-                "median_after_tax_household_income_2020_dollars": inc_at,
-            },
+            # The question asks for total income; after-tax is reference only.
+            "expected": {"median_total_household_income_2020_dollars": inc},
+            "reference": {"median_after_tax_household_income_2020_dollars": inc_at},
             "headline": ["median_total_household_income_2020_dollars"],
-            "tolerances": {
-                "median_total_household_income_2020_dollars": 0,
-                "median_after_tax_household_income_2020_dollars": 0,
-            },
+            "tolerances": {"median_total_household_income_2020_dollars": 0},
             "tolerance": "Exact (rounded census figure); income year 2020; Calgary CMA",
             "citations": [
                 census_cite(

@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v2",
-  "built_at": "2026-11-03T03:18:26+00:00",
+  "built_at": "2026-11-03T03:41:06+00:00",
   "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC",
   "questions": [
     {
@@ -1701,15 +1701,16 @@
       "eval_type": "numeric",
       "question": "What was the median age in the Halifax census metropolitan area in the 2021 Census?",
       "expected": {
-        "median_age_years": 40.4,
+        "median_age_years": 40.4
+      },
+      "reference": {
         "average_age_years": 41.4
       },
       "headline": [
         "median_age_years"
       ],
       "tolerances": {
-        "median_age_years": 0.1,
-        "average_age_years": 0.1
+        "median_age_years": 0.1
       },
       "tolerance": "±0.1 year; Halifax CMA, total gender",
       "citations": [
@@ -1747,15 +1748,16 @@
       "eval_type": "numeric",
       "question": "According to the 2021 Census, what was the median total income of households in the Calgary metropolitan area?",
       "expected": {
-        "median_total_household_income_2020_dollars": 100000.0,
+        "median_total_household_income_2020_dollars": 100000.0
+      },
+      "reference": {
         "median_after_tax_household_income_2020_dollars": 87000.0
       },
       "headline": [
         "median_total_household_income_2020_dollars"
       ],
       "tolerances": {
-        "median_total_household_income_2020_dollars": 0,
-        "median_after_tax_household_income_2020_dollars": 0
+        "median_total_household_income_2020_dollars": 0
       },
       "tolerance": "Exact (rounded census figure); income year 2020; Calgary CMA",
       "citations": [
@@ -1925,8 +1927,8 @@
         "seph_awe_2025": 1702.65
       },
       "headline": [],
-      "flag_pattern": "SEPH|Survey of Employment, Payrolls and Hours|EERH|payroll survey",
-      "tolerance": "Correct only when the answer names SEPH (the payroll survey), which has NAICS 912; the figures are listed for reference.",
+      "flag_pattern": "SEPH|Survey of Employment, Payrolls and Hours|EERH|payroll survey|14-10-020[34]",
+      "tolerance": "Correct only when the answer uses SEPH (names it, or cites its tables 14-10-0203/0204 for NAICS 912); the figures are listed for reference.",
       "citations": [
         {
           "table_id": "14-10-0203-01",
