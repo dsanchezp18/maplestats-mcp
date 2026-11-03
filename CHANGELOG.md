@@ -23,6 +23,11 @@ footnotes instead of 25 footnotes, with repeats merged (`footnote_limit` raises 
 `reproduce_workbook` no longer saves a file unless `MAPLE_EXPORT_DIR` is set (without
 it, a local server returns the workbook as base64, as a hosted one does).
 
+Security: `wds_query_series` now runs each query in a separate process with a memory and
+time cap (one query could exhaust a small server's memory), and it is off by default when
+serving HTTP (`MAPLE_QUERY_SERIES=1` turns it on). The House of Commons tools work in
+French again after the House moved its French feeds.
+
 ### Added
 
 - `check_answer`: the last call before replying with figures. It takes the
@@ -235,6 +240,37 @@ it, a local server returns the workbook as base64, as a hosted one does).
   customs basis and unadjusted; building permits (34-10-0292) say the headline value is
   seasonally adjusted in current dollars. The server instructions now say to report a
   monthly StatCan headline seasonally adjusted unless asked otherwise, and to say which.
+- README and home page claims say what the server does: every StatCan series carries a
+  citation and every other result names its source and licence; `check_answer` re-reads
+  the StatCan and Bank of Canada figures the assistant sends it, when it calls it; quality
+  flags are spelled out on StatCan values; the server only reads, the scripts it writes
+  run only if the user runs them, and saving a workbook is opt-in. The README's coverage
+  table lists `jobbank_`, `cra_charities_` and `telecom_`, and "Using it" names
+  `check_answer`.
+- Server instructions: `check_answer` takes the StatCan and Bank of Canada figures cited;
+  the full-table script is offered and run only if the user agrees; `wds_query_series`
+  for averages, sums and rankings over a few series where the server offers it; `lang='fr'`
+  for a French question.
+- `plan_query` answers a question written in French in French when `lang` is left at its
+  default.
+- `plan_query`: a department's spending or headcount ("How much did ESDC spend in
+  2023-24 and how many employees") is planned as government spending, GC InfoBase first;
+  it had no plan before. "Spend" and "employees" count only beside a department, so
+  household spending and payroll employment questions are not affected.
+- `search_tools`: GC InfoBase now ranks first for federal spending by department and for
+  public servants by department, above proactive disclosure, whose tools say they hold
+  contracts, grants, travel and hospitality, not total spending or headcount.
+  `wds_search_cubes` ranks first for "unemployment rate Toronto CMA" and "GDP by industry
+  monthly", and `jobbank_get_wages` (not the Ontario electricity price history) for an
+  occupation's average hourly wage; `jobbank_get_wages` points to LFS table 14-10-0417
+  and SEPH (14-10-0223) for StatCan's own wage figures.
+- The moving-average reading note for a seasonally adjusted series (14-10-0459) no longer
+  says to compare with the same months a year earlier; that advice is for unadjusted
+  series. The French unadjusted-series note reads "d'ordinaire celle qu'on compare d'une
+  période à l'autre".
+- Fitness caveats: SEPH's exclusions name military personnel of the defence services;
+  the Job Bank caveat says the LFS sample leaves out the three territories, some remote
+  regions and First Nations reserves, and calls the median "salaire en vigueur" in French.
 
 ### Removed
 
@@ -269,6 +305,99 @@ it, a local server returns the workbook as base64, as a hosted one does).
 - `statcan_delta_list_files` with `include_sizes`: checks file sizes 4 at a
   time instead of all 46 at once, which timed out in bulk and paused every
   other www150.statcan.gc.ca tool for a minute.
+- `check_answer` read whole numbers as rounded to their trailing zeros, so 20000
+  passed for a published 24000 and 1000 for 1400. A cited value now matches at
+  its written precision (170 means 169.5 to 170.5), `value` also takes text
+  ("6.50") to keep trailing decimals, and a scale word never widens the match
+  beyond 5% of the value ("2 million" no longer passes for 2.4 million).
+- `check_answer`: a year cited for a monthly or quarterly series was labelled as
+  its first month while the value and flags of its last month were read. The
+  year is now compared with its average (said so, with the range of the
+  values), a single month's value cited as the year is named as that month, E,
+  F and x flags are read for every month, and a newer period is judged at the
+  cited granularity.
+- `check_answer` scale words follow the language: in French a billion is 10^12
+  and a milliard 10^9 ("3,44 billions de dollars" was reported off by a factor
+  of 0.001), and a bare "m" (metres) is no longer read as millions ("M$" and
+  "$M" are).
+- `check_answer` added Canada to the asked places whenever a question said
+  "Canadian" or "pays", so a Canada series passed for "Canadian workers in
+  Alberta"; Canada now counts only when no province or city is named. Each
+  figure is checked against its own `geography` when given, else the places
+  asked, instead of the question's first place for every figure.
+- `check_answer` told the answer to say a figure is not published (and to go to
+  microdata, custom tabulation, RTRA or an RDC) whenever the cited table lacked
+  the place, although another table may publish it (Toronto's unemployment rate
+  is in 14-10-0459 and 14-10-0460, not 14-10-0287). It now reports that the
+  table has no member for the place, with a `wds_search_cubes` query and the
+  tables a fitness rule names; the not-published route is kept for cases known
+  to be published nowhere (11-10-0090 disability poverty below Canada).
+- `check_answer` failed as a whole ("try again") when one vector id was invalid,
+  because WDS answers HTTP 500 for the whole series-info batch; the ids are now
+  retried one by one and only the bad one gets a `series` problem.
+- `check_answer`: a figure from another source than StatCan or the Bank of
+  Canada is no longer a problem asking for a source id the answer cannot give;
+  it is listed in the new `notes` field as not checked.
+- `jobbank_compare_occupations` with `province` and the default region returned
+  Canada-wide medians; it now returns that province's.
+- Job Bank covers 86 geographies: Canada, nine provinces and 76 economic regions (Prince
+  Edward Island and each territory are one economic region), not "86 economic regions".
+- Website: the home page search counts every tool ("Top 5 of 395 tools", as the other
+  pages say), and an open tool card on the Tools page no longer runs past the screen at
+  360 px.
+- Maple Test version 2 re-graded: every one of the 1,923 answers read under one written
+  rule per question, with per-answer overrides (`arm/qid#repeat`), false claims and
+  referrals counted apart. The key accepts each country's own series on X-12, grades
+  A-04 on the Census household median, no longer requires unasked values on C-03, C-11,
+  C-12 and X-24, and needs the figure on flag questions that ask for one; the grader no
+  longer joins separate numbers ("July 1, 2026, 399,133"). The benchmarks page and
+  `tests/maple_test/README.md` lead with per-half results, show each server's declared
+  scope, say the other-sources half was chosen from MapleStats' coverage, label the
+  after-fix runs in-sample, and list setup issues and versions.
+- `ourcommons_*` in French: the House of Commons moved its French feeds to French paths
+  on www.noscommunes.ca by 2026-11-02 (`/deputes/fr/recherche`, `/position-des-partis`,
+  `/conseil-des-ministres`, `/{id}/fonctions`); the old `/members/fr/...` paths now
+  redirect to a 404 page, so every French call failed. English feeds use the published
+  `/Members/en/.../XML` form. The English ministry feed (`/Members/en/ministries/XML`)
+  also answers the 404 page as of 2026-11-03 and is not fixed yet.
+- Live smoke tests: the workflow reports a run that ends SKIPPED (exit 75: a source down,
+  locked or reloading) as a warning and in the job summary instead of failing the job and
+  opening the smoke-failure issue. The modules smoke test counts `[upstream_unavailable]`
+  errors and an EPS reload as skips; the EPS smoke test skips only its load-date check
+  while EPS reloads.
+- DuckDB spilled to `.tmp` in the working directory, which in the Docker image is
+  `/app`, owned by root, so spilling past `MAPLE_DUCKDB_MEMORY_LIMIT` failed
+  (patent, open-database, microdata and tariff queries). Spills now go to a
+  subfolder per query of the system temp folder (`MAPLE_DUCKDB_TEMP_DIR`),
+  removed when the query ends, at most `MAPLE_DUCKDB_TEMP_MAX_GB` (default 1).
+
+### Security
+
+- `wds_query_series` is off by default when serving HTTP (`MAPLE_QUERY_SERIES=1`
+  turns it back on) and on for local installs: DuckDB's memory limit does not cover scalar functions that build large
+  lists or strings, so a single query could exhaust a small instance's memory, and the
+  time limit does not interrupt one long operator.
+- `wds_query_series`: one query could exhaust the server's memory. DuckDB's
+  `memory_limit` does not cover scalar functions that build one large list or
+  string, and its interrupt acts only between operators: with a 256 MB limit,
+  `SELECT len(range(100000000))` reached 7 GB, `SELECT repeat('x', 10000000)
+  FROM range(500)` 9.6 GB (the 500-row cap did not bound bytes), and `SELECT
+  len(range(1000000000))` had the process killed, each running 16-29 s past
+  the 5 s limit while holding a worker thread and a request slot. The SQL now
+  runs in its own process with one thread, an address-space cap
+  (`MAPLE_QUERY_MEMORY_MB`, default 256; enforced on Linux, where those queries
+  now fail in under half a second with an invalid-input error) and no disk
+  spilling, killed at the time limit, at most `MAPLE_QUERY_MAX_CONCURRENT`
+  (default 2) at once; the server waits on it without a thread. Results are
+  capped at 1,000,000 characters and one text cell at 50,000, each with an
+  error that says what to change. A normal query takes about 0.15 s longer.
+- `wds_query_series`: a SELECT holding a data-modifying CTE (`WITH x AS (DELETE
+  FROM obs RETURNING *) SELECT ...`) ran; any INSERT, UPDATE, DELETE or MERGE
+  in the statement is now refused. Statements are classified on a locked
+  connection instead of DuckDB's default one, and duckdb 2.0.0 or later is
+  required (1.5.5 read a file while classifying `PRAGMA import_database`).
+- `wds_query_series`: DuckDB's error messages are cut to their first line, with
+  file paths removed (`duckdb_extensions()` showed the home folder).
 
 ## [0.4.3] - 2026-10-28
 
