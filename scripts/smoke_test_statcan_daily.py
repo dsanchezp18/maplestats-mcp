@@ -105,6 +105,33 @@ async def main() -> int:
     except NotFound:
         print("OK: made-up article id raises NotFound as expected")
 
+    for lang in ("en", "fr"):
+        upcoming_list = await client.get_upcoming_releases(lang=lang)
+        print(
+            f"OK: get_upcoming_releases({lang}) -> {upcoming_list.period}: "
+            f"{upcoming_list.total_in_window} releases, annual PDF "
+            f"{upcoming_list.annual_schedule_pdf_url} ({upcoming_list.annual_schedule_label})"
+        )
+        ok &= upcoming_list.total_in_window > 0 and upcoming_list.start_date is not None
+        ok &= any(r.lockup for r in upcoming_list.releases)
+        ok &= bool(upcoming_list.pdf_url) and bool(upcoming_list.annual_schedule_pdf_url)
+        ok &= len(upcoming_list.major_indicators) > 10
+
+    # A current release with its tabs, walked back two releases.
+    files = await client.get_release_files("dq261030a", previous=2)
+    print(f"OK: get_release_files(dq261030a, previous=2) -> {files.returned_count} releases")
+    ok &= files.returned_count == 3
+    for release in files.releases:
+        print(f"  {release.article_id}: {len(release.tables)} tables, pdf={release.pdf_url}")
+        ok &= bool(release.pdf_url) and any(t.product_id for t in release.tables)
+        ok &= any(s.sdds for s in release.surveys)
+    # 2015 (Tables tab with old CANSIM numbers) and 2012 (no tabs, no <main>).
+    for old in ("dq150130a", "dq120601a"):
+        old_files = (await client.get_release_files(old)).releases[0]
+        mapped = sum(1 for t in old_files.tables if t.legacy_cansim_id and t.product_id)
+        print(f"OK: get_release_files({old}) -> {len(old_files.tables)} tables, {mapped} mapped")
+        ok &= mapped > 0 and bool(old_files.pdf_url)
+
     print("\nSTATCAN DAILY SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 

@@ -93,6 +93,107 @@ class DailyArticle(BaseModel):
     provenance: Provenance
 
 
+class UpcomingRelease(BaseModel):
+    release_date: date
+    title: str
+    reference_period: str | None = Field(
+        default=None, description="Reference period, e.g. 'September 2026'; null for a study."
+    )
+    lockup: bool = Field(
+        description="True for a release shown to journalists in a lockup before 8:30 a.m. "
+        "(the major indicators)."
+    )
+    contact: str | None = Field(
+        default=None, description="StatCan contact for the release, as the page gives it."
+    )
+    phone: str | None = None
+
+
+class UpcomingReleasesResult(BaseModel):
+    query: str
+    period: str = Field(description="The window the page covers, e.g. 'November 2 to 13, 2026'.")
+    start_date: date | None = None
+    end_date: date | None = None
+    releases: list[UpcomingRelease] = Field(default_factory=list)
+    returned_count: int
+    total_in_window: int
+    pdf_url: str | None = Field(default=None, description="The same two-week list as a PDF.")
+    annual_schedule_pdf_url: str | None = Field(
+        default=None,
+        description="StatCan's PDF of the year's planned release dates for the major "
+        "economic indicators.",
+    )
+    annual_schedule_label: str | None = Field(
+        default=None, description="The PDF's own label, e.g. '2026-2027 release dates'."
+    )
+    major_indicators: list[str] = Field(
+        default_factory=list,
+        description="The major economic releases that annual PDF and the calendar cover.",
+    )
+    provenance: Provenance
+
+
+class ReleaseTable(BaseModel):
+    title: str | None = None
+    frequency: str | None = None
+    table_id: str | None = Field(default=None, description="Table number, e.g. '36-10-0434-01'.")
+    product_id: int | None = Field(
+        default=None, description="8-digit product id for the wds_ tools, e.g. 36100434."
+    )
+    legacy_cansim_id: str | None = Field(
+        default=None,
+        description="Old CANSIM number an article from before 2018 cites, e.g. '379-0031'.",
+    )
+    url: str | None = None
+
+
+class ReleaseSurvey(BaseModel):
+    sdds: int | None = Field(default=None, description="IMDB survey number (SDDS), e.g. 1301.")
+    name: str | None = None
+    url: str
+
+
+class ReleaseProduct(BaseModel):
+    catalogue_number: str = Field(description="Catalogue number, e.g. '13-605-X'.")
+    title: str | None = None
+    url: str
+
+
+class ReleaseFiles(BaseModel):
+    article_id: str
+    url: str
+    title: str
+    release_date: date | None = None
+    pdf_url: str | None = Field(default=None, description="The Daily article as a PDF.")
+    tables: list[ReleaseTable] = Field(
+        default_factory=list, description="Every table of the release (its Tables tab)."
+    )
+    surveys: list[ReleaseSurvey] = Field(
+        default_factory=list, description="Surveys and data sources, with their IMDB pages."
+    )
+    products: list[ReleaseProduct] = Field(
+        default_factory=list, description="Catalogued publications the release links to."
+    )
+    subjects: list[str] = Field(default_factory=list)
+    tables_page_url: str | None = None
+    related_info_url: str | None = None
+    release_schedule_url: str | None = None
+    previous_release_url: str | None = None
+
+
+class ReleaseFilesResult(BaseModel):
+    article: str
+    releases: list[ReleaseFiles] = Field(
+        default_factory=list,
+        description="The release asked for first, then its previous releases, newest first.",
+    )
+    returned_count: int
+    chain_ended: bool = Field(
+        description="True when the oldest release returned links no previous release."
+    )
+    provenance: Provenance
+
+
 class ReleaseCalendarEntry(BaseModel):
     release_date: date
     kind: str = Field(description="'key_indicator' (Daily release) or 'product' (catalogue).")
