@@ -315,6 +315,8 @@ error that says when to retry, instead of waiting for another timeout. The
 | `MAPLE_EXPORT_DIR` | unset (no files saved) | Folder where `reproduce_workbook` saves Excel workbooks on a local server. Unset, the workbook comes back as base64 and every tool is read-only |
 | `MAPLE_SEARCH`, `MAPLE_SEMANTIC_DIR` | `bm25`, unset | `hybrid` fuses BM25 with a local multilingual-e5-small index (needs the `[semantic]` extra and `python -m maplestats_mcp.shared.semantic build`); off by default, see `tests/discovery_benchmark/phase2.md` |
 | `MAPLE_RESPONSE_MAX_BYTES` | `200000` | Byte budget for one tool result (minimum 10,000); a larger result has its biggest lists trimmed, and `provenance.limits` says what was kept and how to get the rest |
+| `MAPLE_GOATCOUNTER_URL`, `MAPLE_GOATCOUNTER_TOKEN` | unset | With both set (an https GoatCounter site and an API token allowed to record pageviews), each counted tool call is also sent there as the event `mcp/<instance>/<tool>` (`/error` appended on failure), in batches each minute, so counts outlive restarts and several hosts add up; no arguments or addresses, `no_sessions` on |
+| `MAPLE_INSTANCE_NAME` | `server` | The `<instance>` label in those events (`azure`, `render`) |
 | `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
 | `MAPLE_DELTA_INDEX_DIR` | system temp | Saved Delta File resume points (a few MB per day); `off` keeps them in memory only |

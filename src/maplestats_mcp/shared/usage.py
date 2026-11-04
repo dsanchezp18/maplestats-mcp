@@ -22,6 +22,7 @@ from typing import Any
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 
 from maplestats_mcp.shared.breaker import BREAKER
+from maplestats_mcp.shared.goatcounter import FORWARDER, GoatCounterForwarder
 
 # Days kept; older ones are dropped so the counters stay small.
 MAX_DAYS = 90
@@ -38,8 +39,13 @@ def _percentile(ordered: list[float], share: float) -> float:
 class UsageStats:
     """Calls per tool and per day, split into succeeded and failed."""
 
-    def __init__(self, tool_names: Iterable[str] = ()) -> None:
+    def __init__(
+        self, tool_names: Iterable[str] = (), forwarder: GoatCounterForwarder | None = None
+    ) -> None:
         self.tool_names = set(tool_names)
+        # Also sends each call to GoatCounter when configured (shared/goatcounter.py),
+        # so the counts outlive a restart and both hosts add up in one place.
+        self.forwarder = forwarder
         self.since = datetime.now(UTC)
         self.tools: Counter[tuple[str, bool]] = Counter()
         self.days: dict[str, Counter[bool]] = {}
@@ -52,6 +58,8 @@ class UsageStats:
     def record(self, tool: str, ok: bool, seconds: float | None = None) -> None:
         name = tool if tool in self.tool_names else "other"
         self.tools[(name, ok)] += 1
+        if self.forwarder is not None:
+            self.forwarder.add(name, ok)
         if seconds is not None:
             samples = self.durations.setdefault(name, deque(maxlen=LATENCY_SAMPLES))
             samples.append(seconds)
@@ -78,7 +86,8 @@ class UsageStats:
             "counting_since": self.since.isoformat(),
             "note": (
                 "Tool names, outcomes and durations, and upstream host names with their error "
-                "counts, only, in memory; a restart starts the count again."
+                "counts, only, in memory; a restart starts the count again. Where GoatCounter "
+                "is configured, each call's tool name and outcome are also counted there."
             ),
             "calls": sum(self.tools.values()),
             "errors": sum(c for (_, ok), c in self.tools.items() if not ok),
@@ -97,7 +106,7 @@ class UsageStats:
 _inside_call: ContextVar[bool] = ContextVar("maplestats_usage_inside_call", default=False)
 
 # The process-wide counters the middleware fills and /stats reports.
-STATS = UsageStats()
+STATS = UsageStats(forwarder=FORWARDER)
 
 
 def public_snapshot() -> dict[str, Any]:

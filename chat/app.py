@@ -609,6 +609,12 @@ def inline_script_hashes(page: str) -> list[str]:
     ]
 
 
+# The page-view counter the website also uses: its script, and the endpoint it
+# reports to (by beacon or image).
+GOATCOUNTER_SCRIPT = "https://gc.zgo.at"
+GOATCOUNTER = "https://dsanchezp18.goatcounter.com"
+
+
 def page_policy(page: str) -> str:
     """The Content-Security-Policy for the page.
 
@@ -621,15 +627,20 @@ def page_policy(page: str) -> str:
     the daily budget from its own visitors' browsers.
     """
     scripts = " ".join(
-        ["'self'", "https://cdnjs.cloudflare.com", *inline_script_hashes(page)]
+        [
+            "'self'",
+            "https://cdnjs.cloudflare.com",
+            GOATCOUNTER_SCRIPT,
+            *inline_script_hashes(page),
+        ]
     )
     return "; ".join(
         [
             "default-src 'self'",
             f"script-src {scripts}",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data:",
-            "connect-src 'self'",
+            f"img-src 'self' data: {GOATCOUNTER}",
+            f"connect-src 'self' {GOATCOUNTER}",
             "base-uri 'none'",
             "form-action 'self'",
             "frame-ancestors 'none'",
