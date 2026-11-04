@@ -1,8 +1,8 @@
 name: Docker images
 
-# Render deploys the server and the chat demo straight from these Dockerfiles
+# Render deploys backup copies of the server and the chat demo straight from these Dockerfiles
 # (render.yaml and chat/render.yaml), and deploy-azure below rolls the server
-# image out to Azure, so a base-image bump or a dependency without a wheel for the
+# image out to Azure (deploy-chat-azure the chat image), so a base-image bump or a dependency without a wheel for the
 # image's Python must fail here, not on the next deploy. ci.yml's test matrix
 # runs uv's own Python, not the image. Kept out of ci.yml so a registry outage
 # cannot hold back the website, which publishes only after CI passes.
@@ -60,9 +60,18 @@ jobs:
   chat:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The chat's Azure container app pulls this image from ghcr.io too.
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/maplestats-chat
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: docker build -t maplestats-chat -f chat/Dockerfile chat
+      - run: >-
+          docker build -t maplestats-chat
+          --label org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          -f chat/Dockerfile chat
       # Building is not enough: an image that misses a module (results.py, 2026-11-02)
       # builds fine and fails only when Render starts it.
       - name: The image starts and answers /health
@@ -74,6 +83,17 @@ jobs:
           done
           docker logs chat
           exit 1
+      - name: Push to ghcr.io
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          short_sha="${GITHUB_SHA::7}"
+          docker tag maplestats-chat "$IMAGE:$short_sha"
+          docker tag maplestats-chat "$IMAGE:latest"
+          docker push "$IMAGE:$short_sha"
+          docker push "$IMAGE:latest"
 
   # Rolls the image pushed above out to the Azure Container Apps instance. It
   # signs in with GitHub's OIDC token, so no Azure secret is stored: the
@@ -134,3 +154,61 @@ jobs:
           curl -fsS --max-time 60 -o /dev/null -H "Content-Type: application/json" \
             -H "Accept: application/json, text/event-stream" "https://$fqdn/mcp" \
             -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"deploy-check","version":"1"}}}'
+
+  # Rolls the chat image out to its own Azure container app, in the same
+  # environment as the server, with the same deploy identity (which also holds
+  # Contributor on maplestats-chat). The model key lives in the app's secrets,
+  # never here.
+  deploy-chat-azure:
+    needs: chat
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-chat-azure
+      cancel-in-progress: false
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      RESOURCE_GROUP: maplestats-rg
+      APP: maplestats-chat
+      IMAGE: ghcr.io/${{ github.repository_owner }}/maplestats-chat
+    steps:
+      - name: Sign in to Azure with GitHub's OIDC token
+        run: |
+          token=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+          az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" \
+            --federated-token "$token" --output none
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+      # The app was created with a placeholder image on port 80; the chat image
+      # listens on 10000. Setting the port again is a no-op after the first run.
+      - name: Deploy the image
+        run: |
+          az containerapp ingress update --resource-group "$RESOURCE_GROUP" --name "$APP" \
+            --target-port 10000 --only-show-errors --output none
+          az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
+            --image "$IMAGE:${GITHUB_SHA::7}" --only-show-errors --output none
+      # The previous revision keeps serving until the new one passes its probes.
+      - name: The new revision is healthy and serves the page
+        run: |
+          revision=$(az containerapp show -g "$RESOURCE_GROUP" -n "$APP" \
+            --query properties.latestRevisionName -o tsv --only-show-errors)
+          fqdn=$(az containerapp show -g "$RESOURCE_GROUP" -n "$APP" \
+            --query properties.configuration.ingress.fqdn -o tsv --only-show-errors)
+          for _ in $(seq 1 40); do
+            health=$(az containerapp revision show -g "$RESOURCE_GROUP" -n "$APP" \
+              --revision "$revision" --query properties.healthState -o tsv --only-show-errors)
+            echo "$revision: $health"
+            [ "$health" = Healthy ] && break
+            [ "$health" = Unhealthy ] && exit 1
+            sleep 15
+          done
+          [ "$health" = Healthy ] || exit 1
+          curl -fsS --max-time 60 "https://$fqdn/health"
+          curl -fsS --max-time 60 -o /dev/null "https://$fqdn/"
