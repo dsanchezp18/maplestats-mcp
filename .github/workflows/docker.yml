@@ -19,9 +19,20 @@ jobs:
   server:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # The Azure Container Apps instance pulls the server image from GitHub's
+    # registry (ghcr.io), which is free for a public package; Azure's own
+    # registry cost about $5 a month.
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - run: docker build -t maplestats-mcp .
+      - run: >-
+          docker build -t maplestats-mcp
+          --label org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          .
       - name: The image starts and answers /health
         run: |
           docker run -d --name mcp -p 8000:8000 maplestats-mcp
@@ -31,6 +42,19 @@ jobs:
           done
           docker logs mcp
           exit 1
+      # Only main is published, and only after /health passed; pull requests
+      # build and test the image without pushing it.
+      - name: Push to ghcr.io
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          short_sha="${GITHUB_SHA::7}"
+          docker tag maplestats-mcp "$IMAGE:$short_sha"
+          docker tag maplestats-mcp "$IMAGE:latest"
+          docker push "$IMAGE:$short_sha"
+          docker push "$IMAGE:latest"
 
   chat:
     runs-on: ubuntu-latest
