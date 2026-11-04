@@ -98,7 +98,8 @@ async def statcan_daily_get_article(
     reproduced: read figures from the tables and cite them.
     Keywords: The Daily article, full text, release text, StatCan
     analysis, note to readers, PDF, press release, Daily release,
-    commentary, what StatCan said, highlights, release article.
+    commentary, what StatCan said, what StatCan says about a release,
+    today's release explained, highlights, release article.
     Mots-clés : article du Quotidien, texte intégral, texte du
     communiqué, analyse de Statistique Canada, note aux lecteurs, PDF,
     communiqué de presse, diffusion du Quotidien, faits saillants,

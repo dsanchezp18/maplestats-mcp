@@ -174,6 +174,16 @@ QUESTIONS: list[tuple[str, str, str]] = [
         "statcan_updates",
         "statcan_delta_list_files",
     ),
+    (
+        "Show me the Note to readers for the latest LFS release",
+        "statcan_daily",
+        "statcan_daily_get_releases",
+    ),
+    (
+        "Note aux lecteurs du communiqué de Statistique Canada sur le PIB",
+        "statcan_daily",
+        "statcan_daily_get_releases",
+    ),
     ("Taux de chômage au Québec", "labour", "statcan_indicators_get_indicators"),
     ("Prix des loyers à Montréal", "housing", "cmhc_list_categories"),
     ("Prévisions météo pour Ottawa demain", "environment", "eccc_search_collections"),
@@ -313,6 +323,12 @@ def test_cross_border_questions_stay_in_scope():
         ("Bulk data on Calgary property assessments", "statcan_tables"),
         ("Téléchargement CSV des permis de bâtir de Montréal", "statcan_tables"),
         ("Bulk download of Ontario open data", "statcan_tables"),
+        # statcan_daily (2026-11-04): "the daily", "le quotidien", press releases and
+        # communiqués are mostly not StatCan's bulletin.
+        ("What was the daily average temperature in Calgary?", "statcan_daily"),
+        ("Le coût du panier d'épicerie dans le quotidien des familles", "statcan_daily"),
+        ("Calgary police press release on impaired driving", "statcan_daily"),
+        ("Communiqué de la Ville de Montréal sur le déneigement", "statcan_daily"),
     ],
 )
 def test_false_positive_terms(question: str, absent: str):
