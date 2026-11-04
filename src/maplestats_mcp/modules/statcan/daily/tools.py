@@ -9,6 +9,7 @@ from fastmcp.tools import tool
 from maplestats_mcp.modules.statcan.daily import client, constants
 from maplestats_mcp.modules.statcan.daily.schemas import (
     DailyArchiveSearchResult,
+    DailyArticle,
     DailyReleaseList,
     ReleaseCalendarResult,
 )
@@ -75,6 +76,36 @@ async def statcan_daily_get_releases(
     """
     use_lang(lang)
     return await client.get_releases(subject, lang=lang, limit=limit)
+
+
+@tool
+async def statcan_daily_get_article(
+    article: str,
+    lang: Literal["en", "fr"] = "en",
+) -> DailyArticle:
+    """Read the full text of one Daily article, with its tables, charts and PDF.
+
+    Use for: what StatCan actually wrote in a release -- the analysis,
+    the headings, the Note to readers (concepts, revisions, next release
+    date) -- beyond the one-paragraph summary statcan_daily_get_releases
+    gives. `article` is the id ("dq261104a") or the URL that
+    statcan_daily_get_releases or statcan_daily_search_archive returned;
+    `lang` picks the English or French page. Returns the text by
+    section, chart titles, the StatCan tables the text links to (with
+    8-digit product ids for the wds_ tools), the article's own PDF, its
+    Tables and Related information pages, the previous release, and the
+    other links in the body. Charts and the release's tables are not
+    reproduced: read figures from the tables and cite them.
+    Keywords: The Daily article, full text, release text, StatCan
+    analysis, note to readers, PDF, press release, Daily release,
+    commentary, what StatCan said, highlights, release article.
+    Mots-clés : article du Quotidien, texte intégral, texte du
+    communiqué, analyse de Statistique Canada, note aux lecteurs, PDF,
+    communiqué de presse, diffusion du Quotidien, faits saillants,
+    commentaire, article de diffusion, ce que dit Statistique Canada.
+    """
+    use_lang(lang)
+    return await client.get_article(article, lang=lang)
 
 
 @tool
