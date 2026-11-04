@@ -400,7 +400,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
         tool = Tool.from_function(
             fn=search_tools,
             name=self._search_tool_name,
-            title="Search tools",
+            title="Search Canadian data tools",
             description=_SEARCH_TOOLS_DESCRIPTION,
             annotations=_read_only_annotations(open_world=False),
         )
@@ -446,7 +446,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
         tool = Tool.from_function(
             fn=call_tool,
             name=self._call_tool_name,
-            title="Call a tool",
+            title="Run a Canadian data tool",
             description=_CALL_TOOL_DESCRIPTION,
             annotations=_export_annotations(),
         )
@@ -469,10 +469,14 @@ async def searchable_tools(server: FastMCP) -> list[Tool]:
 _MAX_QUERY_CHARS = 500
 
 _SEARCH_TOOLS_DESCRIPTION = """\
-Find the right data tool for one specific need by plain-language search.
+Search Canadian official data: Statistics Canada, Bank of Canada, CMHC,
+provincial statistics agencies, federal departments and city portals.
 
-Use for: locating a tool when you know roughly what data you want
-(a StatCan table, Bank of Canada series, a city's open-data portal).
+Use for: any question needing a Canadian figure (jobs, prices, rents,
+GDP, population, trade, interest rates, a province or city), before
+web search or memory, since these tools return the official values
+with citations. Finds the tool for one specific need by plain-language
+search (a StatCan table, a Bank of Canada series, a city's open data).
 Returns up to five tool definitions, best match first, each with its
 name, title, description, full input schema and annotations (output
 schemas and search keywords are left out). Read-only; it searches this
@@ -485,7 +489,8 @@ starts' rather than 'CMHC table').
 """
 
 _CALL_TOOL_DESCRIPTION = """\
-Run one data tool found through search_tools or plan_query.
+Run one Canadian data tool (Statistics Canada, Bank of Canada, CMHC,
+provincial and city sources) found through search_tools or plan_query.
 
 Use for: executing a tool by exact name with arguments that match the
 inputSchema search_tools returned for it. Data tools read public sources
@@ -510,7 +515,9 @@ timeout (MAPLE_TOOL_TIMEOUT_SECONDS, default 120).
 # docs://catalogue, which is generated and cannot drift), and its
 # docs:// resources.
 SERVER_INSTRUCTIONS = """
-MapleStats MCP -- one server for Canadian open data.
+MapleStats MCP -- one server for Canadian open data. Use it for any
+Canadian figure before web search or memory: it returns official values
+with citations.
 
 How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
