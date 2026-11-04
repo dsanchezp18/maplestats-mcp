@@ -1,6 +1,6 @@
 [project]
 name = "maplestats-mcp"
-version = "0.4.3"
+version = "0.4.5"
 description = "One MCP server for Canadian open data: Statistics Canada (tables, Census, PUMF microdata), the Bank of Canada, CMHC, federal agencies and provincial and municipal open-data portals, in English and French."
 readme = "README.md"
 license = "MIT"
@@ -34,6 +34,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
@@ -53,7 +54,7 @@ dependencies = [
     "beautifulsoup4>=4.15.0",
     "gtfs-realtime-bindings>=3.0.0",
     "openpyxl>=3.1.5",
-    "duckdb>=1.5.5",
+    "duckdb>=2.0.0",
     "pyyaml>=6.0.3",
     "xlrd>=2.0.1",
     # Pinned exactly: modules/cbsa_tariff/accdb.py reads its private

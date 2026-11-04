@@ -5,15 +5,22 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import skip_outage, verdict
+
 from maplestats_mcp.modules.eps import client
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
 
 
 async def main() -> int:
     failures = 0
-    load = await client.get_last_load_date()
-    print(f"OK: get_last_load_date -> {load.last_load_date} ({load.raw_value!r})")
-    failures += load.last_load_date is None
+    # EPS empties its load-date table while it reloads (seen 2026-09-28 and 2026-11-02);
+    # that is an outage of one check, so the occurrence checks below still run.
+    try:
+        load = await client.get_last_load_date()
+        print(f"OK: get_last_load_date -> {load.last_load_date} ({load.raw_value!r})")
+        failures += load.last_load_date is None
+    except UpstreamUnavailable as exc:
+        skip_outage("EPS load date", exc, rest_runs=True)
 
     for dataset in ("current", "2023"):
         listing = await client.list_occurrences(dataset, limit=3)  # type: ignore[arg-type]
@@ -46,8 +53,7 @@ async def main() -> int:
     except InvalidInput:
         print("OK: bad date raises InvalidInput")
 
-    print("EPS SMOKE TEST " + ("PASSED" if not failures else f"FAILED ({failures})"))
-    return 1 if failures else 0
+    return verdict("EPS", not failures)
 
 
 if __name__ == "__main__":

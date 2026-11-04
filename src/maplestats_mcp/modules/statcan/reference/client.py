@@ -53,7 +53,8 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
-_client = new_client(follow_redirects=True)
+# Every request sends a Referer: see statcan/reference/constants.py, REFERER.
+_client = new_client(follow_redirects=True, headers={"Referer": constants.REFERER})
 _warmed: set[tuple[str, str]] = set()
 
 

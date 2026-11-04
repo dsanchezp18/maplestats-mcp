@@ -6,10 +6,11 @@ Each one has a trap an analyst knows and a general assistant tends to miss:
   the census), and the line must be named (MBM, the official poverty line).
 - A-02 wages in provincial public administration: the payroll survey (SEPH) has the
   detailed industry (NAICS 912); the Labour Force Survey's wage table stops at "Public
-  administration" as a whole. Correct only when the answer names SEPH or says why.
+  administration" as a whole. Correct only with SEPH's NAICS 912 figure.
 - A-03 "average income": incomes are skewed, so the median belongs beside the average.
 - A-04 "median household income": a household is a Census unit; the Canadian Income
-  Survey counts economic families and persons not in an economic family.
+  Survey counts economic families and persons not in an economic family. The Census
+  household median answers the question as asked; the survey's median alone is partial.
 
 Values are read live from StatCan (WDS and the Census Profile SDMX API).
 """
@@ -74,17 +75,23 @@ def questions() -> list[dict[str, Any]]:
             "eval_type": "flag",
             "question": "What are average wages for workers in Alberta's provincial public "
             "administration?",
-            # Kept out of "expected": a flag question counts a direct figure as correct,
-            # and this one is correct only when the answer names the payroll survey.
-            "expected": {},
-            "reference": {
-                "seph_awe_aug_2026": monthly["points"]["2026-08-01"][0],
-                "seph_awe_2025": annual["points"]["2025-01-01"][0],
-            },
+            # The figure is the latest month; the last annual average is a documented
+            # alternative. Naming SEPH without a figure is no answer (flag_alone), and a
+            # figure for all of public administration (NAICS 91) is the trap.
+            "expected": {"seph_awe_aug_2026": monthly["points"]["2026-08-01"][0]},
+            "alternatives": [
+                {
+                    "label": "the 2025 annual average (14-10-0204)",
+                    "expected": {"seph_awe_2025": annual["points"]["2025-01-01"][0]},
+                }
+            ],
             "headline": [],
             "flag_pattern": r"SEPH|Survey of Employment, Payrolls and Hours|EERH|payroll survey|14-10-020[34]",
-            "tolerance": "Correct only when the answer uses SEPH (names it, or cites its tables "
-            "14-10-0203/0204 for NAICS 912); the figures are listed for reference.",
+            "figure_required": True,
+            "flag_alone": "abstained",
+            "tolerance": "Correct: SEPH's NAICS 912 average weekly earnings for Alberta, the "
+            "latest month (August 2026) or the 2025 annual average. Partial: an older month, "
+            "or all of public administration (NAICS 91) labelled as such. No figure: abstained.",
             "citations": [
                 cite(m_pid, monthly, "2026-08-01", coord),
                 cite(a_pid, annual, "2025-01-01", coord),
@@ -133,15 +140,24 @@ def questions() -> list[dict[str, Any]]:
             "category": "Analyst",
             "eval_type": "numeric",
             "question": "What is the median household income in Alberta?",
-            "expected": {
-                "census_household_median_2020": household,
-                "cis_family_median_2024": fam["points"]["2024-01-01"][0],
-            },
-            # Either figure alone is partial (the CIS one is real, but not a household unit).
+            # The question asks for households, a Census unit: the Census median answers it
+            # as asked. The income survey's median is real and newer, but counts economic
+            # families and persons not in one, so on its own it is partial.
+            "expected": {"census_household_median_2020": household},
+            "alternatives": [
+                {
+                    "label": "the Canadian Income Survey median (economic families and persons "
+                    "not in an economic family), not a household unit",
+                    "expected": {"cis_family_median_2024": fam["points"]["2024-01-01"][0]},
+                    "outcome": "partial",
+                }
+            ],
+            "reference": {"cis_family_median_2024": fam["points"]["2024-01-01"][0]},
             "headline": [],
             "tolerances": {"census_household_median_2020": 0, "cis_family_median_2024": 100},
-            "tolerance": "The Census household figure is the headline; correct gives both and "
-            "names each unit (household vs economic families and persons not in one)",
+            "tolerance": "Correct: the 2021 Census household median (income year 2020), "
+            "labelled; the CIS median alone, with its unit named, is partial; the CIS median "
+            "passed off as a household figure is wrong",
             "citations": [
                 {
                     "table_id": "Other",

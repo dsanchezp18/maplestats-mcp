@@ -45,9 +45,10 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import httpx
+from _smoke_common import SKIPPED_EXIT
 
 from maplestats_mcp.modules.transit import client, constants, national
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
 from maplestats_mcp.shared.remote_zip import ZipMember
 
 # A point in each core, a search radius in metres, and the least routes and
@@ -347,94 +348,126 @@ async def main() -> int:
     if not args:
         keys = list(CORES)
     agencies = await client.list_agencies()
-    check(
-        all(a.reachable for a in agencies.agencies if a.reachable is not None),
-        f"all {agencies.total_matches} feeds answer a live probe (BC Transit's are not probed)",
+    # A feed that does not answer the probe is reported as an outage, not a failure; its
+    # own checks below are skipped if it stays down.
+    down = [a.key for a in agencies.agencies if a.reachable is False]
+    print(
+        f"OK: {agencies.total_matches - len(down)} of {agencies.total_matches} feeds answer a "
+        "live probe (BC Transit's are not probed)"
+        if not down
+        else f"SKIP: feeds that did not answer a live probe: {', '.join(down)}"
     )
     check(
         set(CORES) == set(constants.AGENCIES),
         "the smoke test covers every configured agency",
     )
 
+    skipped: list[str] = []
     for key in keys:
-        lat, lon, radius, min_routes, min_stops = CORES[key]
-        agency = constants.AGENCIES[key]
-        today = datetime.now(ZoneInfo(agency.timezone)).date()
-        info = await client.get_feed_info(key)
-        covers = (info.feed_end_date is None or info.feed_end_date >= today) and (
-            info.feed_start_date is None or info.feed_start_date <= today
-        )
-        check(covers, f"{key}: feed {info.feed_start_date}..{info.feed_end_date} covers {today}")
-        check(
-            info.route_count >= min_routes and info.stop_count >= min_stops,
-            f"{key}: {info.route_count} routes, {info.stop_count} stops",
-        )
-
-        routes = await client.search_routes(key, limit=500)
-        if agency.excluded_route_types:
-            check(
-                routes.total_matches < info.route_count,
-                f"{key}: route search drops excluded lines "
-                f"({routes.total_matches} of {info.route_count})",
+        try:
+            lat, lon, radius, min_routes, min_stops = CORES[key]
+            agency = constants.AGENCIES[key]
+            today = datetime.now(ZoneInfo(agency.timezone)).date()
+            info = await client.get_feed_info(key)
+            # A schedule published up to two weeks before it applies is current (exo La
+            # Presqu'ile posted its 2026-11-09 feed on 2026-11-03).
+            soon = today + timedelta(days=14)
+            covers = (info.feed_end_date is None or info.feed_end_date >= today) and (
+                info.feed_start_date is None or info.feed_start_date <= soon
             )
-        else:
             check(
-                routes.total_matches == info.route_count,
-                f"{key}: route search returns all {info.route_count} routes",
+                covers,
+                f"{key}: feed {info.feed_start_date}..{info.feed_end_date} covers {today} "
+                "or starts within 14 days",
+            )
+            check(
+                info.route_count >= min_routes and info.stop_count >= min_stops,
+                f"{key}: {info.route_count} routes, {info.stop_count} stops",
             )
 
-        near = await client.search_stops(
-            key, near_latitude=lat, near_longitude=lon, radius_m=radius
-        )
-        check(bool(near.stops), f"{key}: {near.total_matches} stops within {radius} m of the core")
-
-        # One stop at a time: each stop is a full pass over stop_times.txt
-        # (tens of MB compressed for the large agencies), so scanning many is slow. Suburban
-        # and small-town networks (exo's sectors) run little or nothing on
-        # weekends, so a few nearby stops are tried, then the next Wednesday.
-        weekday = today + timedelta(days=(2 - today.weekday()) % 7)
-        day_label, service_date = "today", None
-        best_stop, best = near.stops[0], None
-        for when, label in ((None, "today"), (str(weekday), str(weekday))):
-            for candidate in near.stops[:4]:
-                result = await client.get_stop_departures(
-                    key, candidate.stop_id, service_date=when, start_time="00:00", limit=500
+            routes = await client.search_routes(key, limit=500)
+            if agency.excluded_route_types:
+                check(
+                    routes.total_matches < info.route_count,
+                    f"{key}: route search drops excluded lines "
+                    f"({routes.total_matches} of {info.route_count})",
                 )
-                if result.total_matches:
-                    best_stop, best, day_label, service_date = candidate, result, label, when
-                    break
-            if best is not None:
-                break
-        check(
-            best is not None,
-            f"{key}: stop {best_stop.stop_id} ({best_stop.name}) has "
-            f"{best.total_matches if best else 0} scheduled departures {day_label}",
-        )
-        if best is not None:
-            times = [d.local_time for d in best.departures]
-            check(len(best.departures) == min(best.total_matches, 500), f"{key}: listing size")
-            check(
-                all(d.route_id for d in best.departures),
-                f"{key}: every departure names its route",
-            )
-            print(f"    first: {best.departures[0].route_short_name} {times[0]}")
+            else:
+                check(
+                    routes.total_matches == info.route_count,
+                    f"{key}: route search returns all {info.route_count} routes",
+                )
 
-        # Rail and small-town feeds have non-numeric names and few routes, so
-        # the first routes that run on the date are tried instead of a numbered bus.
-        # STQ's crossings are ferries (route_type 4).
-        candidates = [r for r in routes.routes if r.route_type in (2, 3, 4)][:10]
-        route = candidates[0]
-        summary = await client.get_route_summary(key, route.route_id, service_date=service_date)
-        for route in candidates[1:]:
-            if summary.trips_on_date > 0:
-                break
+            near = await client.search_stops(
+                key, near_latitude=lat, near_longitude=lon, radius_m=radius
+            )
+            check(
+                bool(near.stops), f"{key}: {near.total_matches} stops within {radius} m of the core"
+            )
+
+            # One stop at a time: each stop is a full pass over stop_times.txt
+            # (tens of MB compressed for the large agencies), so scanning many is slow. Suburban
+            # and small-town networks (exo's sectors) run little or nothing on
+            # weekends, so a few nearby stops are tried, then the next Wednesday.
+            # A feed can also start in the future (exo La Presqu'ile's 2026-11-09 schedule,
+            # published before it applied), so the next three Wednesdays are tried and a date
+            # outside the schedule is skipped.
+            weekday = today + timedelta(days=(2 - today.weekday()) % 7)
+            wednesdays = [weekday + timedelta(weeks=n) for n in range(3)]
+            day_label, service_date = "today", None
+            best_stop, best = near.stops[0], None
+            for when, label in ((None, "today"), *((str(d), str(d)) for d in wednesdays)):
+                for candidate in near.stops[:4]:
+                    try:
+                        result = await client.get_stop_departures(
+                            key, candidate.stop_id, service_date=when, start_time="00:00", limit=500
+                        )
+                    except InvalidInput as exc:
+                        if "outside it" not in str(exc):
+                            raise
+                        break
+                    if result.total_matches:
+                        best_stop, best, day_label, service_date = candidate, result, label, when
+                        break
+                if best is not None:
+                    break
+            check(
+                best is not None,
+                f"{key}: stop {best_stop.stop_id} ({best_stop.name}) has "
+                f"{best.total_matches if best else 0} scheduled departures {day_label}",
+            )
+            if best is not None:
+                times = [d.local_time for d in best.departures]
+                check(len(best.departures) == min(best.total_matches, 500), f"{key}: listing size")
+                check(
+                    all(d.route_id for d in best.departures),
+                    f"{key}: every departure names its route",
+                )
+                print(f"    first: {best.departures[0].route_short_name} {times[0]}")
+
+            # Rail and small-town feeds have non-numeric names and few routes, so
+            # the first routes that run on the date are tried instead of a numbered bus.
+            # STQ's crossings are ferries (route_type 4).
+            candidates = [r for r in routes.routes if r.route_type in (2, 3, 4)][:10]
+            route = candidates[0]
             summary = await client.get_route_summary(key, route.route_id, service_date=service_date)
-        scanned = sum(h.trips for h in summary.hourly)
-        check(
-            summary.trips_on_date > 0 and scanned == summary.trips_on_date,
-            f"{key}: route {summary.route.short_name or summary.route.long_name} runs "
-            f"{summary.trips_on_date} trips {day_label} ({scanned} found in stop_times)",
-        )
+            for route in candidates[1:]:
+                if summary.trips_on_date > 0:
+                    break
+                summary = await client.get_route_summary(
+                    key, route.route_id, service_date=service_date
+                )
+            scanned = sum(h.trips for h in summary.hourly)
+            check(
+                summary.trips_on_date > 0 and scanned == summary.trips_on_date,
+                f"{key}: route {summary.route.short_name or summary.route.long_name} runs "
+                f"{summary.trips_on_date} trips {day_label} ({scanned} found in stop_times)",
+            )
+        except UpstreamUnavailable as exc:
+            # An agency's server being down is an outage of that feed, not a MapleStats
+            # failure: reported, and the other agencies still run.
+            print(f"SKIP: {key} unavailable ({exc})")
+            skipped.append(key)
 
     # STM metro lines stay out of results.
     if "stm" in keys:
@@ -465,8 +498,14 @@ async def main() -> int:
     if not args or only_national:
         await national_checks(check, national_keys)
 
-    print("TRANSIT SMOKE TEST " + ("PASSED" if not failures else f"FAILED ({failures})"))
-    return 1 if failures else 0
+    if failures:
+        print(f"TRANSIT SMOKE TEST FAILED ({failures})")
+        return 1
+    if skipped:
+        print(f"TRANSIT SMOKE TEST SKIPPED ({', '.join(skipped)} unavailable): not a pass")
+        return SKIPPED_EXIT
+    print("TRANSIT SMOKE TEST PASSED")
+    return 0
 
 
 if __name__ == "__main__":

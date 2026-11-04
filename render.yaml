@@ -49,14 +49,26 @@ services:
       - key: MAPLE_USAGE_STATS
         value: "1"
       # The free instance has 512 MB: DuckDB spills to disk beyond this limit
-      # (patent, open-database and microdata queries), and the patent cache
-      # (the IPC table alone is 740 MB) is capped well under the free disk.
+      # (patent, open-database and microdata queries), into the system temp
+      # folder (/tmp, writable by the image's appuser; MAPLE_DUCKDB_TEMP_DIR
+      # moves it), at most MAPLE_DUCKDB_TEMP_MAX_GB (default 1) per query. The
+      # patent cache (the IPC table alone is 740 MB) is capped well under the
+      # free disk.
       - key: MAPLE_DUCKDB_MEMORY_LIMIT
         value: "256MB"
+      # wds_query_series runs each caller's SQL in its own process, about
+      # 70 MB plus at most this much (address-space cap); two at a time (the
+      # default MAPLE_QUERY_MAX_CONCURRENT) stay inside the free 512 MB.
+      - key: MAPLE_QUERY_MEMORY_MB
+        value: "128"
       - key: MAPLE_IP_HORIZONS_CACHE_MAX_GB
         value: "1.5"
       # PUMF tabulation downloads whole ZIPs; the free disk does not persist.
       - key: MAPLE_PUMF_TABULATE
+        value: "0"
+      # wds_query_series stays off until each query runs in a memory-capped process:
+      # one query could exhaust the instance's 512 MB (security review, 2026-11-03).
+      - key: MAPLE_QUERY_SERIES
         value: "0"
       # StatCan open-database (LODE) archives are unpacked to the system temp
       # folder (MAPLE_LODE_CACHE_DIR unset): the free plan has no persistent

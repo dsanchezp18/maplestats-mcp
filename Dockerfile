@@ -1,5 +1,5 @@
 # Tag for readers, digest for reproducible builds (the digest wins). Refresh both
-# together: docker buildx imagetools inspect python:3.14-slim
+# together: docker buildx imagetools inspect python:3.15-slim
 FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913
 
 RUN groupadd -r appuser && useradd -r -g appuser -m appuser
@@ -16,10 +16,12 @@ COPY src/ src/
 # rather than silently resolving different versions than were tested.
 RUN uv sync --locked --no-dev
 
-# PUMF, CIPO patent and StatCan open-database (LODE) caches; named volumes
-# mounted here inherit this owner.
-RUN mkdir -p /data/pumf /data/ip_horizons /data/lode \
-    && chown appuser:appuser /data/pumf /data/ip_horizons /data/lode
+# PUMF, CIPO patent, StatCan open-database (LODE) and CBSA tariff caches; named
+# volumes mounted here inherit this owner. docker-compose.yml points
+# MAPLE_CBSA_TARIFF_CACHE_DIR at /data/cbsa_tariff, which a root-owned /data made
+# unwritable for appuser, so every cbsa_tariff_ tool failed there.
+RUN mkdir -p /data/pumf /data/ip_horizons /data/lode /data/cbsa_tariff \
+    && chown appuser:appuser /data/pumf /data/ip_horizons /data/lode /data/cbsa_tariff
 
 USER appuser
 

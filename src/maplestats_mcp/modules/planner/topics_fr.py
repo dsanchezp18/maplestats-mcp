@@ -21,6 +21,11 @@ FR: dict[str, str] = {
     "CMHC starts, completions, rents and vacancy: category_level_1 and _2": (
         "Mises en chantier, achèvements, loyers et inoccupation de la SCHL : category_level_1 et _2"
     ),
+    "a city or CMA's geography_id (name=<the city>), passed with "
+    "geography_type='MetropolitanMajorArea'": (
+        "le geography_id d'une ville ou d'une RMR (name=<la ville>), à passer avec "
+        "geography_type='MetropolitanMajorArea'"
+    ),
     "column_field and row_field options for that category and geography": (
         "options column_field et row_field pour cette catégorie et cette géographie"
     ),
@@ -403,10 +408,12 @@ FR: dict[str, str] = {
         "Tableaux de référence financiers : longues séries fédérales et provinciales "
         "(numéro de tableau pour finance_frt_get_table)"
     ),
-    "Estimates, Public Accounts, program spending": (
-        "budgets des dépenses, Comptes publics, dépenses de programmes"
+    "Estimates, Public Accounts, program spending and FTEs": (
+        "budgets des dépenses, Comptes publics, dépenses de programmes et ETP"
     ),
-    "filter by organization and fiscal year": "filtrer par organisation et par exercice",
+    "a department's expenditures or FTEs: filter by organization and fiscal year": (
+        "dépenses ou ETP d'un ministère : filtrer par organisation et par exercice"
+    ),
     "federal contracts over $10,000 by vendor, department, fiscal year or value": (
         "contrats fédéraux de plus de 10 000 $ par fournisseur, ministère, exercice ou valeur"
     ),
@@ -1454,8 +1461,8 @@ GUIDANCE_FR = tuple(
         ),
         "Si une étape ne trouve rien, utilisez search_tools avec l'objet de l'étape comme requête.",
         (
-            "Avant de répondre, appelez check_answer une fois avec la question et les chiffres "
-            "que vous citerez."
+            "Avant de répondre, appelez check_answer avec la question et les chiffres de "
+            "Statistique Canada et de la Banque du Canada que vous citerez."
         ),
     )
 )

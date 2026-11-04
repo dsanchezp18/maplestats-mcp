@@ -11,6 +11,7 @@ import re
 import unicodedata
 from functools import cache
 
+from maplestats_mcp.catalogue import TOOL_SWITCHES
 from maplestats_mcp.modules.planner.places import (
     CITIES,
     CITY_SHADOWS,
@@ -55,7 +56,10 @@ _GUIDANCE = (
         "into one series."
     ),
     "If a step finds nothing, use search_tools with the step's purpose as the query.",
-    "Before replying, call check_answer once with the question and the figures you will cite.",
+    (
+        "Before replying, call check_answer with the question and the StatCan and Bank of "
+        "Canada figures you will cite."
+    ),
 )
 # A step whose purpose names the place asked about ("Alberta fires...") moves
 # ahead of national steps; "BC" is how purposes name British Columbia.
@@ -126,11 +130,18 @@ def _ordered(topic: Topic, text: str, labels: list[str]) -> list[StepOut]:
         return 2 * term_hit + _place_score(step, labels)
 
     steps = sorted(topic.steps, key=score, reverse=True)
-    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps]
+    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps if _available(step)]
+
+
+def _available(step: PlanStep) -> bool:
+    """False for a tool a setting has switched off on this server (statcan_pumf_tabulate on
+    the hosted one), so a plan never sends the model to a tool call_tool will refuse."""
+    switch = TOOL_SWITCHES.get(step.tool)
+    return switch is None or switch()
 
 
 def _steps(steps: tuple[PlanStep, ...]) -> list[StepOut]:
-    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps]
+    return [StepOut(tool=step.tool, purpose=step.purpose) for step in steps if _available(step)]
 
 
 def _places(question: str, text: str, foreign: str | None = None) -> list[PlaceMatch]:
@@ -218,6 +229,32 @@ def _add_fitness_notes(plan_out: QueryPlan, lang: str) -> QueryPlan:
                     topic.caveats.append(note)
                 seen.add(note)
     return plan_out
+
+
+# French function words that English questions do not use. A question with two
+# of them, outside hyphenated place names ("Rivière-du-Loup"), is French: a
+# client that sends a French question without lang='fr' still gets a French
+# plan (one did, and answered in English).
+_FRENCH_WORDS = frozenset(
+    {
+        *("le", "la", "les", "des", "du", "de", "au", "aux", "un", "une", "est", "sont"),
+        *("quel", "quelle", "quels", "quelles", "combien", "dans", "pour", "depuis"),
+        *("avec", "entre", "qui", "que", "qu", "et", "ou", "sur", "à"),
+    }
+)
+
+
+def looks_french(question: str) -> bool:
+    """Whether a question is written in French (two French function words)."""
+    words = set()
+    for token in question.lower().replace("’", "'").split():
+        if "-" in token:
+            continue
+        for part in re.split(r"'", token):
+            part = part.strip('.,;:!?()«»"')
+            if part in _FRENCH_WORDS:
+                words.add(part)
+    return len(words) >= 2
 
 
 def plan(question: str, lang: str = "en") -> QueryPlan:

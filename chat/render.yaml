@@ -23,3 +23,13 @@ services:
         value: "20"
       - key: CHAT_DAILY_LIMIT
         value: "500"
+      # Input plus output tokens per day, summed from every model call. In
+      # memory, so a restart resets it: also set a spend limit on the API
+      # key's workspace.
+      - key: CHAT_DAILY_TOKENS
+        value: "3000000"
+      # Cloudflare fronts onrender.com and sets this to the caller's address;
+      # the rightmost X-Forwarded-For entry may be a shared edge address.
+      # Falls back to X-Forwarded-For when the header is missing.
+      - key: CHAT_CLIENT_IP_HEADER
+        value: CF-Connecting-IP

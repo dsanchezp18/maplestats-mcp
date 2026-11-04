@@ -322,3 +322,61 @@ def test_admin_topics_in_french():
     permits = client.plan("Building permits issued in Halifax", lang="fr").topics[0]
     assert permits.label == "Permis de bâtir et construction"
     assert permits.steps[0].purpose.startswith("registres de permis d'Halifax")
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "How much did ESDC spend in 2023-24 and how many employees",
+        (
+            "Combien Emploi et Développement social Canada a-t-il dépensé en 2023-2024 et "
+            "quels sont ses effectifs?"
+        ),
+        "How many FTEs does the Canada Revenue Agency have",
+        "federal government spending by department",
+    ],
+)
+def test_department_spending_and_headcount_go_to_gc_infobase(question: str):
+    result = client.plan(question)
+    assert result.topics[0].topic == "spending", [t.topic for t in result.topics]
+    assert result.topics[0].steps[0].tool == "gc_infobase_list_files"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "number of employees in manufacturing in Ontario",
+        "average weekly earnings of employees in Alberta",
+        "how much do households spend on food",
+        "federal contracts by department",
+    ],
+)
+def test_spend_and_employees_alone_do_not_mean_department_totals(question: str):
+    spending = [t for t in client.plan(question).topics if t.topic == "spending"]
+    assert not spending or spending[0].steps[0].tool != "gc_infobase_list_files"
+
+
+@pytest.mark.parametrize(
+    ("question", "french"),
+    [
+        ("Quel est le taux de chômage à Montréal ?", True),
+        ("Combien de logements ont été mis en chantier à Québec?", True),
+        ("unemployment rate in Trois-Rivières and Rivière-du-Loup", False),
+        ("What is the population of La Tuque?", False),
+        ("average rent in Montréal", False),
+    ],
+)
+def test_looks_french(question: str, french: bool):
+    assert client.looks_french(question) is french
+
+
+async def test_plan_query_answers_a_french_question_in_french_without_lang():
+    from fastmcp import Client
+
+    async with Client(mcp) as session:
+        result = await session.call_tool(
+            "plan_query", {"question": "Quel est le taux de chômage à Montréal ?"}
+        )
+    assert result.structured_content is not None
+    assert result.structured_content["provenance"]["lang"] == "fr"
+    assert result.structured_content["guidance"][0].startswith("Exécutez")

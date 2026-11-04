@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -806,7 +806,7 @@ wheels = [
 
 [[package]]
 name = "maplestats-mcp"
-version = "0.4.3"
+version = "0.4.5"
 source = { editable = "." }
 dependencies = [
     { name = "access-parser" },
@@ -852,7 +852,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.15.0" },
     { name = "cachetools", specifier = ">=5.3.0" },
     { name = "defusedxml", specifier = ">=0.7.1" },
-    { name = "duckdb", specifier = ">=1.5.5" },
+    { name = "duckdb", specifier = ">=2.0.0" },
     { name = "fastmcp", specifier = ">=4.0.3,<4.3" },
     { name = "gtfs-realtime-bindings", specifier = ">=3.0.0" },
     { name = "h2", specifier = ">=4.1.0" },

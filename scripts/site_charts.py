@@ -189,6 +189,12 @@ def _truncate(text: str, max_chars: int) -> str:
     return text[: max_chars - 1].rstrip(" ,;:") + "\u2026"
 
 
+def _gap(i: int, lines: Sequence[str]) -> str:
+    """A space after every line but the last, so a screen reader, which reads
+    the tspans as one string, hears "born abroad" and not "bornabroad"."""
+    return " " if i < len(lines) - 1 else ""
+
+
 def _multiline(x: float, y: float, lines: Sequence[str], cls: str, anchor: str, lh: float) -> str:
     """A <text> with one <tspan> per line, the block centred on y."""
     if len(lines) == 1:
@@ -196,7 +202,7 @@ def _multiline(x: float, y: float, lines: Sequence[str], cls: str, anchor: str, 
     top = y - (len(lines) - 1) * lh / 2
     anchor_attr = "" if anchor == "start" else f' text-anchor="{anchor}"'
     spans = "".join(
-        f'<tspan x="{_n(x)}" y="{_n(top + i * lh)}">{_esc(line)}</tspan>'
+        f'<tspan x="{_n(x)}" y="{_n(top + i * lh)}">{_esc(line)}{_gap(i, lines)}</tspan>'
         for i, line in enumerate(lines)
     )
     return f'<text class="{cls}"{anchor_attr}>{spans}</text>'
@@ -405,7 +411,8 @@ def grouped_bars(
         else:
             lines = wrapped[c]
             spans = "".join(
-                f'<tspan x="{_n(cx)}" y="{_n(plot_bottom + 18 + i * 15)}">{_esc(line)}</tspan>'
+                f'<tspan x="{_n(cx)}" y="{_n(plot_bottom + 18 + i * 15)}">'
+                f"{_esc(line)}{_gap(i, lines)}</tspan>"
                 for i, line in enumerate(lines)
             )
             out.append(f'<text class="c-label" text-anchor="middle">{spans}</text>')
@@ -949,7 +956,7 @@ def square_chart(
         lead = line_size * 1.15
         top = y - lead * (len(rows) - 1) / 2 + line_size * 0.35
         spans = "".join(
-            f'<tspan x="{_n(x)}" y="{_n(top + k * lead)}">{_esc(row)}</tspan>'
+            f'<tspan x="{_n(x)}" y="{_n(top + k * lead)}">{_esc(row)}{_gap(k, rows)}</tspan>'
             for k, row in enumerate(rows)
         )
         labels.append(

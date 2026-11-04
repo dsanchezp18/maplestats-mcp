@@ -220,8 +220,8 @@ assumption shared by the code and its tests.
 
 ```bash
 uv sync                          # install
-uv run ruff check src tests      # lint
-uv run ruff format src tests     # format
+uv run ruff check src tests scripts  # lint
+uv run ruff format src tests scripts  # format
 uv run pyright                   # type check — must be 0 errors
 uv run pytest                    # unit tests, all mocked, no network
 uv run pytest -n 4 --dist loadfile   # the same in parallel (pytest-xdist), as CI runs it
@@ -277,7 +277,7 @@ whole classified list:
 
 ```bash
 uv run python scripts/check_tool_surface.py              # against origin/main
-uv run python scripts/check_tool_surface.py --base v0.4.3
+uv run python scripts/check_tool_surface.py --base v0.4.5
 ```
 
 The test skips where there is no history to compare with (an sdist, a

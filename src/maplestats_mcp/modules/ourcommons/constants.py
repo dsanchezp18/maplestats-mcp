@@ -1,17 +1,41 @@
 """Constants for the House of Commons open data module.
 
-Fetched live on 2026-09-30 from www.ourcommons.ca/en/open-data. Feeds exist per language
-(`/members/en/...` and `/members/fr/...`), and a member's page accepts the
-bare person id in place of "first-last(id)".
+Fetched live on 2026-09-30 from www.ourcommons.ca/en/open-data, and re-checked
+2026-11-03. Feeds exist per language, and a member's page accepts the bare person id
+in place of "first-last(id)". The French feeds moved to French paths on
+www.noscommunes.ca by 2026-11-02: /members/fr/... now redirects to a 404 error page,
+so French uses /deputes/fr/recherche, /position-des-partis, /conseil-des-ministres
+and /{id}/fonctions. English is unchanged (/Members/en/..., as the open-data page
+publishes it). An unknown person id still answers 302 to the error page in both.
 """
 
 DOMAIN = "www.ourcommons.ca"
 SITE = f"https://{DOMAIN}"
+SITE_FR = "https://www.noscommunes.ca"
 
-MEMBERS_URL = SITE + "/members/{lang}/search/xml"
-ROLES_URL = SITE + "/members/{lang}/{person_id}/roles/xml"
-STANDINGS_URL = SITE + "/members/{lang}/party-standings/xml"
-MINISTRY_URL = SITE + "/members/{lang}/ministries/xml"
+
+class _ByLang:
+    """A URL template per language, used as `TEMPLATE.format(lang=..., ...)`."""
+
+    def __init__(self, en: str, fr: str) -> None:
+        self._templates = {"en": en, "fr": fr}
+
+    def format(self, *, lang: str, **values: object) -> str:
+        return self._templates[lang].format(**values)
+
+
+MEMBERS_URL = _ByLang(SITE + "/Members/en/search/XML", SITE_FR + "/deputes/fr/recherche/XML")
+ROLES_URL = _ByLang(
+    SITE + "/Members/en/{person_id}/roles/XML", SITE_FR + "/deputes/fr/{person_id}/fonctions/XML"
+)
+STANDINGS_URL = _ByLang(
+    SITE + "/Members/en/party-standings/XML", SITE_FR + "/deputes/fr/position-des-partis/XML"
+)
+# English moved from /Members/en/ministries to /members/en/ministry (found 2026-11-03 through
+# the French page's language switch); the open-data page still links the old address.
+MINISTRY_URL = _ByLang(
+    SITE + "/members/en/ministry/xml", SITE_FR + "/deputes/fr/conseil-des-ministres/XML"
+)
 OPEN_DATA_PAGE = SITE + "/en/open-data"
 
 RATE_LIMIT_SOURCE = "ourcommons"

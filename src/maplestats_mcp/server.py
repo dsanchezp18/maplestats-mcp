@@ -65,6 +65,7 @@ from maplestats_mcp.shared import search, semantic
 from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
+from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
@@ -374,7 +375,17 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
             ],
             ctx: Context = None,  # type: ignore[assignment]  # fastmcp injects it
         ) -> str | list[dict[str, Any]]:
+            # A query is a few words; a long one is cut rather than scored in full.
+            query = query[:_MAX_QUERY_CHARS]
             results = await transform._search(await transform.searchable_tools(ctx), query)
+            if not results:
+                # An empty list reached the client as no content at all (live 2026-11-03),
+                # which a client reading the first block, and the model, could not use.
+                return (
+                    "No tools matched. Try topic words (for example 'rent Calgary' or "
+                    "'taux de chômage Québec') rather than tool names, or call plan_query "
+                    "with the question."
+                )
             rendered = transform._serializer(results)
             return await rendered if inspect.isawaitable(rendered) else rendered
 
@@ -403,14 +414,23 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
             ctx: Context = None,  # type: ignore[assignment]  # fastmcp injects it
         ) -> ToolResult:
             if name in {transform._call_tool_name, transform._search_tool_name}:
-                raise ValueError(
-                    f"'{name}' is a synthetic search tool and cannot be called via the "
-                    "call_tool proxy"
+                raise InvalidInput(
+                    f"'{name}' is called directly, not through call_tool; pass the name of a "
+                    "data tool that search_tools returned."
                 )
             # As fastmcp's proxy does: the name comes from the model, so it may
             # reach only what the model could have found through search_tools.
             if not any(t.name == name for t in await transform.get_tool_catalog(ctx)):
-                raise NotFoundError(f"Unknown tool: {name!r}")
+                switch = TOOL_SWITCHES.get(name)
+                if switch is not None and not switch():
+                    raise InvalidInput(
+                        f"{name} is switched off on this server (it runs code or files "
+                        "the hosted server does not allow). For StatCan series use "
+                        "wds_get_data_from_vectors or wds_get_full_table_download instead."
+                    )
+                # A name is echoed back, so a 100,000-character one is cut (live 2026-11-03).
+                shown = name if len(name) <= 100 else name[:100] + "..."
+                raise NotFoundError(f"Unknown tool: {shown!r}")
             return await ctx.fastmcp.call_tool(name, arguments)
 
         return Tool.from_function(
@@ -432,6 +452,10 @@ async def searchable_tools(server: FastMCP) -> list[Tool]:
 # Glama and similar registries grade these two synthetic tools on their
 # descriptions alone; FastMCP's defaults say what they do but not when to
 # pick each one, or what happens on a bad name.
+# search_tools reads at most this much of a query (a 200,000-character one was scored in
+# full, live 2026-11-03).
+_MAX_QUERY_CHARS = 500
+
 _SEARCH_TOOLS_DESCRIPTION = """\
 Find the right data tool for one specific need by plain-language search.
 
@@ -480,21 +504,22 @@ How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
 plain-language query (English or French), then call_tool with its name.
-For a whole StatCan table, or hundreds of series, use
-wds_get_full_table_download (a CSV link, not the rows); the vector tools
-return every observation inline and suit a handful of series. Run the Python
-script it returns and read its summary.
+For a French question, pass lang='fr' to plan_query and every tool.
+For a handful of series use the vector tools (every observation inline);
+for averages, sums or rankings over a few series, wds_query_series (where the
+server offers it; off over HTTP by default) runs SQL server-side. For a whole StatCan table, or hundreds of series, use
+wds_get_full_table_download (a CSV link, not the rows) and offer the Python
+script it returns; run it only if the user agrees.
 Cite every figure you report: a StatCan series carries context.citation
 (table, vector, release date) to quote with each value's reference period;
 other results name their source in provenance.
 For a monthly StatCan headline (jobs, trade, permits, sales), report the
 seasonally adjusted series unless the question asks otherwise, and say which.
-After fetching data, offer the analyst scripts: reproduce_code (tool name
-and arguments) returns R, Python, Stata and Julia code, and an Excel Power
-Query, that retrieves and cleans the same data; reproduce_workbook returns
-the rows as a formatted Excel workbook. docs://catalogue describes every
-module in one bilingual line.
-Before replying with figures, call check_answer once and fix what it returns.
+After fetching data, offer reproduce_code (R, Python, Stata, Julia, Excel
+Power Query that re-fetch the same data) and reproduce_workbook (the rows as
+an Excel workbook). docs://catalogue describes every module in one bilingual line.
+Before replying, call check_answer with the StatCan and Bank of Canada
+figures you cite, and fix what it returns.
 Not published? Say so, give the closest published figure labelled, then public
 microdata (statcan_pumf_, own estimate), else a custom tabulation, RTRA or an
 RDC (approval or fee; MapleStats cannot run them).

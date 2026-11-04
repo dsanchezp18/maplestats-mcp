@@ -23,7 +23,7 @@ def is_upstream_outage(exc: BaseException) -> bool:
     return isinstance(exc, UpstreamError) and re.search(r"HTTP 5\d\d", str(exc)) is not None
 
 
-def skip_outage(source: str, exc: BaseException) -> None:
+def skip_outage(source: str, exc: BaseException, *, rest_runs: bool = False) -> None:
     """Report an outage that stopped a smoke run, or raise anything else again.
 
     The caller keeps going to its verdict, so a check that already failed
@@ -32,7 +32,8 @@ def skip_outage(source: str, exc: BaseException) -> None:
     if not is_upstream_outage(exc):
         raise exc
     _skipped.append(source)
-    print(f"SKIP: {source} unavailable ({exc}); the remaining checks did not run")
+    rest = "the other checks still run" if rest_runs else "the remaining checks did not run"
+    print(f"SKIP: {source} unavailable ({exc}); {rest}")
 
 
 def verdict(name: str, ok: bool) -> int:

@@ -8,6 +8,529 @@ each; `scripts/build_changelog.py` writes them in here at release time.
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-11-03
+
+This release fixes `check_answer`, which flagged a correct percent change as wrong and
+suggested the index level instead (a 3.1% CPI change was told to become 167.7). It brings
+back StatCan's reference, analysis, data and survey searches: since about 2026-10-29
+StatCan has answered those pages with a 404 to any request without a referrer. CMHC data now
+covers cities (CMAs) as well as Canada and the provinces, through
+`cmhc_list_metropolitan_areas`. The chat demo gets a token budget, a full Content Security
+Policy, and charts of the percent change an answer quotes. Nothing breaks a caller: the tool
+surface changes are one new tool and one new optional `provenance` field.
+
+### Added
+
+- Chat demo: a daily token budget (`CHAT_DAILY_TOKENS`, default 3,000,000 input plus
+  output tokens, summed from the usage of every model call on both backends). A spent
+  budget answers 429 with a message before any model call. The counters stay in
+  memory and reset on restart, so `chat/README.md` now says the real backstop is a
+  spend limit on the API key's workspace.
+- `cmhc_list_metropolitan_areas`: CMHC's 225 metropolitan areas (CMAs, census agglomerations
+  and smaller centres) with the `geography_id` to pass with
+  `geography_type="MetropolitanMajorArea"`, filtered by `name` ("Toronto" is 2270) or
+  `province_id`. The `cmhc_` tools now return rents, vacancy rates and housing starts for a
+  city, not only for Canada and the provinces.
+
+### Changed
+
+- Chat demo: a series computed by the server (`transform="yoy_pct_change"` and the
+  like on WDS, SDMX and Bank of Canada tools) is charted and tabulated in its own unit
+  (percent, percentage points, an index), with the server's formula in its notes. The
+  published levels follow as a second series while there is room under the
+  8-series cap. Before, the panel showed only the levels and ignored `transformed`.
+- CI runs the test suite in the Python 3.15 image that both Docker images use since a
+  Dependabot update, and the package lists 3.15 as supported. The release workflow refuses a
+  tag on a commit that is not on `main`.
+- The transit smoke test accepts a schedule published up to 14 days before it starts (exo
+  La Presqu'ile's 2026-11-09 feed), tries the next three Wednesdays for departures, and
+  reports a feed whose server is down (STS Sherbrooke, 2026-11-03) as SKIPPED rather than
+  stopping the whole run.
+
+### Fixed
+
+- Chat demo: a failure after a billed model call (while reading the answer or the tool
+  results) is no longer refunded against the per-address and daily caps. Only a backend
+  failure known to have happened before any billed call is given back.
+- `check_answer`: a figure written as a percent or a change ("percent", "%", "pourcentage",
+  "12-month change", "variation", or no unit in a question about inflation or growth) cited
+  against an index or level series (the CPI, 2002=100) is compared with the series' 12-month
+  and one-period percent changes, not with its level. Until now a correct 3.1% Quebec
+  inflation rate for 2026-09 was reported wrong with the fix "Use 167.7", the index level. A
+  wrong percent now gets a problem quoting the computed changes, and a percent whose earlier
+  period is not published gets a note instead of a problem.
+- `check_answer`: places are matched on whole names. "Victoria" no longer matches
+  "Victoriaville, Quebec", "London" no longer matches "Londonderry", and the province of
+  Quebec no longer matches the Québec CMA (nor Quebec City the province). A question naming a
+  city with its province ("Victoria, BC") asks for the city, so a British Columbia series no
+  longer passes for it, and the suggested member is the one with the exact name.
+- `cmhc_list_categories`, `cmhc_get_table_options` and `cmhc_get_table_data` accept
+  `geography_type="CMA"` (and "RMR", "metro", "centre", "city"), which CMHC answered with an
+  error, and a place name as `geography_id` ("Toronto", "Ontario") when exactly one area
+  carries it; an unknown type, id or name is refused with the valid choices instead of
+  reaching CMHC. `cmhc_get_table_data` also accepts the field labels that
+  `cmhc_get_table_options` shows ("Bedroom Type", "Historical Time Periods") in place of
+  their codes. Together these failed the chat demo's Toronto rent question.
+- Chat demo: CMHC time series (`cmhc_get_table_data` with `row_field="TIMESERIES"`) are
+  charted and tabled under the answer, one series per column. A saved conversation the page
+  cannot draw is dropped instead of stopping the rest from loading, and a result the chart
+  cannot draw shows a note under the answer instead of replacing the answer with an error.
+- The HTTP server (`python -m maplestats_mcp`) and the chat demo keep an idle connection open
+  for 130 s instead of uvicorn's 5 s. Behind a proxy that reuses connections for longer
+  (Render's), a request sent down a connection uvicorn had just closed failed at the proxy
+  with a plain-text 502, which the chat demo showed as "The demo server did not answer".
+- `ourcommons_get_ministry` in English: the House of Commons moved the English ministry feed
+  from `/Members/en/ministries/XML` to `/members/en/ministry/xml`; the old address answered
+  its 404 page, so the English call failed (French was fixed in 0.4.4).
+- `statcan_surveys_search_surveys`: StatCan's survey directory answers 404 since 2026-10-29.
+  The search now lists surveys from IMDB's alphabetical index instead (917 surveys, active
+  and inactive, same ids), and says so in `provenance.limits`.
+- `wds_get_data_from_vectors` and the other vector tools refuse more than 300 vectors, and
+  vector ids that are not positive 32-bit numbers, before calling StatCan. StatCan answered
+  them with HTTP 416 (reported as an upstream error to retry) and a "JSON syntax error".
+- CMHC: an HTTP 200 error page in place of a province's metropolitan area list is no
+  longer cached for a day, which refused valid ids such as Toronto's meanwhile. Field codes
+  are upper-cased on every path (`timeseries` works like `TIMESERIES`).
+- `call_tool`: a switched-off tool (`wds_query_series`, `statcan_pumf_tabulate` on the hosted
+  server) says it is switched off and what to use instead, rather than "unknown tool". An
+  unknown name is echoed back cut to 100 characters. Calling `call_tool` or `search_tools`
+  through `call_tool` is an `invalid_input`, without the advice to retry.
+- `search_tools` answers "No tools matched" with a suggestion instead of an empty result,
+  and reads at most 500 characters of a query.
+- `plan_query` leaves out tools this server has switched off, so a hosted plan no longer
+  sends the model to `statcan_pumf_tabulate`.
+- `rdaas_get_classification_index_entry` now carries `provenance` (source, licence and
+  URL), the one tool that had none.
+- The reproduction script for CIPO patent data carries the RapidSSL intermediate
+  certificate itself, instead of downloading it over plain http and trusting it.
+- The HTTP server sends `X-Content-Type-Options: nosniff` and HSTS on every response.
+- Docker: the server image creates `/data/cbsa_tariff`, which `docker-compose.yml` uses as
+  the CBSA tariff cache; it was owned by root, so every `cbsa_tariff_` tool failed under
+  compose. Compose keeps it in a named volume.
+- Website: the About page links Kole Harvey's `statcan-mcp` and `bank-of-canada-mcp` at their
+  current repositories (the old links were dead), and the Connect page links OpenAI's moved
+  developer-mode article, in French on the French page. The benchmark tables use decimal
+  commas on the French page, and the count of answers read by hand says it includes the
+  updated MapleStats runs. The French home page offers French example questions and says, under
+  the tool search, that tool descriptions are in English. Chart labels that wrap onto several
+  lines are read with a space between the lines by screen readers. Several French phrasings
+  were corrected, and the Contributing page no longer lists Python versions that can go out of
+  date.
+- README: the Docker Compose command sets `MAPLE_AUTH_TOKEN` first, without which the server
+  refuses to start, and the lint and format commands include `scripts`, as CI runs them.
+- SECURITY.md: the chat demo is in scope.
+- `statcan_reference_search_documents`, `statcan_reference_search_analysis`,
+  `statcan_reference_search_data`, `statcan_pumf_search` and
+  `statcan_surveys_search_surveys` work again. Since about 2026-10-29 StatCan answers its
+  404 page (and a redirect loop for the survey directory) to any request without a
+  `Referer` header, while the same pages load for a browser following StatCan's own menu.
+  These tools now send StatCan's home page as the referrer. The survey search keeps IMDB's
+  alphabetical index as a fallback.
+
+### Security
+
+- Chat demo: on Render the per-address rate limit reads `CF-Connecting-IP`
+  (`CHAT_CLIENT_IP_HEADER`) before `X-Forwarded-For`, whose rightmost entry behind
+  Cloudflare may be a shared edge address that put many callers in one bucket. Falls
+  back to `X-Forwarded-For` when the header is missing or not an IP address.
+- Chat demo: the page sends a full Content-Security-Policy (scripts only from this
+  origin, the two pinned cdnjs files and the page's inline script by a SHA-256 hash
+  computed at startup; no framing), and every response sends
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`.
+  Model text is sanitised without images, and its links open in a new tab with
+  `rel="noopener noreferrer"`.
+
+## [0.4.4] - 2026-11-03
+
+This release adds Job Bank wages, IRCC processing times, federal proactive disclosure
+(contracts, grants, ministers' travel and hospitality), server-side SQL over StatCan
+series, leaf members, and three portals; `check_answer`, which re-checks the figures an
+answer cites before it is given; reading notes derived from StatCan's own metadata; and
+new caveats on traps found by the Maple Test v2. Results are smaller: a `search_tools`
+answer went from 15,702 to 6,605 characters, table 14-10-0287's cube metadata from
+36,579 to 18,769, and a search, data and plan sequence from 20,849 to 11,526 characters
+(45% less); on the Maple Test the cost per question fell by about a third. Nothing
+breaks a caller, but two defaults changed: `wds_get_cube_metadata` returns 10 distinct
+footnotes instead of 25 footnotes, with repeats merged (`footnote_limit` raises it), and
+`reproduce_workbook` no longer saves a file unless `MAPLE_EXPORT_DIR` is set (without
+it, a local server returns the workbook as base64, as a hosted one does).
+
+Security: `wds_query_series` now runs each query in a separate process with a memory and
+time cap (one query could exhaust a small server's memory), and it is off by default when
+serving HTTP (`MAPLE_QUERY_SERIES=1` turns it on). The House of Commons tools work in
+French again after the House moved its French feeds.
+
+### Added
+
+- `check_answer`: the last call before replying with figures. It takes the
+  question and each figure the answer will report (value, unit, period,
+  geography, and a StatCan vector, a table and coordinate, or a Bank of Canada
+  series), re-reads them from the source and returns only the problems, each
+  with a fix: a value that differs from the published one, a missed scale
+  factor (thousands, millions), a newer period, a series for another place than
+  the question names (with the right coordinate when the table has it), an
+  unadjusted series where an adjusted one exists, E, F or suppressed flags,
+  current against constant or chained dollars, an index given as dollars,
+  chained or not-additive components added together, and surveys a fitness rule
+  says not to compare. A figure not published at the asked geography gets the
+  route: public microdata when its codebook has the variables (the Canadian
+  Income Survey PUMF has no disability variable), else a custom tabulation,
+  RTRA or a Research Data Centre, with their access conditions and a pointer to
+  `statcan_surveys_search_rtra_datasets` and `statcan_surveys_search_rdc_holdings`.
+  `plan_query`'s guidance and the server instructions point to it.
+- WDS and SDMX series context: short reading notes derived from StatCan's own
+  metadata, added only when it shows the issue: three-month moving averages,
+  chained and constant dollars, E, F and x periods named, footnotes saying
+  totals are not the sum of their components, archived tables (with the table
+  that replaced them) and terminated series, and unadjusted series whose table
+  also has the seasonally adjusted one.
+- `arcgis_hub_*`: three portals. `portal="sk"` is the Saskatchewan GeoHub
+  (geohub.saskatchewan.ca, 129 provincial geospatial datasets), back after its
+  2026-10-03 removal: saskatchewan.ca's terms of use exclude its sub-sites, and
+  most items carry the Government of Saskatchewan Standard Unrestricted Use
+  Data Licence v2.0, which allows commercial use. `portal="waterloo"` is the
+  City of Waterloo (data.waterloo.ca, Waterloo Open Data User Licence),
+  distinct from the Region of Waterloo's `portal="waterloo_region"`; its
+  catalogue also lists Kitchener, Region and Cambridge items under their own
+  licences. `portal="new_westminster"` is the City of New Westminster
+  (opendata.newwestcity.ca, Open Government Licence - City of New Westminster
+  v1.0); searches default to Feature Service, as the site has only the "all"
+  collection.
+- `plan_query`: "Waterloo" alone now maps to the City of Waterloo and the
+  Region's portal, "Region of Waterloo" to the Region only; New Westminster
+  and the Saskatchewan GeoHub are mapped too.
+- Chat demo: under each answer, a panel with a chart, a sortable and filterable table
+  with CSV download, and the sources (table number and title linked to the StatCan page,
+  vector, geography, unit, release date, reading notes and table cautions), built from
+  the tool results rather than the model's text. Reads StatCan WDS and SDMX series and
+  Bank of Canada Valet series. Conversations are kept in the browser; New chat and a
+  light or dark theme switch are in the header. Modelled on Eurostat Assistant's chat.
+- Every tool error starts with a machine-readable code, then the message, then the
+  suggested fix: `[invalid_input]`, `[not_found]`, `[upstream_error]`,
+  `[upstream_unavailable]`, `[data_locked]`, `[unknown_tool]` (else `[error]`), so an
+  assistant can branch on the kind of failure without parsing the sentence.
+- `provenance.lang`: the language MapleStats wrote the result's own text in (`en` or `fr`).
+- The weekly live workflow (`smoke.yml`) rebuilds the Maple Test v1 and v2 answer keys
+  from the sources (`--check`) and opens the smoke-failure issue when a published value
+  was revised or a trap no longer holds.
+- `wds_get_full_table_download` (CSV) now also returns Python and R scripts that download
+  the zipped table to `data/raw/`, keep the `members` asked for (`{"Geography": ["Canada"]}`,
+  dimension and member names checked against the table's metadata) and the periods from
+  `start_period` to `end_period` (an end of `2025` keeps all of 2025's months), then print a short summary: the size, each column's
+  distinct values and the first and last rows. An assistant runs the script and reads the
+  summary instead of pulling a large table's rows into the conversation. The new arguments
+  are optional; with `format="sdmx"` they are refused.
+- `reproduce_code` takes `summary=True`, which ends the R and Python scripts with the same
+  printed summary (no Stata, Julia or Excel version is written then). Reproduction filters
+  gain a "one of these values" match, used for the members.
+- Job Bank wages from Employment and Social Development Canada (`jobbank_*`, a new
+  module): low, median and high hourly or annual wages for the 516 NOC 2021 occupations,
+  for 86 geographies (Canada, nine provinces and 76 economic regions; Prince Edward Island
+  and each territory are one economic region), from the yearly "Wages" dataset on
+  open.canada.ca. `jobbank_search_occupations` finds NOC codes by title
+  (English or French) or code prefix, `jobbank_get_wages` gives one occupation's wages
+  by region or province, `jobbank_compare_occupations` compares 2 to 25 occupations in
+  one region, and `jobbank_list_regions` lists the economic regions. The newest release
+  is found from the dataset at run time (2025 on 2026-11-03), with `release_year` for
+  the 2023 and 2024 releases. Each row carries the wage unit, the data source Job Bank
+  names, the reference period and whether the cell is published; each result cites the
+  release. A fitness-for-use caution says these are Job Bank estimates from the Labour
+  Force Survey and other sources, not a Statistics Canada table. OGL-Canada.
+- IRCC application processing times (`ircc_processing_list_application_types`,
+  `ircc_processing_get_time`): IRCC's current times for 57 application types read from
+  the JSON files behind its "Check processing times" tool (visitor visas, study and work
+  permits from inside or outside Canada, by country of residence where they vary; Express
+  Entry and other permanent residence programs; sponsorship; refugees; citizenship; PR
+  cards and documents), with people waiting for forward-looking types and IRCC's
+  last-updated date. The files have no documented API: a change in their shape raises an
+  error naming the file. Point-in-time estimates, cached for an hour, with a
+  fitness-for-use caution that they are not a time series.
+- Federal proactive disclosure module (`disclosure_*`, 6 tools) over Treasury Board's
+  government-wide Proactive Publication tables on open.canada.ca:
+  `disclosure_search_contracts` (contracts over $10,000),
+  `disclosure_search_grants` (grants and contributions),
+  `disclosure_search_travel` and `disclosure_search_hospitality` (ministers, their
+  staff and senior officials), `disclosure_summarize` (count and sum of value grouped
+  by department, vendor or recipient, program, province, riding, person, title, fiscal
+  year and more) and `disclosure_list_datasets` (ids, row counts, last update). Search
+  by name, title, department or `owner_org` code, program, province, riding, fiscal
+  year, date range and value range, with paging (up to 100 rows per call). Every row
+  carries its dataset and resource ids and the open.canada.ca page to cite. The portal
+  has no `datastore_search_sql`, so totals are summed by MapleStats from up to 100,000
+  matching rows; amendment rows, which restate an agreement's whole value, are
+  collapsed to each agreement's latest by default (`value_mode='all_rows'` sums them
+  as published).
+- Fitness-for-use caveat for every `disclosure_*` result: amendment rows, values in
+  CAD with taxes over the whole contract term, and quarterly (contracts, hospitality)
+  or monthly (travel) publication with late entries added to past quarters.
+- WDS and SDMX series `context` carries `citation`, a sentence to quote beside each value:
+  publisher, table number and title, vector and release date ("Statistics Canada. Table
+  14-10-0287-01, Labour force characteristics, .... Vector v2062815. Released
+  2026-10-09."), in the call's language. The server instructions ask assistants to cite
+  every figure with it and the value's reference period.
+- WDS data tools (`wds_get_data_from_vectors`, `wds_get_data_from_cube_coord`,
+  `wds_get_data_by_reference_period_range`, `wds_get_bulk_vector_data_by_range`,
+  `wds_get_changed_series_data`): each series now carries `context`, with the table
+  number, title and page URL, the series title, the unit of measure (for example
+  "Dollars" or "2024 constant dollars"), scale, frequency, geography, every
+  dimension's member label, the table's last release time and period range, and
+  notes on reading the unit (current vs constant dollars, index levels). A series
+  with no observations in the requested window says which periods it does have.
+- `sdmx_get_data` and `sdmx_get_vector_data`: each series carries the same `context`,
+  so the unit is a label ("2024 constant dollars"), not only a code ("455").
+- `plan_query` has an income topic: median and average family, household and
+  individual income, with table 11-10-0190 first for family and household income.
+- Fitness-for-use caveats for the CPI tables 18-10-0004 and 18-10-0005 (annual
+  average vs December over December; mortgage interest cost is published for Canada
+  only, and Toronto has six CPI series), the CMHC Rental Market Survey tables
+  34-10-0127, 34-10-0130 and 34-10-0133 (survey rent vs asking rent; which structures
+  each covers), and the income tables 11-10-0190, 11-10-0238 and 11-10-0239
+  (families vs individuals; constant dollars). The CMHC caveat also says that most
+  series start later than their table.
+- `wds_get_leaf_members`: the lowest-level members of one dimension of a StatCan
+  table (members that are no other member's parent), so a sum or ranking across
+  provinces, industries or product groups leaves out totals and subtotals. It
+  returns each leaf with its parent, the number of parents left out, the ids as a
+  list and comma string, an SDMX `+` key fragment and full key for
+  `sdmx_get_data`, and example coordinates for `wds_get_data_from_cube_coord`.
+  `dimension` takes the position or the name ("Geography", "Géographie").
+  `under_member_id` keeps one branch (a NAICS sector, the CPI's "Food");
+  `member_query` filters leaf names. Leaves that may still double-count are set
+  aside in `flagged_leaves`: names that read as totals ("Canada" alone, "Total
+  private dwellings"), StatCan's T-coded NAICS aggregates ("Goods-producing
+  industries", "Energy sector") and leaves outside the main hierarchy (the CPI's
+  "All-items excluding food"). Notes say when the leaves mix geographic levels
+  (the CPI's leaves are cities, not provinces), mix units, or come from a
+  dimension with no parent links (age groups).
+- `wds_query_series`: computes on the server instead of in the assistant's head.
+  It fetches up to 20 StatCan vectors for a reference-period range or the latest
+  N periods, loads them into a table `obs` (vector, table, reference period, value,
+  scale, status, series title, unit, frequency, geography) and runs one SQL query
+  with DuckDB, returning only the result: an annual average, a sum, a ranking, a
+  peak. Each series used comes with its citation. The query is read-only and
+  sandboxed: a single SELECT (or WITH ... SELECT), no file, network or extension
+  access, at most 500 result rows and a 20-second limit. Any other statement, or
+  SQL that DuckDB rejects, is an invalid-input error that lists the columns of
+  `obs`.
+- Website: a "Why MapleStats" section on the home page (for anyone who works with Canadian figures) and a "How we test it" page
+  (`benchmarks.html`, English and French) with the method, the Maple Test and CanData
+  benchmark results, and their limits; linked from the footer. The README has the same
+  "Why MapleStats" section, pointing to that page.
+
+### Changed
+
+- Income caveats (11-10-0190, 11-10-0238, 11-10-0239) now say the Canadian Income Survey
+  has no household unit (households are a Census unit; the 2021 Census Profile gives
+  median household income for 2020) and that the median belongs beside an "average
+  income". The low-income caveat points to the Census for areas smaller than a province.
+  The LFS/SEPH caveat says detailed-industry earnings, such as provincial public
+  administration (NAICS 912), come from SEPH, since the LFS wage table stops at broad
+  sectors.
+- The City of Hamilton (open.hamilton.ca) and Niagara Open Data
+  (niagaraopendata.ca, the Region's CKAN catalogue) were checked again on
+  2026-11-03 and stay out: both answer automated requests with a Cloudflare
+  challenge.
+- New fitness caveats: LFS estimates below the province are three-month moving averages
+  (14-10-0458, 14-10-0459, 14-10-0462; single months only for Montréal, Toronto and
+  Vancouver in 14-10-0460); IRCC monthly counts are admissions and permits, not
+  population, which comes from StatCan's demographic estimates (17-10-0009, 17-10-0040,
+  17-10-0121). The low-income caveat says rates by disability (11-10-0090) are for Canada
+  only.
+- Benchmarks page and home page: MapleStats's cost after the fixes (USD 0.074 per
+  question, was 0.116); the home page names `check_answer`, which the assistant can call
+  before replying, and the routes for figures that are not published.
+- Maple Test version 2 results (53 questions, 11 setups, three runs each, blind hand
+  review) on the benchmarks page and in `tests/maple_test/README.md`.
+- The shared CKAN client can send an action as a POST with a JSON body, so a
+  DataStore filter listing hundreds of values (every day of a date range) fits.
+- `provenance.caveats` now also follows the tables a result contains, so a call by
+  vector ID gets the same caveats as a call naming the table.
+- Every failed tool call ends with a suggested fix ("Fix: ..."), by error class, when
+  the module did not give one. A WDS coordinate with no series now says whether a
+  member ID is wrong (naming the dimension) or the combination is not published
+  (naming each member), instead of passing on WDS's bare status.
+- `reproduce_workbook` saves files only when `MAPLE_EXPORT_DIR` is set; without it, a
+  local server returns the workbook as base64, as a hosted one does. By default every
+  tool, `call_tool` included, is now annotated read-only and idempotent. Set
+  `MAPLE_EXPORT_DIR` to keep saving workbooks to a folder.
+- `search_tools` answers are about 60% smaller ("unemployment rate by province": 15.7 KB
+  to 6.6 KB). Each tool comes back with its name, title, description, input schema and
+  annotations; the output schema is left out, and so are the description's `Keywords`
+  and `Mots-clés` lines, which only serve the ranking. The ranking itself is unchanged:
+  the index still reads the whole docstring.
+- `wds_get_cube_metadata` returns a footnote that WDS repeats under several ids once,
+  with the other ids in the new `same_text_ids` field, and `footnote_limit` now
+  defaults to 10 distinct texts (it was 25 footnotes, repeats included).
+  `provenance.limits` says when footnotes were cut; pass a larger `footnote_limit` for
+  the rest. The answer for table 14-10-0287 went from 36.6 KB to 18.8 KB.
+- `provenance.reproduce` is one short sentence, and the Statistics Canada licence in
+  `provenance.licence` gives the licence name, link and attribution. The rule that
+  adapted data must not be presented as endorsed by the publisher is stated once in the
+  server instructions instead of in every result. Fitness-for-use caveats are unchanged.
+- New fitness caveats: merchandise trade (table 12-10-0011 and the CIMT tools) says the
+  monthly headline is the balance-of-payments basis, seasonally adjusted, and that CIMT is
+  customs basis and unadjusted; building permits (34-10-0292) say the headline value is
+  seasonally adjusted in current dollars. The server instructions now say to report a
+  monthly StatCan headline seasonally adjusted unless asked otherwise, and to say which.
+- README and home page claims say what the server does: every StatCan series carries a
+  citation and every other result names its source and licence; `check_answer` re-reads
+  the StatCan and Bank of Canada figures the assistant sends it, when it calls it; quality
+  flags are spelled out on StatCan values; the server only reads, the scripts it writes
+  run only if the user runs them, and saving a workbook is opt-in. The README's coverage
+  table lists `jobbank_`, `cra_charities_` and `telecom_`, and "Using it" names
+  `check_answer`.
+- Server instructions: `check_answer` takes the StatCan and Bank of Canada figures cited;
+  the full-table script is offered and run only if the user agrees; `wds_query_series`
+  for averages, sums and rankings over a few series where the server offers it; `lang='fr'`
+  for a French question.
+- `plan_query` answers a question written in French in French when `lang` is left at its
+  default.
+- `plan_query`: a department's spending or headcount ("How much did ESDC spend in
+  2023-24 and how many employees") is planned as government spending, GC InfoBase first;
+  it had no plan before. "Spend" and "employees" count only beside a department, so
+  household spending and payroll employment questions are not affected.
+- `search_tools`: GC InfoBase now ranks first for federal spending by department and for
+  public servants by department, above proactive disclosure, whose tools say they hold
+  contracts, grants, travel and hospitality, not total spending or headcount.
+  `wds_search_cubes` ranks first for "unemployment rate Toronto CMA" and "GDP by industry
+  monthly", and `jobbank_get_wages` (not the Ontario electricity price history) for an
+  occupation's average hourly wage; `jobbank_get_wages` points to LFS table 14-10-0417
+  and SEPH (14-10-0223) for StatCan's own wage figures.
+- The moving-average reading note for a seasonally adjusted series (14-10-0459) no longer
+  says to compare with the same months a year earlier; that advice is for unadjusted
+  series. The French unadjusted-series note reads "d'ordinaire celle qu'on compare d'une
+  période à l'autre".
+- Fitness caveats: SEPH's exclusions name military personnel of the defence services;
+  the Job Bank caveat says the LFS sample leaves out the three territories, some remote
+  regions and First Nations reserves, and calls the median "salaire en vigueur" in French.
+
+### Removed
+
+- `nwt_stats_list_files` and `nwt_stats_search_files`: the `business-dynamics`
+  topic (business conditions survey tables). The NWT Bureau of Statistics
+  removed that page from its relaunched site; it answers 404 since 2026-10-29.
+
+### Fixed
+
+- WDS and SDMX series context no longer calls chained (2017) dollars or
+  constant dollars "current (nominal) dollars": 36-10-0104 and 34-10-0292 give
+  those series the plain "Dollars" unit, and the price basis is now read from
+  the member.
+- The `Docker images` workflow now starts the chat image and checks `/health`, not only
+  builds it: an image missing a module built fine and would have failed on Render.
+- Live smoke scripts that stop at an upstream outage no longer report PASSED: they say
+  SKIPPED and exit 75, so a source that is down week after week shows in the weekly run.
+- `ab_wildfire_get_fire_danger`: a point in Alberta with no rating polygon (late
+  in the fire season the layer covers only part of the province) no longer gets
+  a note saying it is outside Alberta.
+- `statcan_reference_search_documents`, `statcan_reference_search_analysis`,
+  `statcan_reference_search_data`, `statcan_pumf_search` and
+  `statcan_surveys_search_surveys`: since 2026-10-29 StatCan's listing pages
+  (`/n1/{lang}/type/...`) answer 404 while its own menus still link them. These
+  tools now say the StatCan page is unavailable and point to a tool that still
+  works (`wds_search_cubes`, or `statcan_surveys_get_survey_metadata` for a known
+  id) instead of a bare "returned HTTP 404".
+- `statcan_surveys_get_survey_metadata`: an unknown survey id raises NotFound
+  again, at once. StatCan's 404 page, where IMDB sends it, answers 503 since
+  2026-10-29 instead of 500, so the call retried for about 100 seconds and
+  ended in a generic upstream error.
+- `statcan_delta_list_files` with `include_sizes`: checks file sizes 4 at a
+  time instead of all 46 at once, which timed out in bulk and paused every
+  other www150.statcan.gc.ca tool for a minute.
+- `check_answer` read whole numbers as rounded to their trailing zeros, so 20000
+  passed for a published 24000 and 1000 for 1400. A cited value now matches at
+  its written precision (170 means 169.5 to 170.5), `value` also takes text
+  ("6.50") to keep trailing decimals, and a scale word never widens the match
+  beyond 5% of the value ("2 million" no longer passes for 2.4 million).
+- `check_answer`: a year cited for a monthly or quarterly series was labelled as
+  its first month while the value and flags of its last month were read. The
+  year is now compared with its average (said so, with the range of the
+  values), a single month's value cited as the year is named as that month, E,
+  F and x flags are read for every month, and a newer period is judged at the
+  cited granularity.
+- `check_answer` scale words follow the language: in French a billion is 10^12
+  and a milliard 10^9 ("3,44 billions de dollars" was reported off by a factor
+  of 0.001), and a bare "m" (metres) is no longer read as millions ("M$" and
+  "$M" are).
+- `check_answer` added Canada to the asked places whenever a question said
+  "Canadian" or "pays", so a Canada series passed for "Canadian workers in
+  Alberta"; Canada now counts only when no province or city is named. Each
+  figure is checked against its own `geography` when given, else the places
+  asked, instead of the question's first place for every figure.
+- `check_answer` told the answer to say a figure is not published (and to go to
+  microdata, custom tabulation, RTRA or an RDC) whenever the cited table lacked
+  the place, although another table may publish it (Toronto's unemployment rate
+  is in 14-10-0459 and 14-10-0460, not 14-10-0287). It now reports that the
+  table has no member for the place, with a `wds_search_cubes` query and the
+  tables a fitness rule names; the not-published route is kept for cases known
+  to be published nowhere (11-10-0090 disability poverty below Canada).
+- `check_answer` failed as a whole ("try again") when one vector id was invalid,
+  because WDS answers HTTP 500 for the whole series-info batch; the ids are now
+  retried one by one and only the bad one gets a `series` problem.
+- `check_answer`: a figure from another source than StatCan or the Bank of
+  Canada is no longer a problem asking for a source id the answer cannot give;
+  it is listed in the new `notes` field as not checked.
+- `jobbank_compare_occupations` with `province` and the default region returned
+  Canada-wide medians; it now returns that province's.
+- Job Bank covers 86 geographies: Canada, nine provinces and 76 economic regions (Prince
+  Edward Island and each territory are one economic region), not "86 economic regions".
+- Website: the home page search counts every tool ("Top 5 of 395 tools", as the other
+  pages say), and an open tool card on the Tools page no longer runs past the screen at
+  360 px.
+- Maple Test version 2 re-graded: every one of the 1,923 answers read under one written
+  rule per question, with per-answer overrides (`arm/qid#repeat`), false claims and
+  referrals counted apart. The key accepts each country's own series on X-12, grades
+  A-04 on the Census household median, no longer requires unasked values on C-03, C-11,
+  C-12 and X-24, and needs the figure on flag questions that ask for one; the grader no
+  longer joins separate numbers ("July 1, 2026, 399,133"). The benchmarks page and
+  `tests/maple_test/README.md` lead with per-half results, show each server's declared
+  scope, say the other-sources half was chosen from MapleStats' coverage, label the
+  after-fix runs in-sample, and list setup issues and versions.
+- `ourcommons_*` in French: the House of Commons moved its French feeds to French paths
+  on www.noscommunes.ca by 2026-11-02 (`/deputes/fr/recherche`, `/position-des-partis`,
+  `/conseil-des-ministres`, `/{id}/fonctions`); the old `/members/fr/...` paths now
+  redirect to a 404 page, so every French call failed. English feeds use the published
+  `/Members/en/.../XML` form. The English ministry feed (`/Members/en/ministries/XML`)
+  also answers the 404 page as of 2026-11-03 and is not fixed yet.
+- Live smoke tests: the workflow reports a run that ends SKIPPED (exit 75: a source down,
+  locked or reloading) as a warning and in the job summary instead of failing the job and
+  opening the smoke-failure issue. The modules smoke test counts `[upstream_unavailable]`
+  errors and an EPS reload as skips; the EPS smoke test skips only its load-date check
+  while EPS reloads.
+- DuckDB spilled to `.tmp` in the working directory, which in the Docker image is
+  `/app`, owned by root, so spilling past `MAPLE_DUCKDB_MEMORY_LIMIT` failed
+  (patent, open-database, microdata and tariff queries). Spills now go to a
+  subfolder per query of the system temp folder (`MAPLE_DUCKDB_TEMP_DIR`),
+  removed when the query ends, at most `MAPLE_DUCKDB_TEMP_MAX_GB` (default 1).
+
+### Security
+
+- `wds_query_series` is off by default when serving HTTP (`MAPLE_QUERY_SERIES=1`
+  turns it back on) and on for local installs: DuckDB's memory limit does not cover scalar functions that build large
+  lists or strings, so a single query could exhaust a small instance's memory, and the
+  time limit does not interrupt one long operator.
+- `wds_query_series`: one query could exhaust the server's memory. DuckDB's
+  `memory_limit` does not cover scalar functions that build one large list or
+  string, and its interrupt acts only between operators: with a 256 MB limit,
+  `SELECT len(range(100000000))` reached 7 GB, `SELECT repeat('x', 10000000)
+  FROM range(500)` 9.6 GB (the 500-row cap did not bound bytes), and `SELECT
+  len(range(1000000000))` had the process killed, each running 16-29 s past
+  the 5 s limit while holding a worker thread and a request slot. The SQL now
+  runs in its own process with one thread, an address-space cap
+  (`MAPLE_QUERY_MEMORY_MB`, default 256; enforced on Linux, where those queries
+  now fail in under half a second with an invalid-input error) and no disk
+  spilling, killed at the time limit, at most `MAPLE_QUERY_MAX_CONCURRENT`
+  (default 2) at once; the server waits on it without a thread. Results are
+  capped at 1,000,000 characters and one text cell at 50,000, each with an
+  error that says what to change. A normal query takes about 0.15 s longer.
+- `wds_query_series`: a SELECT holding a data-modifying CTE (`WITH x AS (DELETE
+  FROM obs RETURNING *) SELECT ...`) ran; any INSERT, UPDATE, DELETE or MERGE
+  in the statement is now refused. Statements are classified on a locked
+  connection instead of DuckDB's default one, and duckdb 2.0.0 or later is
+  required (1.5.5 read a file while classifying `PRAGMA import_database`).
+- `wds_query_series`: DuckDB's error messages are cut to their first line, with
+  file paths removed (`duckdb_extensions()` showed the home folder).
+
 ## [0.4.3] - 2026-10-28
 
 This release adds five sources (BIS, the CBSA Customs Tariff, Indigenous Services

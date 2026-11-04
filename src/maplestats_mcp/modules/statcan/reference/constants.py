@@ -42,6 +42,15 @@ French uses a different, pluralized path ("references"/"analyses"/
 (`texte`, not `text`).
 """
 
+# Since about 2026-10-29 every /n1/{lang}/type/ listing answers StatCan's 404 page to a
+# request with no Referer, and the survey directory loops on redirects instead. Any
+# Referer gets the real page (checked 2026-11-03: none -> 404, example.com -> 200). A
+# browser following StatCan's own menu sends one, which is why the pages look up for
+# visitors while scripts, link checkers and crawlers see them down; robots.txt allows
+# all of /n1/. StatCan's home page is sent, since that is where these listings are
+# linked from. Approved by the project owner on 2026-11-03.
+REFERER = "https://www.statcan.gc.ca/"
+
 BASE_URL_TEMPLATE = "https://www150.statcan.gc.ca/n1/{lang}/type/{path}"
 # (catalogue, lang) -> (path segment, query param name for the keyword)
 CATALOGUE_CONFIG = {

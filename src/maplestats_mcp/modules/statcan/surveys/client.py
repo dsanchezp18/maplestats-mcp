@@ -17,6 +17,7 @@ does.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import unicodedata
 
@@ -24,6 +25,7 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 
 from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
+from maplestats_mcp.modules.statcan.reference.constants import REFERER
 from maplestats_mcp.modules.statcan.surveys import constants
 from maplestats_mcp.modules.statcan.surveys.schemas import (
     RdcHolding,
@@ -48,7 +50,8 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 
-_client = new_client(follow_redirects=True)
+# Every request sends a Referer: see statcan/reference/constants.py, REFERER.
+_client = new_client(follow_redirects=True, headers={"Referer": REFERER})
 # StatCan's own 404 page, where IMDB redirects an unknown survey id.
 _NOT_FOUND_PAGE = "srvmsg404"
 _warmed_list_langs: set[str] = set()
@@ -72,6 +75,77 @@ async def _warm_up_list(lang: str, *, force: bool = False) -> None:
 
 def _has_survey_links(html: str) -> bool:
     return bool(BeautifulSoup(html, "html.parser").select("ul.ndm-surveys-az li a"))
+
+
+def _directory_listings(html: str) -> list[SurveyListing]:
+    soup = BeautifulSoup(html, "html.parser")
+    found: list[SurveyListing] = []
+    for link in soup.select("ul.ndm-surveys-az li a"):
+        href_attr = link.get("href")
+        href = href_attr if isinstance(href_attr, str) else ""
+        segment = href.rstrip("/").rsplit("/", 1)[-1]
+        if segment.isdigit():
+            found.append(SurveyListing(survey_id=int(segment), name=link.get_text(strip=True)))
+    return found
+
+
+_SDDS = re.compile(r"[?&](?:amp;)?SDDS=(\d+)")
+
+
+def _imdb_index_listings(html: str) -> list[SurveyListing]:
+    soup = BeautifulSoup(html, "html.parser")
+    found: list[SurveyListing] = []
+    for link in soup.find_all("a", href=True):
+        href = link.get("href")
+        match = _SDDS.search(href if isinstance(href, str) else "")
+        name = link.get_text(" ", strip=True)
+        if match and name:
+            found.append(SurveyListing(survey_id=int(match.group(1)), name=name))
+    return found
+
+
+async def _imdb_index(lang: str) -> tuple[list[SurveyListing], bool]:
+    """Every survey in IMDB's alphabetical index (one page per letter), for when the
+    directory is down. A letter with no page (404) is skipped."""
+    template = constants.IMDB_INDEX_URL_FR if lang == "fr" else constants.IMDB_INDEX_URL_EN
+
+    async def page(letter: str) -> list[SurveyListing]:
+        await _LIMITER.acquire()
+        response = await get_with_retry(_client, template.format(letter=letter))
+        if response.status_code == 404:
+            return []
+        response.raise_for_status()
+        return _imdb_index_listings(response.text)
+
+    async def fetch() -> list[SurveyListing]:
+        try:
+            pages = await asyncio.gather(*(page(x) for x in constants.IMDB_INDEX_LETTERS))
+        except httpx.HTTPError as exc:
+            raise UpstreamUnavailable(
+                say(
+                    "statcan_surveys:search_surveys: StatCan's survey directory is down and "
+                    "IMDB's alphabetical index did not answer either. Try again later.",
+                    "statcan_surveys:search_surveys : le répertoire des enquêtes de Statistique "
+                    "Canada est indisponible et l'index alphabétique de la BMDI n'a pas répondu "
+                    "non plus. Réessayez plus tard.",
+                )
+            ) from exc
+        unique = {s.survey_id: s for listing in pages for s in listing}
+        if not unique:
+            # Raised inside fetch, so an empty index is never cached for a day.
+            raise UpstreamError(
+                say(
+                    "statcan_surveys:search_surveys: IMDB's alphabetical index listed no "
+                    "surveys; its layout may have changed.",
+                    "statcan_surveys:search_surveys : l'index alphabétique de la BMDI "
+                    "n'a énuméré aucune enquête ; sa mise en page a peut-être changé.",
+                )
+            )
+        return sorted(unique.values(), key=lambda s: s.name.casefold())
+
+    return await cached_fetch(
+        f"statcan-surveys:imdb-index:{lang}", constants.CACHE_TTL_LIST_SECONDS, fetch
+    )
 
 
 async def search_surveys(
@@ -152,17 +226,26 @@ async def search_surveys(
             ) from exc
 
     cache_key = f"statcan-surveys:list:{lang}"
-    html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_LIST_SECONDS, fetch)
-
-    soup = BeautifulSoup(html, "html.parser")
-    all_surveys: list[SurveyListing] = []
-    for link in soup.select("ul.ndm-surveys-az li a"):
-        href_attr = link.get("href")
-        href = href_attr if isinstance(href_attr, str) else ""
-        segment = href.rstrip("/").rsplit("/", 1)[-1]
-        if not segment.isdigit():
-            continue
-        all_surveys.append(SurveyListing(survey_id=int(segment), name=link.get_text(strip=True)))
+    source_url, limits = url, None
+    try:
+        html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_LIST_SECONDS, fetch)
+        all_surveys = _directory_listings(html)
+    except UpstreamUnavailable:
+        # The directory is down (HTTP 404 since 2026-10-29): list from IMDB's alphabetical
+        # index instead, which links the same survey ids.
+        all_surveys, was_cached = await _imdb_index(lang)
+        source_url = (
+            constants.IMDB_INDEX_URL_FR if lang == "fr" else constants.IMDB_INDEX_URL_EN
+        ).format(letter="a")
+        limits = say(
+            "StatCan's survey directory is down; these surveys come from IMDB's alphabetical "
+            "index (one page per letter), which lists the same ids. Names are in IMDB's "
+            "order, for example 'Accessible Print Materials, Survey on'.",
+            "Le répertoire des enquêtes de Statistique Canada est indisponible ; ces enquêtes "
+            "viennent de l'index alphabétique de la BMDI (une page par lettre), qui donne les "
+            "mêmes identifiants. Les noms suivent l'ordre de la BMDI, par exemple "
+            "« Accessibilité dans les organisations du secteur public, Enquête sur l' ».",
+        )
 
     query_lower = query.strip().lower()
     matched = (
@@ -177,9 +260,10 @@ async def search_surveys(
         total_matched=len(matched),
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
-            url=url,
+            url=source_url,
             cached=was_cached,
             schema_name="statcan_surveys.SurveyListResult",
+            limits=limits,
             lang=lang,
         ),
     )

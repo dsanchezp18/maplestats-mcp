@@ -28,7 +28,10 @@ confirmed vulnerability is fixed ahead of other work and credited in the
 ## Scope
 
 In scope: the code in this repository, the hosted server at
-`maplestats-mcp.onrender.com`, and the website.
+`maplestats-mcp.onrender.com`, the chat demo at
+`maplestats-chat-ydx4.onrender.com` (a public endpoint that holds a paid
+model-provider API key, so a way to spend that key or get around its rate
+limits is a vulnerability), and the website.
 
 Out of scope: the publishers' own sites and APIs (Statistics Canada, the
 Bank of Canada and the others). A problem in one of those belongs with its

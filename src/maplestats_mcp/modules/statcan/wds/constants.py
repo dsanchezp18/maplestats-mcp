@@ -40,10 +40,24 @@ CODE_SET_LIMIT_DEFAULT = 100
 # of series" tool (whole tables go to wds_get_full_table_download); 3,000
 # periods reaches back to 1914 for a monthly series (the CPI has 1,353).
 QUERY_MAX_VECTORS = 20
+
+# WDS refuses more than 300 objects in one list (HTTP 416, "The number of object in
+# the list exceeds the limit - 300", live 2026-11-03) and answers a vector id past a
+# 32-bit integer with HTTP 406 "JSON syntax error". Both are checked before the call,
+# so a caller gets a clear invalid_input instead of an upstream error to retry.
+WDS_MAX_LIST = 300
+MAX_VECTOR_ID = 2_147_483_647
 QUERY_MAX_LATEST_N = 3000
 QUERY_ROW_CAP = 500
 QUERY_MAX_SQL_CHARS = 10_000
 QUERY_MAX_SECONDS = 20.0
+# The 500-row cap did not bound bytes: `SELECT repeat('x', 10000000) FROM
+# range(500)` produced 5 GB of text (2026-11-03). `SELECT * FROM obs LIMIT 500`
+# is about 300,000 characters, so the cap leaves room for that (the response
+# budget middleware then trims rows) and stops anything far past it.
+QUERY_MAX_RESULT_CHARS = 1_000_000
+# One text cell: list(value) over 3,000 periods is about 20,000 characters.
+QUERY_MAX_CELL_CHARS = 50_000
 
 # The cube list is about 5 MB. Probed 2026-09-27 from GitHub runners: usually
 # under a second, but one runner took 31-70 s on every try, past the shared

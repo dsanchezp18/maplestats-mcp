@@ -13,6 +13,7 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
+from maplestats_mcp import config
 from maplestats_mcp.modules.statcan.wds import (
     client,
     constants,
@@ -75,8 +76,9 @@ async def wds_search_cubes(
 
     Use for: finding a StatCan table's productId when you only know a
     topic (GDP by industry, the consumer price index (CPI), the monthly
-    unemployment rate for Alberta, population estimates by province) or a
-    number such as "18-10-0004",
+    unemployment rate for Alberta or a CMA, average hourly wages by
+    occupation, population estimates by province) or a number such as
+    "18-10-0004",
     discovering which StatCan tables cover a subject before requesting
     metadata or data. Every word must
     be in a title, else the best partial matches come back. `limit`
@@ -86,10 +88,11 @@ async def wds_search_cubes(
     Keywords: statcan, find a StatCan table, statistics canada, table, cube, search, productId,
     discover, wds, catalogue, browse, list, inventory, all cubes, full
     list, tables, labour force, monthly unemployment rate, employment,
-    GDP by industry, CPI, consumer price index monthly, population estimates
+    GDP by industry monthly, CPI, consumer price index monthly, population estimates
     quarterly, retail trade, wages, trade, interprovincial migration,
     time series, real-time table, Alberta, by province, which table has,
-    LFS, SEPH, MBM, low income.
+    LFS, SEPH, MBM, low income, CMA, Toronto, monthly GDP, wages by
+    occupation, nurses.
     Mots-clés : Statistique Canada, StatCan, chercher un tableau, trouver un
     tableau, quel tableau, tableau de données, recherche, tableaux,
     numéro de tableau, découverte, catalogue, parcourir, liste, inventaire,
@@ -98,7 +101,8 @@ async def wds_search_cubes(
     de bâtir, permis de construire, estimations de population
     trimestrielles, commerce de détail, salaires, commerce, migration
     interprovinciale, séries chronologiques, tableau en temps réel,
-    révisions, espérance de vie, mortalité.
+    révisions, espérance de vie, mortalité, RMR, PIB mensuel, salaire
+    selon la profession, infirmières.
     """
     client.use_lang(lang)
     if query is not None and query.strip() and not lite:
@@ -540,50 +544,56 @@ async def wds_get_data_by_reference_period_range(
     return await _described(data.model_copy(update={"series": series, "provenance": provenance}))
 
 
-@tool
-async def wds_query_series(
-    vector_ids: list[int],
-    sql: str,
-    start_ref_period: str | None = None,
-    end_ref_period: str | None = None,
-    latest_n: int | None = None,
-    lang: Lang = "en",
-) -> SeriesQueryResult:
-    """Run one read-only SQL query over a few StatCan series on the server
-    and get back only its result: a sum, an average by year, a ranking, a
-    peak, a comparison between series, instead of every observation.
+# Left undefined when MAPLE_QUERY_SERIES=0, so discovery never lists it. The hosted
+# server sets it to 0 until each query runs in a memory-capped process: one query
+# could otherwise exhaust the instance's memory (security review, 2026-11-03).
+if config.get_query_series_enabled():
 
-    Use for: computing from StatCan vectors without adding up hundreds of
-    values yourself, e.g. the annual average CPI or unemployment rate, the
-    month with the highest value, provinces ranked by growth, the gap
-    between two series, a count of months above a threshold. The server
-    fetches up to 20 `vector_ids` for a window (`start_ref_period` and
-    `end_ref_period` as "YYYY-MM-DD" or "YYYY-MM", or `latest_n` periods,
-    default 12), loads them into a table `obs` and runs `sql` with DuckDB.
-    `obs` columns: vector_id, product_id, table_id, coordinate, ref_period
-    (DATE), value (unscaled: times scale_multiplier for the full figure),
-    scale_multiplier, decimals, status, symbol, release_time, series_title,
-    table_title, unit, scale, frequency, geography. Example: SELECT
-    vector_id, year(ref_period) AS year, avg(value) FROM obs GROUP BY ALL
-    ORDER BY ALL. Only one SELECT (or WITH ... SELECT) runs, with no file,
-    URL or extension access; at most 500 rows come back. Quote `series`
-    citations with the result.
-    Keywords: statcan, SQL, query, compute, calculate, aggregate, sum,
-    average, annual average, mean, group by, ranking, rank, top, maximum,
-    minimum, peak, compare series, DuckDB, analysis, vectors, server-side.
-    Mots-clés : Statistique Canada, requête SQL, calculer, calcul, agréger,
-    somme, moyenne, moyenne annuelle, regrouper, classement, classer,
-    maximum, minimum, sommet, comparer des séries, analyse, vecteurs,
-    calcul côté serveur.
-    """
-    client.use_lang(lang)
-    return await query.query_series(
-        vector_ids,
-        sql,
-        start_ref_period=start_ref_period,
-        end_ref_period=end_ref_period,
-        latest_n=latest_n,
-    )
+    @tool
+    async def wds_query_series(
+        vector_ids: list[int],
+        sql: str,
+        start_ref_period: str | None = None,
+        end_ref_period: str | None = None,
+        latest_n: int | None = None,
+        lang: Lang = "en",
+    ) -> SeriesQueryResult:
+        """Run one read-only SQL query over a few StatCan series on the server
+        and get back only its result: a sum, an average by year, a ranking, a
+        peak, a comparison between series, instead of every observation.
+
+        Use for: computing from StatCan vectors without adding up hundreds of
+        values yourself, e.g. the annual average CPI or unemployment rate, the
+        month with the highest value, provinces ranked by growth, the gap
+        between two series, a count of months above a threshold. The server
+        fetches up to 20 `vector_ids` for a window (`start_ref_period` and
+        `end_ref_period` as "YYYY-MM-DD" or "YYYY-MM", or `latest_n` periods,
+        default 12), loads them into a table `obs` and runs `sql` with DuckDB.
+        `obs` columns: vector_id, product_id, table_id, coordinate, ref_period
+        (DATE), value (unscaled: times scale_multiplier for the full figure),
+        scale_multiplier, decimals, status, symbol, release_time, series_title,
+        table_title, unit, scale, frequency, geography. Example: SELECT
+        vector_id, year(ref_period) AS year, avg(value) FROM obs GROUP BY ALL
+        ORDER BY ALL. Only one SELECT (or WITH ... SELECT) runs, with no file,
+        URL or extension access, in a time and memory limit; at most 500 rows
+        and 1,000,000 characters come back. Quote `series` citations with the
+        result.
+        Keywords: statcan, SQL, query, compute, calculate, aggregate, sum,
+        average, annual average, mean, group by, ranking, rank, top, maximum,
+        minimum, peak, compare series, DuckDB, analysis, vectors, server-side.
+        Mots-clés : Statistique Canada, requête SQL, calculer, calcul, agréger,
+        somme, moyenne, moyenne annuelle, regrouper, classement, classer,
+        maximum, minimum, sommet, comparer des séries, analyse, vecteurs,
+        calcul côté serveur.
+        """
+        client.use_lang(lang)
+        return await query.query_series(
+            vector_ids,
+            sql,
+            start_ref_period=start_ref_period,
+            end_ref_period=end_ref_period,
+            latest_n=latest_n,
+        )
 
 
 @tool

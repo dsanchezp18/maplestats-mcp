@@ -550,7 +550,17 @@ async def get_classification_index_entry(
                 f"Aucune entrée d'index {index_id!r} pour la classification {resource_id!r}.",
             )
         )
-    return _index_entry_from_json(obj)
+    return _index_entry_from_json(obj).model_copy(
+        update={
+            "provenance": make_provenance(
+                source="statcan-rdaas",
+                url=f"{constants.BASE_URL}/classification/{resource_id}/indexes/entry/{index_id}",
+                cached=False,
+                schema_name="statcan.rdaas.ClassificationIndexEntry",
+                lang=lang,
+            )
+        }
+    )
 
 
 async def get_term_exclusion(term_exclusion_id: str, *, lang: str = "en") -> TermExclusion:

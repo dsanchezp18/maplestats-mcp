@@ -1,7 +1,7 @@
 # Build from the repository root: docker build -f chat/Dockerfile chat
 # The same base as the server's image (../Dockerfile): tag for readers, digest for
 # reproducible builds (the digest wins). Refresh both files together:
-# docker buildx imagetools inspect python:3.14-slim
+# docker buildx imagetools inspect python:3.15-slim
 FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913
 
 RUN groupadd -r appuser && useradd -r -g appuser -m appuser
@@ -21,4 +21,7 @@ USER appuser
 EXPOSE 10000
 ENV PORT=10000
 
-CMD [".venv/bin/python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000"]
+# uvicorn closes an idle keep-alive connection after 5 s by default; Render's proxy
+# reuses connections for longer, and a request sent down one uvicorn has just closed
+# fails at the proxy as a plain-text 502 ("upstream request failed", 2026-11-03).
+CMD [".venv/bin/python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000", "--timeout-keep-alive", "130"]

@@ -484,8 +484,8 @@ SOURCES: dict[str, Source] = {
         "Elections Canada: federal general election results",
         "Élections Canada : résultats des élections générales fédérales",
         "national",
-        "Elections Canada; Borealis and Harvard Dataverse (historical)",
-        "Élections Canada; Borealis et Harvard Dataverse (historique)",
+        "Elections Canada (historical results)",
+        "Élections Canada (résultats historiques)",
         domain="government",
     ),
     "elections_provincial": Source(
@@ -1309,6 +1309,9 @@ def build_index(modules: list[ModuleDoc]) -> dict[str, Any]:
         "top": transform._max_results,
         "avg": sum(lengths) / len(lengths),
         "len": lengths,
+        # Every tool, the always-visible ones too, so the status line counts
+        # the same total as the rest of the site ("Top 5 of 395 tools").
+        "total": sum(len(m.tools) for m in modules),
         "tools": [[t.name, t.module, t.summary] for t in docs],
         # The identifiers each tool takes, for the identifier boosts (shared/search.py).
         "ids": [t.ids for t in docs],

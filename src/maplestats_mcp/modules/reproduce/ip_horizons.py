@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import json
 import re
+from functools import cache
+from pathlib import Path
 from typing import Any
 
 from maplestats_mcp.modules.reproduce.render import jl_quote
@@ -26,6 +28,19 @@ _TLS_NOTE = (
     "on Linux or macOS, R, Stata and Julia need RapidSSL TLS RSA CA G1 "
     "(http://cacerts.rapidssl.com/RapidSSLTLSRSACAG1.crt) in the system trust store."
 )
+# The intermediate the server ships for its own CIPO downloads. A script that fetched it
+# from the issuer's plain-http URL and trusted it could be handed someone else's
+# certificate on an untrusted network; embedding the vetted copy closes that.
+_INTERMEDIATE_PEM = (
+    Path(__file__).resolve().parents[1] / "ised" / "ip_horizons" / "rapidssl_tls_rsa_ca_g1.pem"
+)
+
+
+@cache
+def _intermediate_pem() -> str:
+    return _INTERMEDIATE_PEM.read_text(encoding="ascii").strip()
+
+
 _IPC = re.compile(r"^([A-H])(\d{2})([A-Z])(?:\s*(\d{1,4})(?:/(\d{1,6}))?)?$")
 
 
@@ -40,11 +55,12 @@ def _files(groups: dict[str, list[Any]]) -> dict[str, str]:
 def _py_body(files: dict[str, str], steps: str) -> Code:
     listing = "".join(f"    {name!r}: {url!r},\n" for name, url in files.items())
     body = (
-        "# CIPO's server omits its RapidSSL intermediate certificate; add it from the\n"
-        "# issuer on top of certifi's roots, so verification still anchors at a root.\n\n"
-        'intermediate = httpx.get("http://cacerts.rapidssl.com/RapidSSLTLSRSACAG1.crt").content\n'
+        "# CIPO's server omits its RapidSSL intermediate certificate (RapidSSL TLS RSA\n"
+        "# CA G1). It is written out here rather than fetched over plain http, and added\n"
+        "# on top of certifi's roots.\n"
+        f'RAPIDSSL_INTERMEDIATE = """\\\n{_intermediate_pem()}\n"""\n'
         "tls = ssl.create_default_context(cafile=certifi.where())\n"
-        "tls.load_verify_locations(cadata=ssl.DER_cert_to_PEM_cert(intermediate))\n\n"
+        "tls.load_verify_locations(cadata=RAPIDSSL_INTERMEDIATE)\n\n"
         f"files = {{\n{listing}}}\n"
         "tables = {}\n"
         "with httpx.Client(verify=tls, timeout=900, follow_redirects=True) as client:\n"

@@ -17,9 +17,15 @@ from tests.maple_test import sources_v2_a, sources_v2_b
 # the name appears; a refusal passes on its own wording for "this does not exist"; a flag
 # question names its warning sign.
 _HINTS: dict[str, dict[str, Any]] = {
+    # A flag question that asks for a figure passes only with the figure (figure_required):
+    # a flag alone is partial. The station-closure pattern once matched "connection
+    # closed" (a tool error), so a closure must now be tied to the station or the year.
     "A-04": {
-        "flag_pattern": r"clos(?:ed|ure)|discontinu|no longer report|stopped report|"
-        r"decommission|6158731|successor|replac",
+        "flag_pattern": r"(?:station|6158733)[^.]{0,80}(?<!connection )(?:clos(?:ed|ure)|"
+        r"discontinu|decommission)|(?<!connection )(?:clos(?:ed|ure)|discontinu|"
+        r"decommission)[^.]{0,80}(?:station|2013)|no longer report|stopped report|"
+        r"6158731|successor|replacement station|replaced by",
+        "figure_required": True,
     },
     "B-01": {"answer_contains": True},
     "B-02": {"answer_contains": True},
@@ -37,6 +43,7 @@ _HINTS: dict[str, dict[str, Any]] = {
         "flag_pattern": r"(?:no|not yet|hasn't|has not|haven't|have not|isn't|is not|aren't|"
         r"are not)[^.]{0,50}(?:2026 census|released|published|available|out yet)|"
         r"2026 census[^.]{0,80}(?:not|n't|until|due|expected)",
+        "figure_required": True,
     },
 }
 

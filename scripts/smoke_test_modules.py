@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from _smoke_common import SKIPPED_EXIT
 from fastmcp import Client
 from mcp.types import TextContent
 
@@ -1554,9 +1555,31 @@ def _text(result: Any) -> str:
     return ""
 
 
+async def _eps_reloading() -> bool:
+    """True while EPS empties its load-date table to reload (2026-09-28, 2026-11-02).
+
+    The occurrence tools still answer then, but without a load date, so the checks
+    that read provenance.as_of would fail for a reason that is EPS's, not ours.
+    """
+    from maplestats_mcp.modules.eps import client as eps_client
+    from maplestats_mcp.shared.errors import UpstreamUnavailable
+
+    try:
+        await eps_client.get_last_load_date()
+    except UpstreamUnavailable:
+        return True
+    return False
+
+
 async def main(modules: set[str]) -> int:
     ctx: Context = {}
     failures: list[str] = []
+    # Outages seen during this run: reported as SKIPPED (not a pass), never as FAILED.
+    skipped: list[str] = []
+    if (not modules or "eps" in modules) and await _eps_reloading():
+        print("SKIP eps: EPS is reloading its data (its load-date table is empty)")
+        DOWN_MODULES["eps"] = "EPS is reloading its data"
+        skipped.append("eps")
     if await _ourcommons_blocked_on_ci():
         print("SKIP ourcommons: ourcommons.ca answers HTTP 403 to this GitHub runner")
         DOWN_MODULES["ourcommons"] = "blocked on this runner (HTTP 403)"
@@ -1605,6 +1628,12 @@ async def main(modules: set[str]) -> int:
                 ):
                     print(f"SKIP {label}: Cloudflare challenge for this GitHub runner")
                     continue
+                # The server codes an outage (a timeout, a 5xx, a source that is down
+                # or locked) as [upstream_unavailable]: a skip, not a regression.
+                if text.startswith("[upstream_unavailable]"):
+                    skipped.append(label)
+                    print(f"SKIP {label}: {text[:200]}")
+                    continue
                 failures.append(label)
                 print(f"FAIL {label} {args}: {text[:300]}")
                 continue
@@ -1619,6 +1648,9 @@ async def main(modules: set[str]) -> int:
     if failures:
         print(f"MODULES SMOKE TEST FAILED ({len(failures)}): {', '.join(failures)}")
         return 1
+    if skipped:
+        print(f"MODULES SMOKE TEST SKIPPED ({', '.join(skipped)} unavailable): not a pass")
+        return SKIPPED_EXIT
     print("MODULES SMOKE TEST PASSED")
     return 0
 

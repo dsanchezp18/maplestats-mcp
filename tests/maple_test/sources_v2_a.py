@@ -520,6 +520,23 @@ def q_bis_compare() -> dict:
     if ca == us:
         fail("comparison tie")
     win = "Canada" if ca > us else "United States"
+    # The question does not name the BIS (X-11 does), so a comparison from each country's
+    # own series, labelled as such, also answers it: Statistics Canada's household debt
+    # service ratio (11-10-0065-01, seasonally adjusted, v1001696813) and the Federal
+    # Reserve's (TDSP, read from FRED). Both are read live, and must make the same call.
+    sc_url = "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods"
+    sc = _client.post(sc_url, json=[{"vectorId": 1001696813, "latestN": 12}])
+    sc.raise_for_status()
+    sc_points = {p["refPer"][:7]: p["value"] for p in sc.json()[0]["object"]["vectorDataPoint"]}
+    ca_sc = check("ca_dsr_statcan_2025Q4", sc_points.get("2025-10"), 5, 25)
+    fred_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=TDSP"
+    # FRED resets HTTP/2 streams (checked 2026-11-03), so this one request uses HTTP/1.1.
+    fred_csv = httpx.get(fred_url, timeout=60, follow_redirects=True)
+    fred_csv.raise_for_status()
+    fred = {r["observation_date"]: r["TDSP"] for r in csv.DictReader(io.StringIO(fred_csv.text))}
+    us_fed = check("us_dsr_fed_2025Q4", round(float(fred["2025-10-01"]), 2), 3, 20)
+    if (ca_sc > us_fed) != (ca > us):
+        fail("the national series make the opposite call to the BIS")
     return {
         "category": "Finance",
         "eval_type": "comparison",
@@ -528,7 +545,17 @@ def q_bis_compare() -> dict:
         "headline": ["canada_dsr_2025q4_pct", "us_dsr_2025q4_pct"],
         "tolerances": {"canada_dsr_2025q4_pct": 0.05, "us_dsr_2025q4_pct": 0.05},
         "answer_pattern": win,
-        "tolerance": "Correct country; ratios ±0.05",
+        "alternatives": [
+            {
+                "label": "each country's own series: Statistics Canada 11-10-0065-01 "
+                "(v1001696813) and the Federal Reserve's TDSP",
+                "expected": {"canada_dsr_2025q4_pct": ca_sc, "us_dsr_2025q4_pct": us_fed},
+                "urls": [sc_url, fred_url],
+            }
+        ],
+        "tolerance": "Correct country; ratios ±0.05. The question does not name the BIS, so "
+        "each country's own series (Statistics Canada's and the Fed's), labelled, with the "
+        "right call, is also correct.",
         "citations": [
             {
                 "table_id": "Other",

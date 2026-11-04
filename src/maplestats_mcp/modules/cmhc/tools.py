@@ -22,6 +22,7 @@ from fastmcp.tools import tool
 from maplestats_mcp.modules.cmhc import client
 from maplestats_mcp.modules.cmhc.schemas import (
     CategoryList,
+    MetroAreaList,
     ProvinceList,
     TableDataResult,
     TableOptions,
@@ -44,8 +45,10 @@ async def cmhc_list_categories(
     docs://cmhc/well-known-categories first - it already lists the
     common categories with their exact spelling.
     `geography_type`/`geography_id` default to "Country"/"1" (Canada);
-    pass a province id from cmhc_list_provinces for province-level
-    categories instead. Category names are language-dependent strings
+    pass geography_type="Province" with an id from cmhc_list_provinces,
+    or geography_type="MetropolitanMajorArea" ("CMA" also works) with an
+    id from cmhc_list_metropolitan_areas (Toronto is "2270"; the name
+    "Toronto" is accepted too). Category names are language-dependent strings
     (not fixed codes) - the values this returns for lang="fr" must be
     passed back with lang="fr" to other cmhc_ tools.
     Keywords: cmhc, housing, hmip, category, discover, rental market,
@@ -103,8 +106,7 @@ async def cmhc_list_provinces(lang: Lang = "en") -> ProvinceList:
     Use for: getting a `geography_id` (with `geography_type="Province"`)
     to pass to cmhc_list_categories/cmhc_get_table_options/
     cmhc_get_table_data for province-level data instead of national
-    Canada-wide data. CMA/city-level geography is not yet supported by
-    this module - only Canada and provinces.
+    Canada-wide data. For a city or CMA use cmhc_list_metropolitan_areas.
     Keywords: cmhc, housing, hmip, province, territory, geography,
     geography id, list, canada.
     Mots-clés : Société canadienne d'hypothèques et de logement (SCHL),
@@ -113,6 +115,32 @@ async def cmhc_list_provinces(lang: Lang = "en") -> ProvinceList:
     Canada.
     """
     return await client.list_provinces(lang=lang)
+
+
+@tool
+async def cmhc_list_metropolitan_areas(
+    province_id: str | None = None, name: str | None = None, lang: Lang = "en"
+) -> MetroAreaList:
+    """List CMHC's metropolitan areas (CMAs, census agglomerations, centres) with their id.
+
+    Use for: getting the `geography_id` of a city or CMA to pass with
+    `geography_type="MetropolitanMajorArea"` to cmhc_list_categories,
+    cmhc_get_table_options and cmhc_get_table_data, for city-level rents,
+    vacancy rates and housing starts. `name` keeps the areas whose name
+    contains that word; `province_id`
+    (an id or name from cmhc_list_provinces) keeps one province. Without
+    either, every province is read (a few seconds the first time, then
+    cached a day). Ids are text and some start with zero ("0120" is Barrie): pass
+    them as returned.
+    Keywords: cmhc, housing, hmip, cma, census metropolitan area, city,
+    metropolitan area, centre, geography id, average rent, vacancy rate.
+    Mots-clés : Société canadienne d'hypothèques et de logement (SCHL),
+    logement, Portail de l'information sur le marché de l'habitation (PIMH),
+    région métropolitaine de recensement (RMR), agglomération de
+    recensement, ville, centre, identifiant géographique, loyer, taux
+    d'inoccupation.
+    """
+    return await client.list_metropolitan_areas(province_id=province_id, name=name, lang=lang)
 
 
 @tool
@@ -133,7 +161,9 @@ async def cmhc_get_table_data(
     seniors' rental housing data, or
     any other category's numeric data - e.g. national historical rental
     vacancy rates by bedroom type, or current vacancy rates broken down
-    by province. Pass `row_field="TIMESERIES"` for a historical time
+    by province, or a city's average rent by bedroom type
+    (geography_type="MetropolitanMajorArea", geography_id from
+    cmhc_list_metropolitan_areas, or its name: "Toronto"). Pass `row_field="TIMESERIES"` for a historical time
     series (one row per period) or a province/centre-breakdown field
     from cmhc_get_table_options for a current cross-tabulation (one row
     per province/centre). Each returned cell carries CMHC's own

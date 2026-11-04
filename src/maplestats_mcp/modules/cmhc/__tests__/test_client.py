@@ -358,8 +358,8 @@ async def test_unknown_province_id_is_refused_before_hmip(httpx_mock):
         await client.list_categories(geography_type="Province", geography_id="999")
     with pytest.raises(InvalidInput, match="Canada"):
         await client.list_categories(geography_type="Country", geography_id="2")
-    with pytest.raises(InvalidInput, match="number"):
-        await client.get_table_options("a", "b", geography_type="Cma", geography_id="abc")
+    with pytest.raises(InvalidInput, match="not one HMIP knows"):
+        await client.get_table_options("a", "b", geography_type="Zone", geography_id="1")
 
 
 def test_ysod_title_drops_markup():
@@ -488,3 +488,174 @@ async def test_get_table_data_french_export_reads_comma_as_decimal(httpx_mock):
     )
     values = {name: cell.value for name, cell in result.rows[0].values.items()}
     assert values == {"Unifamilial": 1.5, "Total": 1013.5}
+
+
+# Live 2026-11-03 (/Navigation/MetsByProvince/35): one anchor per metropolitan major area,
+# ids kept as text because some start with zero.
+_METROS_NL_HTML = """
+<div class="option-container">
+<a href="#" class="MetropolitanMajorArea option" data-type="MetropolitanMajorArea" data-id="0005" data-type-code="3">St. John's</a>
+</div>
+"""
+_METROS_NS_HTML = """
+<div class="option-container">
+<a href="#" class="MetropolitanMajorArea option" data-type="MetropolitanMajorArea" data-id="0580" data-type-code="3">Halifax</a>
+<a href="#" class="MetropolitanMajorArea option" data-type="MetropolitanMajorArea" data-id="0590" data-type-code="3">Kentville - Halifax Road</a>
+<a href="#" class="MetropolitanMajorArea option" data-type="MetropolitanMajorArea" data-id="0595" data-type-code="3">New Glasgow - Halifax Road</a>
+</div>
+"""
+
+
+def _mock_geographies(httpx_mock) -> None:
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/ProvincesByCountry?countryId=1",
+        text=_PROVINCES_HTML,
+        is_reusable=True,
+        is_optional=True,
+    )
+    for province, body in (("10", _METROS_NL_HTML), ("12", _METROS_NS_HTML)):
+        httpx_mock.add_response(
+            url=f"{constants.BASE_URL}/en/Navigation/MetsByProvince/{province}",
+            text=body,
+            is_reusable=True,
+            is_optional=True,
+        )
+
+
+async def test_list_metropolitan_areas_reads_every_province(httpx_mock):
+    _mock_geographies(httpx_mock)
+    result = await client.list_metropolitan_areas()
+    assert result.geography_type == "MetropolitanMajorArea"
+    assert [(a.id, a.name, a.province_name) for a in result.areas] == [
+        ("0005", "St. John's", "Newfoundland and Labrador"),
+        ("0580", "Halifax", "Nova Scotia"),
+        ("0590", "Kentville - Halifax Road", "Nova Scotia"),
+        ("0595", "New Glasgow - Halifax Road", "Nova Scotia"),
+    ]
+    assert result.total_count == 4
+
+
+async def test_list_metropolitan_areas_filters_by_name_and_province(httpx_mock):
+    _mock_geographies(httpx_mock)
+    by_name = await client.list_metropolitan_areas(name="halifax")
+    assert [a.id for a in by_name.areas] == ["0580", "0590", "0595"]
+    by_province = await client.list_metropolitan_areas(province_id="Nova Scotia")
+    assert {a.province_id for a in by_province.areas} == {"12"}
+    with pytest.raises(InvalidInput, match="Newfoundland"):
+        await client.list_metropolitan_areas(province_id="99")
+
+
+async def test_cma_alias_and_name_resolve_to_hmip_type_and_id(httpx_mock):
+    """Live 2026-11-03: HMIP answers geography_type "CMA" with HTTP 500 (an unknown name
+    becomes enum value 0); "MetropolitanMajorArea" with Toronto's 2270 resolves."""
+    _mock_geographies(httpx_mock)
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart"
+            "?geographyType=MetropolitanMajorArea&geographyId=0580"
+        ),
+        text=_CATEGORIES_HTML,
+    )
+    result = await client.list_categories(geography_type="CMA", geography_id="Halifax")
+    assert (result.geography_type, result.geography_id) == ("MetropolitanMajorArea", "0580")
+
+
+async def test_unknown_or_ambiguous_metro_area_is_refused(httpx_mock):
+    _mock_geographies(httpx_mock)
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/TableMapChart?geographyType=MetropolitanMajorArea&geographyId=0580",
+        text=_CATEGORIES_HTML,
+    )
+    # An exact name wins over the two names that contain it.
+    halifax = await client.list_categories(geography_type="metro", geography_id="Halifax")
+    assert halifax.geography_id == "0580"
+    with pytest.raises(InvalidInput, match="No metropolitan area with id"):
+        await client.list_categories(geography_type="cma", geography_id="9999")
+    with pytest.raises(InvalidInput, match="No metropolitan area named"):
+        await client.list_categories(geography_type="RMR", geography_id="Atlantis")
+    # "Halifax Road" is part of two names and the exact name of none.
+    with pytest.raises(InvalidInput, match="more than one.*0590"):
+        await client.list_categories(geography_type="metro", geography_id="Halifax Road")
+
+
+async def test_province_name_is_accepted_as_id(httpx_mock):
+    _mock_geographies(httpx_mock)
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/TableMapChart?geographyType=Province&geographyId=12",
+        text=_CATEGORIES_HTML,
+    )
+    result = await client.list_categories(geography_type="province", geography_id="nova scotia")
+    assert result.geography_id == "12"
+
+
+async def test_field_labels_are_turned_into_codes(httpx_mock):
+    """The chat demo's model passed column_field="Bedroom Type" (live 2026-11-03); HMIP
+    needs the code, "2"."""
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart/TableCategory"
+            "?GeographyType=Country&GeographyId=1"
+            "&CategoryLevel1=Primary+Rental+Market&CategoryLevel2=Vacancy+Rate+%28%25%29"
+        ),
+        text=_TABLE_OPTIONS_HTML,
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart/TableMatchingCriteria"
+            "?GeographyType=Country&GeographyId=1"
+            "&CategoryLevel1=Primary+Rental+Market&CategoryLevel2=Vacancy+Rate+%28%25%29"
+            "&ColumnField=2&RowField=TIMESERIES"
+        ),
+        text=_TABLE_MATCHING_CRITERIA_HTML,
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/TableMapChart/ExportTable",
+        method="POST",
+        content=_EXPORT_CSV,
+        headers={"content-type": "text/csv"},
+    )
+    result = await client.get_table_data(
+        "Primary Rental Market", "Vacancy Rate (%)", "bedroom type", "Historical Time Periods"
+    )
+    assert (result.column_field, result.row_field) == ("2", "TIMESERIES")
+    with pytest.raises(InvalidInput, match="Bedroom Type \\(column_field=2"):
+        await client.get_table_data(
+            "Primary Rental Market", "Vacancy Rate (%)", "Bedrooms", "TIMESERIES"
+        )
+
+
+async def test_metro_list_error_page_is_raised_and_not_cached(httpx_mock):
+    """An HTTP 200 page with no list container (maintenance) must not be cached for a day:
+    valid ids would be refused until it expired."""
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/ProvincesByCountry?countryId=1",
+        text=_PROVINCES_HTML,
+        is_reusable=True,
+    )
+    url_nl = f"{constants.BASE_URL}/en/Navigation/MetsByProvince/10"
+    httpx_mock.add_response(url=url_nl, text="<html><body>Down for maintenance</body></html>")
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/MetsByProvince/12",
+        text=_METROS_NS_HTML,
+        is_reusable=True,
+    )
+    with pytest.raises(UpstreamError, match="Newfoundland"):
+        await client.list_metropolitan_areas()
+    httpx_mock.add_response(url=url_nl, text=_METROS_NL_HTML)
+    result = await client.list_metropolitan_areas()
+    assert "0005" in {a.id for a in result.areas}
+
+
+async def test_empty_metro_list_container_is_a_valid_answer(httpx_mock):
+    # Live 2026-11-03: Nunavut answers the empty container.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/ProvincesByCountry?countryId=1",
+        text=_PROVINCES_HTML,
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/Navigation/MetsByProvince/10",
+        text='<div class="MetropolitanMajorAreaContainer">\n</div>',
+    )
+    result = await client.list_metropolitan_areas(province_id="10")
+    assert result.areas == []

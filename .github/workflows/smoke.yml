@@ -59,14 +59,24 @@ jobs:
       # One retry after a pause: of eight failed jobs on 2026-09-26/27, seven
       # were StatCan and portal blips (503, 429, 500, timeouts) that passed
       # on a rerun minutes later. A real upstream change fails both attempts.
+      # Exit 75 (scripts/_smoke_common.SKIPPED_EXIT) means the source was down, locked or
+      # reloading: reported as a warning and in the job summary, never as a pass and never
+      # as a failure that opens the smoke-failure issue. A failure (exit 1) still fails.
       - name: Run ${{ matrix.script }}
         run: |
-          if uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log; then
+          run() { uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log; }
+          skipped() {
+            echo "::warning::${{ matrix.script }} SKIPPED: an upstream source was unavailable"
+            { echo "### SKIPPED: \`${{ matrix.script }}\`"; echo '```'; grep -E "^SKIP" smoke.log | head -n 20; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
             exit 0
-          fi
+          }
+          run && exit 0 || status=$?
+          [ "$status" -eq 75 ] && skipped
           echo "::warning::${{ matrix.script }} failed; retrying once in 120s"
           sleep 120
-          uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log
+          run && exit 0 || status=$?
+          [ "$status" -eq 75 ] && skipped
+          exit "$status"
         shell: bash -o pipefail {0}
       - name: Summarize failure
         if: failure()
@@ -87,7 +97,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
           version: "0.11.7" # same uv as both Dockerfiles; bump all three together
