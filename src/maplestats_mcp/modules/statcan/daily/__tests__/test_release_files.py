@@ -200,9 +200,7 @@ async def test_upcoming_window_over_new_year(httpx_mock):
 async def test_upcoming_in_french(httpx_mock):
     httpx_mock.add_response(url=_UPCOMING_URL.replace("eng", "fra"), text=_FRENCH)
     # Retried by shared/http.py, then left out: the two-week list still comes back.
-    httpx_mock.add_response(
-        url=_MAJOR_URL.replace("eng", "fra"), status_code=500, is_reusable=True
-    )
+    httpx_mock.add_response(url=_MAJOR_URL.replace("eng", "fra"), status_code=500, is_reusable=True)
     result = await client.get_upcoming_releases("enquete", lang="fr")
     assert result.annual_schedule_pdf_url is None
     (lfs,) = result.releases
