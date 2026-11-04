@@ -14,7 +14,7 @@ import asyncio
 import sys
 
 from maplestats_mcp.modules.statcan.daily import client
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
 
 async def main() -> int:
@@ -85,6 +85,25 @@ async def main() -> int:
     )
     print(f"OK: get_release_calendar('62-013-X', products) -> {products.total_matched} releases")
     ok &= products.total_matched > 0 and all(e.catalogue_number for e in products.entries)
+
+    # The newest Daily article in the feed, read in full in both languages.
+    article_url = next((r.url for r in all_releases.releases if "/daily-quotidien/" in r.url), None)
+    ok &= article_url is not None
+    if article_url:
+        for lang in ("en", "fr"):
+            article = await client.get_article(article_url, lang=lang)
+            print(
+                f"OK: get_article({article.article_id}, {lang}) -> {len(article.sections)} "
+                f"sections, {article.word_count} words, pdf={article.pdf_url}"
+            )
+            ok &= bool(article.title) and article.word_count > 50
+            ok &= bool(article.pdf_url) and article.release_date is not None
+    try:
+        await client.get_article("dq991231z")
+        print("FAIL: expected NotFound for a made-up article id")
+        ok = False
+    except NotFound:
+        print("OK: made-up article id raises NotFound as expected")
 
     print("\nSTATCAN DAILY SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
