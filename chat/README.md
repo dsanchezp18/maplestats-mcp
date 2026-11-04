@@ -62,7 +62,7 @@ The endpoint is public and every call costs money. Defaults, all overridable by
 environment variable: 20 questions per address per hour (`CHAT_RATE_PER_HOUR`), 500
 per day in total (`CHAT_DAILY_LIMIT`), 1,000 characters per user message,
 16,000 per assistant reply, 120,000 per conversation, a 512 KiB request body,
-8 user turns per conversation, 2,000 output tokens per model call, 8 tool steps, and
+8 user turns per conversation, 4,000 output tokens per model call, 12 tool steps, and
 3,000,000 tokens per day in total (`CHAT_DAILY_TOKENS`: input plus output tokens,
 cached input included, summed from the usage of every model call on both backends).
 The question caps count questions, not cost: on the Anthropic path the connector

@@ -38,7 +38,15 @@
     border-radius: 8px; padding: 5px 10px; font: inherit; font-size: .85rem; cursor: pointer;
   }
   .tool-btn:hover { border-color: var(--accent); }
-  .sub { color: var(--muted); margin: 4px 0 18px; font-size: .95rem; }
+  .sub { color: var(--muted); margin: 4px 0 12px; font-size: .95rem; }
+  .disclaimer {
+    margin: 0 0 18px; padding: 8px 12px; border: 1px solid var(--line);
+    border-left: 3px solid var(--accent); border-radius: 6px; background: var(--soft);
+    font-size: .85rem;
+  }
+  .disclaimer summary { cursor: pointer; font-weight: 600; }
+  .disclaimer ul { margin: 6px 0 2px; padding-left: 18px; }
+  .disclaimer li { margin: 4px 0; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
   .chips button {
     border: 1px solid var(--line); background: var(--card); color: var(--fg);
@@ -118,9 +126,28 @@
     <button type="button" class="tool-btn" id="theme" aria-label="Switch light or dark theme">Theme</button>
     <button type="button" class="tool-btn" id="new">New chat</button>
   </header>
-  <p class="sub">Ask about Canadian open data. A small, cheap model looks the answer up
-    live through the MapleStats MCP server. Under each answer: a chart and a table of the
-    data the server returned, and its sources.</p>
+  <p class="sub">Ask about Canadian open data. Claude Haiku, a small AI model, looks the
+    answer up live through the MapleStats MCP server. Under each answer: a chart and a
+    table of the data the server returned, and its sources.</p>
+  <details class="disclaimer" open>
+    <summary>Before you ask</summary>
+    <ul>
+      <li><strong>AI answers can be wrong.</strong> The model can misread a table, pick the
+        wrong series or period, or miscalculate. Check every figure against the source
+        listed under the answer before you use it.</li>
+      <li><strong>Not an official source.</strong> MapleStats is an independent project. It
+        is not affiliated with or endorsed by Statistics Canada, the Bank of Canada or any
+        other government agency; their published releases are the authoritative figures.</li>
+      <li><strong>Not advice.</strong> Answers are for information only, not financial,
+        legal, tax or investment advice.</li>
+      <li><strong>Privacy.</strong> Your questions are sent to Anthropic, the model provider,
+        to be answered. Do not enter names, contact details or other personal or
+        confidential information.</li>
+      <li><strong>A limited demo.</strong> Questions per hour and per day are capped, and an
+        answer can stop early when a question needs many lookups. It may be unavailable
+        or change without notice.</li>
+    </ul>
+  </details>
   <div class="chips" id="chips"></div>
   <div id="log" role="log" aria-live="polite"></div>
 </main>
@@ -130,9 +157,10 @@
       placeholder="Ask a question, in English or French">
     <button class="send" id="send">Ask</button>
   </div>
-  <div class="note">Demo only: answers can be wrong, so check the source it names. The
-    chart and table show the data the server returned, not the model's text. Questions are
-    sent to the model provider; this chat is saved in your browser only.</div>
+  <div class="note">AI-generated answers can be wrong: check the source each one names.
+    Not affiliated with Statistics Canada or any government agency. The chart and table
+    show the data the server returned, not the model's text. Questions go to Anthropic;
+    this chat is saved in your browser only.</div>
 </form>
 <!-- Subresource Integrity: the browser refuses a file whose SHA-384 differs from
      these, so a tampered CDN copy cannot run in a page that renders model output.
