@@ -48,6 +48,16 @@ services:
       # addresses are kept (shared/usage.py, shared/breaker.py).
       - key: MAPLE_USAGE_STATS
         value: "1"
+      # The same counts also go to the project's GoatCounter site, labelled
+      # "render", so they survive the free tier's sleeps and add up with Azure's
+      # (shared/goatcounter.py). Set MAPLE_GOATCOUNTER_TOKEN in the Render
+      # dashboard; never commit it. Without it nothing is sent.
+      - key: MAPLE_INSTANCE_NAME
+        value: render
+      - key: MAPLE_GOATCOUNTER_URL
+        value: https://dsanchezp18.goatcounter.com
+      - key: MAPLE_GOATCOUNTER_TOKEN
+        sync: false
       # The free instance has 512 MB: DuckDB spills to disk beyond this limit
       # (patent, open-database and microdata queries), into the system temp
       # folder (/tmp, writable by the image's appuser; MAPLE_DUCKDB_TEMP_DIR

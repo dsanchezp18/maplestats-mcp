@@ -332,11 +332,11 @@ def test_page_policy_allows_only_its_own_inline_script():
     )
     assert policy["default-src"] == "'self'"
     assert policy["script-src"] == (
-        f"'self' https://cdnjs.cloudflare.com 'sha256-{digest}'"
+        f"'self' https://cdnjs.cloudflare.com https://gc.zgo.at 'sha256-{digest}'"
     )
     assert "'unsafe-inline'" not in policy["script-src"]
-    assert policy["img-src"] == "'self' data:"
-    assert policy["connect-src"] == "'self'"
+    assert policy["img-src"] == "'self' data: https://dsanchezp18.goatcounter.com"
+    assert policy["connect-src"] == "'self' https://dsanchezp18.goatcounter.com"
     assert policy["base-uri"] == "'none'"
     assert policy["form-action"] == "'self'"
     assert policy["frame-ancestors"] == "'none'"
@@ -507,7 +507,7 @@ def test_third_party_scripts_carry_integrity_hashes():
     # from a CDN must be pinned by hash, not trusted by URL alone.
     page = (chat_app.STATIC_DIR / "index.html").read_text(encoding="utf-8")
     tags = re.findall(r"<script\b[^>]*\bsrc=[^>]*>", page)
-    assert len(tags) == 2
+    assert len(tags) == 3  # two CDN libraries and GoatCounter's counter
     for tag in tags:
         assert re.search(r'integrity="sha384-[A-Za-z0-9+/]{64}"', tag), tag
         assert 'crossorigin="anonymous"' in tag, tag

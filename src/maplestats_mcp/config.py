@@ -117,6 +117,27 @@ def get_usage_stats_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def get_goatcounter_url() -> str | None:
+    """GoatCounter site that receives the tool-call counts (MAPLE_GOATCOUNTER_URL).
+
+    Off unless both this and MAPLE_GOATCOUNTER_TOKEN are set. Only https is
+    accepted, since the token travels in a header.
+    """
+    raw = os.environ.get("MAPLE_GOATCOUNTER_URL", "").strip().rstrip("/")
+    return raw if raw.startswith("https://") else None
+
+
+def get_goatcounter_token() -> str | None:
+    raw = os.environ.get("MAPLE_GOATCOUNTER_TOKEN", "").strip()
+    return raw or None
+
+
+def get_instance_name() -> str:
+    """Label for this deployment in the forwarded counts ("azure", "render")."""
+    raw = os.environ.get("MAPLE_INSTANCE_NAME", "").strip().lower()
+    return re.sub(r"[^a-z0-9-]", "", raw)[:32] or "server"
+
+
 def get_require_auth() -> bool:
     raw = os.environ.get("MAPLE_REQUIRE_AUTH", "0").strip().lower()
     return raw in {"1", "true", "yes", "on"}
