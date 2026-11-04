@@ -84,8 +84,8 @@ Website: <https://maplestats.danielstats.io/>.
 The default is the hosted server: nothing to install, no account, no key.
 
 1. Register this remote (HTTP) MCP server under the name `maplestats`:
-   - **Claude Code:** `claude mcp add --transport http --scope user maplestats https://maplestats-mcp.onrender.com/mcp`
-   - **Codex CLI:** `codex mcp add maplestats --url https://maplestats-mcp.onrender.com/mcp`
+   - **Claude Code:** `claude mcp add --transport http --scope user maplestats https://mcp.maplestats.danielstats.io/mcp`
+   - **Codex CLI:** `codex mcp add maplestats --url https://mcp.maplestats.danielstats.io/mcp`
    - **Cursor, Claude Desktop and other `mcpServers` clients:** add the entry
      below to the client's config file (Cursor: `~/.cursor/mcp.json`; Claude
      Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -93,7 +93,7 @@ The default is the hosted server: nothing to install, no account, no key.
      keeping any servers already there.
    - **claude.ai and the Claude phone app:** on the web, open Settings →
      Connectors → Add custom connector, name it `MapleStats`, and enter
-     `https://maplestats-mcp.onrender.com/mcp`. Then switch it on from the tools
+     `https://mcp.maplestats.danielstats.io/mcp`. Then switch it on from the tools
      menu in a chat, on the web or in the phone app. Claude asks for approval
      before each call by default; every tool is read-only, so set them to
      always allow in the connector's tool permissions.
@@ -116,7 +116,7 @@ The default is the hosted server: nothing to install, no account, no key.
    {
      "mcpServers": {
        "maplestats": {
-         "url": "https://maplestats-mcp.onrender.com/mcp"
+         "url": "https://mcp.maplestats.danielstats.io/mcp"
        }
      }
    }
@@ -129,12 +129,12 @@ The default is the hosted server: nothing to install, no account, no key.
    (needs [uv](https://docs.astral.sh/uv/)), or the equivalent `uvx
    maplestats-mcp` entry for other clients (see [Install](#install)).
 
-The first request after a quiet spell can take up to a minute; if your client
-reports the server as failed, retry a minute later. Each client gets 60 requests a minute, and the microdata tabulation
-tool is switched off there. Your agent's tool calls (a search phrase, a table
-number) reach the server and its host, Render. The code keeps no log of them,
-but its in-memory cache can hold a search phrase or filter in a key or a
-response until the entry expires or the server restarts. Check Render's [terms](https://render.com/terms) and [privacy policy](https://render.com/privacy); for full privacy, run it locally. What it logs:
+Each client gets 60 requests a minute, and the microdata tabulation tool is
+switched off there. Your agent's tool calls (a search phrase, a table number)
+reach the server and its host, Microsoft Azure (Canada Central). The code keeps
+no log of them, but its in-memory cache can hold a search phrase or filter in a
+key or a response until the entry expires or the server restarts. Check
+Microsoft's [terms](https://azure.microsoft.com/support/legal/) and [privacy statement](https://privacy.microsoft.com/privacystatement); for full privacy, run it locally. What it logs:
 [FAQ](https://maplestats.danielstats.io/faq.html#hosted). Other
 clients: the [Connect](https://maplestats.danielstats.io/connect.html)
 page.

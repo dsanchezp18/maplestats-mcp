@@ -48,7 +48,7 @@ PROVIDER = os.environ.get("CHAT_PROVIDER", "anthropic")
 MODEL = os.environ.get("CHAT_MODEL", "claude-haiku-5-5")
 API_KEY = os.environ.get("CHAT_API_KEY", "")
 BASE_URL = os.environ.get("CHAT_BASE_URL", "")
-MCP_URL = os.environ.get("CHAT_MCP_URL", "https://maplestats-mcp.onrender.com/mcp")
+MCP_URL = os.environ.get("CHAT_MCP_URL", "https://mcp.maplestats.danielstats.io/mcp")
 EFFORT = os.environ.get("CHAT_EFFORT", "low")
 
 # Limits protect the key's budget: this endpoint is public and every call costs money.

@@ -518,8 +518,8 @@ seasonally adjusted series unless the question asks otherwise, and say which.
 After fetching data, offer reproduce_code (R, Python, Stata, Julia, Excel
 Power Query that re-fetch the same data) and reproduce_workbook (the rows as
 an Excel workbook). docs://catalogue describes every module in one bilingual line.
-Before replying, call check_answer with the StatCan and Bank of Canada
-figures you cite, and fix what it returns.
+check_answer re-reads the StatCan and Bank of Canada figures an answer
+cites and returns only the problems, each with a fix.
 Not published? Say so, give the closest published figure labelled, then public
 microdata (statcan_pumf_, own estimate), else a custom tabulation, RTRA or an
 RDC (approval or fee; MapleStats cannot run them).

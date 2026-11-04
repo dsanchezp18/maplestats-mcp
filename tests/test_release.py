@@ -144,7 +144,7 @@ def test_tests_that_run_r_or_julia_are_marked():
 def test_server_json_lists_the_hosted_endpoint():
     server = json.loads((ROOT / "server.json").read_text(encoding="utf-8"))
     assert server["remotes"] == [
-        {"type": "streamable-http", "url": "https://maplestats-mcp.onrender.com/mcp"}
+        {"type": "streamable-http", "url": "https://mcp.maplestats.danielstats.io/mcp"}
     ]
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert server["remotes"][0]["url"] in readme
