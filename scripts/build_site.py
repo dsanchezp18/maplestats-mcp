@@ -138,17 +138,21 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
     ),
     (
         "user",
-        "https://mcprush.com/dsanchezp18/maplestats-mcp",
-        f"{_SHIELDS}/badge/Mcprush-listed-B6F24B",
-        "Listed on Mcprush",
-        "Répertorié sur Mcprush",
+        "https://mcprush.com/to/maplestats-mcp?ref=badge",
+        (
+            f"{_SHIELDS}/badge/dynamic/json?url=https%3A%2F%2Fmcprush.com%2Fbadge%2F"
+            "maplestats-mcp%2Fshields.json&query=%24.message&label=mcprush&color=BEF264"
+            "&labelColor=1A1A1A"
+        ),
+        "Grade on Mcprush",
+        "Note sur Mcprush",
     ),
     (
         "user",
         "https://lobehub.com/mcp/dsanchezp18-maplestats-mcp",
-        f"{_SHIELDS}/badge/LobeHub-listed-1F1F1F",
-        "Listed on LobeHub",
-        "Répertorié sur LobeHub",
+        "https://lobehub.com/badge/mcp/dsanchezp18-maplestats-mcp",
+        "On LobeHub",
+        "Sur LobeHub",
     ),
     (
         "user",
