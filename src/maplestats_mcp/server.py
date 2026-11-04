@@ -112,9 +112,17 @@ def _prepare(component: FastMCPComponent, annotations: ToolAnnotations) -> None:
         component.annotations = _export_annotations()
     elif component.annotations is None:
         component.annotations = annotations
-    # Directories such as Claude's require a human-readable title.
+    # Directories such as Claude's require a human-readable title, and Claude's
+    # reads it from annotations.title, not the tool's own title field.
     if component.title is None:
         component.title = component.name.replace("_", " ").capitalize()
+    _title_annotations(component)
+
+
+def _title_annotations(tool: Tool) -> None:
+    """Copy the tool's title into its annotations (a copy: modules share one object)."""
+    if tool.annotations is not None and tool.annotations.title is None:
+        tool.annotations = tool.annotations.model_copy(update={"title": tool.title})
 
 
 def _module_annotations(root: Path) -> ToolAnnotations:
@@ -389,13 +397,15 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
             rendered = transform._serializer(results)
             return await rendered if inspect.isawaitable(rendered) else rendered
 
-        return Tool.from_function(
+        tool = Tool.from_function(
             fn=search_tools,
             name=self._search_tool_name,
             title="Search tools",
             description=_SEARCH_TOOLS_DESCRIPTION,
             annotations=_read_only_annotations(open_world=False),
         )
+        _title_annotations(tool)
+        return tool
 
     def _make_call_tool(self) -> Tool:
         transform = self
@@ -433,13 +443,15 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                 raise NotFoundError(f"Unknown tool: {shown!r}")
             return await ctx.fastmcp.call_tool(name, arguments)
 
-        return Tool.from_function(
+        tool = Tool.from_function(
             fn=call_tool,
             name=self._call_tool_name,
             title="Call a tool",
             description=_CALL_TOOL_DESCRIPTION,
             annotations=_export_annotations(),
         )
+        _title_annotations(tool)
+        return tool
 
 
 async def searchable_tools(server: FastMCP) -> list[Tool]:
