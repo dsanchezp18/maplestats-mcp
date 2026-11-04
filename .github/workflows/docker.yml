@@ -1,7 +1,8 @@
 name: Docker images
 
 # Render deploys the server and the chat demo straight from these Dockerfiles
-# (render.yaml and chat/render.yaml), so a base-image bump or a dependency without a wheel for the
+# (render.yaml and chat/render.yaml), and deploy-azure below rolls the server
+# image out to Azure, so a base-image bump or a dependency without a wheel for the
 # image's Python must fail here, not on the next deploy. ci.yml's test matrix
 # runs uv's own Python, not the image. Kept out of ci.yml so a registry outage
 # cannot hold back the website, which publishes only after CI passes.
@@ -73,3 +74,63 @@ jobs:
           done
           docker logs chat
           exit 1
+
+  # Rolls the image pushed above out to the Azure Container Apps instance. It
+  # signs in with GitHub's OIDC token, so no Azure secret is stored: the
+  # repository variables AZURE_CLIENT_ID, AZURE_TENANT_ID and
+  # AZURE_SUBSCRIPTION_ID name a deploy identity whose federated credential
+  # trusts this repository's main branch, with Contributor on the container app
+  # only and Reader on its resource group. Skipped until those variables exist.
+  deploy-azure:
+    needs: server
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AZURE_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    # One rollout at a time; a newer push waits for the current one to finish.
+    concurrency:
+      group: deploy-azure
+      cancel-in-progress: false
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      RESOURCE_GROUP: maplestats-rg
+      APP: maplestats-mcp
+      IMAGE: ghcr.io/${{ github.repository }}
+    steps:
+      - name: Sign in to Azure with GitHub's OIDC token
+        run: |
+          token=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+          az login --service-principal --username "$AZURE_CLIENT_ID" --tenant "$AZURE_TENANT_ID" \
+            --federated-token "$token" --output none
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+      - name: Deploy the image
+        run: |
+          az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
+            --image "$IMAGE:${GITHUB_SHA::7}" --only-show-errors --output none
+      # The app keeps serving the previous revision until the new one passes
+      # its probes, so a bad image fails this step without taking the server down.
+      - name: The new revision is healthy and answers MCP
+        run: |
+          revision=$(az containerapp show -g "$RESOURCE_GROUP" -n "$APP" \
+            --query properties.latestRevisionName -o tsv --only-show-errors)
+          fqdn=$(az containerapp show -g "$RESOURCE_GROUP" -n "$APP" \
+            --query properties.configuration.ingress.fqdn -o tsv --only-show-errors)
+          for _ in $(seq 1 40); do
+            health=$(az containerapp revision show -g "$RESOURCE_GROUP" -n "$APP" \
+              --revision "$revision" --query properties.healthState -o tsv --only-show-errors)
+            echo "$revision: $health"
+            [ "$health" = Healthy ] && break
+            [ "$health" = Unhealthy ] && exit 1
+            sleep 15
+          done
+          [ "$health" = Healthy ] || exit 1
+          curl -fsS --max-time 60 "https://$fqdn/health"
+          curl -fsS --max-time 60 -o /dev/null -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" "https://$fqdn/mcp" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"deploy-check","version":"1"}}}'
