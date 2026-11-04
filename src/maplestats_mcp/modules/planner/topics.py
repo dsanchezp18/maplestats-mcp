@@ -1949,6 +1949,56 @@ _STATCAN_CUE = (
 )
 _BULK_DOWNLOAD = _near(r"csvs?|bulk downloads?|bulk data|telechargements? en bloc", _STATCAN_CUE)
 
+# "The daily" is mostly not StatCan's bulletin ("the daily average temperature", "the
+# daily cap"), nor is "le quotidien" ("le quotidien des familles"), and a press release
+# or communiqué is as often a city's or a police service's; they count only near a word
+# naming StatCan. The terms below are specific enough on their own.
+_THE_DAILY = _near(
+    r"the daily|le quotidien|press releases?|news releases?|communiques?|release text",
+    _STATCAN_CUE,
+)
+
+STATCAN_DAILY = Topic(
+    "statcan_daily",
+    "The Daily: StatCan's release articles, their text and PDFs",
+    (
+        "daily article",
+        "release article",
+        "note to readers",
+        "statcan say*",
+        "statcan said",
+        "statistics canada say*",
+        "statistics canada said",
+        "article du quotidien",
+        "note aux lecteurs",
+    ),
+    (
+        PlanStep("statcan_daily_get_releases", "the release and its article id (last 100 days)"),
+        PlanStep("statcan_daily_search_archive", "an older release, back to 2012"),
+        PlanStep(
+            "statcan_daily_get_article",
+            "the article in full: text by section, Note to readers, tables cited, PDF",
+        ),
+        PlanStep(
+            "wds_get_data_from_vectors",
+            "the figures to quote: vector_ids of the series in the tables cited",
+        ),
+        PlanStep("statcan_daily_get_release_calendar", "when the next release comes out"),
+    ),
+    (
+        (
+            "The article rounds and describes; quote figures from the tables it cites "
+            "(wds_ tools) with their citation, and say what the article itself says in words."
+        ),
+        (
+            "Older articles are marked archived: kept for reference, not updated. A newer "
+            "release of the same data usually exists."
+        ),
+    ),
+    patterns=(_THE_DAILY,),
+)
+TOPICS = (*TOPICS, STATCAN_DAILY)
+
 STATCAN_TABLES = Topic(
     "statcan_tables",
     "StatCan whole tables, bulk series and vector IDs",

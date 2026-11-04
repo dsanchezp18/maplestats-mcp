@@ -755,6 +755,32 @@ FR: dict[str, str] = {
         "Seules les 19 statistiques qui ont un tableau en temps réel ont un historique des "
         "révisions; le tableau ordinaire affiche la dernière révision."
     ),
+    # The Daily
+    "The Daily: StatCan's release articles, their text and PDFs": (
+        "Le Quotidien : les communiqués de Statistique Canada, leur texte et leurs PDF"
+    ),
+    "the release and its article id (last 100 days)": (
+        "le communiqué et l'identifiant de son article (100 derniers jours)"
+    ),
+    "an older release, back to 2012": "un communiqué plus ancien, jusqu'en 2012",
+    "the article in full: text by section, Note to readers, tables cited, PDF": (
+        "l'article complet : texte par section, note aux lecteurs, tableaux cités, PDF"
+    ),
+    "the figures to quote: vector_ids of the series in the tables cited": (
+        "les chiffres à citer : vector_ids des séries des tableaux cités"
+    ),
+    "when the next release comes out": "la date du prochain communiqué",
+    "The article rounds and describes; quote figures from the tables it cites (wds_ tools) "
+    "with their citation, and say what the article itself says in words.": (
+        "L'article arrondit et décrit; citez les chiffres à partir des tableaux qu'il cite "
+        "(outils wds_), avec leur référence, et rapportez en mots ce que dit l'article."
+    ),
+    "Older articles are marked archived: kept for reference, not updated. A newer release "
+    "of the same data usually exists.": (
+        "Les articles plus anciens sont marqués comme archivés : conservés à titre de "
+        "référence, sans mise à jour. Un communiqué plus récent sur les mêmes données existe "
+        "habituellement."
+    ),
     # StatCan whole tables and vectors
     "StatCan whole tables, bulk series and vector IDs": (
         "Tableaux complets, séries en bloc et identifiants de vecteur de Statistique Canada"
