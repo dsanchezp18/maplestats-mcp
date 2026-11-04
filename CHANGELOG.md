@@ -64,6 +64,12 @@ where they outlive restarts and add up across hosts. A new tool,
 - The server instructions and `plan_query`'s guidance describe what `check_answer` does
   instead of telling the assistant to call it before every reply.
 
+### Fixed
+
+- Every tool's title is now also in its `annotations.title`. Claude's connectors
+  directory reads the title from there and flagged `search_tools`, `call_tool` and
+  `plan_query` as untitled.
+
 ## [0.4.5] - 2026-11-03
 
 This release fixes `check_answer`, which flagged a correct percent change as wrong and
