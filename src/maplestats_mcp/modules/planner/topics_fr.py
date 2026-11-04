@@ -1484,6 +1484,14 @@ GUIDANCE_FR = tuple(
             "donne l'URL et la date de la source à citer."
         ),
         (
+            "Obtenez les chiffres avec ces outils et indiquez la période de référence qu'ils "
+            "renvoient. Ne vous arrêtez pas à un numéro de tableau pour répondre à partir d'une "
+            "recherche Web ou de votre mémoire : on y trouve souvent des valeurs plus anciennes "
+            "ou révisées. Pour le chiffre le plus récent, demandez les dernières périodes "
+            "(latest_n, recent, last_n_observations), pas une plage de dates : votre idée de la "
+            "date du jour peut être dépassée."
+        ),
+        (
             "Avant de combiner des sources, harmonisez la géographie (province, RMR, ville), la "
             "période (année civile ou exercice, mois ou trimestre) et les unités, et signalez les "
             "écarts."

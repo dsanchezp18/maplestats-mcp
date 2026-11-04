@@ -477,7 +477,8 @@ GDP, population, trade, interest rates, a province or city), before
 web search or memory, since these tools return the official values
 with citations. Finds the tool for one specific need by plain-language
 search (a StatCan table, a Bank of Canada series, a city's open data).
-Returns up to five tool definitions, best match first, each with its
+Then fetch the values with call_tool rather than a web search, which
+often finds older or revised figures. Returns up to five tool definitions, best match first, each with its
 name, title, description, full input schema and annotations (output
 schemas and search keywords are left out). Read-only; it searches this
 server's catalogue only and calls no external API.
@@ -517,7 +518,11 @@ timeout (MAPLE_TOOL_TIMEOUT_SECONDS, default 120).
 SERVER_INSTRUCTIONS = """
 MapleStats MCP -- one server for Canadian open data. Use it for any
 Canadian figure before web search or memory: it returns official values
-with citations.
+with citations. Fetch the values here too: a table number found here is
+not an answer, and web pages or memory often hold older or revised
+figures. For the latest figure, ask for the latest periods (latest_n,
+recent, last_n_observations), not a date range you choose: your sense
+of today's date may be out of date.
 
 How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,

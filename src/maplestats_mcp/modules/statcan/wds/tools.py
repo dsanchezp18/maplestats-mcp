@@ -41,6 +41,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
 from maplestats_mcp.shared.envelope import raise_error
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.limits import join_limits
+from maplestats_mcp.shared.newer_data import newer_data_note
 from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform
 
 Lang = Literal["en", "fr"]
@@ -520,10 +521,14 @@ async def wds_get_data_by_reference_period_range(
     request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
     request.check(lang)
     if not request.active:
-        return await _described(
-            await client.get_data_from_vector_by_reference_period_range(
-                vector_ids, start_ref_period, end_ref_period
-            )
+        return _with_newer_data_note(
+            await _described(
+                await client.get_data_from_vector_by_reference_period_range(
+                    vector_ids, start_ref_period, end_ref_period
+                )
+            ),
+            end_ref_period,
+            lang,
         )
     start = date.fromisoformat(client._ref_period(start_ref_period, "start_ref_period", end=False))
     end = date.fromisoformat(client._ref_period(end_ref_period, "end_ref_period", end=True))
@@ -541,7 +546,38 @@ async def wds_get_data_by_reference_period_range(
     provenance = data.provenance.model_copy(
         update={"coverage": transforms.coverage_note(f"{fetch_start.isoformat()} to {end}")}
     )
-    return await _described(data.model_copy(update={"series": series, "provenance": provenance}))
+    return _with_newer_data_note(
+        await _described(data.model_copy(update={"series": series, "provenance": provenance})),
+        end_ref_period,
+        lang,
+    )
+
+
+def _with_newer_data_note(result: VectorDataSet, end_ref_period: str, lang: str) -> VectorDataSet:
+    """`result`, its limits led by a note when a series has data after the range."""
+    end = date.fromisoformat(client._ref_period(end_ref_period, "end_ref_period", end=True))
+    contexts = [s.context for s in result.series if s.context and s.context.last_period]
+    if not contexts:
+        return result
+    newest = max(contexts, key=lambda c: c.last_period or end)
+    released = (newest.table_release_time or "")[:10] or None
+    note = newer_data_note(
+        requested_end=end,
+        latest=newest.last_period,
+        latest_args=(
+            "latest_n à wds_get_data_from_vectors"
+            if lang == "fr"
+            else "latest_n to wds_get_data_from_vectors"
+        ),
+        released=released,
+        lang=lang,
+    )
+    if note is None:
+        return result
+    provenance = result.provenance.model_copy(
+        update={"limits": join_limits(note, result.provenance.limits)}
+    )
+    return result.model_copy(update={"provenance": provenance})
 
 
 # Left undefined when MAPLE_QUERY_SERIES=0, so discovery never lists it. The hosted

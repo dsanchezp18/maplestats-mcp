@@ -56,11 +56,13 @@ from maplestats_mcp.shared.errors import (
     UpstreamUnavailable,
 )
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.newer_data import newer_data_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.transform import (
     PERIODS_PER_YEAR,
     extra_months,
     parse_period,
+    period_end,
     period_label,
     shift_months,
     source_periods_needed,
@@ -824,6 +826,9 @@ async def get_data(
                 "getCodeSets du SDW n'a pas répondu",
             )
         )
+    newer = await _newer_data(product_id, end_period, lang)
+    if newer:
+        notes.insert(0, newer)
     fetched = ", ".join(f"{name}={value}" for name, value in params.items())
     return SdmxData(
         dataflow_id=dataflow_id,
@@ -852,6 +857,28 @@ async def get_data(
             limits="; ".join(notes) if notes else None,
             lang=lang,
         ),
+    )
+
+
+async def _newer_data(product_id: int, end_period: str | None, lang: str) -> str | None:
+    """A note when the table has periods after `end_period` (see shared/newer_data)."""
+    if not end_period:
+        return None
+    try:
+        first, ppy = parse_period(end_period)
+        metadata, _ = await wds_client.cube_metadata_raw(product_id)
+        latest = date.fromisoformat(str(metadata.get("cubeEndDate") or "")[:10])
+    except (ValueError, InvalidInput, NotFound, UpstreamError, UpstreamUnavailable):
+        # The note is a hint; a table WDS cannot describe still gets its data.
+        return None
+    requested_end = period_end(first, ppy) if ppy else first
+    released = str(metadata.get("releaseTime") or "")[:10] or None
+    return newer_data_note(
+        requested_end=requested_end,
+        latest=latest,
+        latest_args="last_n_observations",
+        released=released,
+        lang=lang,
     )
 
 
