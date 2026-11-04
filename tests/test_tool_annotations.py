@@ -42,6 +42,17 @@ async def test_every_tool_has_a_title():
     assert not untitled, f"tools missing a title: {untitled}"
 
 
+async def test_every_tool_title_is_in_its_annotations():
+    """Claude's directory reads annotations.title and flags tools without it."""
+    tools = [*await mcp._list_tools(), *await mcp.list_tools()]
+    wrong = sorted(
+        tool.name
+        for tool in tools
+        if tool.annotations is None or tool.annotations.title != tool.title
+    )
+    assert not wrong, f"annotations.title missing or different: {wrong}"
+
+
 async def test_hosted_exports_and_wrapper_declare_no_file_writes(monkeypatch):
     monkeypatch.setenv("MAPLE_TRANSPORT", "http")
     expected = _export_annotations()
@@ -49,4 +60,6 @@ async def test_hosted_exports_and_wrapper_declare_no_file_writes(monkeypatch):
     assert expected.destructive_hint is False
     assert expected.idempotent_hint is True
     transform = AnnotatedBM25SearchTransform()
-    assert transform._make_call_tool().annotations == expected
+    annotations = transform._make_call_tool().annotations
+    assert annotations is not None
+    assert annotations.model_copy(update={"title": None}) == expected
