@@ -13,10 +13,19 @@ each; `scripts/build_changelog.py` writes them in here at release time.
 The hosted server moves to `https://mcp.maplestats.danielstats.io/mcp`, an always-on
 instance on Microsoft Azure (Canada Central) that every push to `main` now deploys, so the
 first request no longer waits for a cold start. Its usage counts can also go to GoatCounter,
-where they outlive restarts and add up across hosts. Nothing changes for a caller's tools.
+where they outlive restarts and add up across hosts. A new tool,
+`statcan_daily_get_article`, reads a Daily release in full, with its tables and PDF, and
+`plan_query` routes questions about what StatCan said in a release to it.
 
 ### Added
 
+- `statcan_daily_get_article` reads one Daily article in full, in English or French: its text
+  by section (including the Note to readers), chart titles, the StatCan tables it links to with
+  their product ids for the `wds_` tools, and links to the article's PDF, its Tables and
+  Related information pages and the previous release. It takes the id (`dq261104a`) or the URL
+  that `statcan_daily_get_releases` and `statcan_daily_search_archive` return, and flags
+  articles StatCan has marked archived. Checked against articles from 2013 to 2026. Until now
+  the Daily tools gave only the feed's one-paragraph summary.
 - Every push to `main` rolls the new server image out to the always-on Azure Container
   Apps instance, once the image passes its `/health` check, and fails the run if the new
   revision does not become healthy or answer an MCP handshake. Azure keeps serving the
@@ -30,6 +39,12 @@ where they outlive restarts and add up across hosts. Nothing changes for a calle
   and time are sent, never arguments or addresses, and visitor counting is off.
 - The chat demo's page counts views with GoatCounter, like the website, under a fixed path,
   so the question a `?q=` link carries is not recorded.
+- `plan_query` has a topic for The Daily: a question about what StatCan said in a release ("What
+  did StatCan say about the September trade numbers?", "note to readers", "communiqué de
+  Statistique Canada") now plans `statcan_daily_get_releases`, then `statcan_daily_get_article`
+  for the full text and PDF, then the tables for the figures. "The daily", "le quotidien",
+  "press release" and "communiqué" count only next to a word naming StatCan, so the daily
+  average temperature or a city's press release stays off it.
 - The server's Docker image is published to GitHub's container registry as
   `ghcr.io/dsanchezp18/maplestats-mcp` (tags `latest` and the short commit) on every
   push to `main`, after the image passes its `/health` check. Pull requests still
