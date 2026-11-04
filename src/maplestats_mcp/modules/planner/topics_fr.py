@@ -763,6 +763,13 @@ FR: dict[str, str] = {
         "le communiqué et l'identifiant de son article (100 derniers jours)"
     ),
     "an older release, back to 2012": "un communiqué plus ancien, jusqu'en 2012",
+    "every table, survey and PDF of the release, and of its previous releases": (
+        "tous les tableaux, enquêtes et PDF du communiqué et des communiqués précédents"
+    ),
+    "everything scheduled in the next two weeks, and the year's release-dates PDF": (
+        "toutes les diffusions des deux prochaines semaines, et le PDF des dates de "
+        "diffusion de l'année"
+    ),
     "the article in full: text by section, Note to readers, tables cited, PDF": (
         "l'article complet : texte par section, note aux lecteurs, tableaux cités, PDF"
     ),

@@ -51,6 +51,13 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     DailyReleaseList,
     ReleaseCalendarEntry,
     ReleaseCalendarResult,
+    ReleaseFiles,
+    ReleaseFilesResult,
+    ReleaseProduct,
+    ReleaseSurvey,
+    ReleaseTable,
+    UpcomingRelease,
+    UpcomingReleasesResult,
 )
 from maplestats_mcp.modules.statcan.lang import say, use_lang
 from maplestats_mcp.shared.cache import cached_fetch
@@ -525,7 +532,7 @@ def _table_id(digits: str) -> str:
 # Links in an article are root-relative ("/daily-quotidien/...", "/en/catalogue/...");
 # on www150 those answer 301 to the same path under /n1/ (checked 2026-11-04 from the
 # Azure server), so they are given in that final form.
-_N1_PREFIXES = ("/daily-quotidien/", "/dai-quo/", "/en/", "/fr/")
+_N1_PREFIXES = ("/daily-quotidien/", "/dai-quo/", "/en/", "/fr/", "/release-diffusion/")
 
 
 def _absolute(url: str, href: str) -> str:
@@ -731,6 +738,492 @@ async def get_article(article: str, *, lang: str = "en") -> DailyArticle:
                 "Texte seulement : les graphiques et les tableaux du communiqué sont donnés par "
                 "titre et lien, sans leur contenu. Lisez les chiffres dans les tableaux (outils "
                 "wds_) et citez-les.",
+            ),
+            lang=lang,
+        ),
+    )
+
+
+async def _fetch_html(
+    url: str, cache_key: str, ttl: int, tool: str, *, missing_ok: bool
+) -> tuple[str | None, bool]:
+    """Read one StatCan page; a 404 gives None when `missing_ok`, else NotFound."""
+
+    async def fetch() -> str | None:
+        await _LIMITER.acquire()
+        try:
+            response = await get_raw(url)
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status == 404 and missing_ok:
+                return None
+            if status == 404:
+                raise NotFound(
+                    say(
+                        f"statcan_daily:{tool}: StatCan has no page at {url}.",
+                        f"statcan_daily:{tool} : Statistique Canada n'a pas de page à {url}.",
+                    )
+                ) from exc
+            raise UpstreamError(
+                say(
+                    f"statcan_daily:{tool} returned HTTP {status} for {url}.",
+                    f"statcan_daily:{tool} a renvoyé HTTP {status} pour {url}.",
+                )
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise UpstreamUnavailable(
+                say(
+                    f"statcan_daily:{tool} did not respond in time "
+                    "(already retried by shared/http.py). Try again shortly.",
+                    f"statcan_daily:{tool} n'a pas répondu à temps (nouvelles tentatives "
+                    "déjà faites). Réessayez sous peu.",
+                )
+            ) from exc
+        return response.text
+
+    return await cached_fetch(cache_key, ttl, fetch)
+
+
+_MONTHS = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+    "janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
+    "juillet": 7, "aout": 8, "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12,
+}  # fmt: skip
+
+
+def _day_month(text: str) -> tuple[int, int] | None:
+    """'November 4' or '4 novembre' -> (11, 4); the day headings carry no year."""
+    words = re.findall(r"\w+", _fold(text))
+    month = next((_MONTHS[w] for w in words if w in _MONTHS), None)
+    day = next((int(w) for w in words if w.isdigit() and 1 <= int(w) <= 31), None)
+    return (month, day) if month and day else None
+
+
+def _parse_upcoming(html: str, url: str) -> tuple[str, list[UpcomingRelease], str | None]:
+    """The two-week list on cal2 (layout described in constants.py)."""
+    soup = BeautifulSoup(html, "html.parser")
+    block = soup.find("div", class_="upcoming")
+    heading = block.find("h2") if isinstance(block, Tag) else None
+    if not isinstance(block, Tag) or not isinstance(heading, Tag):
+        raise UpstreamError(
+            say(
+                f"statcan_daily:get_upcoming_releases: {url} has no upcoming-release list "
+                "(div.upcoming); StatCan may have changed the page.",
+                f"statcan_daily:get_upcoming_releases : {url} n'a pas de liste des "
+                "diffusions à venir (div.upcoming) ; Statistique Canada a peut-être changé "
+                "la page.",
+            )
+        )
+    period = _clean(heading.get_text(" "))
+    years = re.findall(r"\b(20\d\d)\b", period)
+    year = int(years[-1]) if years else datetime.now(ZoneInfo(constants.CALENDAR_TIMEZONE)).year
+
+    days: list[tuple[tuple[int, int], Tag]] = []
+    for day_heading in block.find_all("h3"):
+        parsed = _day_month(day_heading.get_text(" "))
+        listing = day_heading.find_next_sibling("ol")
+        if parsed and isinstance(listing, Tag):
+            days.append((parsed, listing))
+    # A window can run over New Year ("December 28 to January 8, 2027"): the heading's
+    # year is the last day's, so a month after the last day's month is the year before.
+    last_month = days[-1][0][0] if days else 12
+    releases: list[UpcomingRelease] = []
+    for (month, day), listing in days:
+        release_date = date(year - 1 if month > last_month else year, month, day)
+        for item in listing.find_all("li", recursive=False):
+            title_tag = item.find("div", class_="rtitle")
+            if not isinstance(title_tag, Tag):
+                continue
+            refper_tag = title_tag.find("span", class_="refper")
+            refper = None
+            if isinstance(refper_tag, Tag):
+                refper = _clean(refper_tag.get_text(" ")) or None
+                refper_tag.extract()
+            title = _clean(title_tag.get_text(" ")).rstrip(" ,")
+            lockup_tag = item.find("div", class_="lockup")
+            contact_tag = item.find("p", class_="contact")
+            contact = phone = None
+            if isinstance(contact_tag, Tag):
+                phone_tag = contact_tag.find("span", class_="phone")
+                if isinstance(phone_tag, Tag):
+                    phone = _clean(phone_tag.get_text(" ")) or None
+                    phone_tag.extract()
+                contact = _clean(contact_tag.get_text(" ")).strip("() ,") or None
+            releases.append(
+                UpcomingRelease(
+                    release_date=release_date,
+                    title=title,
+                    reference_period=refper,
+                    lockup=isinstance(lockup_tag, Tag) and bool(lockup_tag.get_text(strip=True)),
+                    contact=contact,
+                    phone=phone,
+                )
+            )
+
+    pdf = None
+    for link in soup.find_all("a", href=True):
+        href = str(link["href"])
+        if href.endswith(".pdf") and "upcoming" in href:
+            pdf = _absolute(url, href)
+            break
+    return period, releases, pdf
+
+
+def _parse_major_releases(html: str, url: str) -> tuple[str | None, str | None, list[str]]:
+    """The year's PDF of planned dates and the indicator list on cal1."""
+    soup = BeautifulSoup(html, "html.parser")
+    pdf_url = label = None
+    for link in soup.find_all("a", href=True):
+        href = str(link["href"])
+        if "/release-diffusion/" in href and href.endswith(".pdf"):
+            pdf_url = _absolute(url, href)
+            label = re.sub(r"\s*\([^)]*\b[kK][bBoO]\)\s*$", "", _clean(link.get_text(" ")))
+            break
+    picker = soup.find("select", id="select_keylist")
+    indicators = (
+        [_clean(option.get_text(" ")) for option in picker.find_all("option")]
+        if isinstance(picker, Tag)
+        else []
+    )
+    return pdf_url, label or None, [name for name in indicators if name]
+
+
+async def get_upcoming_releases(query: str = "", *, lang: str = "en") -> UpcomingReleasesResult:
+    """Every release scheduled in the next two weeks, plus the year's major-release PDF."""
+    use_lang(lang)
+    suffix = constants.LANG_TO_SUFFIX.get(lang, "eng")
+    url = constants.UPCOMING_URL.format(suffix=suffix)
+    html, was_cached = await _fetch_html(
+        url,
+        f"statcan-daily:upcoming:{suffix}",
+        constants.CACHE_TTL_UPCOMING_SECONDS,
+        "get_upcoming_releases",
+        missing_ok=False,
+    )
+    period, releases, pdf_url = _parse_upcoming(html or "", url)
+
+    major_url = constants.MAJOR_RELEASES_URL.format(suffix=suffix)
+    # The annual PDF is a pointer, not the answer: a failure there leaves it out rather
+    # than losing the two-week list.
+    try:
+        major_html, _ = await _fetch_html(
+            major_url,
+            f"statcan-daily:major-releases:{suffix}",
+            constants.CACHE_TTL_ARCHIVE_SECONDS,
+            "get_upcoming_releases",
+            missing_ok=True,
+        )
+    except (UpstreamError, UpstreamUnavailable):
+        major_html = None
+    annual_pdf, annual_label, indicators = (
+        _parse_major_releases(major_html, major_url) if major_html else (None, None, [])
+    )
+
+    words = re.findall(r"\w+", _fold(query))
+    matched = [
+        release
+        for release in releases
+        if all(word in _fold(f"{release.title} {release.reference_period or ''}") for word in words)
+    ]
+    return UpcomingReleasesResult(
+        query=query,
+        period=period,
+        start_date=releases[0].release_date if releases else None,
+        end_date=releases[-1].release_date if releases else None,
+        releases=matched,
+        returned_count=len(matched),
+        total_in_window=len(releases),
+        pdf_url=pdf_url,
+        annual_schedule_pdf_url=annual_pdf,
+        annual_schedule_label=annual_label,
+        major_indicators=indicators,
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=url,
+            cached=was_cached,
+            schema_name="statcan_daily.UpcomingReleasesResult",
+            coverage=period,
+            limits=say(
+                "Two weeks ahead only, and StatCan compiles the list for planning: dates "
+                "can move. For the major indicators further ahead (about six months) use "
+                "statcan_daily_get_release_calendar, or the annual PDF.",
+                "Deux semaines seulement, et Statistique Canada dresse la liste à des fins de "
+                "planification : les dates peuvent changer. Pour les grands indicateurs plus "
+                "loin (environ six mois), utilisez statcan_daily_get_release_calendar ou le "
+                "PDF annuel.",
+            ),
+            lang=lang,
+        ),
+    )
+
+
+_LEGACY_CANSIM = re.compile(r"/cansim/(\d{3}-\d{4})\b")
+_LEGACY_CANSIM_LIST = re.compile(r"[?&]cansim=([\d,\-]+)")
+_SDDS = re.compile(r"(?:SDDS=|imdb-bmdi/)(\d{3,4})\b", re.IGNORECASE)
+_CATALOGUE = re.compile(r"/catalogue/(\d{2}-\d{3}-[A-Z])")
+_PREVIOUS_TEXT = ("previous release", "communique precedent")
+
+
+def _release_links(soup: BeautifulSoup, url: str) -> dict[str, Any]:
+    """Links any layout of a Daily page carries: its tabs, PDF, tables, surveys, products.
+
+    Reads every link in <main> (or <body> for the 2012 layout, which has no <main>),
+    so the same code serves the tabs of a current release and the bare text of an old one.
+    """
+    root = soup.find("main") or soup.body or soup
+    found: dict[str, Any] = {
+        "tables": {},
+        "legacy": {},
+        "surveys": {},
+        "products": {},
+        "subjects": [],
+    }
+    own = _ARTICLE_ID.search(url)
+    own_id = own.group(1).lower() if own else "\0"
+    links = root.find_all("a", href=True) if isinstance(root, Tag) else []
+    for link in links:
+        href = str(link["href"])
+        if href.startswith(("#", "mailto:")):
+            continue
+        absolute = _absolute(url, href)
+        text = _clean(link.get_text(" "))
+        if absolute.endswith(".pdf") and own_id in absolute:
+            found.setdefault("pdf", absolute)
+        elif "-cansim-" in absolute and own_id in absolute:
+            found.setdefault("tables_page", absolute)
+        elif "-info-" in absolute and own_id in absolute:
+            found.setdefault("info_page", absolute)
+        elif "/dai-quo/cal" in absolute and "sk=" in absolute:
+            found.setdefault("schedule", absolute)
+        elif _fold(text) in _PREVIOUS_TEXT and "/daily-quotidien/" in absolute:
+            found.setdefault("previous", absolute)
+        elif pid := _PID.search(absolute):
+            found["tables"].setdefault(int(pid.group(1)), absolute)
+        elif cansim := _LEGACY_CANSIM.search(absolute):
+            found["legacy"].setdefault(cansim.group(1), absolute)
+        elif many := _LEGACY_CANSIM_LIST.search(absolute):
+            for number in many.group(1).split(","):
+                if re.fullmatch(r"\d{3}-\d{4}", number):
+                    found["legacy"].setdefault(number, absolute)
+        elif sdds := _SDDS.search(absolute):
+            # The Related information tab writes "1301 — Gross Domestic Product by
+            # Industry"; a 2012 page links only "survey number 1301", which names nothing.
+            name = re.sub(r"^\d+\s*[–—-]?\s*", "", text)
+            if not name or sdds.group(1) in name:
+                name = None
+            found["surveys"].setdefault(int(sdds.group(1)), (name, absolute))
+        elif catalogue := _CATALOGUE.search(absolute):
+            number = catalogue.group(1)
+            # Old pages link the number itself ("Catalogue number 13-010-X"): no title there.
+            title = None if re.search(r"\d{2}-\d{3}-[A-Z]", text) else text or None
+            known = found["products"].get(number)
+            if known is None or (known[0] is None and title):
+                found["products"][number] = (title, absolute)
+        elif "/rel-com/theme" in absolute and text:
+            found["subjects"].append(text)
+    return found
+
+
+def _tables_tab(html: str, url: str) -> list[ReleaseTable]:
+    """Every table of a release, from its Tables tab (table#release-list)."""
+    soup = BeautifulSoup(html, "html.parser")
+    listing = soup.find("table", id="release-list")
+    tables: list[ReleaseTable] = []
+    links = listing.find_all("a", href=True) if isinstance(listing, Tag) else []
+    for link in links:
+        absolute = _absolute(url, str(link["href"]))
+        heading = link.find("h3")
+        frequency = None
+        if isinstance(heading, Tag):
+            frequency_tag = heading.find("span", class_="frq")
+            if isinstance(frequency_tag, Tag):
+                frequency = _clean(frequency_tag.get_text(" ")).strip("()") or None
+                frequency_tag.extract()
+        number_tag = link.find("p", class_="arrayid")
+        number = _clean(number_tag.get_text(" ")).strip("()") if isinstance(number_tag, Tag) else ""
+        pid = _PID.search(absolute)
+        # 2015-2017 tabs list the old CANSIM number ("379-0031") and link a dead URL.
+        legacy = number if re.fullmatch(r"\d{3}-\d{4}", number) else None
+        tables.append(
+            ReleaseTable(
+                title=_clean(heading.get_text(" ")) if isinstance(heading, Tag) else None,
+                frequency=frequency,
+                table_id=_table_id(pid.group(1))
+                if pid
+                else (number or None if not legacy else None),
+                product_id=int(pid.group(1)) if pid else None,
+                legacy_cansim_id=legacy,
+                url=absolute,
+            )
+        )
+    return tables
+
+
+async def _legacy_to_current(numbers: set[str]) -> dict[str, int]:
+    """Map old CANSIM numbers to today's 8-digit product ids via the WDS table inventory."""
+    if not numbers:
+        return {}
+    # Imported here: only a release citing old CANSIM numbers needs the WDS inventory.
+    from maplestats_mcp.modules.statcan.wds.client import get_all_cubes_list
+
+    try:
+        inventory = await get_all_cubes_list(lite=True)
+    except Exception:  # noqa: BLE001 -- the mapping is a convenience; the old numbers stay
+        return {}
+    wanted = {re.sub(r"\D", "", number): number for number in numbers}
+    mapping: dict[str, int] = {}
+    for cube in inventory.cubes:
+        for old in re.split(r"[,;\s]+", cube.cansim_id or ""):
+            number = wanted.get(re.sub(r"\D", "", old))
+            if number:
+                mapping.setdefault(number, cube.product_id)
+    return mapping
+
+
+async def _release_files(article_id: str, url: str, lang: str) -> tuple[ReleaseFiles, bool]:
+    ttl = constants.CACHE_TTL_ARTICLE_SECONDS
+    html, cached = await _fetch_html(
+        url,
+        f"statcan-daily:article:{article_id}:{lang}",
+        ttl,
+        "get_release_files",
+        missing_ok=False,
+    )
+    soup = BeautifulSoup(html or "", "html.parser")
+    found = _release_links(soup, url)
+    heading = soup.find("h1")
+    title = _clean(heading.get_text(" ")) if isinstance(heading, Tag) else article_id
+    day = article_id[2:8]
+    release_date = date(2000 + int(day[:2]), int(day[2:4]), int(day[4:6]))
+
+    tables: list[ReleaseTable] = []
+    if "tables_page" in found:
+        tab_html, tab_cached = await _fetch_html(
+            found["tables_page"],
+            f"statcan-daily:tables:{article_id}:{lang}",
+            ttl,
+            "get_release_files",
+            missing_ok=True,
+        )
+        cached &= tab_cached
+        tables = _tables_tab(tab_html, found["tables_page"]) if tab_html else []
+    if not tables:
+        tables = [
+            ReleaseTable(table_id=_table_id(str(pid)), product_id=pid, url=link)
+            for pid, link in found["tables"].items()
+        ] + [
+            ReleaseTable(legacy_cansim_id=number, url=link)
+            for number, link in found["legacy"].items()
+        ]
+
+    surveys = found["surveys"]
+    subjects = found["subjects"]
+    products = found["products"]
+    if "info_page" in found:
+        info_html, info_cached = await _fetch_html(
+            found["info_page"],
+            f"statcan-daily:info:{article_id}:{lang}",
+            ttl,
+            "get_release_files",
+            missing_ok=True,
+        )
+        cached &= info_cached
+        if info_html:
+            info = _release_links(BeautifulSoup(info_html, "html.parser"), found["info_page"])
+            # Keep whichever side names the survey or product; the tab usually does.
+            for key, value in info["surveys"].items():
+                if value[0] or key not in surveys:
+                    surveys[key] = value
+            for key, value in info["products"].items():
+                if value[0] or key not in products:
+                    products[key] = value
+            subjects = info["subjects"] or subjects
+
+    return (
+        ReleaseFiles(
+            article_id=article_id,
+            url=url,
+            title=title,
+            release_date=release_date,
+            pdf_url=found.get("pdf"),
+            tables=tables,
+            surveys=[
+                ReleaseSurvey(sdds=sdds, name=name, url=link)
+                for sdds, (name, link) in surveys.items()
+            ],
+            products=[
+                ReleaseProduct(catalogue_number=number, title=product_title, url=link)
+                for number, (product_title, link) in products.items()
+            ],
+            subjects=list(dict.fromkeys(subjects)),
+            tables_page_url=found.get("tables_page"),
+            related_info_url=found.get("info_page"),
+            release_schedule_url=found.get("schedule"),
+            previous_release_url=found.get("previous"),
+        ),
+        cached,
+    )
+
+
+async def get_release_files(
+    article: str, *, lang: str = "en", previous: int = 0
+) -> ReleaseFilesResult:
+    """The tables, PDF, surveys and publications of a Daily release and its predecessors."""
+    use_lang(lang)
+    if previous < 0 or previous > constants.RELEASE_FILES_PREVIOUS_MAX:
+        raise InvalidInput(
+            say(
+                "statcan_daily:get_release_files: previous must be between 0 and "
+                f"{constants.RELEASE_FILES_PREVIOUS_MAX}, got {previous}.",
+                "statcan_daily:get_release_files : previous doit être entre 0 et "
+                f"{constants.RELEASE_FILES_PREVIOUS_MAX}, reçu {previous}.",
+            )
+        )
+    article_id, url = _article_url(article, lang)
+    releases: list[ReleaseFiles] = []
+    all_cached = True
+    seen: set[str] = set()
+    next_url: str | None = url
+    while next_url and len(releases) <= previous:
+        current_id, current_url = _article_url(next_url, lang)
+        if current_id in seen:
+            break
+        seen.add(current_id)
+        files, cached = await _release_files(current_id, current_url, lang)
+        releases.append(files)
+        all_cached &= cached
+        next_url = files.previous_release_url
+
+    legacy = {t.legacy_cansim_id for r in releases for t in r.tables if t.legacy_cansim_id}
+    mapping = await _legacy_to_current(legacy)
+    for release in releases:
+        for table in release.tables:
+            pid = mapping.get(table.legacy_cansim_id or "")
+            if pid and table.product_id is None:
+                table.product_id = pid
+                table.table_id = _table_id(str(pid))
+
+    return ReleaseFilesResult(
+        article=article_id,
+        releases=releases,
+        returned_count=len(releases),
+        chain_ended=releases[-1].previous_release_url is None,
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=url,
+            cached=all_cached,
+            schema_name="statcan_daily.ReleaseFilesResult",
+            limits=say(
+                "Links only: read a table's figures with the wds_ tools (product_id), and "
+                "the article text with statcan_daily_get_article. Old CANSIM numbers are "
+                "matched to today's tables through the WDS inventory where StatCan kept "
+                "the link; a table with only legacy_cansim_id was not matched.",
+                "Liens seulement : lisez les chiffres d'un tableau avec les outils wds_ "
+                "(product_id) et le texte avec statcan_daily_get_article. Les anciens numéros "
+                "CANSIM sont associés aux tableaux actuels par l'inventaire WDS quand "
+                "Statistique Canada a gardé le lien ; un tableau qui n'a que legacy_cansim_id "
+                "n'a pas été associé.",
             ),
             lang=lang,
         ),

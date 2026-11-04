@@ -12,6 +12,8 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     DailyArticle,
     DailyReleaseList,
     ReleaseCalendarResult,
+    ReleaseFilesResult,
+    UpcomingReleasesResult,
 )
 from maplestats_mcp.modules.statcan.lang import use_lang
 
@@ -190,3 +192,69 @@ async def statcan_daily_get_release_calendar(
         end_date=end_date,
         limit=limit,
     )
+
+
+@tool
+async def statcan_daily_get_upcoming_releases(
+    query: str = "",
+    lang: Literal["en", "fr"] = "en",
+) -> UpcomingReleasesResult:
+    """List every StatCan release scheduled in the next two weeks, studies included.
+
+    Use for: "what is StatCan releasing this week / next week" -- the
+    detailed two-week schedule from The Daily's Upcoming releases page:
+    every release, not only the major indicators (annual surveys,
+    studies, census data tables, price indexes), each with its date,
+    reference period, whether it has a media lockup (the major
+    economic releases) and the StatCan contact. query keeps the releases
+    whose title or reference period holds every word (accents ignored).
+    Also returns the same list as a PDF, and the link to StatCan's
+    annual PDF of planned release dates for the major economic
+    indicators (the whole year, e.g. "2026-2027 release dates") with the
+    names of those indicators. For dates further than two weeks ahead
+    use statcan_daily_get_release_calendar (major indicators, about six
+    months); for releases already out, statcan_daily_search_archive.
+    Keywords: upcoming releases, this week, next week, release schedule,
+    two-week schedule, what is coming out, lockup, major economic releases,
+    annual release dates, release calendar PDF, Statistics Canada, The Daily.
+    Mots-clés : diffusions à venir, cette semaine, semaine prochaine,
+    calendrier de diffusion, huis clos, principales diffusions
+    économiques, dates de diffusion annuelles, prochaines parutions,
+    Le Quotidien, Statistique Canada.
+    """
+    use_lang(lang)
+    return await client.get_upcoming_releases(query, lang=lang)
+
+
+@tool
+async def statcan_daily_get_release_files(
+    article: str,
+    lang: Literal["en", "fr"] = "en",
+    previous: int = 0,
+) -> ReleaseFilesResult:
+    """Get the tables, PDF, surveys and publications behind a Daily release, and past releases.
+
+    Use for: "which tables and documents came with this release" and
+    "what did the previous releases of this indicator include" -- for one
+    Daily article (id such as "dq261030a" or its URL, from
+    statcan_daily_get_releases or statcan_daily_search_archive) returns
+    the article's PDF, every table of the release (title, frequency,
+    table number and 8-digit product id for the wds_ tools), the surveys
+    with their IMDB documentation pages (definitions, methods), the
+    catalogued publications it links, its subjects and its release
+    schedule. previous (0 to 12) also walks the "Previous release" links
+    back that many releases, newest first, so you can see each past
+    release's PDF and tables. Releases from 2012 to 2017 cite old CANSIM
+    numbers; these are matched to today's tables where StatCan kept the
+    link (legacy_cansim_id holds the old number). Links only: read the
+    figures with the wds_ tools and the text with statcan_daily_get_article.
+    Keywords: release tables, datasets, PDF, previous release, past
+    releases, release history, CANSIM table, related information, IMDB,
+    survey documentation, release files, downloads, The Daily, Statistics Canada.
+    Mots-clés : tableaux du communiqué, jeux de données, PDF, communiqué
+    précédent, diffusions passées, historique des diffusions, tableau
+    CANSIM, informations connexes, documentation de l'enquête,
+    Le Quotidien, Statistique Canada.
+    """
+    use_lang(lang)
+    return await client.get_release_files(article, lang=lang, previous=previous)

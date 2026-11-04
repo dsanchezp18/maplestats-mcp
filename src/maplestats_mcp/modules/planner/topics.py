@@ -1983,7 +1983,15 @@ STATCAN_DAILY = Topic(
             "wds_get_data_from_vectors",
             "the figures to quote: vector_ids of the series in the tables cited",
         ),
+        PlanStep(
+            "statcan_daily_get_release_files",
+            "every table, survey and PDF of the release, and of its previous releases",
+        ),
         PlanStep("statcan_daily_get_release_calendar", "when the next release comes out"),
+        PlanStep(
+            "statcan_daily_get_upcoming_releases",
+            "everything scheduled in the next two weeks, and the year's release-dates PDF",
+        ),
     ),
     (
         (

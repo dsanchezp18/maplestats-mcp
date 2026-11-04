@@ -115,6 +115,30 @@ ARTICLE_URL_TEMPLATE = (
 )
 CACHE_TTL_ARTICLE_SECONDS = 6 * 60 * 60
 
+# Two-week list of every scheduled release. Checked live 2026-11-04: the key-indicators
+# JSON above carries only the ~30 major indicators into the future, while this page
+# (div.upcoming) lists every release of the next two weeks, studies and annual surveys
+# included (Sawmills, Accounting services, Industrial Water Survey...), each with a
+# "(lockup)" / "(huis clos)" marker, the reference period in span.refper and the
+# StatCan contact in p.contact. Its heading names the window ("November 2 to 13, 2026",
+# "Du 2 au 13 novembre 2026"); each day is an <h3> without the year. The same list is
+# linked as a PDF. The major-releases page next to it links the year's PDF of planned
+# release dates ("2026-2027 release dates" at /n1/release-diffusion/2026-eng.pdf;
+# 2012-2024 sit at the same path, 2025 answers 404).
+UPCOMING_URL = "https://www150.statcan.gc.ca/n1/dai-quo/cal2-{suffix}.htm"
+MAJOR_RELEASES_URL = "https://www150.statcan.gc.ca/n1/dai-quo/cal1-{suffix}.htm"
+CACHE_TTL_UPCOMING_SECONDS = 60 * 60
+
+# Release files: every article has a Text tab and, when the release has them, a Tables
+# tab (dq...-cansim-{eng,fra}.htm: table#release-list, one link per table with its title,
+# span.frq frequency and p.arrayid number) and a Related information tab
+# (dq...-info-{eng,fra}.htm: IMDB survey links with SDDS=nnnn, subject links). Checked
+# 2026-11-04 on 2015, 2026 and 2012 releases: a 2012 release has no tabs (they answer
+# 404) and no <main>; its text links CANSIM tables by their old numbers
+# (/n1/en/cansim/379-0027 or /n1/en/type/data?cansim=380-0001,380-0002, both now 404)
+# and surveys as www.statcan.gc.ca/imdb-bmdi/1301-eng.htm.
+RELEASE_FILES_PREVIOUS_MAX = 12
+
 CALENDAR_TIMEZONE = "America/Toronto"
 CALENDAR_LIMIT_DEFAULT = 20
 CALENDAR_LIMIT_MAX = 200
