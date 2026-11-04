@@ -37,7 +37,7 @@ async def main() -> int:
         survey = next(s for s in result.surveys if s.survey_id == survey_id)
         print("  found:", survey.model_dump())
     except UpstreamUnavailable as exc:
-        skip_outage("StatCan's survey directory", exc)
+        skip_outage("StatCan's survey directory", exc, rest_runs=True)
 
     metadata = await client.get_survey_metadata(survey_id)
     print(f"OK: get_survey_metadata({survey_id}) -> {metadata.name}")
