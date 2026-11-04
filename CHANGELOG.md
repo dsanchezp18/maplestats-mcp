@@ -8,6 +8,68 @@ each; `scripts/build_changelog.py` writes them in here at release time.
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-11-04
+
+The hosted server moves to `https://mcp.maplestats.danielstats.io/mcp`, an always-on
+instance on Microsoft Azure (Canada Central) that every push to `main` now deploys, so the
+first request no longer waits for a cold start. Its usage counts can also go to GoatCounter,
+where they outlive restarts and add up across hosts. A new tool,
+`statcan_daily_get_article`, reads a Daily release in full, with its tables and PDF, and
+`plan_query` routes questions about what StatCan said in a release to it.
+
+### Added
+
+- `statcan_daily_get_article` reads one Daily article in full, in English or French: its text
+  by section (including the Note to readers), chart titles, the StatCan tables it links to with
+  their product ids for the `wds_` tools, and links to the article's PDF, its Tables and
+  Related information pages and the previous release. It takes the id (`dq261104a`) or the URL
+  that `statcan_daily_get_releases` and `statcan_daily_search_archive` return, and flags
+  articles StatCan has marked archived. Checked against articles from 2013 to 2026. Until now
+  the Daily tools gave only the feed's one-paragraph summary.
+- Every push to `main` rolls the new server image out to the always-on Azure Container
+  Apps instance, once the image passes its `/health` check, and fails the run if the new
+  revision does not become healthy or answer an MCP handshake. Azure keeps serving the
+  previous revision meanwhile. The hourly uptime check now tests the Azure and Render
+  endpoints separately.
+- With `MAPLE_GOATCOUNTER_URL` and `MAPLE_GOATCOUNTER_TOKEN` set, the HTTP server also sends
+  each counted tool call to GoatCounter as the event `mcp/<instance>/<tool>` (`/error` on
+  failure; `MAPLE_INSTANCE_NAME` labels the host), in batches each minute. `/stats` starts
+  again on every restart and knows one host only; the GoatCounter counts persist and add up
+  across the Azure and Render instances. Only the registry tool name, outcome, host label
+  and time are sent, never arguments or addresses, and visitor counting is off.
+- The chat demo's page counts views with GoatCounter, like the website, under a fixed path,
+  so the question a `?q=` link carries is not recorded.
+- `plan_query` has a topic for The Daily: a question about what StatCan said in a release ("What
+  did StatCan say about the September trade numbers?", "note to readers", "communiqué de
+  Statistique Canada") now plans `statcan_daily_get_releases`, then `statcan_daily_get_article`
+  for the full text and PDF, then the tables for the figures. "The daily", "le quotidien",
+  "press release" and "communiqué" count only next to a word naming StatCan, so the daily
+  average temperature or a city's press release stays off it.
+- The server's Docker image is published to GitHub's container registry as
+  `ghcr.io/dsanchezp18/maplestats-mcp` (tags `latest` and the short commit) on every
+  push to `main`, after the image passes its `/health` check. Pull requests still
+  build and test it without pushing.
+
+### Changed
+
+- Website: the About page's alternatives list now includes `ca-economic-indicators-mcp`
+  (donniertf-hub), a hosted server for StatCan headline indicators with a free tool
+  limited to 20 calls a day and two more on a paid monthly plan.
+- The public endpoint is now `https://mcp.maplestats.danielstats.io/mcp`, an always-on
+  server on Microsoft Azure (Canada Central), so the first request after a quiet spell no
+  longer waits up to a minute. Limits are unchanged (60 requests a minute per client,
+  `statcan_pumf_tabulate` off). `server.json`, the README, the Connect, FAQ and privacy
+  pages and the chat demo use it; `https://maplestats-mcp.onrender.com/mcp` keeps working
+  as a backup.
+- The server instructions and `plan_query`'s guidance describe what `check_answer` does
+  instead of telling the assistant to call it before every reply.
+
+### Fixed
+
+- Every tool's title is now also in its `annotations.title`. Claude's connectors
+  directory reads the title from there and flagged `search_tools`, `call_tool` and
+  `plan_query` as untitled.
+
 ## [0.4.5] - 2026-11-03
 
 This release fixes `check_answer`, which flagged a correct percent change as wrong and
