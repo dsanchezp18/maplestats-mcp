@@ -442,8 +442,8 @@ Where MapleStats is listed or could be (checked 2026-10-01 unless stated).
 | awesome-mcp-servers (punkpeye) | Submitted | [punkpeye/awesome-mcp-servers#18619](https://github.com/punkpeye/awesome-mcp-servers/pull/18619), under Data Platforms (2026-11-04). |
 | mcpservers.org | Submitted | Free plan, with the hosted URL, 2026-11-04; review takes up to two weeks. |
 | mcplist.ai | No path | Checked 2026-11-04: /submit returns 404 and the site has no form; it mirrors the official servers list. |
-| Cursor MCP directory | Not submitted | cursor.directory/plugins/new?type=mcp_server needs a sign-in. |
-| Claude connectors directory | In progress | Draft under Laboratorio LIDE at step 2 of 10 (2026-11-04); the directory reads `annotations.title`, added in 0.4.6. Field values in [connector-submission.md](connector-submission.md). |
+| Cursor MCP directory | Submitted | [cursor.directory/plugins/maplestats](https://cursor.directory/plugins/maplestats), with the hosted URL as its install config (2026-11-04). It stays hidden until Cursor's security scan passes. |
+| Claude connectors directory | In review | Submitted 2026-11-04 under Laboratorio LIDE (claude.ai/directory/manage); API ownership answered as third-party public open data, with a note. Field values in [connector-submission.md](connector-submission.md). |
 | ChatGPT app directory | Not started | See the Launch table; not the same as developer mode. |
 
 ## Discovery
