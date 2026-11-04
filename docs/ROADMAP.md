@@ -435,15 +435,15 @@ Where MapleStats is listed or could be (checked 2026-10-01 unless stated).
 |---|---|---|
 | Official MCP Registry | Listed | `io.github.dsanchezp18/maplestats-mcp`, published by `release.yml` after PyPI. |
 | PyPI | Listed | `maplestats-mcp`; piwheels builds Raspberry Pi wheels. |
-| Glama, Mcprush, LobeHub, M8ven, MCPLookup | Listed | Badges in the README and site. |
+| Glama, Mcprush, LobeHub, M8ven, MCPLookup | Listed | Badges in the README and site. Mcprush's install guide gives the hosted URL first, then `uvx` (2026-11-04). |
 | Smithery | Dropped | Updates refused from 0.4.0; the platform's API and CLI shut down 2026-10-31. |
-| mcp.so | Not listed | Submit at mcp.so/submit?type=server (posts under the owner's name). |
+| mcp.so | Skipped | Checked 2026-11-04: signed in, the only way to submit is a $39 paid listing; skipped. |
 | PulseMCP | Not listed | New submissions are paused by PulseMCP; revisit at pulsemcp.com/submit when it reopens. |
-| awesome-mcp-servers (punkpeye) | Not submitted | Pull request on GitHub. |
-| mcpservers.org | Not submitted | Curated list; has a submit form. |
-| mcplist.ai | Not submitted | Submit at mcplist.ai/submit. |
-| Cursor MCP directory | Not submitted | Listed through Cursor's own submission. |
-| Claude connectors directory | Not submitted | Needs a human-readable title on every tool (done 2026-09-30); check Anthropic's current requirements. |
+| awesome-mcp-servers (punkpeye) | Submitted | [punkpeye/awesome-mcp-servers#18619](https://github.com/punkpeye/awesome-mcp-servers/pull/18619), under Data Platforms (2026-11-04). |
+| mcpservers.org | Submitted | Free plan, with the hosted URL, 2026-11-04; review takes up to two weeks. |
+| mcplist.ai | No path | Checked 2026-11-04: /submit returns 404 and the site has no form; it mirrors the official servers list. |
+| Cursor MCP directory | Not submitted | cursor.directory/plugins/new?type=mcp_server needs a sign-in. |
+| Claude connectors directory | In progress | Draft under Laboratorio LIDE at step 2 of 10 (2026-11-04); the directory reads `annotations.title`, added in 0.4.6. Field values in [connector-submission.md](connector-submission.md). |
 | ChatGPT app directory | Not started | See the Launch table; not the same as developer mode. |
 
 ## Discovery
