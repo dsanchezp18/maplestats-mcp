@@ -8,6 +8,47 @@ each; `scripts/build_changelog.py` writes them in here at release time.
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-11-04
+
+The hosted server moves to `https://mcp.maplestats.danielstats.io/mcp`, an always-on
+instance on Microsoft Azure (Canada Central) that every push to `main` now deploys, so the
+first request no longer waits for a cold start. Its usage counts can also go to GoatCounter,
+where they outlive restarts and add up across hosts. Nothing changes for a caller's tools.
+
+### Added
+
+- Every push to `main` rolls the new server image out to the always-on Azure Container
+  Apps instance, once the image passes its `/health` check, and fails the run if the new
+  revision does not become healthy or answer an MCP handshake. Azure keeps serving the
+  previous revision meanwhile. The hourly uptime check now tests the Azure and Render
+  endpoints separately.
+- With `MAPLE_GOATCOUNTER_URL` and `MAPLE_GOATCOUNTER_TOKEN` set, the HTTP server also sends
+  each counted tool call to GoatCounter as the event `mcp/<instance>/<tool>` (`/error` on
+  failure; `MAPLE_INSTANCE_NAME` labels the host), in batches each minute. `/stats` starts
+  again on every restart and knows one host only; the GoatCounter counts persist and add up
+  across the Azure and Render instances. Only the registry tool name, outcome, host label
+  and time are sent, never arguments or addresses, and visitor counting is off.
+- The chat demo's page counts views with GoatCounter, like the website, under a fixed path,
+  so the question a `?q=` link carries is not recorded.
+- The server's Docker image is published to GitHub's container registry as
+  `ghcr.io/dsanchezp18/maplestats-mcp` (tags `latest` and the short commit) on every
+  push to `main`, after the image passes its `/health` check. Pull requests still
+  build and test it without pushing.
+
+### Changed
+
+- Website: the About page's alternatives list now includes `ca-economic-indicators-mcp`
+  (donniertf-hub), a hosted server for StatCan headline indicators with a free tool
+  limited to 20 calls a day and two more on a paid monthly plan.
+- The public endpoint is now `https://mcp.maplestats.danielstats.io/mcp`, an always-on
+  server on Microsoft Azure (Canada Central), so the first request after a quiet spell no
+  longer waits up to a minute. Limits are unchanged (60 requests a minute per client,
+  `statcan_pumf_tabulate` off). `server.json`, the README, the Connect, FAQ and privacy
+  pages and the chat demo use it; `https://maplestats-mcp.onrender.com/mcp` keeps working
+  as a backup.
+- The server instructions and `plan_query`'s guidance describe what `check_answer` does
+  instead of telling the assistant to call it before every reply.
+
 ## [0.4.5] - 2026-11-03
 
 This release fixes `check_answer`, which flagged a correct percent change as wrong and
