@@ -29,8 +29,8 @@ SITE_URL = "https://maplestats.danielstats.io/"
 SKIP_SCHEMES = ("mailto:", "cursor:", "vscode:", "data:", "javascript:")
 # The MCP endpoint answers a plain GET with an error by design (the connect
 # page says so); /health is the address that shows it is up.
-SKIP_EXTERNAL = ("https://maplestats-mcp.onrender.com/mcp",)
-EXTRA_EXTERNAL = ("https://maplestats-mcp.onrender.com/health",)
+SKIP_EXTERNAL = ("https://mcp.maplestats.danielstats.io/mcp",)
+EXTRA_EXTERNAL = ("https://mcp.maplestats.danielstats.io/health",)
 
 
 class _Links(HTMLParser):

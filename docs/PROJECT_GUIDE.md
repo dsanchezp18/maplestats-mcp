@@ -9,7 +9,7 @@ update this file from Notion rather than editing Notion from memory.
 
 | Field | Value |
 |---|---|
-| Development Stage | Hosted beta (Render free tier) |
+| Development Stage | Hosted (Azure Container Apps, always on) |
 | Priority | High |
 | Project Type | Data product |
 | Repository | `maplestats-mcp` |

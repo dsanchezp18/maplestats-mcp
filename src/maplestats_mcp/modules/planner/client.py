@@ -57,8 +57,8 @@ _GUIDANCE = (
     ),
     "If a step finds nothing, use search_tools with the step's purpose as the query.",
     (
-        "Before replying, call check_answer with the question and the StatCan and Bank of "
-        "Canada figures you will cite."
+        "check_answer re-reads the StatCan and Bank of Canada figures you will cite, "
+        "given the question, and returns only the problems."
     ),
 )
 # A step whose purpose names the place asked about ("Alberta fires...") moves

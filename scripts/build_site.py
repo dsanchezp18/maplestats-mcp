@@ -4386,7 +4386,7 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         (
             "Connect (hosted, no install, no API key): "
             "`claude mcp add --transport http --scope user maplestats "
-            "https://maplestats-mcp.onrender.com/mcp`, or add that address as a remote MCP "
+            "https://mcp.maplestats.danielstats.io/mcp`, or add that address as a remote MCP "
             f"server. Or run it locally (stdio): `{UVX_COMMAND}`"
             + ("" if ON_PYPI else " (from GitHub until the first PyPI release)")
             + f". Setup steps for an agent, per client: {REPO}#the-easiest-way-ask-your-agent"

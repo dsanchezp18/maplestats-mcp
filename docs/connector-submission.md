@@ -6,7 +6,7 @@ Portal: https://claude.ai/directory/manage (Submit new, MCP connector).
 
 | Field | Value |
 |---|---|
-| Server URL | `https://maplestats-mcp.onrender.com/mcp` |
+| Server URL | `https://mcp.maplestats.danielstats.io/mcp` |
 | Authentication | None (public open data; no accounts, no keys) |
 | Privacy policy URL | `https://maplestats.danielstats.io/privacy.html` |
 | Documentation URL | `https://maplestats.danielstats.io/connect.html` |
@@ -34,8 +34,8 @@ authentication.
      `reproduce_code`.)
    - "Export that table as an Excel workbook." (`call_tool` with
      `reproduce_workbook`; the hosted server returns the file as base64.)
-4. Limits: 60 requests per minute per client. The first request after an idle
-   period can take up to a minute while the host wakes.
+4. Limits: 60 requests per minute per client. The server is always on, so
+   there is no cold start.
 
 ## Review checklist
 

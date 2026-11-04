@@ -24,7 +24,7 @@ jobs:
       matrix:
         host:
           - name: azure
-            url: https://maplestats-mcp.orangedune-c91498ba.canadacentral.azurecontainerapps.io
+            url: https://mcp.maplestats.danielstats.io
           - name: render
             url: https://maplestats-mcp.onrender.com
     name: mcp (${{ matrix.host.name }})

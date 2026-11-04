@@ -44,7 +44,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://maplestats-mcp.onrender.com/mcp"
+      "url": "https://mcp.maplestats.danielstats.io/mcp"
     }
   ]
 }
