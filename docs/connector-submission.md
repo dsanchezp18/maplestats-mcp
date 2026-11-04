@@ -43,6 +43,6 @@ authentication.
 - [x] Tool names are at most 64 characters.
 - [x] Public HTTPS endpoint, Streamable HTTP transport.
 - [x] Privacy policy page, English and French.
-- [ ] Run every tool once from Claude as a custom connector (the portal asks
+- [x] Run every tool once from Claude as a custom connector (the portal asks
       you to confirm).
-- [ ] Icon, support contact and company details ready.
+- [x] Icon, support contact and company details ready. Submitted 2026-11-04; in review.
