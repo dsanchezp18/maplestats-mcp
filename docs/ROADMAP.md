@@ -443,7 +443,7 @@ Where MapleStats is listed or could be (checked 2026-10-01 unless stated).
 | mcpservers.org | Submitted | Free plan, with the hosted URL, 2026-11-04; review takes up to two weeks. |
 | mcplist.ai | No path | Checked 2026-11-04: /submit returns 404 and the site has no form; it mirrors the official servers list. |
 | Cursor MCP directory | Submitted | [cursor.directory/plugins/maplestats](https://cursor.directory/plugins/maplestats), with the hosted URL as its install config (2026-11-04). It stays hidden until Cursor's security scan passes. |
-| Claude connectors directory | In review | Submitted 2026-11-04 under Laboratorio LIDE (claude.ai/directory/manage); API ownership answered as third-party public open data, with a note. Field values in [connector-submission.md](connector-submission.md). |
+| Claude connectors directory | In review | Submitted 2026-11-04 under Laboratorio LIDE (claude.ai/directory/manage). Field values in [connector-submission.md](connector-submission.md). |
 | ChatGPT app directory | Not started | See the Launch table; not the same as developer mode. |
 
 ## Discovery
