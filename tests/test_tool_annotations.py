@@ -44,7 +44,7 @@ async def test_every_tool_has_a_title():
 
 async def test_every_tool_title_is_in_its_annotations():
     """Claude's directory reads annotations.title and flags tools without it."""
-    tools = await mcp._list_tools() + await mcp.list_tools()
+    tools = [*await mcp._list_tools(), *await mcp.list_tools()]
     wrong = sorted(
         tool.name
         for tool in tools
