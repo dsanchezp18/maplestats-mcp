@@ -100,6 +100,21 @@ KEY_INDICATORS_URL = (
 PRODUCTS_URL = (
     "https://www150.statcan.gc.ca/n1/dai-quo/ssi/homepage/schedule-products-{suffix}.json"
 )
+# Article pages. Checked 2026-11-04 from the Azure server (this module's feeds give
+# only a summary): www150.statcan.gc.ca/n1/daily-quotidien/YYMMDD/dqYYMMDDx-{eng,fra}.htm
+# answers HTTP 200 with the whole article inside <main>: an <h1>, then one <section>
+# holding the release nav (Tables, Related information, Release schedule, Previous
+# release, and "PDF (318 KB)" pointing at dqYYMMDDx-{eng,fra}.pdf, HTTP 200
+# application/pdf), the paragraphs and <h2> headings, chart panels (h2.chartt), the
+# Note to readers panel (div.sd-noteuser, with <h3> subheadings) and the Products and
+# Contact sections. The release date is in <meta name="dcterms.issued">. The feeds
+# link the same article as www.statcan.gc.ca/daily-quotidien/..., which redirects here.
+# Neither the Daily index nor StatCan's home page links a PDF of the whole issue.
+ARTICLE_URL_TEMPLATE = (
+    "https://www150.statcan.gc.ca/n1/daily-quotidien/{day}/{article_id}-{suffix}.htm"
+)
+CACHE_TTL_ARTICLE_SECONDS = 6 * 60 * 60
+
 CALENDAR_TIMEZONE = "America/Toronto"
 CALENDAR_LIMIT_DEFAULT = 20
 CALENDAR_LIMIT_MAX = 200
