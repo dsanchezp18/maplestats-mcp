@@ -48,6 +48,13 @@ _GUIDANCE = (
         "URL and date to cite."
     ),
     (
+        "Fetch the figures with these tools and report the reference period they return. Do "
+        "not stop at a table number and answer from a web search or memory: those often hold "
+        "older or revised values. For the latest figure, ask for the latest periods (latest_n, "
+        "recent, last_n_observations), not a date range: your sense of today's date may be out "
+        "of date."
+    ),
+    (
         "Before combining sources, align geography (province, CMA, city), period (calendar vs "
         "fiscal year, month vs quarter) and units, and say where they differ."
     ),

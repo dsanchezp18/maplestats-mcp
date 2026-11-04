@@ -119,11 +119,49 @@ async def test_get_data_defaults_to_latest_observations_without_fetching_structu
     assert "latest 100 observations" in (result.provenance.limits or "")
 
 
+def _table_end(httpx_mock, cube_end: str) -> None:
+    httpx_mock.add_response(
+        url=_WDS_METADATA_URL,
+        json=[
+            {
+                "status": "SUCCESS",
+                "object": {
+                    "productId": 18100004,
+                    "cubeEndDate": cube_end,
+                    "releaseTime": "2026-10-21T08:30",
+                },
+            }
+        ],
+    )
+
+
 async def test_get_data_with_period_range_sends_no_default_last_n(httpx_mock):
     httpx_mock.add_response(
         url=f"{_DATA_URL}?startPeriod=2026-01&endPeriod=2026-03", content=_DATA_XML.encode()
     )
+    _table_end(httpx_mock, "2026-03-01")
     result = await client.get_data(18100004, "2", start_period="2026-01", end_period="2026-03")
+    assert result.provenance.limits is None
+
+
+async def test_get_data_range_before_the_table_end_says_newer_data_exist(httpx_mock):
+    # An agent that thinks it is 2024 asks for 2024; the table runs to 2026-09.
+    httpx_mock.add_response(
+        url=f"{_DATA_URL}?startPeriod=2024-01&endPeriod=2024-12", content=_DATA_XML.encode()
+    )
+    _table_end(httpx_mock, "2026-09-01")
+    result = await client.get_data(18100004, "2", start_period="2024-01", end_period="2024-12")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("Newer data exist: the series runs to 2026-09-01, released 2026-10-21")
+    assert "(2024-12-31)" in limits and "last_n_observations" in limits
+
+
+async def test_get_data_range_note_is_skipped_when_metadata_fails(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{_DATA_URL}?startPeriod=2024-01&endPeriod=2024-12", content=_DATA_XML.encode()
+    )
+    httpx_mock.add_response(url=_WDS_METADATA_URL, status_code=404, is_reusable=True)
+    result = await client.get_data(18100004, "2", start_period="2024-01", end_period="2024-12")
     assert result.provenance.limits is None
 
 

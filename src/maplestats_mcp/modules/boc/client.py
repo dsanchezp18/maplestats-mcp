@@ -94,7 +94,8 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.i18n import NBSP, french_spacing
 from maplestats_mcp.shared.json_utils import list_or_empty
-from maplestats_mcp.shared.limits import fit_to_budget, truncation_note
+from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
+from maplestats_mcp.shared.newer_data import newer_data_note, today
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.transform import (
     PERIODS_PER_YEAR,
@@ -871,9 +872,53 @@ async def get_observations(
             as_of=_latest_date(observations),
             schema_name="boc.ObservationsResult",
             coverage=" ".join(c for c in coverage if c) or None,
-            limits=_observation_limits(len(kept), len(observations), lang),
+            limits=join_limits(
+                await _newer_data(path, end_date, lang),
+                _observation_limits(len(kept), len(observations), lang),
+            ),
             lang=lang,
         ),
+    )
+
+
+async def _newer_data(path: str, end_date: str | None, lang: str) -> str | None:
+    """A note when the series has dates after `end_date` (see shared/newer_data).
+
+    Valet gives no series end date in its metadata, so this asks for the one
+    newest observation (`recent=1`, cached like any observations call). A range
+    that reaches today needs no check and makes no request.
+    """
+    if not end_date:
+        return None
+    try:
+        requested_end = date.fromisoformat(end_date)
+    except ValueError:
+        return None
+    if requested_end >= today():
+        return None
+    params = {"recent": 1}
+    cache_key = _cache_key(f"boc:{path}:{sorted(params.items())}", lang)
+
+    async def fetch() -> dict[str, Any]:
+        return _check_observation_rows(await _get(path, params=params, lang=lang), path, lang)
+
+    try:
+        obj, _ = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
+        latest = _latest_date(
+            _observations_from_json(list_or_empty(obj, "observations"), path, lang)
+        )
+    except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable, ValueError):
+        # The note is a hint; the requested range was already answered.
+        return None
+    return newer_data_note(
+        requested_end=requested_end,
+        latest=latest.date() if latest else None,
+        latest_args=(
+            "recent, recent_months ou recent_years"
+            if lang == "fr"
+            else "recent, recent_months or recent_years"
+        ),
+        lang=lang,
     )
 
 
@@ -940,7 +985,10 @@ async def get_group_observations(
             as_of=_latest_date(observations),
             schema_name="boc.GroupObservationsResult",
             coverage=_non_numeric_note(kept, lang),
-            limits=_observation_limits(len(kept), len(observations), lang),
+            limits=join_limits(
+                await _newer_data(path, end_date, lang),
+                _observation_limits(len(kept), len(observations), lang),
+            ),
             lang=lang,
         ),
     )

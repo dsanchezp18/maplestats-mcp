@@ -33,6 +33,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.http import api_get, get_raw
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
+from maplestats_mcp.shared.newer_data import newer_data_note
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -282,6 +283,15 @@ async def get_data(
     # Newest rows first into the byte budget, then back to oldest first.
     kept = fit_to_budget(matching[-limit:][::-1])[::-1]
     dates = [d for r in kept if (d := _row_date(r))]
+    # The upstream table is the whole series, so its newest row is known
+    # without another request (see shared/newer_data).
+    all_dates = [d for r in rows if isinstance(r, dict) and (d := _row_date(r))]
+    newer = newer_data_note(
+        requested_end=end,
+        latest=max(all_dates).date() if all_dates else None,
+        latest_args="limit sans end_date" if lang == "fr" else "limit with no end_date",
+        lang=lang,
+    )
     return TableData(
         table=name,
         filters=filters,
@@ -302,6 +312,7 @@ async def get_data(
                 "noms de colonnes et valeurs textuelles en anglais, comme à la source",
             ),
             limits=join_limits(
+                newer,
                 truncation_note(
                     returned=len(kept),
                     total=len(matching),
