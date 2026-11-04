@@ -16,8 +16,20 @@ jobs:
   mcp:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Azure (LIDE's subscription, always on) is the public endpoint; Render's free
+    # tier stays deployed as a backup. Each is checked on its own, so one failing
+    # does not hide the other.
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          - name: azure
+            url: https://maplestats-mcp.orangedune-c91498ba.canadacentral.azurecontainerapps.io
+          - name: render
+            url: https://maplestats-mcp.onrender.com
+    name: mcp (${{ matrix.host.name }})
     env:
-      URL: https://maplestats-mcp.onrender.com
+      URL: ${{ matrix.host.url }}
     steps:
       - name: Handshake, tool list and a search
         run: |
