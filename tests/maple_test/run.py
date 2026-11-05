@@ -105,6 +105,11 @@ the answer short.""",
 }
 
 
+def _venv_python(venv: Path) -> Path:
+    """A virtual environment's Python: bin/python, or Scripts/python.exe on Windows."""
+    return venv / "Scripts" / "python.exe" if sys.platform == "win32" else venv / "bin" / "python"
+
+
 def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, Any]:
     if arm in ("openmcp", "candata_mcp", "canada_data_agent", "opencanada") and alts is None:
         raise SystemExit(f"--alts (or MAPLE_TEST_ALTS) is needed for the {arm} arm")
@@ -121,7 +126,7 @@ def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, A
         home = alts / "openmcp"
         return {
             "openmcp": {
-                "command": str(home / "venv" / "bin" / "python"),
+                "command": str(_venv_python(home / "venv")),
                 "args": [str(home / "mcp_server.py")],
             }
         }
@@ -150,7 +155,7 @@ def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, A
         names = OPENCANADA_SERVERS
         return {
             n.replace("-", "_"): {
-                "command": str(home / n / ".venv" / "bin" / "python"),
+                "command": str(_venv_python(home / n / ".venv")),
                 "args": [str(home / n / "main.py")],
             }
             for n in names
@@ -239,7 +244,11 @@ def ask(
                 encoding="utf-8",
                 errors="replace",
                 cwd=empty,
-                env={**os.environ, "ENABLE_TOOL_SEARCH": "false"},
+                # MCP_TIMEOUT (ms): how long the CLI waits for a server to start. OpenMCP
+                # took 85 s to answer initialize on Windows (2026-11-05), and MapleStats
+                # sometimes missed the default under load; both then answered with no
+                # tools. Three minutes, for every arm alike.
+                env={**os.environ, "ENABLE_TOOL_SEARCH": "false", "MCP_TIMEOUT": "180000"},
                 timeout=TIMEOUT_S,
                 check=False,
             )
