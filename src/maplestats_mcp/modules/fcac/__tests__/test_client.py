@@ -261,6 +261,16 @@ async def test_savings_search_reads_interest_rates_and_groups(httpx_mock):
     assert search[_P + "cblDemographic$0"] == ["25"] and search[_P + "cblDemographic$4"] == ["30"]
 
 
+async def test_savings_search_refuses_a_fee_filter():
+    # Savings rows have no fee cell: the filter used to return zero accounts.
+    with pytest.raises(InvalidInput, match="no monthly fee"):
+        await client.search_bank_accounts(
+            "AB", account_type="savings", currency="USD", max_monthly_fee=0
+        )
+    with pytest.raises(InvalidInput, match="no monthly fee"):
+        await client.search_bank_accounts("AB", account_type="savings", sort="monthly_fee")
+
+
 async def test_short_walk_raises_and_is_not_cached(httpx_mock):
     short = _page("accounts_usd_savings_en.html").replace(
         "6 results match your filters", "7 results match your filters"

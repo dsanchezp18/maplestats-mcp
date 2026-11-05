@@ -89,6 +89,7 @@ def build_asgi_app():
         inner,
         auth_token=config.get_auth_token(),
         max_concurrent_requests=config.get_max_concurrent_requests(),
+        max_requests_per_client=config.get_max_requests_per_client(),
         rate_limit_requests=config.get_rate_limit_requests(),
         rate_limit_window_seconds=config.get_rate_limit_window_seconds(),
         trust_proxy_headers=config.get_trust_proxy_headers(),

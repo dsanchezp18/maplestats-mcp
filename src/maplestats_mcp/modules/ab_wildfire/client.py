@@ -116,6 +116,12 @@ def _utc_date(value: object) -> date | None:
     return parsed.date() if parsed else None
 
 
+def _alberta_midnight(day: date) -> str:
+    """Alberta's midnight on `day`, as a UTC 'YYYY-MM-DD HH:MM:SS' literal."""
+    local = datetime(day.year, day.month, day.day, tzinfo=_ALBERTA)
+    return local.astimezone(UTC).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def _local_datetime(value: object) -> datetime | None:
     """Parse the string status date 'YYYY/MM/DD HH:MM:SS' as Alberta time, in UTC.
 
@@ -391,11 +397,15 @@ def build_fire_where(
             f"start_date ({start}) est postérieur à end_date ({end}).",
         )
     if filters.date_basis == "assessed":
+        # The field is a UTC epoch, and a DATE literal is UTC midnight, which
+        # is 18:00 the evening before in Alberta: CWF099, assessed 00:13Z, fell
+        # on the wrong day. Bounds are Alberta midnights, written in UTC, so
+        # both date bases count the same calendar days.
         if start:
-            clauses.append(f"ASSESSMENT_ASSISTANCE_DATE >= DATE '{start.isoformat()}'")
+            clauses.append(f"ASSESSMENT_ASSISTANCE_DATE >= TIMESTAMP '{_alberta_midnight(start)}'")
         if end:
-            after = (end + timedelta(days=1)).isoformat()
-            clauses.append(f"ASSESSMENT_ASSISTANCE_DATE < DATE '{after}'")
+            after = _alberta_midnight(end + timedelta(days=1))
+            clauses.append(f"ASSESSMENT_ASSISTANCE_DATE < TIMESTAMP '{after}'")
     else:
         # FIRE_STATUS_DATE is text 'YYYY/MM/DD HH:MM:SS', so it compares as a string.
         if start:

@@ -1016,6 +1016,21 @@ async def get_data_from_vectors_and_latest_n_periods(
     _check_vector_ids(vector_ids)
     if latest_n < 1:
         raise InvalidInput(_m("latest_n must be 1 or more.", "latest_n doit être 1 ou plus."))
+    if latest_n > constants.QUERY_MAX_LATEST_N or (
+        len(vector_ids) * latest_n > constants.INLINE_MAX_OBSERVATIONS
+    ):
+        raise InvalidInput(
+            _m(
+                f"latest_n={latest_n} for {len(vector_ids)} vectors is too much to return "
+                f"inline (at most {constants.QUERY_MAX_LATEST_N} periods and "
+                f"{constants.INLINE_MAX_OBSERVATIONS:,} observations per call); ask for fewer "
+                "periods or vectors, or use wds_get_full_table_download.",
+                f"latest_n={latest_n} pour {len(vector_ids)} vecteurs dépasse ce qui peut être "
+                f"renvoyé directement (au plus {constants.QUERY_MAX_LATEST_N} périodes et "
+                f"{constants.INLINE_MAX_OBSERVATIONS:,} observations par appel) ; demandez moins "
+                "de périodes ou de vecteurs, ou utilisez wds_get_full_table_download.",
+            )
+        )
     method = "getDataFromVectorsAndLatestNPeriods"
     cache_key = f"wds:{method}:{sorted(vector_ids)}:{latest_n}"
 

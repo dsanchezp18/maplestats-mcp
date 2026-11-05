@@ -208,6 +208,34 @@ async def local_data_file(
     return await asyncio.shield(task)
 
 
+# Labels StatCan codebooks give the reserve codes of a numeric variable
+# (9999996 "Valid skip", 99999999 "Not stated"). Seen in the LFS, CCHS and
+# Census PUMF codebooks; a mean that kept them came out orders of magnitude
+# too high, and filters (inclusion only) could not drop them.
+_RESERVE_LABEL = re.compile(
+    r"valid skip|not stated|not applicable|don'?t know|do not know|refus|missing|"
+    r"enchaînement valide|non déclaré|non indiqué|sans objet|ne sait pas|refus|manquant",
+    re.IGNORECASE,
+)
+
+
+def reserve_codes(variable: PumfVariable) -> list[float]:
+    """Numeric codes the codebook labels as valid skip, not stated and the like."""
+    codes: list[float] = []
+    for value in variable.values:
+        if not _RESERVE_LABEL.search(value.label or ""):
+            continue
+        try:
+            codes.append(float(value.code))
+        except ValueError:
+            continue
+    return codes
+
+
+def _fmt_code(code: float) -> str:
+    return str(int(code)) if code.is_integer() else str(code)
+
+
 def _labels(variable: PumfVariable) -> dict[str, str]:
     labels: dict[str, str] = {}
     for value in variable.values:
@@ -257,6 +285,7 @@ def _run_query(
     filters: dict[str, list[str]],
     replicates: DataSource | None = None,
     id_variable: str | None = None,
+    exclude_values: list[float] | None = None,
 ) -> tuple[list[tuple[Any, ...]], int, float]:
     """Rows of (group codes..., n, then numerator and denominator per weight).
 
@@ -300,6 +329,10 @@ def _run_query(
     if statistic == "mean" and value_variable:
         value_expr = f"TRY_CAST({col(value_variable)} AS DOUBLE)"
         where.append(f"{value_expr} IS NOT NULL")
+        if exclude_values:
+            placeholders = ", ".join("?" for _ in exclude_values)
+            where.append(f"{value_expr} NOT IN ({placeholders})")
+            params.extend(exclude_values)
     sums: list[str] = []
     for weight in weights:
         weight_expr = f"TRY_CAST({col(weight)} AS DOUBLE)"
@@ -590,6 +623,8 @@ async def tabulate(
                 )
             )
 
+    value_name = value_variable.upper() if value_variable else ""
+    reserved = reserve_codes(by_name[value_name]) if statistic == "mean" and value_variable else []
     result_rows, total_n, total_weight = await run_in_pool(
         _run_query,
         DataSource(path, fixed_width, by_name),
@@ -600,6 +635,7 @@ async def tabulate(
         upper_filters,
         replicate_source,
         method.id_variable if method else None,
+        reserved,
     )
     width = len(upper_rows)
     labels = {name: _labels(by_name[name]) for name in upper_rows}
@@ -691,9 +727,21 @@ async def tabulate(
             ),
             say(
                 "Special codes (valid skip, don't know, not stated) are included unless filtered "
-                "out.",
+                "out"
+                + (
+                    f"; the mean leaves out {value_name}'s reserve codes "
+                    f"{', '.join(_fmt_code(c) for c in reserved)}."
+                    if reserved
+                    else "."
+                ),
                 "Les codes spéciaux (enchaînement valide, ne sait pas, non déclaré) sont inclus "
-                "sauf s'ils sont filtrés.",
+                "sauf s'ils sont filtrés"
+                + (
+                    f" ; la moyenne exclut les codes réservés de {value_name} "
+                    f"{', '.join(_fmt_code(c) for c in reserved)}."
+                    if reserved
+                    else "."
+                ),
             ),
             say(
                 "Some variables carry implied decimals (LFS HRLYEARN is in cents); check the "

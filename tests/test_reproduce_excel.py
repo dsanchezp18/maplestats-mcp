@@ -50,7 +50,7 @@ KNOWN_FUNCTIONS = {
     "Json.Document", "Json.FromValue", "List.AllTrue", "List.Combine", "List.Contains",
     "List.Count", "List.Distinct", "List.FirstN", "List.Generate", "List.IsEmpty",
     "List.Positions", "List.RemoveNulls", "List.Select", "List.Transform", "List.Zip",
-    "Number.From", "Number.FromText", "Number.Power", "Record.Combine", "Record.Field",
+    "Number.From", "Number.FromText", "Number.Power", "Record.Combine", "Record.Field", "Record.HasFields",
     "Record.FieldNames", "Record.FieldOrDefault", "Record.FieldValues", "Record.FromList",
     "Record.SelectFields", "Splitter.SplitTextByCharacterTransition", "Table.AddColumn",
     "Table.Column", "Table.ColumnNames", "Table.FromColumns", "Table.FromRecords",

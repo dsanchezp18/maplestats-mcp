@@ -486,21 +486,25 @@ class MemberStream:
                     # nothing of the next block (its header is longer than
                     # the 7 bits left), so the output is exactly the
                     # output before the block.
-                    out = probe.decompress(aligned[fed:cut])
+                    # Bounded like the main loop: an archive with an extreme
+                    # ratio must not inflate gigabytes while looking for a point.
+                    out = probe.decompress(aligned[fed:cut], _INFLATE_STEP)
+                    if probe.unconsumed_tail:
+                        return None
                     produced += len(out)
                     tail = (tail + out[-WINDOW_BYTES:])[-WINDOW_BYTES:]
                     fed = cut
                 # Verify: the main stream and the candidate must inflate the
                 # next bytes identically (a false header decodes to an error
                 # or to other bytes).
-                truth = probe.copy().decompress(aligned[cut : cut + _VERIFY_BYTES])
+                truth = probe.copy().decompress(aligned[cut : cut + _VERIFY_BYTES], _INFLATE_STEP)
                 if len(truth) < _VERIFY_MIN_OUTPUT:
                     # Too close to the range's end to prove anything.
                     return None
                 candidate = zlib.decompressobj(-15, zdict=tail) if tail else zlib.decompressobj(-15)
                 shifted = _BitShifter(bit % 8).feed(aligned[bit // 8 : cut + _VERIFY_BYTES])
                 try:
-                    guess = candidate.decompress(shifted)
+                    guess = candidate.decompress(shifted, _INFLATE_STEP)
                 except zlib.error:
                     continue
                 if guess and len(guess) >= len(truth) - 1024 and truth.startswith(guess):

@@ -243,6 +243,12 @@ def test_number_reads_dollar_percent_and_symbols():
     assert parsing.number(" 28.4 ") == (28.4, "28.4")
     assert parsing.number("30.6%") == (30.6, "30.6%")
     assert parsing.number("1,042") == (1042.0, "1,042")
+    # French workbooks: comma decimal mark, space or no-break space thousands.
+    assert parsing.number("59,97 $") == (59.97, "59,97 $")
+    assert parsing.number("28,4 %") == (28.4, "28,4 %")
+    assert parsing.number("1 234,5") == (1234.5, "1 234,5")
+    assert parsing.number("1,234.5") == (1234.5, "1,234.5")
+    assert parsing.number("1.2.3") == (None, "1.2.3")
     assert parsing.number("--") == (None, "--")
     assert parsing.number("More than one quarter") == (None, "More than one quarter")
     assert parsing.number(0.283) == (0.283, None)

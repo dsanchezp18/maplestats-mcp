@@ -6,9 +6,17 @@ name: Docker images
 # image's Python must fail here, not on the next deploy. ci.yml's test matrix
 # runs uv's own Python, not the image. Kept out of ci.yml so a registry outage
 # cannot hold back the website, which publishes only after CI passes.
+#
+# Images are pushed and deployed only after CI passes on a push to main
+# (workflow_run, as pages.yml), from the exact commit CI tested (head_sha).
+# Before 2026-11, this ran on push alongside CI, so a commit that failed the
+# tests still became :latest and the public server. Pull requests and manual
+# runs build and check the image without pushing it.
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   pull_request:
   workflow_dispatch:
@@ -18,6 +26,12 @@ permissions:
 
 jobs:
   server:
+    # A pull request whose head branch is also called main triggers
+    # workflow_run too; only CI runs for pushes to this repository count.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # The Azure Container Apps instance pulls the server image from GitHub's
@@ -30,34 +44,42 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Under workflow_run, GITHUB_SHA is main's tip, not the commit CI tested.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - run: >-
           docker build -t maplestats-mcp
           --label org.opencontainers.image.source=https://github.com/${{ github.repository }}
           .
       - name: The image starts and answers /health
         run: |
-          docker run -d --name mcp -p 8000:8000 maplestats-mcp
+          docker run -d --name mcp -p 8000:8000 -e MAPLE_REQUIRE_AUTH=0 maplestats-mcp
           for _ in $(seq 1 60); do
             if curl -fsS http://localhost:8000/health; then exit 0; fi
             sleep 2
           done
           docker logs mcp
           exit 1
-      # Only main is published, and only after /health passed; pull requests
+      # Only main is published, after CI and /health passed; pull requests
       # build and test the image without pushing it.
       - name: Push to ghcr.io
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_run'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          short_sha="${GITHUB_SHA::7}"
+          short_sha="${HEAD_SHA::7}"
           docker tag maplestats-mcp "$IMAGE:$short_sha"
           docker tag maplestats-mcp "$IMAGE:latest"
           docker push "$IMAGE:$short_sha"
           docker push "$IMAGE:latest"
 
   chat:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The chat's Azure container app pulls this image from ghcr.io too.
@@ -68,6 +90,9 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository_owner }}/maplestats-chat
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Under workflow_run, GITHUB_SHA is main's tip, not the commit CI tested.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - run: >-
           docker build -t maplestats-chat
           --label org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -84,12 +109,13 @@ jobs:
           docker logs chat
           exit 1
       - name: Push to ghcr.io
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_run'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          short_sha="${GITHUB_SHA::7}"
+          short_sha="${HEAD_SHA::7}"
           docker tag maplestats-chat "$IMAGE:$short_sha"
           docker tag maplestats-chat "$IMAGE:latest"
           docker push "$IMAGE:$short_sha"
@@ -103,7 +129,7 @@ jobs:
   # only and Reader on its resource group. Skipped until those variables exist.
   deploy-azure:
     needs: server
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AZURE_CLIENT_ID != ''
+    if: github.event_name == 'workflow_run' && vars.AZURE_CLIENT_ID != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -117,6 +143,7 @@ jobs:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       RESOURCE_GROUP: maplestats-rg
       APP: maplestats-mcp
       IMAGE: ghcr.io/${{ github.repository }}
@@ -129,10 +156,13 @@ jobs:
             --federated-token "$token" --output none
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
           az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
+      # The image requires a token by default; the public endpoint opts out,
+      # as render.yaml does.
       - name: Deploy the image
         run: |
           az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
-            --image "$IMAGE:${GITHUB_SHA::7}" --only-show-errors --output none
+            --image "$IMAGE:${HEAD_SHA::7}" --set-env-vars MAPLE_REQUIRE_AUTH=0 \
+            --only-show-errors --output none
       # The app keeps serving the previous revision until the new one passes
       # its probes, so a bad image fails this step without taking the server down.
       - name: The new revision is healthy and answers MCP
@@ -161,7 +191,7 @@ jobs:
   # never here.
   deploy-chat-azure:
     needs: chat
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.AZURE_CLIENT_ID != ''
+    if: github.event_name == 'workflow_run' && vars.AZURE_CLIENT_ID != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -174,6 +204,7 @@ jobs:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       RESOURCE_GROUP: maplestats-rg
       APP: maplestats-chat
       IMAGE: ghcr.io/${{ github.repository_owner }}/maplestats-chat
@@ -193,7 +224,7 @@ jobs:
           az containerapp ingress update --resource-group "$RESOURCE_GROUP" --name "$APP" \
             --target-port 10000 --only-show-errors --output none
           az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
-            --image "$IMAGE:${GITHUB_SHA::7}" --only-show-errors --output none
+            --image "$IMAGE:${HEAD_SHA::7}" --only-show-errors --output none
       # The previous revision keeps serving until the new one passes its probes.
       - name: The new revision is healthy and serves the page
         run: |

@@ -365,6 +365,8 @@ _MEMORY_ATTACKS = [
 
 
 def _peak_rss_mb() -> float:
+    if sys.platform == "win32":
+        return 0.0  # only called by the Linux-only test below
     import resource
 
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss

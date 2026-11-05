@@ -210,13 +210,14 @@ GENERIC: dict[str, Code] = {
 # names them, Python and Julia as in the source file.
 SPECIFIC: dict[str, dict[str, Code]] = {
     "statcan_table": {
-        # cansim in R already returns val_norm (scaled value) and Date.
+        # cansim in R already returns val_norm (scaled value) and Date. No filter
+        # on val_norm: suppressed cells (x, F, ..) have a missing value, and the
+        # tool and the other languages keep those rows with their flags.
         "r": Code(
-            ["dplyr"],
+            [],
             (
-                "# cansim adds val_norm (VALUE times its scalar factor) and a Date column;\n"
-                "# keep STATUS and SYMBOL, which flag estimates to use with caution.\n\n"
-                "data <- data |>\n  filter(!is.na(val_norm))\n"
+                "# cansim adds val_norm (VALUE times its scalar factor) and a Date column.\n"
+                "# Suppressed cells keep a missing val_norm; STATUS and SYMBOL say why.\n"
             ),
         ),
         "python": Code(
@@ -253,10 +254,10 @@ SPECIFIC: dict[str, dict[str, Code]] = {
     },
     "statcan_vectors": {
         "r": Code(
-            ["dplyr"],
+            [],
             (
-                "# cansim adds val_norm (the value times its scalar factor) and a Date column.\n\n"
-                "data <- data |>\n  filter(!is.na(val_norm))\n"
+                "# cansim adds val_norm (the value times its scalar factor) and a Date column.\n"
+                "# Suppressed observations keep a missing val_norm, as the tool returned them.\n"
             ),
         ),
         "python": Code(

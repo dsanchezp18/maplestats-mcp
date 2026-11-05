@@ -123,8 +123,11 @@ def test_where_quotes_and_case_folds_text_filters():
 
 def test_where_dates_are_inclusive_for_both_bases():
     assessed = client.build_fire_where(FireFilters(start_date="2026-07-01", end_date="2026-07-31"))
-    assert "ASSESSMENT_ASSISTANCE_DATE >= DATE '2026-07-01'" in assessed
-    assert "ASSESSMENT_ASSISTANCE_DATE < DATE '2026-08-01'" in assessed
+    # A UTC epoch field: the bounds are Alberta midnights (MDT, UTC-6) in UTC.
+    assert "ASSESSMENT_ASSISTANCE_DATE >= TIMESTAMP '2026-07-01 06:00:00'" in assessed
+    assert "ASSESSMENT_ASSISTANCE_DATE < TIMESTAMP '2026-08-01 06:00:00'" in assessed
+    winter = client.build_fire_where(FireFilters(start_date="2026-01-15"))
+    assert "TIMESTAMP '2026-01-15 07:00:00'" in winter
     # The status date is text 'YYYY/MM/DD HH:MM:SS', so it is compared as text.
     status = client.build_fire_where(
         FireFilters(start_date="2026-07-01", end_date="2026-07-31", date_basis="status_changed")

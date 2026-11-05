@@ -270,8 +270,8 @@ for the contributor guide and how to add a source module.
 ## Hosting
 
 `MAPLE_TRANSPORT=http MAPLE_HOST=0.0.0.0 MAPLE_PORT=8000 uv run maplestats-mcp`
-serves HTTP instead of stdio. Docker Compose does the same in Docker, but
-`docker-compose.yml` sets `MAPLE_REQUIRE_AUTH=1`, so the server refuses to
+serves HTTP instead of stdio. Docker Compose does the same in Docker, but the
+image and `docker-compose.yml` set `MAPLE_REQUIRE_AUTH=1`, so the server refuses to
 start until `MAPLE_AUTH_TOKEN` is set:
 `MAPLE_AUTH_TOKEN=<a long random string> docker compose up --build`. Clients
 then send that token as a bearer token. Docker is optional and unnecessary on
@@ -289,9 +289,10 @@ error that says when to retry, instead of waiting for another timeout. The
 |---|---|---|
 | `MAPLE_TRANSPORT` | `stdio` | `stdio` for local clients, `http` for hosting |
 | `MAPLE_HOST` / `MAPLE_PORT` | `127.0.0.1` / `8000` | HTTP bind address |
-| `MAPLE_AUTH_TOKEN`, `MAPLE_REQUIRE_AUTH` | unset, `0` | Bearer token required on `/mcp`; refuse to start without one if `1`. `docker-compose.yml` defaults `MAPLE_REQUIRE_AUTH` to `1` |
+| `MAPLE_AUTH_TOKEN`, `MAPLE_REQUIRE_AUTH` | unset, `0` | Bearer token required on `/mcp`; refuse to start without one if `1`. The Docker image and `docker-compose.yml` default `MAPLE_REQUIRE_AUTH` to `1` |
 | `MAPLE_RATE_LIMIT_REQUESTS` / `MAPLE_RATE_LIMIT_WINDOW_SECONDS` | `120` / `60` | Per-client rate limit |
 | `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | In-flight request cap; the excess waits 5 s, then gets 503 |
+| `MAPLE_MAX_REQUESTS_PER_CLIENT` | `0` (off) | In-flight requests one client (IPv6: one /64) may hold; past it, 429. Leave off where many people share an address |
 | `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS in-process |
 | `MAPLE_TRUST_PROXY_HEADERS` | `0` | Rate-limit on `X-Forwarded-For`; only behind a proxy that sets it |
 | `MAPLE_TRUSTED_PROXY_HOPS` | `1` | Proxies that append to `X-Forwarded-For`; the client address is read that many entries from the right |

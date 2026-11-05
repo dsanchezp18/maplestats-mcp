@@ -880,8 +880,16 @@ def _newer(
     """`key` is the latest period at the cited granularity (2026 for 2026-09)."""
     latest_period, latest_value = latest
     # A question that names the cited year asks for that period on purpose.
-    if (key or latest_period) <= period or period[:4] in question:
+    if period[:4] in question:
         return None
+    # Compared as dates: as text, a quarter "2026-Q3" sorted after the month
+    # "2026-07" ('Q' > '0') and was reported as newer.
+    try:
+        if parse_period(key or latest_period)[0] <= parse_period(period)[0]:
+            return None
+    except ValueError:
+        if (key or latest_period) <= period:
+            return None
     value = "" if latest_value is None else f" ({_fmt(latest_value)})"
     return _problem(
         index,
@@ -1157,7 +1165,11 @@ async def _check_statcan(
             if series.observations:
                 latest_rows[series.vector_id] = series.observations[-1]
     except _SOFT:
-        pass
+        # Figures with a period are still re-read below; one without a
+        # period can only be compared with the latest value, so it gets a note.
+        for c in live:
+            if c.figure.period is None and c.figure.value is not None:
+                notes.append(_not_reread(c.index, "Statistics Canada WDS", lang))
     described, _ = await context.describe_vectors(ids, set())
     for ctx in live:
         assert ctx.vector_id is not None
@@ -1409,8 +1421,16 @@ def _check_combinations(ctxs: Sequence[_Ctx], summed: bool, lang: str) -> list[A
     return problems
 
 
+def _not_reread(index: int, source: str, lang: str) -> str:
+    return pick(
+        lang,
+        f"Figure {index} not re-read: {source} did not answer, so its value is unchecked.",
+        f"Chiffre {index} non relu : {source} n'a pas répondu, sa valeur n'est donc pas vérifiée.",
+    )
+
+
 async def _check_boc(
-    index: int, figure: CitedFigure, question: str, lang: str
+    index: int, figure: CitedFigure, question: str, lang: str, notes: list[str]
 ) -> list[AnswerProblem]:
     name = str(figure.boc_series)
     try:
@@ -1432,17 +1452,38 @@ async def _check_boc(
         (o for o in reversed(latest_result.observations) if o.values.get(name) is not None), None
     )
     latest = (latest_obs.ref_date.isoformat(), latest_obs.values.get(name)) if latest_obs else None
-    if figure.period is None or figure.value is None:
+    if figure.value is None:
         return []
+    if figure.period is None:
+        # No period cited: the answer presents the value as current, so it is
+        # compared with the latest observation, as the StatCan path does.
+        if latest is None or latest[1] is None:
+            notes.append(_not_reread(index, "Bank of Canada Valet", lang))
+            return []
+        return _value_problems(index, figure, latest[1], 1, None, latest[0], None, lang)
     try:
         start, end = _window(figure.period)
     except ValueError:
-        return []
+        return [
+            _problem(
+                index,
+                "period",
+                pick(
+                    lang,
+                    f"Period {figure.period!r} is not 2024, 2024-09, 2024-Q3 or 2024-09-01.",
+                    f"La période {figure.period!r} n'est pas 2024, 2024-09, 2024-Q3 ou 2024-09-01.",
+                ),
+                pick(
+                    lang, "Give the period in one of those forms.", "Utilisez l'une de ces formes."
+                ),
+            )
+        ]
     try:
         window = await boc.get_observations(
             [name], start_date=start.isoformat(), end_date=end.isoformat(), lang=lang
         )
     except _SOFT:
+        notes.append(_not_reread(index, "Bank of Canada Valet", lang))
         return []
     values = [o.values.get(name) for o in window.observations]
     values = [v for v in values if v is not None]
@@ -1536,7 +1577,7 @@ async def check_answer(
         if figure.vector_id is not None or (figure.product_id and figure.coordinate):
             statcan.append(_Ctx(index, figure))
         elif figure.boc_series:
-            problems.extend(await _check_boc(index, figure, question, lang))
+            problems.extend(await _check_boc(index, figure, question, lang, notes))
             checked += 1
         else:
             # A figure from another source (CMHC, a provincial agency) is not a

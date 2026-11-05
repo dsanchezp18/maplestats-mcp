@@ -139,9 +139,11 @@ async def test_long_minute_series_default_to_hourly(httpx_mock):
 async def test_date_only_end_one_day_past_the_cap_is_clamped(httpx_mock):
     httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
     httpx_mock.add_response(json=[])
-    await client.get_water_levels("07120", "wlp", start="2026-09-01", end="2026-09-08")
+    result = await client.get_water_levels("07120", "wlp", start="2026-09-01", end="2026-09-08")
     params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
     assert params["to"] == ["2026-09-08T00:00:00Z"]
+    # The hours of 2026-09-08 that were not fetched are named in limits.
+    assert "were not fetched" in (result.provenance.limits or "")
 
 
 async def test_window_over_seven_days_is_rejected_before_calling(httpx_mock):

@@ -47,7 +47,9 @@ _YEAR = re.compile(r"^\s*((?:19|20)\d{2})\s*(\((?:MP|TM)\))?\s*$")
 _QUARTER = re.compile(r"^\s*((?:19|20)\d{2})\s*[QT]([1-4])\s*$")
 _DERIVED = re.compile(r"growth|cagr|croissance|tcac", re.IGNORECASE)
 _SOURCE_LINE = re.compile(r"^\s*source\s*:", re.IGNORECASE)
-_NUMBER = re.compile(r"^[\s$]*(-?[\d,]*\.?\d+)\s*(%)?\s*\$?\s*$")
+_NUMBER = re.compile(r"^[\s$]*(-?\d[\d ,.]*)\s*(%)?\s*\$?\s*$")
+# English thousands: 1,042 or 12,345,678 (groups of exactly three digits).
+_COMMA_THOUSANDS = re.compile(r"^-?\d{1,3}(,\d{3})+$")
 _NOT_AVAILABLE = {"", "--", "-", "..", "...", "n/a", "na", "n.a.", "s.o.", "x"}
 _SHEET_ID = re.compile(r"^[A-Z]{1,2}-[A-Z]\d+")
 
@@ -74,7 +76,17 @@ def number(value: Any) -> tuple[float | None, str | None]:
     match = _NUMBER.match(raw)
     if match is None:
         return None, raw
-    return float(match.group(1).replace(",", "")), raw
+    # The French workbooks write 59,97 $ and 1 234,5: a comma is the decimal
+    # mark unless it groups thousands English-style (1,042) or a point follows.
+    digits = match.group(1).replace(" ", "")
+    if "," in digits and "." not in digits and not _COMMA_THOUSANDS.match(digits):
+        digits = digits.replace(",", ".")
+    else:
+        digits = digits.replace(",", "")
+    try:
+        return float(digits), raw
+    except ValueError:
+        return None, raw
 
 
 def _year(value: Any) -> tuple[int, bool] | None:

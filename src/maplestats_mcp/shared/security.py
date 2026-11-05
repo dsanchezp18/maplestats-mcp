@@ -29,6 +29,28 @@ _MCP_PATHS = {"/mcp", "/mcp/"}
 # without bound.
 _QUEUE_TIMEOUT_SECONDS = 5.0
 
+# Largest request body /mcp accepts. A JSON-RPC tool call is a few KB; the
+# MCP SDK reads the whole body and parses it, so 8 concurrent 100 MB posts
+# could exhaust a 512 MB instance with no token needed (review, 2026-11-05).
+MAX_BODY_BYTES = 2 * 1024 * 1024
+
+
+def _bucket(client_key: str) -> str:
+    """The rate-limit bucket: an IPv6 address counts as its /64 network.
+
+    An ordinary IPv6 allocation is a /64, so keying on the full address gave
+    one caller billions of fresh buckets.
+    """
+    try:
+        address = ipaddress.ip_address(client_key)
+    except ValueError:
+        return client_key
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped:
+            return str(address.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return str(address)
+
 
 def _header(scope: dict, name: bytes) -> str | None:
     """The header's value; repeated lines are joined with ", " (RFC 9110 section 5.3).
@@ -112,6 +134,27 @@ async def _json_response(
     await send({"type": "http.response.body", "body": body})
 
 
+def _capped_receive(receive: Callable, limit: int) -> Callable:
+    """A receive that ends the request once its body passes `limit` bytes.
+
+    Content-Length is checked before this, but a chunked body declares no
+    length; past the limit the app sees a client disconnect and stops reading.
+    """
+    received = [0]
+
+    async def capped() -> dict:
+        if received[0] > limit:
+            return {"type": "http.disconnect"}
+        message = await receive()
+        if message.get("type") == "http.request":
+            received[0] += len(message.get("body", b""))
+            if received[0] > limit:
+                return {"type": "http.disconnect"}
+        return message
+
+    return capped
+
+
 def with_http_security(
     inner_app: ASGIApp,
     *,
@@ -122,6 +165,8 @@ def with_http_security(
     trust_proxy_headers: bool = False,
     trusted_proxy_hops: int = 1,
     client_ip_header: str | None = None,
+    max_requests_per_client: int = 0,
+    max_body_bytes: int = MAX_BODY_BYTES,
 ) -> ASGIApp:
     """Protect MCP requests while leaving health checks and stdio untouched.
 
@@ -138,6 +183,8 @@ def with_http_security(
     rate_limit_window_seconds = max(1.0, rate_limit_window_seconds)
     rate_hits: dict[str, list[float]] = {}
     rate_lock = asyncio.Lock()
+    in_flight: dict[str, int] = {}
+    last_sweep = [time.monotonic()]
 
     async def app(scope: dict, receive: Callable, send: Callable) -> None:
         # OPTIONS is a CORS preflight: browsers send it without credentials
@@ -152,25 +199,33 @@ def with_http_security(
             await inner_app(scope, receive, send)
             return
 
-        # The rate limit comes before the token check so that guessing tokens
-        # spends the guesser's own budget like any other request.
-        if rate_limit_requests:
-            now = time.monotonic()
-            client_key = _client_key(
+        declared = _header(scope, b"content-length")
+        if declared and declared.strip().isdigit() and int(declared) > max_body_bytes:
+            await _json_response(send, 413, {"error": "Request body too large."})
+            return
+
+        client_key = _bucket(
+            _client_key(
                 scope,
                 trust_proxy_headers=trust_proxy_headers,
                 proxy_hops=trusted_proxy_hops,
                 client_ip_header=client_ip_header,
             )
+        )
+        # The rate limit comes before the token check so that guessing tokens
+        # spends the guesser's own budget like any other request.
+        if rate_limit_requests:
+            now = time.monotonic()
             async with rate_lock:
-                # Opportunistically drop any other client's entry once its
-                # hits have all aged out of the window — otherwise every
-                # distinct client this process has ever seen accumulates
-                # a permanent dict entry, an unbounded-growth DoS surface
-                # on a long-running hosted instance.
-                for other_key in [k for k in rate_hits if k != client_key]:
-                    if all(now - hit >= rate_limit_window_seconds for hit in rate_hits[other_key]):
-                        del rate_hits[other_key]
+                # Drop clients whose hits have all aged out, once per window
+                # rather than on every request: otherwise every client ever
+                # seen keeps a permanent entry (unbounded growth), and a full
+                # scan per request grows with the number of clients.
+                if now - last_sweep[0] >= rate_limit_window_seconds:
+                    last_sweep[0] = now
+                    for other_key in [k for k in rate_hits if k != client_key]:
+                        if now - rate_hits[other_key][-1] >= rate_limit_window_seconds:
+                            del rate_hits[other_key]
 
                 hits = [
                     hit
@@ -219,21 +274,36 @@ def with_http_security(
             await inner_app(scope, receive, send)
             return
 
-        try:
-            await asyncio.wait_for(slots.acquire(), timeout=_QUEUE_TIMEOUT_SECONDS)
-        except TimeoutError:
+        # Optional (MAPLE_MAX_REQUESTS_PER_CLIENT): with only the global
+        # semaphore, one caller holding every slot leaves the rest with 503s.
+        if max_requests_per_client and in_flight.get(client_key, 0) >= max_requests_per_client:
             await _json_response(
                 send,
-                503,
-                {"error": "Server is busy; please try again."},
+                429,
+                {"error": "Too many requests in progress from this client."},
                 [(b"retry-after", b"1")],
             )
             return
-
+        in_flight[client_key] = in_flight.get(client_key, 0) + 1
         try:
-            await inner_app(scope, receive, send)
+            try:
+                await asyncio.wait_for(slots.acquire(), timeout=_QUEUE_TIMEOUT_SECONDS)
+            except TimeoutError:
+                await _json_response(
+                    send,
+                    503,
+                    {"error": "Server is busy; please try again."},
+                    [(b"retry-after", b"1")],
+                )
+                return
+            try:
+                await inner_app(scope, _capped_receive(receive, max_body_bytes), send)
+            finally:
+                slots.release()
         finally:
-            slots.release()
+            in_flight[client_key] -= 1
+            if not in_flight[client_key]:
+                del in_flight[client_key]
 
     return app
 

@@ -48,6 +48,10 @@ QUERY_MAX_VECTORS = 20
 WDS_MAX_LIST = 300
 MAX_VECTOR_ID = 2_147_483_647
 QUERY_MAX_LATEST_N = 3000
+# Inline vector data: vectors x latest_n periods. 300 vectors x 5,000 periods
+# would put ~1.5 M observations (hundreds of MB) in one reply; 60,000 still
+# covers 20 monthly series back to 1775 or 300 series over 16 years.
+INLINE_MAX_OBSERVATIONS = 60_000
 QUERY_ROW_CAP = 500
 QUERY_MAX_SQL_CHARS = 10_000
 QUERY_MAX_SECONDS = 20.0

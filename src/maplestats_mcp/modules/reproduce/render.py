@@ -373,6 +373,8 @@ def _r_read(spec: Spec) -> tuple[list[str], str]:
                 "data <- payload |>\n"
                 "  map(\\(item) {\n"
                 f"    parent <- item{parent}\n"
+                "    # An item the source could not serve (a WDS FAILED vector) has no rows.\n\n"
+                f"    if (!is.list(parent) || is.null(parent[[{last}]])) return(NULL)\n"
                 "    scalars <- keep(parent, \\(value) length(value) == 1 && !is.list(value))\n"
                 f"    parent[[{last}]] |>\n"
                 "      map(\\(row) {\n"
@@ -691,6 +693,8 @@ def py_read(spec: Spec) -> tuple[list[str], str]:
                 "        **row,\n"
                 "    }\n"
                 "    for item in payload\n"
+                "    # An item the source could not serve (a WDS FAILED vector) has no rows.\n"
+                f"    if isinstance(item{parent}, dict) and {spec.records_path[-1]!r} in item{parent}\n"
                 f"    for row in item{walk}\n"
                 "]\n"
             )
@@ -1283,7 +1287,12 @@ def _jl_read(spec: Spec) -> tuple[list[str], str] | None:
                 f"        Dict(k => v for (k, v) in item{parent} if !(v isa JSON3.Object || v isa JSON3.Array)),\n"
                 "        Dict(row),\n"
                 "    )\n"
-                f"    for item in payload for row in item{parent}[{last}]\n"
+                "    # An item the source could not serve (a WDS FAILED vector) has no rows.\n"
+                "    for item in filter(\n"
+                f"        i -> i{parent} isa JSON3.Object && haskey(i{parent}, {last}),\n"
+                "        payload,\n"
+                "    )\n"
+                f"    for row in item{parent}[{last}]\n"
                 "]\n"
             )
         elif spec.record_field:
