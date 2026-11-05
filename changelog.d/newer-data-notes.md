@@ -1,4 +1,0 @@
-### Changed
-
-- A date-range request that ends before the newest published data now says so: `provenance.limits` opens with "Newer data exist", the series' last period and release date, today's date, and the argument that returns the latest values. Agents were choosing date ranges from an out-of-date sense of today (2024 windows in November 2026) and reporting those values as current. Covers `wds_get_data_by_reference_period_range`, `sdmx_get_data`, `sdmx_get_vector_data`, `boc_get_observations`, `boc_get_group_observations` and `ab_economic_get_data`. For the Bank of Canada, a range ending before today makes one extra cached `recent=1` request.
-- The server instructions, `search_tools` and `plan_query`'s guidance now tell agents to fetch the values with these tools rather than stopping at a table number and answering from a web search or memory, and to ask for the latest periods rather than a date range.

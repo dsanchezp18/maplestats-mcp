@@ -8,6 +8,88 @@ each; `scripts/build_changelog.py` writes them in here at release time.
 
 ## [Unreleased]
 
+## [0.4.8] - 2026-11-05
+
+### Added
+
+- `statcan_daily_get_release_calendar` and `statcan_daily_get_upcoming_releases` say what
+  is known when nothing scheduled matches: `not_scheduled` gives the same release's last
+  dates (the provincial and territorial economic accounts came out on 2025-11-06,
+  2024-11-07 and 2023-11-08), any release of it already scheduled (the 2025 accounts on
+  2026-11-05), and an estimate from the usual gap, labelled as an estimate and never as a
+  date Statistics Canada announced.
+
+### Changed
+
+- The chat demo has its own address, `https://chat.maplestats.danielstats.io`, and the website links there.
+- The chat demo moves to Azure Container Apps (Canada Central), next to the MCP server, so it no longer sleeps between visitors. It still runs Claude Haiku 5.5, now at medium effort with up to 4,000 output tokens per model call and 12 tool steps per answer (were low, 2,000 and 8), so questions that need several lookups finish more often. The page now lists disclaimers above the conversation: answers can be wrong, MapleStats is not affiliated with Statistics Canada or any government agency, answers are not advice, questions go to Anthropic, and the demo is rate-limited.
+- The website's chat demo links (home page, connect and privacy pages, in English and French) now open the Azure-hosted chat, which does not sleep. The Render copy stays up as an unadvertised backup.
+- A date-range request that ends before the newest published data now says so: `provenance.limits` opens with "Newer data exist", the series' last period and release date, today's date, and the argument that returns the latest values. Agents were choosing date ranges from an out-of-date sense of today (2024 windows in November 2026) and reporting those values as current. Covers `wds_get_data_by_reference_period_range`, `sdmx_get_data`, `sdmx_get_vector_data`, `boc_get_observations`, `boc_get_group_observations` and `ab_economic_get_data`. For the Bank of Canada, a range ending before today makes one extra cached `recent=1` request.
+- The server instructions, `search_tools` and `plan_query`'s guidance now tell agents to fetch the values with these tools rather than stopping at a table number and answering from a web search or memory, and to ask for the latest periods rather than a date range.
+- The Docker image now sets `MAPLE_REQUIRE_AUTH=1`: it listens on every
+  interface, so it refuses to start without `MAPLE_AUTH_TOKEN` unless a
+  deployment opts out with `MAPLE_REQUIRE_AUTH=0` (the public Render and Azure
+  deployments do).
+- Docker images are pushed and deployed to Azure only after CI passes on main,
+  from the commit CI tested. Before, they were built on the same push as CI
+  and deployed even when the tests failed.
+- `wds_get_data_from_vectors` refuses more than 3,000 periods, or more than
+  60,000 observations in total (vectors times `latest_n`), instead of returning
+  hundreds of MB inline; `wds_get_full_table_download` covers larger requests.
+- `fcac_search_bank_accounts` refuses `max_monthly_fee` and
+  `sort="monthly_fee"` for savings accounts, whose search results carry no fee.
+  Before, the filter dropped every account and reported none matching.
+- `search_tools` results leave out each tool's title and, for a read-only tool, its
+  annotations: about 12% less text in every search result, which an assistant re-reads on
+  each later turn. A tool that is not read-only keeps its annotations.
+- The server instructions and `search_tools` say plainly that the tools it finds run
+  through `call_tool`: in the Maple Test, a third of answers tried to call a found tool
+  by its own name, and each attempt cost a turn.
+- Website copy pass, in English and French. The home page has a plainer opening and new claim headings, and the chat demo now sits right under the hero with a one-line notice (the chat page keeps the full terms). The Statistics Canada post is about a quarter of its old length and less technical. The Connect page is tighter, and its Claude, ChatGPT and Microsoft 365 Copilot steps and its environment-variable table fold away; a link to one of them opens it. The Tools lede and the Contribute steps are simpler.
+- The About page links OpenMCP to its repository (`opendatafyi/openmcp`), and the footer says the project is not affiliated with any government or institution; its line about the hosted server's privacy is gone (the Privacy page keeps it).
+- The Contribute page and the README add uptime, Pyright and licence badges.
+
+### Fixed
+
+- `wds_query_series` errors no longer show a Windows path that starts with a single
+  backslash (`\.duckdb\extensions\...`); it is replaced by `<path>` like any other path.
+- The release calendars ignore words that only ask the question ("next", "release",
+  "date"): "next consumer price index release" matched nothing scheduled.
+- `check_answer`: a Bank of Canada figure cited without a period is compared
+  with the latest observation. Before, it passed whatever its value. A period
+  it cannot read is reported, and a figure it could not re-read (Valet or WDS
+  down) gets a note instead of passing silently. A newer period is found by
+  date, not by label, so a quarter such as 2026-Q3 no longer reads as newer
+  than the month 2026-07.
+- `statcan_pumf_tabulate`: a mean leaves out the value variable's reserve codes
+  (valid skip, not stated, don't know and the like, as the codebook labels
+  them), which inflated means by orders of magnitude.
+- `reproduce_code`: the R script for StatCan tables and vectors keeps
+  suppressed observations (missing `val_norm`) with their status and symbol,
+  as the tool and the other languages do. The WDS vector scripts in R, Python,
+  Julia and Excel skip a vector WDS could not serve instead of failing on it.
+- `telecom_prices`: numbers written as French text (`59,97 $`, `1 234,5`) are
+  read with a decimal comma. Before, `59,97 $` became 5997.
+- `ab_wildfire`: `date_basis="assessed"` counts Alberta calendar days. The
+  assessment time is UTC, and the bounds were UTC midnight, 18:00 the
+  evening before in Alberta.
+- `dfo_iwls_get_water_levels`: when a date-only `end` one day past the 7-day
+  cap is cut back, `limits` names the hours that were not fetched.
+
+### Security
+
+- HTTP mode refuses `/mcp` request bodies over 2 MB (413, or a disconnect for
+  a chunked body). The MCP SDK read any body whole, so a few large posts could
+  run a small instance out of memory without a token.
+- The rate limit counts an IPv6 address as its /64 network, so one caller can
+  no longer use a fresh bucket per address. Expired clients are swept once
+  per window instead of on every request.
+- The ZIP reader's search for a resume point inflates at most 16 MB per step,
+  like the rest of the reader, instead of without limit.
+- New `MAPLE_MAX_REQUESTS_PER_CLIENT` (off by default) caps the requests one
+  client may hold in flight, for deployments where callers do not share
+  addresses.
+
 ## [0.4.7] - 2026-11-04
 
 ### Added
