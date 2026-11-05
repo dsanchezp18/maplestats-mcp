@@ -163,10 +163,10 @@ def test_search_results_keep_annotations_of_a_tool_that_writes():
 
     writes = Tool.from_function(
         save_file,
-        annotations=ToolAnnotations(title="Save", readOnlyHint=False, destructiveHint=True),
+        annotations=ToolAnnotations(title="Save", read_only_hint=False, destructive_hint=True),
     )
     reads = Tool.from_function(
-        save_file, name="read", annotations=ToolAnnotations(readOnlyHint=True)
+        save_file, name="read", annotations=ToolAnnotations(read_only_hint=True)
     )
     kept, dropped = serialize_tools_compact([writes, reads])
     assert kept["annotations"] == {"readOnlyHint": False, "destructiveHint": True}
