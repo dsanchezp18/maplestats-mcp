@@ -50,8 +50,12 @@ SANDBOX = (
 _SELECT_NODES = frozenset({"SELECT_NODE", "SET_OPERATION_NODE", "RECURSIVE_CTE_NODE", "CTE_NODE"})
 
 # An absolute path (/home/x/.duckdb, C:\Users\x, \\server\share) after a non-word
-# character: duckdb_extensions() named the home folder in its error.
-_PATH = re.compile(r"(?<![\w.])(?:[A-Za-z]:[\\/]|\\\\|~[\\/]|/)(?:[^\s'\"`\\/]+[\\/])+[^\s'\"`]*")
+# character: duckdb_extensions() named the home folder in its error. A single leading
+# backslash counts too: on Windows, with no home folder in the worker's environment,
+# DuckDB names "\.duckdb\extensions\v2.0.0\windows_amd64" (seen 2026-11-04).
+_PATH = re.compile(
+    r"(?<![\w.])(?:[A-Za-z]:[\\/]|\\\\|~[\\/]|[\\/])(?:[^\s'\"`\\/]+[\\/])+[^\s'\"`]*"
+)
 _ERROR_CHARS = 300
 _LOAD_CHUNK = 5_000
 

@@ -31,7 +31,9 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from datetime import date, datetime
+from collections.abc import Awaitable, Callable
+from datetime import date, datetime, timedelta
+from itertools import pairwise
 from typing import Any
 from urllib.parse import urljoin
 from xml.etree import ElementTree
@@ -53,6 +55,7 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     ReleaseCalendarResult,
     ReleaseFiles,
     ReleaseFilesResult,
+    ReleaseHistory,
     ReleaseProduct,
     ReleaseSurvey,
     ReleaseTable,
@@ -219,32 +222,10 @@ def _parse_archive_entry_date(value: str | None) -> date | None:
 _ARCHIVE_HOST = "https://www150.statcan.gc.ca"
 
 
-async def search_archive(
-    query: str = "",
-    *,
-    lang: str = "en",
-    start_date: str | None = None,
-    end_date: str | None = None,
-    limit: int = constants.ARCHIVE_SEARCH_LIMIT_DEFAULT,
-) -> DailyArchiveSearchResult:
-    """Search the full Daily release archive (2012-03-14 onward) by title/period and date range."""
-    use_lang(lang)
-    if limit < 1 or limit > constants.ARCHIVE_SEARCH_LIMIT_MAX:
-        raise InvalidInput(
-            say(
-                f"statcan_daily:search_archive: limit must be between 1 and "
-                f"{constants.ARCHIVE_SEARCH_LIMIT_MAX}, got {limit}.",
-                f"statcan_daily:search_archive : limit doit être entre 1 et {constants.ARCHIVE_SEARCH_LIMIT_MAX}, reçu {limit}.",
-            )
-        )
-    parsed_start = _parse_iso_date(start_date) if start_date else None
-    parsed_end = _parse_iso_date(end_date) if end_date else None
-
+async def _load_archive(lang: str) -> tuple[list[Any], bool, str]:
+    """The whole Daily release archive (one JSON array, cached), its cache flag and URL."""
     suffix = constants.LANG_TO_SUFFIX.get(lang, "eng")
     url = constants.FULL_ARCHIVE_URL.format(suffix=suffix)
-    # Same reference timezone as the release calendar: a release dated today
-    # in Toronto is still "scheduled" until its article exists.
-    today = datetime.now(ZoneInfo(constants.CALENDAR_TIMEZONE)).date()
 
     async def fetch() -> Any:
         await _LIMITER.acquire()
@@ -276,6 +257,35 @@ async def search_archive(
                 "statcan_daily:search_archive : tableau JSON attendu de l'archive.",
             )
         )
+
+    return payload, was_cached, url
+
+
+async def search_archive(
+    query: str = "",
+    *,
+    lang: str = "en",
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = constants.ARCHIVE_SEARCH_LIMIT_DEFAULT,
+) -> DailyArchiveSearchResult:
+    """Search the full Daily release archive (2012-03-14 onward) by title/period and date range."""
+    use_lang(lang)
+    if limit < 1 or limit > constants.ARCHIVE_SEARCH_LIMIT_MAX:
+        raise InvalidInput(
+            say(
+                f"statcan_daily:search_archive: limit must be between 1 and "
+                f"{constants.ARCHIVE_SEARCH_LIMIT_MAX}, got {limit}.",
+                f"statcan_daily:search_archive : limit doit être entre 1 et {constants.ARCHIVE_SEARCH_LIMIT_MAX}, reçu {limit}.",
+            )
+        )
+    parsed_start = _parse_iso_date(start_date) if start_date else None
+    parsed_end = _parse_iso_date(end_date) if end_date else None
+
+    payload, was_cached, url = await _load_archive(lang)
+    # Same reference timezone as the release calendar: a release dated today
+    # in Toronto is still "scheduled" until its article exists.
+    today = datetime.now(ZoneInfo(constants.CALENDAR_TIMEZONE)).date()
 
     query_lower = query.strip().lower()
     matched: list[DailyArchiveEntry] = []
@@ -397,6 +407,212 @@ def _calendar_entries(
     return entries
 
 
+# Words that ask the question rather than name the release ("next CPI release date").
+# Dropped before matching titles, in the calendars as in the history below: "next" is
+# in no title, so "next consumer price index" once matched nothing scheduled.
+_QUESTION_WORDS = frozenset(
+    [
+        "next",
+        "upcoming",
+        "release",
+        "releases",
+        "released",
+        "date",
+        "dates",
+        "when",
+        "scheduled",
+        "schedule",
+        "prochain",
+        "prochaine",
+        "prochaines",
+        "diffusion",
+        "diffusions",
+        "date",
+        "dates",
+        "quand",
+        "prevue",
+        "prevu",
+    ]
+)
+# Words that name a period. The history drops them too: "PTEA 2026" or "LFS for
+# October" should find the release's past dates, whose periods are other years and months.
+_PERIOD_WORDS = frozenset(
+    [
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december",
+        "janvier",
+        "fevrier",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "aout",
+        "septembre",
+        "octobre",
+        "novembre",
+        "decembre",
+        "first",
+        "second",
+        "third",
+        "fourth",
+        "quarter",
+        "premier",
+        "deuxieme",
+        "troisieme",
+        "quatrieme",
+        "trimestre",
+    ]
+)
+_HISTORY_SIZE = 3
+_YEAR = re.compile(r"(19|20)\d\d")
+
+
+def _query_words(query: str) -> list[str]:
+    """The query's words, folded, without the ones that only ask the question."""
+    return [w for w in re.findall(r"\w+", _fold(query)) if w not in _QUESTION_WORDS]
+
+
+def _release_words(query: str) -> list[str]:
+    """The words that name the release itself: no years, months or quarters."""
+    return [w for w in _query_words(query) if not _YEAR.fullmatch(w) and w not in _PERIOD_WORDS]
+
+
+def _add_years(day: date, years: int) -> date:
+    try:
+        return day.replace(year=day.year + years)
+    except ValueError:  # February 29
+        return day.replace(year=day.year + years, day=28)
+
+
+async def _release_history(
+    query: str,
+    lang: str,
+    today: date,
+    scheduled: list[tuple[date, str, str | None]] | None = None,
+    more_scheduled: Callable[[], Awaitable[list[tuple[date, str, str | None]]]] | None = None,
+) -> ReleaseHistory | None:
+    """The same release's past (and known scheduled) dates, for a query that matched nothing.
+
+    An analyst asking when the 2026 provincial and territorial economic accounts come out
+    gets nothing from the calendars, which list a few weeks to six months ahead. The archive
+    says when the release came out before (2025-11-06, 2024-11-07, 2023-11-08), and with the
+    one already scheduled (2025 accounts, 2026-11-05) that answers "around November 2027",
+    as long as it is called an estimate. `scheduled` adds releases a calendar knows about
+    that the archive may not list yet (the two-week page has more than the archive);
+    `more_scheduled` fetches more of them, only once the archive has a match.
+    """
+    words = _release_words(query)
+    if not words:
+        return None
+    try:
+        payload, _, _ = await _load_archive(lang)
+    except (UpstreamError, UpstreamUnavailable):
+        return None  # a guide, not the answer: the calendar result stands without it
+    rows: dict[tuple[date, str], tuple[str | None, str | None]] = {}
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        when = _parse_archive_entry_date(item.get("date"))
+        title = (item.get("title") or "").strip()
+        if when and title and all(word in _fold(title) for word in words):
+            rows[(when, title)] = (item.get("description") or None, item.get("url") or None)
+    if not rows:
+        return None
+    if more_scheduled is not None:
+        scheduled = [*(scheduled or []), *await more_scheduled()]
+    for when, title, period in scheduled or []:
+        if all(word in _fold(title) for word in words):
+            rows.setdefault((when, title), (period, None))
+    past = sorted((k for k in rows if k[0] < today), reverse=True)
+    if not past:
+        return None
+    # The newest past match names the release; keep only that title, so "supply and use
+    # tables" does not mix in "Digital supply and use tables".
+    title = past[0][1]
+    entries = [
+        DailyArchiveEntry(
+            release_date=when,
+            title=title,
+            reference_period=rows[(when, t)][0],
+            scheduled=False,
+            url=f"{_ARCHIVE_HOST}{rows[(when, t)][1]}" if rows[(when, t)][1] else None,
+        )
+        for when, t in past
+        if t == title
+    ][:_HISTORY_SIZE]
+    ahead = sorted((when, rows[(when, t)][0]) for when, t in rows if when >= today and t == title)
+    gaps = sorted((a.release_date - b.release_date).days for a, b in pairwise(entries))
+    gap = gaps[len(gaps) // 2] if gaps else None
+
+    # The estimate: an annual release and a year asked for give that year's date; otherwise
+    # the latest known date (scheduled or past) plus the usual gap.
+    asked = [int(y) for y in re.findall(r"(?<!\d)((?:19|20)\d\d)(?!\d)", query)]
+    latest_date, latest_period = ahead[-1] if ahead else (entries[0].release_date, None)
+    if not ahead:
+        latest_period = entries[0].reference_period
+    annual = gap is not None and 300 <= gap <= 430
+    estimate: date | None = None
+    if annual and asked and latest_period and _YEAR.fullmatch(latest_period.strip()):
+        years = asked[-1] - int(latest_period.strip())
+        estimate = _add_years(latest_date, years) if years > 0 else None
+    elif gap and not ahead:
+        estimate = entries[0].release_date + timedelta(days=gap)
+    if estimate is not None and estimate < today:
+        estimate = None  # overdue by its own pattern: no honest estimate
+
+    dates = ", ".join(
+        e.release_date.isoformat() + (f" ({e.reference_period})" if e.reference_period else "")
+        for e in entries
+    )
+    next_known = "; ".join(
+        f"{when.isoformat()}" + (f" ({period})" if period else "") for when, period in ahead
+    )
+    note = say(
+        "No release date is announced for what you asked."
+        + (f" Already scheduled: {title}, {next_known}." if ahead else "")
+        + f" Past releases of {title}: {dates}."
+        + (
+            f" If it follows that pattern, it would come out around {estimate.isoformat()}: "
+            "an estimate from past dates, not a scheduled date."
+            if estimate
+            else ""
+        ),
+        "Aucune date de diffusion n'est annoncée pour ce qui est demandé."
+        + (f" Déjà prévu : {title}, {next_known}." if ahead else "")
+        + f" Diffusions passées de {title} : {dates}."
+        + (
+            f" S'il suit ce rythme, il paraîtrait vers le {estimate.isoformat()} : "
+            "une estimation tirée des dates passées, pas une date prévue."
+            if estimate
+            else ""
+        ),
+    )
+    return ReleaseHistory(
+        note=note,
+        title=title,
+        previous_releases=entries,
+        scheduled_releases=[
+            DailyArchiveEntry(
+                release_date=when, title=title, reference_period=period, scheduled=True
+            )
+            for when, period in ahead
+        ],
+        typical_gap_days=gap,
+        estimated_next_date=estimate,
+    )
+
+
 async def get_release_calendar(
     query: str = "",
     *,
@@ -448,7 +664,7 @@ async def get_release_calendar(
         urls.append(url)
 
     latest_scheduled = max((e.release_date for e in entries), default=None)
-    words = re.findall(r"\w+", _fold(query))
+    words = _query_words(query)
     matched: list[ReleaseCalendarEntry] = []
     for entry in entries:
         if upcoming_only and not entry.scheduled:
@@ -466,6 +682,14 @@ async def get_release_calendar(
     # Soonest first when asking about the future, newest first for history.
     matched.sort(key=lambda entry: entry.release_date, reverse=not upcoming_only)
     page = matched[:limit]
+    history = None
+    if query.strip() and upcoming_only and not matched:
+        # The two-week page lists releases the key-indicators file does not (the PTEA and
+        # supply and use tables, checked 2026-11-04), so the history sees both.
+        known = [(e.release_date, e.title, e.reference_period) for e in entries if e.scheduled]
+        history = await _release_history(
+            query, lang, today, known, more_scheduled=lambda: _two_weeks(lang)
+        )
     return ReleaseCalendarResult(
         query=query,
         kind=kind,
@@ -475,6 +699,7 @@ async def get_release_calendar(
         total_matched=len(matched),
         today=today,
         latest_scheduled_date=latest_scheduled,
+        not_scheduled=history,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=urls[0],
@@ -744,6 +969,24 @@ async def get_article(article: str, *, lang: str = "en") -> DailyArticle:
     )
 
 
+async def _two_weeks(lang: str) -> list[tuple[date, str, str | None]]:
+    """The two-week page's releases as (date, title, period); empty if it cannot be read."""
+    suffix = constants.LANG_TO_SUFFIX.get(lang, "eng")
+    url = constants.UPCOMING_URL.format(suffix=suffix)
+    try:
+        html, _ = await _fetch_html(
+            url,
+            f"statcan-daily:upcoming:{suffix}",
+            constants.CACHE_TTL_UPCOMING_SECONDS,
+            "get_release_calendar",
+            missing_ok=True,
+        )
+        _, releases, _ = _parse_upcoming(html or "", url) if html else ("", [], None)
+    except (UpstreamError, UpstreamUnavailable):
+        return []
+    return [(r.release_date, r.title, r.reference_period) for r in releases]
+
+
 async def _fetch_html(
     url: str, cache_key: str, ttl: int, tool: str, *, missing_ok: bool
 ) -> tuple[str | None, bool]:
@@ -920,12 +1163,18 @@ async def get_upcoming_releases(query: str = "", *, lang: str = "en") -> Upcomin
         _parse_major_releases(major_html, major_url) if major_html else (None, None, [])
     )
 
-    words = re.findall(r"\w+", _fold(query))
+    words = _query_words(query)
     matched = [
         release
         for release in releases
         if all(word in _fold(f"{release.title} {release.reference_period or ''}") for word in words)
     ]
+    history = None
+    if query.strip() and not matched:
+        today = datetime.now(ZoneInfo(constants.CALENDAR_TIMEZONE)).date()
+        history = await _release_history(
+            query, lang, today, [(r.release_date, r.title, r.reference_period) for r in releases]
+        )
     return UpcomingReleasesResult(
         query=query,
         period=period,
@@ -938,6 +1187,7 @@ async def get_upcoming_releases(query: str = "", *, lang: str = "en") -> Upcomin
         annual_schedule_pdf_url=annual_pdf,
         annual_schedule_label=annual_label,
         major_indicators=indicators,
+        not_scheduled=history,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,

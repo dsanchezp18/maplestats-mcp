@@ -164,6 +164,65 @@ def numbers_in(text: str) -> list[float]:
     return found
 
 
+MONTH_NUMBERS = {
+    name: number
+    for number, names in enumerate(
+        (
+            ("january", "jan"),
+            ("february", "feb"),
+            ("march", "mar"),
+            ("april", "apr"),
+            ("may",),
+            ("june", "jun"),
+            ("july", "jul"),
+            ("august", "aug"),
+            ("september", "sept", "sep"),
+            ("october", "oct"),
+            ("november", "nov"),
+            ("december", "dec"),
+        ),
+        1,
+    )
+    for name in names
+}
+_MONTH = "|".join(sorted(MONTH_NUMBERS, key=len, reverse=True))
+# "November 5, 2026", "Nov. 5", "Thursday, November 5th, 2026", "5 November 2026", "2026-11-05".
+DATE_WORDS = re.compile(
+    rf"\b(?P<m1>{_MONTH})\.?\s+(?P<d1>\d{{1,2}})(?:st|nd|rd|th)?\b(?:,?\s+(?P<y1>20\d\d))?"
+    rf"|\b(?P<d2>\d{{1,2}})(?:st|nd|rd|th)?\s+(?P<m2>{_MONTH})\.?(?:,?\s+(?P<y2>20\d\d))?\b"
+    r"|\b(?P<y3>20\d\d)-(?P<m3>\d{2})-(?P<d3>\d{2})\b",
+    re.IGNORECASE,
+)
+
+
+def dates_in(text: str) -> list[tuple[int | None, int, int]]:
+    """Every calendar date written in the text, as (year or None, month, day)."""
+    found: list[tuple[int | None, int, int]] = []
+    for m in DATE_WORDS.finditer(text):
+        if m.group("y3"):
+            year, month, day = int(m.group("y3")), int(m.group("m3")), int(m.group("d3"))
+        else:
+            name = (m.group("m1") or m.group("m2")).lower()
+            year_text = m.group("y1") or m.group("y2")
+            year = int(year_text) if year_text else None
+            month, day = MONTH_NUMBERS[name], int(m.group("d1") or m.group("d2"))
+        if 1 <= month <= 12 and 1 <= day <= 31:
+            found.append((year, month, day))
+    return found
+
+
+def _date_matches(question: dict[str, Any], text: str) -> dict[str, bool]:
+    """Expected ISO dates the text states; a date written without a year counts."""
+    seen = dates_in(text)
+    matched = {}
+    for key, value in question["expected"].items():
+        if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            continue
+        y, m, d = (int(p) for p in value.split("-"))
+        matched[key] = any(sm == m and sd == d and sy in (None, y) for sy, sm, sd in seen)
+    return matched
+
+
 def figures_in(text: str) -> list[float]:
     """The numbers that state something: years left out."""
     return [n for n in numbers_in(text) if not YEAR.match(f"{n:g}")]
@@ -188,6 +247,9 @@ class Grade:
     table_coverage: float = 0.0
     vector_coverage: float = 0.0
     overridden: bool = False
+    # The grader's own outcome, kept when a person re-grades it, so the report can show
+    # which way the review moved each arm.
+    auto_outcome: str = ""
     citations: dict[str, Any] = field(default_factory=dict)
 
 
@@ -264,7 +326,27 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
     own = question.get("absent_pattern")
     absent = bool(ABSENT.search(text)) or bool(own and re.search(own, text, re.IGNORECASE))
 
-    if kind == "refusal":
+    if kind == "date":
+        # Release-date questions (v2's release group): the expected dates, and for R-03 the
+        # table that now holds the series. Other dates in the answer are fine (an earlier
+        # release named for context); only an answer with none of the expected dates and a
+        # date of its own is graded as a wrong date.
+        dated = _date_matches(question, text)
+        recall = sum(dated.values()) / len(dated) if dated else 0.0
+        missing = [k for k, ok in dated.items() if not ok]
+        table = question.get("table_pattern")
+        table_ok = not table or bool(re.search(table, text, re.IGNORECASE))
+        headline_ok = all(dated.get(k, False) for k in question.get("headline", []))
+        if recall == 1.0 and table_ok:
+            outcome, reason = "correct", "every expected date"
+        elif recall == 1.0 or (recall >= 0.5 and headline_ok):
+            outcome = "partial"
+            reason = "missing: " + ", ".join(missing + ([] if table_ok else ["the table"]))
+        elif dates_in(text) and not declined:
+            outcome, reason = "hallucinated", "gave a date that is not the release date"
+        else:
+            outcome, reason = "abstained", "no release date"
+    elif kind == "refusal":
         if absent:
             outcome, reason = "correct", "said the figure is not published"
         elif figures and not declined:
@@ -366,6 +448,7 @@ def grade_runs(paths: list[Path], version: str = "v1", verify: bool = False) -> 
         base = f"{run['arm']}/{run['question_id']}"
         o = overrides.get(f"{base}#{repeat}", overrides.get(base, {}))
         if "outcome" in o:
+            g.auto_outcome = g.outcome
             g.outcome, g.reason, g.overridden = o["outcome"], o["reason"], True
         check: CitationCheck = cache.check(run["response"], figures_in(run["response"]))
         g.citations = asdict(check)
@@ -413,6 +496,11 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         cited = sum(len(c["vectors"]) + len(c["valet"]) for c in cites)
         supporting = sum(len(c["vectors_supporting"]) + len(c["valet_supporting"]) for c in cites)
         with_figures = [i for i in items if i["has_figures"]]
+        checkable = [
+            i
+            for i in with_figures
+            if i["grade"]["citations"]["vectors"] or i["grade"]["citations"]["valet"]
+        ]
         costs = [i["run"]["cost_usd"] for i in items if i["run"].get("cost_usd") is not None]
         # v2 reports the core half (StatCan, Bank of Canada) and the beyond half apart.
         groups = {}
@@ -460,6 +548,14 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "traceability": _share(
                     sum(i["grade"]["citations"]["traceable"] for i in with_figures),
                     len(with_figures),
+                ),
+                # Only StatCan vectors and Bank of Canada series can be checked. Answers on
+                # other publishers (ECCC stations, World Bank codes) count as untraceable
+                # above, so an arm that answers more of them scored lower (v2: MapleStats'
+                # 48% was 0 of 63 beyond answers); this share leaves them out.
+                "traceability_checked": _share(
+                    sum(i["grade"]["citations"]["traceable"] for i in checkable),
+                    len(checkable),
                 ),
                 "release_mentions": _share(sum(c["release_mentioned"] for c in cites), len(cites)),
                 "tool_calls": round(mean(len(i["run"]["tool_calls"]) for i in items), 1),
@@ -541,14 +637,18 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         ),
         (
             "- **Traceable:** answers stating figures in which at least one cited ID holds one of "
-            "them. **Release:** answers that mention a release date."
+            "them (a stored value, or one scaled by the series' thousands or millions). "
+            "**Checked:** the same share among answers that cite a StatCan vector or Bank of "
+            "Canada series, the only IDs checked; other publishers' IDs are not, so answers on "
+            "them count as untraceable in the first share. **Release:** answers that mention "
+            "a release date."
         ),
         "",
         (
             "| Arm | Table cov. | Vector cov. | IDs cited | Precision | Invented | Off-table "
-            "| Traceable | Release | Tool calls | Seconds | Cost (USD) |"
+            "| Traceable | Checked | Release | Tool calls | Seconds | Cost (USD) |"
         ),
-        "| :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |",
+        "| :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |",
     ]
     for s in summary:
         cost = "–" if s["cost_usd"] is None else f"{s['cost_usd']:.3f}"
@@ -556,6 +656,7 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
             f"| {s['arm']} | {_pct(s['table_coverage'])} | {_pct(s['vector_coverage'])} "
             f"| {s['ids_cited']} | {_pct(s['citation_precision'])} | {s['invented_ids']} "
             f"| {s['off_table_vectors']} | {_pct(s['traceability'])} "
+            f"| {_pct(s.get('traceability_checked'))} "
             f"| {_pct(s['release_mentions'])} | {s['tool_calls']} | {s['seconds']} | {cost} |"
         )
     arms = [s["arm"] for s in summary]
@@ -580,4 +681,45 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         lines += [
             f"- {r['run']['arm']} {r['run']['question_id']}: {r['false_claim']}" for r in claims
         ]
+    lines += review_direction(report)
     return "\n".join(lines) + "\n"
+
+
+RANK = {"hallucinated": 0, "abstained": 1, "partial": 2, "correct": 3}
+
+
+def review_direction(report: dict[str, Any]) -> list[str]:
+    """Which way the hand review moved each arm: the check that it favoured no one."""
+    moved: dict[str, dict[str, int]] = {}
+    repeats: dict[str, set[int]] = {}
+    for r in report["answers"]:
+        g, arm = r["grade"], r["run"]["arm"]
+        row = moved.setdefault(arm, {"up": 0, "down": 0, "gained": 0, "lost": 0, "n": 0})
+        repeats.setdefault(arm, set()).add(r["run"].get("repeat", 0))
+        row["n"] += 1
+        before, after = g.get("auto_outcome") or g["outcome"], g["outcome"]
+        if before == after:
+            continue
+        row["up" if RANK[after] > RANK[before] else "down"] += 1
+        row["gained"] += after == "correct"
+        row["lost"] += before == "correct"
+    lines = [
+        "",
+        "## Direction of the hand review",
+        "",
+        (
+            "Re-grades that changed the grader's outcome, by arm. A review that favoured one arm "
+            "would raise it and lower the others; correct answers gained and lost are the ones "
+            "that move the score."
+        ),
+        "",
+        "| Arm | Answers | Raised | Lowered | Correct gained | Correct lost | Net correct per run |",
+        "| :-- | --: | --: | --: | --: | --: | --: |",
+    ]
+    for arm, m in sorted(moved.items()):
+        net = (m["gained"] - m["lost"]) / len(repeats[arm])
+        lines.append(
+            f"| {arm} | {m['n']} | {m['up']} | {m['down']} | {m['gained']} | {m['lost']} "
+            f"| {net:+.1f} |"
+        )
+    return lines

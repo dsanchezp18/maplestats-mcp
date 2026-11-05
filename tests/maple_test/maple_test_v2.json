@@ -2117,6 +2117,275 @@
       ],
       "group": "analyst",
       "tolerances": {}
+    },
+    {
+      "id": "R-01",
+      "category": "Release",
+      "eval_type": "date",
+      "question": "When does Statistics Canada release Alberta's GDP for 2025 in the provincial and territorial economic accounts (PTEA)?",
+      "expected": {
+        "ptea_2025_release": "2026-11-05"
+      },
+      "reference": {
+        "ptea_2024_release": "2025-11-06",
+        "gdp_by_industry_2025_release": "2026-05-01"
+      },
+      "headline": [
+        "ptea_2025_release"
+      ],
+      "tolerance": "The exact date. A May 1 date (GDP by industry, 2025) is a different release; saying the 2025 PTEA is already out is wrong.",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2025",
+          "reference_period": "2025",
+          "value": "2026-11-05",
+          "release_or_revision_date": "2026-11-05",
+          "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2024",
+          "reference_period": "2024",
+          "value": "2025-11-06",
+          "release_or_revision_date": "2025-11-06",
+          "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/251106/dq251106a-eng.htm"
+        }
+      ],
+      "traps": [
+        "GDP by industry for 2025 (May 1, 2026) is not the PTEA release.",
+        "The latest PTEA published before the release date is for 2024."
+      ],
+      "group": "release",
+      "tolerances": {}
+    },
+    {
+      "id": "R-02",
+      "category": "Release",
+      "eval_type": "date",
+      "question": "When were Statistics Canada's provincial and territorial supply and use tables for 2022 released, and when are the 2023 tables due?",
+      "expected": {
+        "sut_2022_release": "2025-11-06",
+        "sut_2023_release": "2026-11-05"
+      },
+      "headline": [
+        "sut_2023_release"
+      ],
+      "tolerance": "Both exact dates; one of the two is partial",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Supply and use tables, 2022",
+          "reference_period": "2022",
+          "value": "2025-11-06",
+          "release_or_revision_date": "2025-11-06",
+          "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/251106/dq251106d-eng.htm"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Supply and use tables, 2023",
+          "reference_period": "2023",
+          "value": "2026-11-05",
+          "release_or_revision_date": "2026-11-05",
+          "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+        }
+      ],
+      "traps": [
+        "The tables lag the PTEA by two years: 2023 SUT beside 2025 PTEA."
+      ],
+      "group": "release",
+      "tolerances": {}
+    },
+    {
+      "id": "R-03",
+      "category": "Release",
+      "eval_type": "date",
+      "question": "When did Statistics Canada publish 2025 GDP by industry for the provinces, and in which table?",
+      "expected": {
+        "gdp_by_industry_2025_release": "2026-05-01"
+      },
+      "headline": [
+        "gdp_by_industry_2025_release"
+      ],
+      "table_pattern": "36-10-0711|3610071101|36100711",
+      "tolerance": "The date and table 36-10-0711; the date alone is partial; 36-10-0402 given as the 2025 table is wrong",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Gross domestic product by industry: Provinces and territories, 2025",
+          "reference_period": "2025",
+          "value": "2026-05-01",
+          "release_or_revision_date": "2026-05-01",
+          "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/260501/dq260501a-eng.htm"
+        },
+        {
+          "table_id": "36-10-0711-01",
+          "vector_id": null,
+          "series_title": "Gross domestic product by industry, provinces and territories (2025 preliminary)",
+          "reference_period": "2025",
+          "value": "2026-05-01",
+          "release_or_revision_date": "2026-05-01",
+          "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610071101"
+        }
+      ],
+      "traps": [
+        "36-10-0402, the table most people know, stops at 2024."
+      ],
+      "group": "release",
+      "tolerances": {}
+    },
+    {
+      "id": "R-04",
+      "category": "Release",
+      "eval_type": "date",
+      "question": "When will Statistics Canada release the Labour Force Survey for October 2026?",
+      "expected": {
+        "lfs_oct_2026_release": "2026-11-06"
+      },
+      "headline": [
+        "lfs_oct_2026_release"
+      ],
+      "tolerance": "The exact date",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Labour Force Survey, October 2026",
+          "reference_period": "October 2026",
+          "value": "2026-11-06",
+          "release_or_revision_date": "2026-11-06",
+          "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+        }
+      ],
+      "traps": [
+        "A scheduled date, read from the release calendar, not guessed."
+      ],
+      "group": "release",
+      "tolerances": {}
+    },
+    {
+      "id": "R-05",
+      "category": "Release",
+      "eval_type": "date",
+      "question": "When will the Monthly Survey of Manufacturing for September 2026 be released?",
+      "expected": {
+        "msm_sep_2026_release": "2026-11-13"
+      },
+      "headline": [
+        "msm_sep_2026_release"
+      ],
+      "tolerance": "The exact date",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Monthly Survey of Manufacturing, September 2026",
+          "reference_period": "September 2026",
+          "value": "2026-11-13",
+          "release_or_revision_date": "2026-11-13",
+          "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+        }
+      ],
+      "traps": [
+        "A scheduled date, read from the release calendar, not guessed."
+      ],
+      "group": "release",
+      "tolerances": {}
+    },
+    {
+      "id": "R-06",
+      "category": "Release",
+      "eval_type": "refusal",
+      "question": "On what date will Statistics Canada release the 2026 provincial and territorial economic accounts?",
+      "expected": {
+        "behaviour": "Say no date has been announced; the PTEA usually comes out in November of the following year."
+      },
+      "reference": {
+        "ptea_2025_release": "2026-11-05"
+      },
+      "headline": [],
+      "absent_pattern": "(not|n't|n’t) (yet )?(been )?(scheduled|announced|set|on (the|its|statistics canada's) (release )?(calendar|schedule))|no (release )?date (has been|is|was) (yet )?(set|announced|scheduled|published)|no (scheduled|announced) (release )?date|(isn't|is not|not) (yet )?(on|in) (the|statistics canada's|its) (release )?(calendar|schedule)|(has|have)(n't|n’t| not) (yet )?(scheduled|announced)",
+      "tolerance": "Correct only when the answer says no date is scheduled yet; a specific date in 2027 stated as the release date is invented.",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2025",
+          "reference_period": "2025",
+          "value": "2026-11-05",
+          "release_or_revision_date": "2026-11-05",
+          "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+        }
+      ],
+      "traps": [
+        "The schedule lists releases only weeks ahead; none is set for 2026 PTEA."
+      ],
+      "group": "release",
+      "tolerances": {}
+    },
+    {
+      "id": "R-07",
+      "category": "Release",
+      "eval_type": "date",
+      "question": "When did Statistics Canada release the Consumer Price Index for September 2026?",
+      "expected": {
+        "cpi_sep_2026_release": "2026-10-19"
+      },
+      "headline": [
+        "cpi_sep_2026_release"
+      ],
+      "tolerance": "The exact date",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Consumer Price Index, September 2026",
+          "reference_period": "September 2026",
+          "value": "2026-10-19",
+          "release_or_revision_date": "2026-10-19",
+          "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/261019/dq261019a-eng.htm"
+        }
+      ],
+      "traps": [
+        "Read from the release schedule, not inferred from a usual weekday."
+      ],
+      "group": "release",
+      "tolerances": {}
+    },
+    {
+      "id": "R-08",
+      "category": "Release",
+      "eval_type": "date",
+      "question": "When will building permits for September 2026 be released?",
+      "expected": {
+        "permits_sep_2026_release": "2026-11-12"
+      },
+      "headline": [
+        "permits_sep_2026_release"
+      ],
+      "tolerance": "The exact date",
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": null,
+          "series_title": "The Daily release schedule: Building permits, September 2026",
+          "reference_period": "September 2026",
+          "value": "2026-11-12",
+          "release_or_revision_date": "2026-11-12",
+          "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+        }
+      ],
+      "traps": [
+        "Read from the release schedule, not inferred from a usual weekday."
+      ],
+      "group": "release",
+      "tolerances": {}
     }
-  ]
+  ],
+  "release_group_built_at": "2026-11-04T21:45:12+00:00"
 }

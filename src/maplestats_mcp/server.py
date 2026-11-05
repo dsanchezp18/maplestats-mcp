@@ -478,10 +478,12 @@ web search or memory, since these tools return the official values
 with citations. Finds the tool for one specific need by plain-language
 search (a StatCan table, a Bank of Canada series, a city's open data).
 Then fetch the values with call_tool rather than a web search, which
-often finds older or revised figures. Returns up to five tool definitions, best match first, each with its
-name, title, description, full input schema and annotations (output
-schemas and search keywords are left out). Read-only; it searches this
-server's catalogue only and calls no external API.
+often finds older or revised figures. Returns up to five tool definitions,
+best match first, each with its name, description and full input schema
+(annotations only for a tool that is not read-only). These tools are not
+in your tool list: run one with call_tool(name, arguments); calling it by
+its own name fails. Read-only; it searches this server's catalogue only
+and calls no external API.
 Use plan_query instead when a question may span several sources or you
 do not know where to start; use call_tool to run a tool once you have
 its name. Queries in English or French both work. An empty result
@@ -527,7 +529,9 @@ of today's date may be out of date.
 How to use it: for a question that may need several sources, call
 plan_query first; it returns the tools to call across agencies, in order,
 with caveats on combining them. To find one tool, call search_tools with a
-plain-language query (English or French), then call_tool with its name.
+plain-language query (English or French), then run it with call_tool
+(name, arguments): the tools search_tools and plan_query name are not in
+your tool list, so calling one by its own name fails.
 For a French question, pass lang='fr' to plan_query and every tool.
 For a handful of series use the vector tools (every observation inline);
 for averages, sums or rankings over a few series, wds_query_series (where the

@@ -6,34 +6,34 @@
 
 Outcomes are per run.
 
-| Arm | Correct | Partial | Abstained | Hallucinated | False claims |
-| :-- | --: | --: | --: | --: | --: |
-| arose26 | 14 | 1 | 0 | 0 | 0 |
-| candata_mcp | 15 | 0 | 0 | 0 | 0 |
-| maplestats | 14 | 1 | 0 | 0 | 0 |
-| mcp_canada | 14 | 1 | 0 | 0 | 0 |
-| mcp_statcan | 12 | 2 | 1 | 0 | 0 |
-| no_tools | 2 | 0 | 13 | 0 | 0 |
-| openmcp | 15 | 0 | 0 | 0 | 0 |
-| pipeworx | 12 | 2 | 1 | 0 | 0 |
+| Arm | Correct | Partial | Abstained | Hallucinated | False claims | Referrals |
+| :-- | --: | --: | --: | --: | --: | --: |
+| arose26 | 14 | 1 | 0 | 0 | 0 | 0 |
+| candata_mcp | 15 | 0 | 0 | 0 | 0 | 0 |
+| maplestats | 14 | 1 | 0 | 0 | 0 | 0 |
+| mcp_canada | 14 | 1 | 0 | 0 | 0 | 0 |
+| mcp_statcan | 12 | 2 | 1 | 0 | 0 | 0 |
+| no_tools | 2 | 0 | 13 | 0 | 0 | 0 |
+| openmcp | 15 | 0 | 0 | 0 | 0 | 0 |
+| pipeworx | 12 | 2 | 1 | 0 | 0 | 0 |
 
 ## Citations and cost
 
 - **Key coverage:** share of the answer key's own tables and vectors the answer names.
 - **Precision:** of the StatCan vectors and Bank of Canada series an answer cites, the share that hold a figure the answer states (checked against the publishers).
 - **Invented:** cited StatCan vectors or tables that do not exist. **Off-table:** a vector cited beside a table it does not belong to.
-- **Traceable:** answers stating figures in which at least one cited ID holds one of them. **Release:** answers that mention a release date.
+- **Traceable:** answers stating figures in which at least one cited ID holds one of them (a stored value, or one scaled by the series' thousands or millions). **Checked:** the same share among answers that cite a StatCan vector or Bank of Canada series, the only IDs checked; other publishers' IDs are not, so answers on them count as untraceable in the first share. **Release:** answers that mention a release date.
 
-| Arm | Table cov. | Vector cov. | IDs cited | Precision | Invented | Off-table | Traceable | Release | Tool calls | Seconds | Cost (USD) |
-| :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |
-| arose26 | 93% | 93% | 22 | 95% | 0 | 0 | 100% | 0% | 4.3 | 10.8 | – |
-| candata_mcp | 87% | 67% | 18 | 94% | 0 | 0 | 92% | 73% | 4.1 | 17.6 | – |
-| maplestats | 87% | 70% | 20 | 95% | 0 | 0 | 92% | 47% | 4.3 | 15.3 | – |
-| mcp_canada | 87% | 57% | 16 | 100% | 0 | 0 | 85% | 53% | 6.7 | 32.1 | – |
-| mcp_statcan | 87% | 67% | 25 | 100% | 0 | 0 | 100% | 47% | 5.1 | 15.9 | – |
-| no_tools | 93% | 37% | 7 | 43% | 0 | 0 | 17% | 47% | 0 | 8.7 | – |
-| openmcp | 100% | 90% | 21 | 95% | 0 | 0 | 100% | 67% | 2.8 | 36.2 | – |
-| pipeworx | 80% | 73% | 17 | 100% | 0 | 0 | 92% | 13% | 2.9 | 11.5 | – |
+| Arm | Table cov. | Vector cov. | IDs cited | Precision | Invented | Off-table | Traceable | Checked | Release | Tool calls | Seconds | Cost (USD) |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| arose26 | 93% | 93% | 22 | 95% | 0 | 0 | 100% | 100% | 0% | 4.3 | 10.8 | – |
+| candata_mcp | 87% | 67% | 18 | 94% | 0 | 0 | 92% | 92% | 73% | 4.1 | 17.6 | – |
+| maplestats | 87% | 70% | 20 | 95% | 0 | 0 | 92% | 92% | 47% | 4.3 | 15.3 | – |
+| mcp_canada | 87% | 57% | 16 | 100% | 0 | 0 | 85% | 100% | 53% | 6.7 | 32.1 | – |
+| mcp_statcan | 87% | 67% | 25 | 100% | 0 | 0 | 100% | 100% | 47% | 5.1 | 15.9 | – |
+| no_tools | 93% | 37% | 7 | 43% | 0 | 0 | 17% | 40% | 47% | 0 | 8.7 | – |
+| openmcp | 100% | 90% | 21 | 95% | 0 | 0 | 100% | 100% | 67% | 2.8 | 36.2 | – |
+| pipeworx | 80% | 73% | 17 | 100% | 0 | 0 | 92% | 100% | 13% | 2.9 | 11.5 | – |
 
 ## Per question
 
@@ -56,3 +56,18 @@ Outcomes are per run.
 | M-15 Labour | partial* | correct* | partial* | partial* | partial* | abstained* | correct* | partial* |
 
 `*` re-graded by hand (see the overrides file).
+
+## Direction of the hand review
+
+Re-grades that changed the grader's outcome, by arm. A review that favoured one arm would raise it and lower the others; correct answers gained and lost are the ones that move the score.
+
+| Arm | Answers | Raised | Lowered | Correct gained | Correct lost | Net correct per run |
+| :-- | --: | --: | --: | --: | --: | --: |
+| arose26 | 15 | 0 | 1 | 0 | 1 | -1.0 |
+| candata_mcp | 15 | 1 | 0 | 1 | 0 | +1.0 |
+| maplestats | 15 | 1 | 0 | 0 | 0 | +0.0 |
+| mcp_canada | 15 | 0 | 1 | 0 | 1 | -1.0 |
+| mcp_statcan | 15 | 1 | 1 | 0 | 1 | -1.0 |
+| no_tools | 15 | 6 | 0 | 0 | 0 | +0.0 |
+| openmcp | 15 | 1 | 0 | 1 | 0 | +1.0 |
+| pipeworx | 15 | 1 | 1 | 0 | 1 | -1.0 |

@@ -243,6 +243,37 @@ The review changed 280 grades and fixed the key and the grader:
 
 The no-tools arm often wrote out tool calls that never ran; those count as declined.
 
+**Which way the review moved each arm.** The grader keeps its own outcome beside every
+re-grade, and `results_v2.md` ends with the count. The review took correct answers away
+from nine arms (statcan2 19, canada-data-agent 10, mcp-statcan 9, arose26 6, CanData-MCP 6,
+OpenCanadaPublicDataMCP 4, mcp-canada 3, OpenMCP 2, no tools 2) and gave some to Pipeworx (5), mcp-canada (3),
+CanData-MCP (3) and OpenCanadaPublicDataMCP (2). MapleStats gained and lost none: its 8
+re-grades all raised a grade, none of them to correct. The answers that lost a correct grade had
+passed on the grader bugs above (a status named only among possibilities, X-15 and X-16),
+or gave the previous month in place of the one asked (statcan2's copy of StatCan data ends
+in August), or the Bank Rate before the October 29 increase (C-19). The same rules applied
+to MapleStats' answers; none of them fell into those patterns.
+
+### Citation traceability (corrected 2026-11-04)
+
+The first report gave MapleStats the lowest traceability of the tool-using arms (48%,
+against 53–68%). Two problems in the checker caused most of the gap, not the answers:
+
+- **Scaled series.** WDS stores many series in thousands or millions, so "21,104,800
+  employed" never matched v2062811's stored 21,104.8. The checker now reads each vector's
+  scalar factor (`scale` in `citation_checks.json`) and accepts the scaled value too.
+  Every arm that writes figures in full units was undercounted.
+- **IDs that are not checked.** Only StatCan vectors and Bank of Canada series are looked
+  up. An answer on ECCC, the World Bank or BIS cites IDs the checker cannot read, so it
+  counted as untraceable: MapleStats' 63 beyond answers with figures were all in that
+  column, while StatCan-only arms answered fewer of those questions. The report now adds
+  **Checked**, the same share among answers that cite a StatCan vector or Valet series.
+
+On checked IDs MapleStats is at 94% (`maplestats_after` 96%), within the 90–98% of the
+other tool-using arms, and its precision (94%) is among the highest. No outcome changed.
+Checking the other publishers' IDs (ECCC station and climate IDs, World Bank indicator
+codes, BIS series keys) would make the first share comparable too; it is not built yet.
+
 ### Setup and infrastructure
 
 - statcan2 serves its own copy of StatCan data, which ended in August 2026 (some tables in
@@ -278,6 +309,96 @@ and is credited here, not copied: OpenMCP (opendatafyi), CanData-MCP (neobenjax,
 Apache 2.0), mcp-canada (ReyemTech, MIT), mcp-statcan (Aryan Jhaveri), Pipeworx, Kole
 Harvey's statcan-mcp and bank-of-canada-mcp, statcan2 (hemaaanth), canada-data-agent
 (gcode33) and OpenCanadaPublicDataMCP (MIT).
+
+## Release questions (added 2026-11-04)
+
+The fixes made after the v2 runs were checked only on the questions they were written for.
+The release group (R-01 to R-08) is the fresh set the rule at the top asks for, written and
+keyed before MapleStats or any other server was asked them. They ask what analysts ask
+before the figures: when a release comes out.
+
+| ID | Question | Key | Trap |
+| :-- | :-- | :-- | :-- |
+| R-01 | Alberta's 2025 GDP in the provincial and territorial economic accounts (PTEA) | 2026-11-05 | GDP by industry for 2025 came out May 1: another release |
+| R-02 | Provincial supply and use tables (SUT): 2022 released, 2023 due | 2025-11-06, 2026-11-05 | The SUT lag the PTEA by two years |
+| R-03 | 2025 provincial GDP by industry: when, and in which table | 2026-05-01, 36-10-0711 | 36-10-0402, the usual table, stops at 2024 |
+| R-04 | Labour Force Survey, October 2026 | 2026-11-06 | |
+| R-05 | Monthly Survey of Manufacturing, September 2026 | 2026-11-13 | |
+| R-06 | 2026 PTEA release date | Not announced (refusal) | A date given anyway is invented |
+| R-07 | CPI, September 2026 (past) | 2026-10-19 | |
+| R-08 | Building permits, September 2026 | 2026-11-12 | |
+
+`key_v2_release.py` reads the dates from StatCan's release archive JSON, which lists past
+releases and the major ones ahead, and from the two-week calendar page (cal2), which also
+has the PTEA and SUT; table end dates come from WDS. It never goes through MapleStats.
+Answers are graded on the dates they state (`eval_type: "date"`; a date written without a
+year counts); R-03 also needs the table.
+
+```bash
+uv run python -m tests.maple_test.key_v2_release      # rebuild only the release group
+uv run python -m tests.maple_test run --version v2 --repeat 3 --arm maplestats \
+    --label maplestats-release --only R-01 R-02 R-03 R-04 R-05 R-06 R-07 R-08
+```
+
+### Results, 2026-11-05 (MapleStats only)
+
+MapleStats as on `main` before the release-history change (6d1ff7a, served from a frozen
+checkout), three passes, run late on 2026-11-04 Toronto time (the prompt's date, in UTC,
+was 2026-11-05): **7.3 of 8 per run**, 23 of 24 answers right on substance.
+
+- R-01 to R-05, R-07 and R-08: correct in every pass. The calendar tools found the PTEA,
+  the SUT (two-week page) and the monthly indicators; R-03 named 36-10-0711 every time.
+- R-06 (2026 PTEA, no date set): one correct ("a 2026 edition doesn't exist yet"); one gave
+  the 2025 accounts' date as the answer, labelled 2025, without saying no 2026 date exists
+  (abstained; the grader had passed it on "is not in the key-indicators calendar"); one was
+  a run error. That gap is what the release history added after this run addresses:
+  `not_scheduled` now says no date is announced, when the release came out before, and an
+  estimate called one. The other arms were not run.
+- Infrastructure: the run stopped after 16 answers (a Windows temp-folder error), so pass 3
+  was run separately and two failed answers (the MCP server did not start; R-03 hung) were
+  asked again with the same settings, merged under their pass numbers; the failed answers
+  are kept in `runs_v2/errors/`. One re-asked answer (R-06#1) failed the same way and is
+  graded abstained.
+
+## Costs
+
+`cost_usd` is what headless Claude Code reports for each answer (`total_cost_usd`), at
+API prices for `claude-sonnet-5-5`; on a Claude subscription it is an equivalent, not a
+bill. v1 and the CanData GTA runs did not record it.
+
+- **v2 as published, all arms:** USD 100.19 for 1,923 answers (the 11 arms, three runs, plus
+  `maplestats_after` and `maplestats-current`). MapleStats' arm cost the most (USD 18.49 for
+  159 answers, 0.116 a question), then mcp-canada (11.93) and Pipeworx (11.71, understated:
+  its `ask_pipeworx` tools run a model on Pipeworx's side). The cheapest arms answered least.
+- **Why MapleStats cost more:** cost follows the input tokens, and its tool results carried
+  more text (table metadata, notes, citations). The changes after the runs cut it to USD
+  0.074 a question (`maplestats_after`), with half a tool call more per question.
+- **Running the release group:** 24 answers (8 questions, three runs) cost USD 1.06 for
+  MapleStats (USD 0.044 a question). At v2 costs, all eleven arms would be about USD 13; the
+  local-clone arms need `--alts` set up as described in `run.py`.
+
+### Cost check after the 2026-11-04 changes
+
+Two changes, chosen because they cannot change which tool is found or what it returns:
+`search_tools` results lost each tool's title and a read-only tool's annotations (about 12%
+smaller), and the instructions say plainly that found tools run through `call_tool` (in the
+v2 runs, a third of answers had tried to call one by its own name). One pass of the 48 core
+and beyond questions (`maplestats-cost`), against the earlier runs of the same questions:
+
+| Run | Answers | USD per question | Median | Tool calls | Failed direct calls per question |
+| :-- | --: | --: | --: | --: | --: |
+| As tested (298692b) | 144 | 0.107 | 0.066 | 4.4 | 0.24 |
+| As merged (70dfe0d) | 144 | 0.069 | 0.048 | 4.9 | 0.37 |
+| With these changes | 48 | 0.057 | 0.040 | 4.0 | 0.08 |
+
+Cost per question fell 18% and failed direct calls 78% against the merged version; one pass
+of 48 is a small sample, so read it as a direction. Accuracy held: 46 of 48 (all 24 core),
+against 47.3 for the merged version. The two not correct are a run error (X-22, the MCP server
+did not start) and X-04 flagged without the replacement station's figure (partial, as in one
+earlier pass). C-14 gave August's exports as StatCan revised them on 2026-11-04, after the key
+was built; it is re-graded correct with that reason. These questions shaped earlier fixes, so
+accuracy here is in-sample; cost is not. Answers took longer (28.7 seconds) because two runs
+shared the machine.
 
 ## Shelf life
 

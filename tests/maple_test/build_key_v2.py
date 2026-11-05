@@ -521,7 +521,7 @@ def core() -> list[dict[str, Any]]:
 
 
 def build() -> dict[str, Any]:
-    from tests.maple_test import key_v2_analyst, key_v2_beyond
+    from tests.maple_test import key_v2_analyst, key_v2_beyond, key_v2_release
 
     core_q = core()
     beyond_q = key_v2_beyond.questions()
@@ -534,11 +534,15 @@ def build() -> dict[str, Any]:
     # Added 2026-11-03 after the first v2 runs: questions from an analyst's working week.
     for i, q in enumerate(key_v2_analyst.questions(), 1):
         questions.append({"id": f"A-{i:02d}", **q})
+    # Added 2026-11-04, before any server was asked them: when releases come out (PTEA,
+    # SUT, monthly indicators). A fresh set for the fixes made after the first runs.
+    for i, q in enumerate(key_v2_release.questions(), 1):
+        questions.append({"id": f"R-{i:02d}", **q})
     return {
         "benchmark": "maple_test_v2",
         "built_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, "
-        "ECCC, World Bank, BIS, Health Canada, IRCC",
+        "ECCC, World Bank, BIS, Health Canada, IRCC; StatCan's release schedule",
         "questions": questions,
     }
 

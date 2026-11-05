@@ -38,6 +38,32 @@ class DailyArchiveEntry(BaseModel):
     )
 
 
+class ReleaseHistory(BaseModel):
+    """When a search finds nothing scheduled: the same release's past dates, as a guide."""
+
+    note: str = Field(
+        description="Plain-language summary: no date is announced, when it came out before, "
+        "and the estimate below, labelled as one."
+    )
+    title: str = Field(description="The release title matched in the Daily archive.")
+    previous_releases: list[DailyArchiveEntry] = Field(
+        default_factory=list, description="Its latest published releases, newest first."
+    )
+    scheduled_releases: list[DailyArchiveEntry] = Field(
+        default_factory=list,
+        description="Its releases already on a calendar (other reference periods than the "
+        "one asked for), soonest first.",
+    )
+    typical_gap_days: int | None = Field(
+        default=None, description="Median days between those releases (about 365 for annual)."
+    )
+    estimated_next_date: date | None = Field(
+        default=None,
+        description="Latest release plus the typical gap. An estimate from past dates, not a "
+        "date Statistics Canada announced; never report it as scheduled.",
+    )
+
+
 class DailyArchiveSearchResult(BaseModel):
     query: str
     entries: list[DailyArchiveEntry] = Field(default_factory=list)
@@ -129,6 +155,11 @@ class UpcomingReleasesResult(BaseModel):
     major_indicators: list[str] = Field(
         default_factory=list,
         description="The major economic releases that annual PDF and the calendar cover.",
+    )
+    not_scheduled: ReleaseHistory | None = Field(
+        default=None,
+        description="Set when the query matched no scheduled release: the same release's "
+        "past dates and an estimate of the next, which is not an announced date.",
     )
     provenance: Provenance
 
@@ -223,5 +254,10 @@ class ReleaseCalendarResult(BaseModel):
     today: date = Field(description="Today in Toronto, the reference date for 'upcoming'.")
     latest_scheduled_date: date | None = Field(
         default=None, description="Last date in the schedule file, i.e. how far ahead it reaches."
+    )
+    not_scheduled: ReleaseHistory | None = Field(
+        default=None,
+        description="Set when the query matched no scheduled release: the same release's "
+        "past dates and an estimate of the next, which is not an announced date.",
     )
     provenance: Provenance

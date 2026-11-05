@@ -225,13 +225,19 @@ def ask(
     if config is not None:
         names = list(json.loads(config.read_text())["mcpServers"])
         command += ["--mcp-config", str(config), "--allowedTools", *[f"mcp__{n}" for n in names]]
-    with tempfile.TemporaryDirectory() as empty:
+    # ignore_cleanup_errors: on Windows the folder can still be held by a child process (the
+    # MCP server) when the answer is in; the error ended a run after 16 answers (2026-11-05).
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as empty:
         try:
             proc = subprocess.run(
                 command,
                 input=question["question"],
                 capture_output=True,
-                text=True,
+                # The CLI writes UTF-8. Plain text=True decodes with the Windows code page:
+                # "2–13 November" came back as "2â€“13", and a byte it cannot decode left
+                # stdout None and ended a run after 10 answers (2026-11-05).
+                encoding="utf-8",
+                errors="replace",
                 cwd=empty,
                 env={**os.environ, "ENABLE_TOOL_SEARCH": "false"},
                 timeout=TIMEOUT_S,
@@ -302,7 +308,7 @@ def run(
     if alts is None and os.environ.get("MAPLE_TEST_ALTS"):
         alts = Path(os.environ["MAPLE_TEST_ALTS"])
     config_servers = servers(arm, server_dir, alts)
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         config = None
         if config_servers:
             config = Path(tmp) / "mcp.json"

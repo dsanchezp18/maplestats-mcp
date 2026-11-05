@@ -89,8 +89,9 @@ class Cache:
         )
 
     def save(self) -> None:
+        # newline="\n": on Windows, text mode would write CRLF into an LF file.
         self.path.write_text(
-            json.dumps(self.data, indent=1, sort_keys=True) + "\n", encoding="utf-8"
+            json.dumps(self.data, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
         )
 
     def missing(self, texts: list[str]) -> tuple[set[int], set[int], set[str]]:
@@ -116,11 +117,12 @@ class Cache:
                 info = client.post(
                     WDS + "getSeriesInfoFromVector", json=[{"vectorId": v} for v in chunk]
                 ).json()
-                pids = {}
+                pids, scales = {}, {}
                 for item in info:
                     obj = item.get("object")
                     if isinstance(obj, dict) and obj.get("responseStatusCode") == 0:
                         pids[int(obj["vectorId"])] = int(obj["productId"])
+                        scales[int(obj["vectorId"])] = 10 ** int(obj.get("scalarFactorCode") or 0)
                 data = client.post(
                     WDS + "getDataFromVectorsAndLatestNPeriods",
                     json=[{"vectorId": v, "latestN": 400} for v in pids],
@@ -136,10 +138,16 @@ class Cache:
                         ]
                 for v in chunk:
                     self.data[f"vector:{v}"] = (
-                        {"exists": True, "product_id": pids[v], "values": values.get(v, [])}
+                        {
+                            "exists": True,
+                            "product_id": pids[v],
+                            "scale": scales[v],
+                            "values": values.get(v, []),
+                        }
                         if v in pids
                         else {"exists": False}
                     )
+            self._backfill_scales(client)
             for name in sorted(names):
                 response = client.get(f"{VALET}observations/{name}/json", params={"recent": 500})
                 if response.status_code != 200:
@@ -154,6 +162,24 @@ class Cache:
                         if isinstance(row.get(name), dict) and _is_number(row[name].get("v"))
                     ],
                 }
+
+    def _backfill_scales(self, client: httpx.Client) -> None:
+        """Add the scalar factor to vectors cached before it was recorded (2026-11-04)."""
+        need = sorted(
+            int(k.split(":")[1])
+            for k, e in self.data.items()
+            if k.startswith("vector:") and e.get("exists") and "scale" not in e
+        )
+        for start in range(0, len(need), 50):
+            chunk = need[start : start + 50]
+            info = client.post(
+                WDS + "getSeriesInfoFromVector", json=[{"vectorId": v} for v in chunk]
+            ).json()
+            for item in info:
+                obj = item.get("object")
+                if isinstance(obj, dict) and obj.get("responseStatusCode") == 0:
+                    code = int(obj.get("scalarFactorCode") or 0)
+                    self.data[f"vector:{int(obj['vectorId'])}"]["scale"] = 10**code
 
     def check(self, text: str, figures: list[float]) -> CitationCheck:
         out = CitationCheck(release_mentioned=bool(RELEASE.search(text)))
@@ -172,7 +198,16 @@ class Cache:
                 continue
             if cited_tables and entry["product_id"] not in cited_tables:
                 out.vectors_off_table.append(v)
-            if any(_close(f, p) for f in figures for p in entry["values"]):
+            # WDS stores many series in thousands or millions (scalarFactorCode 3, 6):
+            # employment 21,104.8 for "21,104,800 employed", housing starts 248.896 for
+            # "248,896". Comparing only the raw value missed figures written in full units,
+            # so traceability undercounted every arm that writes them out (v2 review).
+            scale = entry.get("scale", 1)
+            if any(
+                _close(f, p) or (scale != 1 and _close(f, p * scale))
+                for f in figures
+                for p in entry["values"]
+            ):
                 out.vectors_supporting.append(v)
         for name in sorted(valet_names(text)):
             entry = self.data.get(f"valet:{name}")
