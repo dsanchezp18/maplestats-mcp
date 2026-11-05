@@ -10,7 +10,7 @@ import re
 
 import pytest
 
-from tests.maple_test.grade import grade_answer, load_key, numbers_in
+from tests.maple_test.grade import dates_in, grade_answer, load_key, numbers_in
 
 QUESTIONS = {q["id"]: q for q in load_key()}
 
@@ -143,11 +143,13 @@ def test_citation_checks_use_the_cache(tmp_path):
 
 def test_v2_key_is_half_core_half_beyond():
     v2 = load_key("v2")
-    assert len(v2) == 53 and len({q["id"] for q in v2}) == 53
+    assert len(v2) == 61 and len({q["id"] for q in v2}) == 61
     assert sum(q["group"] == "core" for q in v2) == 24
     assert sum(q["group"] == "beyond" for q in v2) == 24
-    # Added after the first runs: four analyst questions, graded as their own group.
+    # Added after the first runs: five analyst questions, graded as their own group.
     assert [q["id"] for q in v2 if q["group"] == "analyst"] == [f"A-0{i}" for i in range(1, 6)]
+    # Added 2026-11-04: eight release-date questions, a fresh set for the later fixes.
+    assert [q["id"] for q in v2 if q["group"] == "release"] == [f"R-0{i}" for i in range(1, 9)]
     for q in v2:
         assert "?" in q["question"] or q["eval_type"] == "flag", q["id"]
         assert q["citations"] and q["traps"], q["id"]
@@ -338,3 +340,91 @@ def test_v2_flag_questions_need_the_figure(qid, text, outcome):
 )
 def test_x12_accepts_each_countrys_own_series(text, outcome):
     assert grade_answer(V2["X-12"], text).outcome == outcome
+
+
+def test_dates_are_read_in_every_common_form():
+    text = (
+        "Thursday, November 5th, 2026; Nov. 6; 13 November 2026; 2026-11-12; released Oct 19, 2026."
+    )
+    assert dates_in(text) == [
+        (2026, 11, 5),
+        (None, 11, 6),
+        (2026, 11, 13),
+        (2026, 11, 12),
+        (2026, 10, 19),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("qid", "text", "outcome"),
+    [
+        ("R-01", "The 2025 PTEA come out on November 5, 2026 (The Daily).", "correct"),
+        # GDP by industry for 2025 (May 1) is another release: the trap.
+        ("R-01", "Alberta's 2025 GDP was released May 1, 2026 in 36-10-0402.", "hallucinated"),
+        ("R-01", "I cannot find the release schedule, so I can't give a date.", "abstained"),
+        (
+            "R-02",
+            (
+                "The 2022 tables were released on November 6, 2025; the 2023 tables are "
+                "scheduled for November 5, 2026."
+            ),
+            "correct",
+        ),
+        ("R-02", "The 2023 supply and use tables are due November 5, 2026.", "partial"),
+        ("R-03", "Released May 1, 2026, in table 36-10-0711-01.", "correct"),
+        ("R-03", "Released May 1, 2026, in table 36-10-0402-01.", "partial"),
+        ("R-04", "The October LFS is out Friday, November 6, 2026.", "correct"),
+        ("R-04", "The October LFS comes out November 7, 2026.", "hallucinated"),
+        (
+            "R-06",
+            "No date has been announced yet; the PTEA usually come out in November.",
+            "correct",
+        ),
+        ("R-06", "It will be released on November 4, 2027.", "hallucinated"),
+        ("R-07", "The September CPI was released October 19, 2026.", "correct"),
+    ],
+)
+def test_v2_release_questions(qid, text, outcome):
+    assert grade_answer(V2[qid], text).outcome == outcome
+
+
+def test_citation_check_reads_figures_written_in_full_units(tmp_path):
+    # WDS stores LFS employment in thousands: "21,104,800" is v2062811's 21,104.8.
+    from tests.maple_test.citations import Cache
+
+    cache = Cache(tmp_path / "checks.json")
+    cache.data = {
+        "vector:2062811": {
+            "exists": True,
+            "product_id": 14100287,
+            "scale": 1000,
+            "values": [21104.8],
+        },
+        "table:14100287": {"exists": True},
+    }
+    text = "Employment was 21,104,800 (table 14-10-0287-01, v2062811)."
+    assert cache.check(text, numbers_in(text)).traceable
+    # Without the scale (a cache entry from before it was recorded), the raw value only.
+    del cache.data["vector:2062811"]["scale"]
+    assert not cache.check(text, numbers_in(text)).traceable
+
+
+def test_review_direction_counts_correct_answers_gained_and_lost():
+    from tests.maple_test.grade import review_direction
+
+    def answer(arm, auto, final, repeat=0):
+        return {
+            "run": {"arm": arm, "repeat": repeat},
+            "grade": {"outcome": final, "auto_outcome": auto if auto != final else ""},
+        }
+
+    report = {
+        "answers": [
+            answer("a", "hallucinated", "correct"),
+            answer("a", "correct", "correct", 1),
+            answer("b", "correct", "abstained"),
+            answer("b", "abstained", "partial", 1),
+        ]
+    }
+    rows = [line for line in review_direction(report) if line.startswith(("| a ", "| b "))]
+    assert rows == ["| a | 2 | 1 | 0 | 1 | 0 | +0.5 |", "| b | 2 | 1 | 1 | 0 | 1 | -0.5 |"]

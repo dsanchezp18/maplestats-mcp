@@ -171,12 +171,17 @@ async def statcan_daily_get_release_calendar(
     "products" is the catalogue-number release history since 2012 only:
     that file has no future dates (use it for "when was catalogue
     62-013-X published"); "all" merges both. Scheduled rows have no URL
-    until the release is out. Dates are plans and can move. For
-    releases already out use statcan_daily_search_archive.
+    until the release is out. Dates are plans and can move. When nothing
+    scheduled matches (the 2026 provincial and territorial economic
+    accounts, a year ahead), not_scheduled gives the same release's past
+    dates, any release of it already scheduled, and an estimate from the
+    usual gap: report the estimate as an estimate, never as a date
+    StatCan announced. For releases already out use
+    statcan_daily_search_archive.
     Keywords: release calendar, release schedule, next release, upcoming
     releases, when is the next, Labour Force Survey release date, CPI
-    release date, The Daily, indicators calendar,
-    Statistics Canada.
+    release date, The Daily, indicators calendar, last year's release
+    date, PTEA, supply and use tables, Statistics Canada.
     Mots-clés : calendrier de diffusion, prochaine diffusion, prochaines
     parutions, date de diffusion, quand sort, Enquête sur la population
     active, indice des prix à la consommation, Le Quotidien, indicateurs
@@ -213,7 +218,9 @@ async def statcan_daily_get_upcoming_releases(
     indicators (the whole year, e.g. "2026-2027 release dates") with the
     names of those indicators. For dates further than two weeks ahead
     use statcan_daily_get_release_calendar (major indicators, about six
-    months); for releases already out, statcan_daily_search_archive.
+    months); for releases already out, statcan_daily_search_archive. When
+    the query matches nothing in the window, not_scheduled gives the
+    release's past dates and an estimate, labelled as one.
     Keywords: upcoming releases, this week, next week, release schedule,
     two-week schedule, what is coming out, lockup, major economic releases,
     annual release dates, release calendar PDF, Statistics Canada, The Daily.

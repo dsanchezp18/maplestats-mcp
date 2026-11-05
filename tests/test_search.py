@@ -73,9 +73,10 @@ async def test_search_results_carry_what_a_call_needs():
         assert set(after) <= set(RESULT_FIELDS)
         assert "outputSchema" not in after
         assert after["name"] == before["name"]
-        assert after["title"] == before["title"]
         assert after["inputSchema"] == before["inputSchema"]
-        assert after["annotations"] == before["annotations"]
+        # Re-read on every later turn, so the title and a read-only tool's
+        # annotations are left out (2026-11-04, cost).
+        assert "title" not in after and "annotations" not in after
         assert "Use for:" in after["description"]
         assert "Keywords" not in after["description"]
         assert "Mots-clés" not in after["description"]
@@ -146,3 +147,27 @@ async def test_search_tools_answers_with_compact_results(query: str):
     assert len(json.dumps(found)) < 0.5 * len(json.dumps(full))
     if query == "full table download csv":
         assert "wds_get_full_table_download" in [tool["name"] for tool in found]
+
+
+def test_search_results_keep_annotations_of_a_tool_that_writes():
+    # A tool that writes (reproduce_workbook with local exports on) keeps its hints:
+    # the one case where they tell the caller something.
+    from fastmcp.tools import Tool
+    from mcp.types import ToolAnnotations
+
+    from maplestats_mcp.shared.search import serialize_tools_compact
+
+    def save_file(path: str) -> str:
+        """Save a file."""
+        return path
+
+    writes = Tool.from_function(
+        save_file,
+        annotations=ToolAnnotations(title="Save", read_only_hint=False, destructive_hint=True),
+    )
+    reads = Tool.from_function(
+        save_file, name="read", annotations=ToolAnnotations(read_only_hint=True)
+    )
+    kept, dropped = serialize_tools_compact([writes, reads])
+    assert kept["annotations"] == {"readOnlyHint": False, "destructiveHint": True}
+    assert "annotations" not in dropped

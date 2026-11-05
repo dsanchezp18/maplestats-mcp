@@ -2360,5 +2360,17 @@
   },
   "statcan2/X-20#2": {
     "referral": true
+  },
+  "maplestats-release/R-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Gave the 2025 accounts' date (2026-11-05), labelled as reference period 2025, and did not say that no date is set for the 2026 accounts. Same rule as a labelled other period elsewhere. The grader passed it on 'is not in the key-indicators calendar'."
+  },
+  "maplestats-release/R-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Run error: the MCP server did not start ('MCP tools were not available'); the answer used no tool."
+  },
+  "maplestats-cost/C-14#0": {
+    "outcome": "correct",
+    "reason": "Review: $54,771.6 million (balance-of-payments basis, v87008956) is August 2026 as revised in StatCan's 2026-11-04 release, checked against WDS on 2026-11-05; the key ($54,346.5 million) was built before that revision."
   }
 }

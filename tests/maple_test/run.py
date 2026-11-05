@@ -105,6 +105,11 @@ the answer short.""",
 }
 
 
+def _venv_python(venv: Path) -> Path:
+    """A virtual environment's Python: bin/python, or Scripts/python.exe on Windows."""
+    return venv / "Scripts" / "python.exe" if sys.platform == "win32" else venv / "bin" / "python"
+
+
 def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, Any]:
     if arm in ("openmcp", "candata_mcp", "canada_data_agent", "opencanada") and alts is None:
         raise SystemExit(f"--alts (or MAPLE_TEST_ALTS) is needed for the {arm} arm")
@@ -121,7 +126,7 @@ def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, A
         home = alts / "openmcp"
         return {
             "openmcp": {
-                "command": str(home / "venv" / "bin" / "python"),
+                "command": str(_venv_python(home / "venv")),
                 "args": [str(home / "mcp_server.py")],
             }
         }
@@ -150,7 +155,7 @@ def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, A
         names = OPENCANADA_SERVERS
         return {
             n.replace("-", "_"): {
-                "command": str(home / n / ".venv" / "bin" / "python"),
+                "command": str(_venv_python(home / n / ".venv")),
                 "args": [str(home / n / "main.py")],
             }
             for n in names
@@ -225,15 +230,25 @@ def ask(
     if config is not None:
         names = list(json.loads(config.read_text())["mcpServers"])
         command += ["--mcp-config", str(config), "--allowedTools", *[f"mcp__{n}" for n in names]]
-    with tempfile.TemporaryDirectory() as empty:
+    # ignore_cleanup_errors: on Windows the folder can still be held by a child process (the
+    # MCP server) when the answer is in; the error ended a run after 16 answers (2026-11-05).
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as empty:
         try:
             proc = subprocess.run(
                 command,
                 input=question["question"],
                 capture_output=True,
-                text=True,
+                # The CLI writes UTF-8. Plain text=True decodes with the Windows code page:
+                # "2–13 November" came back as "2â€“13", and a byte it cannot decode left
+                # stdout None and ended a run after 10 answers (2026-11-05).
+                encoding="utf-8",
+                errors="replace",
                 cwd=empty,
-                env={**os.environ, "ENABLE_TOOL_SEARCH": "false"},
+                # MCP_TIMEOUT (ms): how long the CLI waits for a server to start. OpenMCP
+                # took 85 s to answer initialize on Windows (2026-11-05), and MapleStats
+                # sometimes missed the default under load; both then answered with no
+                # tools. Three minutes, for every arm alike.
+                env={**os.environ, "ENABLE_TOOL_SEARCH": "false", "MCP_TIMEOUT": "180000"},
                 timeout=TIMEOUT_S,
                 check=False,
             )
@@ -302,7 +317,7 @@ def run(
     if alts is None and os.environ.get("MAPLE_TEST_ALTS"):
         alts = Path(os.environ["MAPLE_TEST_ALTS"])
     config_servers = servers(arm, server_dir, alts)
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         config = None
         if config_servers:
             config = Path(tmp) / "mcp.json"

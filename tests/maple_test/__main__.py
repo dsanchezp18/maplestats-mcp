@@ -59,9 +59,10 @@ def main() -> int:
     report = grade.grade_runs(
         args.runs or sorted(suite.runs.glob("*.jsonl")), args.version, args.verify
     )
-    suite.results.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    # newline="\n": on Windows, text mode would write CRLF into LF files.
+    suite.results.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8", newline="\n")
     markdown = suite.results.with_suffix(".md")
-    markdown.write_text(grade.render(report, args.version), encoding="utf-8")
+    markdown.write_text(grade.render(report, args.version), encoding="utf-8", newline="\n")
     print(f"wrote {markdown.relative_to(HERE.parents[1])}")
     return 0
 

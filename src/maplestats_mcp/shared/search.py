@@ -287,7 +287,13 @@ def top_indices(scores: Sequence[float], k: int) -> list[int]:
 # Mots-clés lines, which exist for the BM25 index above, not for the caller.
 # The index still reads the full docstring (`searchable_text`), so dropping
 # them from the answer leaves the ranking as it was.
-RESULT_FIELDS = ("name", "title", "description", "inputSchema", "annotations")
+#
+# 2026-11-04, for cost: each result is re-read on every later turn of an
+# answer, and the title (the name in words) and the annotations of a
+# read-only tool told the caller nothing it acts on, about 12% of a result.
+# Annotations stay on a tool that is not plain read-only (reproduce_workbook
+# writes a file), the one case where they say something.
+RESULT_FIELDS = ("name", "description", "inputSchema", "annotations")
 
 # A Keywords or Mots-clés label starts the ranking-only tail of a docstring.
 # Most sit on their own line; a few run on from the last sentence.
@@ -305,14 +311,18 @@ def caller_description(description: str | None) -> str | None:
 def serialize_tools_compact(tools: Sequence[Tool]) -> list[dict[str, Any]]:
     """Search results in list_tools format, less what only ranking or validation reads.
 
-    Each result keeps the name, title, input schema and annotations, and the
-    description up to its Keywords line. The output schema is left out: the
-    tool's own definition keeps it, so real results are still checked against it.
+    Each result keeps the name, the input schema and the description up to its
+    Keywords line, and the annotations only of a tool that is not plain read-only.
+    The output schema is left out: the tool's own definition keeps it, so real
+    results are still checked against it.
     """
     results = []
     for full in serialize_tools_for_output_json(tools):
         result = {key: full[key] for key in RESULT_FIELDS if key in full}
         if "description" in result:
             result["description"] = caller_description(result["description"])
+        hints = {k: v for k, v in (result.pop("annotations", None) or {}).items() if k != "title"}
+        if hints.get("readOnlyHint") is not True or hints.get("destructiveHint"):
+            result["annotations"] = hints
         results.append(result)
     return results

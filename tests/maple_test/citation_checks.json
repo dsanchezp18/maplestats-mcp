@@ -209,10 +209,22 @@
  "table:36100222": {
   "exists": true
  },
+ "table:36100400": {
+  "exists": true
+ },
+ "table:36100402": {
+  "exists": true
+ },
  "table:36100431": {
   "exists": true
  },
  "table:36100434": {
+  "exists": true
+ },
+ "table:36100658": {
+  "exists": true
+ },
+ "table:36100711": {
   "exists": true
  },
  "table:38100090": {
@@ -8132,6 +8144,7 @@
  "vector:1": {
   "exists": true,
   "product_id": 17100009,
+  "scale": 1,
   "values": [
    12188000.0,
    12241000.0,
@@ -8461,6 +8474,7 @@
  "vector:1001696792": {
   "exists": true,
   "product_id": 11100065,
+  "scale": 1000000,
   "values": [
    615496.0,
    626452.0,
@@ -8613,6 +8627,7 @@
  "vector:1001696813": {
   "exists": true,
   "product_id": 11100065,
+  "scale": 1,
   "values": [
    12.19,
    12.68,
@@ -8765,6 +8780,7 @@
  "vector:1001696841": {
   "exists": true,
   "product_id": 11100065,
+  "scale": 1,
   "values": [
    12.35,
    12.83,
@@ -8917,6 +8933,7 @@
  "vector:101884905": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1000,
   "values": [
    28.3,
    28.3,
@@ -9231,6 +9248,7 @@
  "vector:107654726": {
   "exists": true,
   "product_id": 11100237,
+  "scale": 1,
   "values": [
    72400.0,
    74000.0,
@@ -9286,6 +9304,7 @@
  "vector:107654786": {
   "exists": true,
   "product_id": 11100237,
+  "scale": 1,
   "values": [
    76300.0,
    77800.0,
@@ -9341,6 +9360,7 @@
  "vector:107654846": {
   "exists": true,
   "product_id": 11100237,
+  "scale": 1,
   "values": [
    66300.0,
    68600.0,
@@ -9396,6 +9416,7 @@
  "vector:107660857": {
   "exists": true,
   "product_id": 11100239,
+  "scale": 1,
   "values": [
    48300.0,
    46900.0,
@@ -9451,6 +9472,7 @@
  "vector:107660858": {
   "exists": true,
   "product_id": 11100239,
+  "scale": 1,
   "values": [
    37500.0,
    37800.0,
@@ -9506,6 +9528,7 @@
  "vector:107680657": {
   "exists": true,
   "product_id": 11100239,
+  "scale": 1,
   "values": [
    52500.0,
    50500.0,
@@ -9561,6 +9584,7 @@
  "vector:107680658": {
   "exists": true,
   "product_id": 11100239,
+  "scale": 1,
   "values": [
    40200.0,
    40200.0,
@@ -9616,6 +9640,7 @@
  "vector:107693257": {
   "exists": true,
   "product_id": 11100239,
+  "scale": 1,
   "values": [
    58200.0,
    52500.0,
@@ -9671,6 +9696,7 @@
  "vector:107695057": {
   "exists": true,
   "product_id": 11100239,
+  "scale": 1,
   "values": [
    52900.0,
    51800.0,
@@ -9726,6 +9752,7 @@
  "vector:108785713": {
   "exists": true,
   "product_id": 18100256,
+  "scale": 1,
   "values": [
    1.7,
    1.4,
@@ -10132,6 +10159,7 @@
  "vector:108785714": {
   "exists": true,
   "product_id": 18100256,
+  "scale": 1,
   "values": [
    1.8,
    1.8,
@@ -10538,6 +10566,7 @@
  "vector:108785715": {
   "exists": true,
   "product_id": 18100256,
+  "scale": 1,
   "values": [
    1.9,
    1.9,
@@ -10944,6 +10973,7 @@
  "vector:111666248": {
   "exists": true,
   "product_id": 33100036,
+  "scale": 1,
   "values": [
    1.3927,
    1.3941,
@@ -11221,6 +11251,7 @@
  "vector:12": {
   "exists": true,
   "product_id": 17100009,
+  "scale": 1,
   "values": [
    4615000.0,
    4665000.0,
@@ -11528,6 +11559,7 @@
  "vector:1206133320": {
   "exists": true,
   "product_id": 11100135,
+  "scale": 1,
   "values": [
    12.3,
    10.8,
@@ -11543,6 +11575,7 @@
  "vector:1212389363": {
   "exists": true,
   "product_id": 14100371,
+  "scale": 1,
   "values": [
    14803985.0,
    14955300.0,
@@ -11680,6 +11713,7 @@
  "vector:1212389364": {
   "exists": true,
   "product_id": 14100371,
+  "scale": 1,
   "values": [
    482925.0,
    444495.0,
@@ -11817,6 +11851,7 @@
  "vector:1212389365": {
   "exists": true,
   "product_id": 14100371,
+  "scale": 1,
   "values": [
    3.2,
    2.9,
@@ -11954,6 +11989,7 @@
  "vector:122530": {
   "exists": true,
   "product_id": 10100122,
+  "scale": 1,
   "values": [
    4.41,
    4.9,
@@ -12360,6 +12396,7 @@
  "vector:122540": {
   "exists": true,
   "product_id": 10100122,
+  "scale": 1,
   "values": [
    6.45,
    6.18,
@@ -12766,6 +12803,7 @@
  "vector:122550": {
   "exists": true,
   "product_id": 10100122,
+  "scale": 1,
   "values": [
    4.41,
    4.99,
@@ -13172,6 +13210,7 @@
  "vector:1412450234": {
   "exists": true,
   "product_id": 11100090,
+  "scale": 1,
   "values": [
    20.6,
    16.9,
@@ -13187,6 +13226,7 @@
  "vector:1412450354": {
   "exists": true,
   "product_id": 11100090,
+  "scale": 1,
   "values": [
    11.4,
    10.3,
@@ -13202,6 +13242,7 @@
  "vector:1446283287": {
   "exists": true,
   "product_id": 14100406,
+  "scale": 1,
   "values": [
    438605.0,
    406980.0,
@@ -13339,6 +13380,7 @@
  "vector:1446283289": {
   "exists": true,
   "product_id": 14100406,
+  "scale": 1,
   "values": [
    2.8,
    2.6,
@@ -13476,6 +13518,7 @@
  "vector:1446859481": {
   "exists": true,
   "product_id": 20100056,
+  "scale": 1000,
   "values": [
    41377009.0,
    39819917.0,
@@ -13598,6 +13641,7 @@
  "vector:1446859483": {
   "exists": true,
   "product_id": 20100056,
+  "scale": 1000,
   "values": [
    50417235.0,
    49863452.0,
@@ -13720,6 +13764,7 @@
  "vector:1481212145": {
   "exists": true,
   "product_id": 14100432,
+  "scale": 1,
   "values": [
    438605.0,
    406980.0,
@@ -13857,6 +13902,7 @@
  "vector:1481212146": {
   "exists": true,
   "product_id": 14100432,
+  "scale": 1,
   "values": [
    15108360.0,
    15155925.0,
@@ -13994,6 +14040,7 @@
  "vector:1481212147": {
   "exists": true,
   "product_id": 14100432,
+  "scale": 1,
   "values": [
    2.8,
    2.6,
@@ -14131,6 +14178,7 @@
  "vector:15": {
   "exists": true,
   "product_id": 17100009,
+  "scale": 1,
   "values": [
    943000.0,
    950000.0,
@@ -14438,6 +14486,7 @@
  "vector:1529660402": {
   "exists": true,
   "product_id": 11100091,
+  "scale": 1,
   "values": [
    53300.0,
    54000.0,
@@ -14457,6 +14506,7 @@
  "vector:1529672276": {
   "exists": true,
   "product_id": 11100091,
+  "scale": 1,
   "values": [
    64000.0,
    63600.0,
@@ -14476,6 +14526,7 @@
  "vector:1529672282": {
   "exists": true,
   "product_id": 11100091,
+  "scale": 1,
   "values": [
    68900.0,
    68600.0,
@@ -14495,6 +14546,7 @@
  "vector:1529672284": {
   "exists": true,
   "product_id": 11100091,
+  "scale": 1,
   "values": [
    50300.0,
    50500.0,
@@ -14514,6 +14566,7 @@
  "vector:1529672288": {
   "exists": true,
   "product_id": 11100091,
+  "scale": 1,
   "values": [
    57000.0,
    56900.0,
@@ -14533,11 +14586,13 @@
  "vector:1544290282": {
   "exists": true,
   "product_id": 14100223,
+  "scale": 1,
   "values": []
  },
  "vector:1558664": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": [
    657.99,
    655.73,
@@ -14852,6 +14907,7 @@
  "vector:1560356": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": [
    738.72,
    727.26,
@@ -15166,6 +15222,7 @@
  "vector:1560357": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": [
    927.23,
    929.13,
@@ -15480,6 +15537,7 @@
  "vector:1560358": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": [
    745.92,
    734.38,
@@ -15794,6 +15852,7 @@
  "vector:1560359": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": [
    676.86,
    656.42,
@@ -16107,6 +16166,7 @@
  "vector:1566910279": {
   "exists": true,
   "product_id": 12100163,
+  "scale": 1000000,
   "values": [
    14172.0,
    14971.8,
@@ -16513,6 +16573,7 @@
  "vector:1566910429": {
   "exists": true,
   "product_id": 12100163,
+  "scale": 1000000,
   "values": [
    13880.3,
    14003.0,
@@ -16919,6 +16980,7 @@
  "vector:1566910885": {
   "exists": true,
   "product_id": 12100163,
+  "scale": 1000000,
   "values": [
    15987.9,
    16952.7,
@@ -17325,6 +17387,7 @@
  "vector:1566911035": {
   "exists": true,
   "product_id": 12100163,
+  "scale": 1000000,
   "values": [
    15671.4,
    15757.4,
@@ -17731,6 +17794,7 @@
  "vector:1566927590": {
   "exists": true,
   "product_id": 17100121,
+  "scale": 1,
   "values": [
    1326000.0,
    1408873.0,
@@ -17758,6 +17822,7 @@
  "vector:1566927593": {
   "exists": true,
   "product_id": 17100121,
+  "scale": 1,
   "values": [
    1490.0,
    1241.0,
@@ -17785,6 +17850,7 @@
  "vector:1566927598": {
   "exists": true,
   "product_id": 17100121,
+  "scale": 1,
   "values": [
    359363.0,
    420005.0,
@@ -17812,6 +17878,7 @@
  "vector:1566927599": {
   "exists": true,
   "product_id": 17100121,
+  "scale": 1,
   "values": [
    162717.0,
    161045.0,
@@ -17839,16 +17906,19 @@
  "vector:1587237": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": []
  },
  "vector:1588773": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": []
  },
  "vector:1589911152": {
   "exists": true,
   "product_id": 17100148,
+  "scale": 1,
   "values": [
    963062.0,
    985447.0,
@@ -17880,16 +17950,19 @@
  "vector:1591845": {
   "exists": true,
   "product_id": 14100205,
+  "scale": 1,
   "values": []
  },
  "vector:1593381": {
   "exists": true,
   "product_id": 14100205,
+  "scale": 1,
   "values": []
  },
  "vector:1594571783": {
   "exists": true,
   "product_id": 36100104,
+  "scale": 1,
   "values": [
    2.5,
    2.4,
@@ -18157,16 +18230,19 @@
  "vector:1599034": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": []
  },
  "vector:1600570": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": []
  },
  "vector:1605659": {
   "exists": true,
   "product_id": 14100203,
+  "scale": 1,
   "values": [
    735.25,
    724.3,
@@ -18481,6 +18557,7 @@
  "vector:1675115467": {
   "exists": true,
   "product_id": 34100292,
+  "scale": 1000,
   "values": [
    6404895.0,
    5986070.0,
@@ -18591,6 +18668,7 @@
  "vector:1675119645": {
   "exists": true,
   "product_id": 34100292,
+  "scale": 1000,
   "values": [
    8332584.0,
    8352147.0,
@@ -18701,6 +18779,7 @@
  "vector:1742413": {
   "exists": true,
   "product_id": 14100204,
+  "scale": 1,
   "values": [
    728.55,
    790.82,
@@ -18732,6 +18811,7 @@
  "vector:1742414": {
   "exists": true,
   "product_id": 14100204,
+  "scale": 1,
   "values": [
    913.39,
    985.61,
@@ -18763,6 +18843,7 @@
  "vector:1742415": {
   "exists": true,
   "product_id": 14100204,
+  "scale": 1,
   "values": [
    758.38,
    854.9,
@@ -18794,6 +18875,7 @@
  "vector:1742416": {
   "exists": true,
   "product_id": 14100204,
+  "scale": 1,
   "values": [
    665.29,
    704.62,
@@ -18825,16 +18907,19 @@
  "vector:1744055": {
   "exists": true,
   "product_id": 14100204,
+  "scale": 1,
   "values": []
  },
  "vector:1745591": {
   "exists": true,
   "product_id": 14100204,
+  "scale": 1,
   "values": []
  },
  "vector:1792630893": {
   "exists": true,
   "product_id": 11100135,
+  "scale": 1,
   "values": [
    5.2,
    7.0,
@@ -18846,6 +18931,7 @@
  "vector:1792632015": {
   "exists": true,
   "product_id": 11100135,
+  "scale": 1,
   "values": [
    4.6,
    8.1,
@@ -18857,6 +18943,7 @@
  "vector:1793292452": {
   "exists": true,
   "product_id": 11100090,
+  "scale": 1,
   "values": [
    9.2,
    11.3,
@@ -18868,6 +18955,7 @@
  "vector:1793292497": {
   "exists": true,
   "product_id": 11100090,
+  "scale": 1,
   "values": [
    4.7,
    6.1,
@@ -18879,6 +18967,7 @@
  "vector:1797937": {
   "exists": true,
   "product_id": 14100204,
+  "scale": 1,
   "values": [
    747.74,
    838.26,
@@ -18910,6 +18999,7 @@
  "vector:2": {
   "exists": true,
   "product_id": 17100009,
+  "scale": 1,
   "values": [
    362000.0,
    365000.0,
@@ -19217,6 +19307,7 @@
  "vector:2062811": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1000,
   "values": [
    12780.0,
    12789.6,
@@ -19623,6 +19714,7 @@
  "vector:2062815": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    11.7,
    11.6,
@@ -20029,6 +20121,7 @@
  "vector:2062842": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    18.2,
    17.6,
@@ -20435,6 +20528,7 @@
  "vector:2063004": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    19.6,
    19.9,
@@ -20841,6 +20935,7 @@
  "vector:2063193": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    18.7,
    16.3,
@@ -21247,6 +21342,7 @@
  "vector:2063571": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    12.4,
    13.6,
@@ -21653,6 +21749,7 @@
  "vector:2063762": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    54.0,
    54.0,
@@ -22059,6 +22156,7 @@
  "vector:2063949": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    11.3,
    11.2,
@@ -22465,6 +22563,7 @@
  "vector:2063951": {
   "exists": true,
   "product_id": 14100287,
+  "scale": 1,
   "values": [
    59.2,
    59.3,
@@ -22871,6 +22970,7 @@
  "vector:2132579": {
   "exists": true,
   "product_id": 14100063,
+  "scale": 1,
   "values": [
    15.63,
    15.64,
@@ -23234,6 +23334,7 @@
  "vector:2292826": {
   "exists": true,
   "product_id": 14100064,
+  "scale": 1,
   "values": [
    18.14,
    18.87,
@@ -23269,6 +23370,7 @@
  "vector:2292827": {
   "exists": true,
   "product_id": 14100064,
+  "scale": 1,
   "values": [
    682.58,
    708.77,
@@ -23304,6 +23406,7 @@
  "vector:3": {
   "exists": true,
   "product_id": 17100009,
+  "scale": 1,
   "values": [
    1168000.0,
    1179000.0,
@@ -23611,6 +23714,7 @@
  "vector:37757": {
   "exists": true,
   "product_id": 10100148,
+  "scale": 1000000,
   "values": [
    1065.0,
    818.0,
@@ -23796,6 +23900,7 @@
  "vector:39053": {
   "exists": true,
   "product_id": 10100139,
+  "scale": 1,
   "values": [
    2.77,
    2.78,
@@ -24074,6 +24179,7 @@
  "vector:39055": {
   "exists": true,
   "product_id": 10100139,
+  "scale": 1,
   "values": [
    3.22,
    3.23,
@@ -24352,6 +24458,7 @@
  "vector:39078": {
   "exists": true,
   "product_id": 10100139,
+  "scale": 1,
   "values": [
    2.75,
    2.75,
@@ -24630,6 +24737,7 @@
  "vector:39079": {
   "exists": true,
   "product_id": 10100139,
+  "scale": 1,
   "values": [
    2.5,
    2.5,
@@ -24922,6 +25030,7 @@
  "vector:41690914": {
   "exists": true,
   "product_id": 18100006,
+  "scale": 1,
   "values": [
    85.4,
    85.5,
@@ -25328,6 +25437,7 @@
  "vector:41690973": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    85.4,
    85.6,
@@ -25734,6 +25844,7 @@
  "vector:41690974": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    84.9,
    84.9,
@@ -26140,6 +26251,7 @@
  "vector:41690975": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    85.6,
    85.5,
@@ -26546,6 +26658,7 @@
  "vector:41691136": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    79.5,
    78.4,
@@ -26952,6 +27065,7 @@
  "vector:41691230": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    82.8,
    83.2,
@@ -27358,6 +27472,7 @@
  "vector:41691244": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    86.7,
    87.1,
@@ -27764,6 +27879,7 @@
  "vector:41691379": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    86.4,
    86.7,
@@ -28170,6 +28286,7 @@
  "vector:41691513": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    84.3,
    84.4,
@@ -28576,6 +28693,7 @@
  "vector:41691648": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    85.5,
    85.5,
@@ -28982,6 +29100,7 @@
  "vector:41691783": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    87.6,
    87.6,
@@ -29388,6 +29507,7 @@
  "vector:41691919": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    84.6,
    84.8,
@@ -29794,6 +29914,7 @@
  "vector:41692055": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    83.3,
    83.5,
@@ -30200,6 +30321,7 @@
  "vector:41692191": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    83.4,
    83.4,
@@ -30606,6 +30728,7 @@
  "vector:41692327": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    81.3,
    81.7,
@@ -31012,6 +31135,7 @@
  "vector:41692462": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    87.5,
    87.8,
@@ -31418,6 +31542,7 @@
  "vector:41692598": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    86.3,
    87.3,
@@ -31824,6 +31949,7 @@
  "vector:41693245": {
   "exists": true,
   "product_id": 18100004,
+  "scale": 1,
   "values": [
    91.4,
    91.5,
@@ -32175,6 +32301,7 @@
  "vector:41693271": {
   "exists": true,
   "product_id": 18100005,
+  "scale": 1,
   "values": [
    6.0,
    6.1,
@@ -32293,6 +32420,7 @@
  "vector:466668": {
   "exists": true,
   "product_id": 17100005,
+  "scale": 1,
   "values": [
    21962032.0,
    22218463.0,
@@ -32355,6 +32483,7 @@
  "vector:52299896": {
   "exists": true,
   "product_id": 34100156,
+  "scale": 1000,
   "values": [
    121.952,
    145.323,
@@ -32761,6 +32890,7 @@
  "vector:52300157": {
   "exists": true,
   "product_id": 34100158,
+  "scale": 1000,
   "values": [
    148.908,
    173.655,
@@ -33167,6 +33297,7 @@
  "vector:52673496": {
   "exists": true,
   "product_id": 10100132,
+  "scale": 1,
   "values": [
    250.8,
    246.4,
@@ -33573,6 +33704,7 @@
  "vector:52673503": {
   "exists": true,
   "product_id": 10100143,
+  "scale": 1,
   "values": [
    436.0,
    437.2,
@@ -33979,6 +34111,7 @@
  "vector:54026327": {
   "exists": true,
   "product_id": 14100220,
+  "scale": 1,
   "values": [
    656.88,
    653.23,
@@ -34293,6 +34426,7 @@
  "vector:54027306": {
   "exists": true,
   "product_id": 14100222,
+  "scale": 1,
   "values": [
    656.88,
    653.23,
@@ -34607,6 +34741,7 @@
  "vector:62305752": {
   "exists": true,
   "product_id": 36100104,
+  "scale": 1000000,
   "values": [
    363923.0,
    373138.0,
@@ -34875,6 +35010,7 @@
  "vector:65201210": {
   "exists": true,
   "product_id": 36100434,
+  "scale": 1000000,
   "values": [
    1200427.0,
    1207984.0,
@@ -35237,6 +35373,7 @@
  "vector:729949": {
   "exists": true,
   "product_id": 34100143,
+  "scale": 1,
   "values": [
    12965.0,
    13653.0,
@@ -35643,6 +35780,7 @@
  "vector:79311153": {
   "exists": true,
   "product_id": 14100223,
+  "scale": 1,
   "values": [
    656.88,
    653.23,
@@ -35957,6 +36095,7 @@
  "vector:79311410": {
   "exists": true,
   "product_id": 14100223,
+  "scale": 1,
   "values": [
    720.33,
    717.06,
@@ -36271,6 +36410,7 @@
  "vector:800025": {
   "exists": true,
   "product_id": 16100047,
+  "scale": 1000,
   "values": [
    25841563.0,
    26983201.0,
@@ -36677,6 +36817,7 @@
  "vector:800450": {
   "exists": true,
   "product_id": 16100047,
+  "scale": 1000,
   "values": [
    24887270.0,
    25026215.0,
@@ -37083,6 +37224,7 @@
  "vector:803361": {
   "exists": true,
   "product_id": 16100048,
+  "scale": 1000,
   "values": [
    106332.0,
    114704.0,
@@ -37489,6 +37631,7 @@
  "vector:80691310": {
   "exists": true,
   "product_id": 10100145,
+  "scale": 1,
   "values": [
    2.0,
    2.0,
@@ -37895,6 +38038,7 @@
  "vector:80691312": {
   "exists": true,
   "product_id": 10100145,
+  "scale": 1,
   "values": [
    9.13,
    9.13,
@@ -38131,6 +38275,7 @@
  "vector:87008869": {
   "exists": true,
   "product_id": 12100011,
+  "scale": 1000000,
   "values": [
    19495.0,
    19273.7,
@@ -38493,6 +38638,7 @@
  "vector:87008898": {
   "exists": true,
   "product_id": 12100011,
+  "scale": 1000000,
   "values": [
    19863.7,
    19812.1,
@@ -38855,6 +39001,7 @@
  "vector:87008956": {
   "exists": true,
   "product_id": 12100011,
+  "scale": 1000000,
   "values": [
    19908.9,
    19759.3,
@@ -39217,6 +39364,7 @@
  "vector:87008984": {
   "exists": true,
   "product_id": 12100011,
+  "scale": 1000000,
   "values": [
    3097.4,
    2941.7,
@@ -39579,6 +39727,7 @@
  "vector:96411931": {
   "exists": true,
   "product_id": 11100190,
+  "scale": 1,
   "values": [
    74000.0,
    74500.0,
@@ -39634,6 +39783,7 @@
  "vector:96414571": {
   "exists": true,
   "product_id": 11100190,
+  "scale": 1,
   "values": [
    76300.0,
    77800.0,
@@ -39689,6 +39839,7 @@
  "vector:96414572": {
   "exists": true,
   "product_id": 11100190,
+  "scale": 1,
   "values": [
    97200.0,
    98700.0,
@@ -39744,6 +39895,7 @@
  "vector:96414651": {
   "exists": true,
   "product_id": 11100190,
+  "scale": 1,
   "values": [
    66300.0,
    68600.0,
@@ -39799,6 +39951,7 @@
  "vector:96515838": {
   "exists": true,
   "product_id": 11100135,
+  "scale": 1,
   "values": [
    14.3,
    14.3,
@@ -39854,6 +40007,7 @@
  "vector:96520326": {
   "exists": true,
   "product_id": 11100135,
+  "scale": 1,
   "values": [
    12.6,
    11.7,
@@ -39909,6 +40063,7 @@
  "vector:96520329": {
   "exists": true,
   "product_id": 11100135,
+  "scale": 1,
   "values": [
    11.6,
    10.0,

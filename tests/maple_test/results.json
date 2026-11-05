@@ -41,6 +41,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -61,6 +62,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -116,6 +118,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815,
@@ -142,6 +145,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -187,6 +191,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1
@@ -207,6 +212,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -255,6 +261,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             12,
@@ -277,6 +284,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -324,6 +332,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1566927590
@@ -344,6 +353,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -388,6 +398,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41693271
@@ -408,6 +419,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -462,6 +474,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             108785714,
@@ -490,6 +503,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -536,6 +550,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -556,6 +571,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -604,6 +620,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             87008984
@@ -624,6 +641,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -671,6 +689,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             79311153,
@@ -692,6 +711,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -735,6 +755,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -753,6 +774,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -797,6 +819,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -815,6 +838,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -852,6 +876,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -866,6 +891,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -909,6 +935,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -927,6 +954,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -974,6 +1002,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "correct",
         "citations": {
           "vectors": [
             2062815
@@ -995,6 +1024,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1038,6 +1068,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -1058,6 +1089,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1111,6 +1143,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2063004,
@@ -1135,6 +1168,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1180,6 +1214,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1
@@ -1200,6 +1235,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1245,6 +1281,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             12,
@@ -1267,6 +1304,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1311,6 +1349,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1566927590
@@ -1331,6 +1370,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1373,6 +1413,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41690973
@@ -1392,6 +1433,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1431,6 +1473,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -1451,6 +1494,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1494,6 +1538,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -1514,6 +1559,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1561,6 +1607,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             87008984
@@ -1581,6 +1628,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1624,6 +1672,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             54027306
@@ -1645,6 +1694,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1687,6 +1737,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -1705,6 +1756,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1753,6 +1805,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             39055
@@ -1773,6 +1826,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1811,6 +1865,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": true,
+        "auto_outcome": "correct",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -1827,6 +1882,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -1869,6 +1925,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -1887,6 +1944,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -1935,6 +1993,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [
             2062815
@@ -1956,6 +2015,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -1995,6 +2055,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -2015,6 +2076,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2055,6 +2117,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815,
@@ -2077,6 +2140,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2116,6 +2180,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1
@@ -2136,6 +2201,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2182,6 +2248,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             12,
@@ -2204,6 +2271,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2248,6 +2316,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1566927590
@@ -2268,6 +2337,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2304,6 +2374,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41690973
@@ -2323,6 +2394,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2358,6 +2430,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41690973
@@ -2386,6 +2459,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2428,6 +2502,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -2448,6 +2523,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2490,6 +2566,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             87008984
@@ -2510,6 +2587,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2549,6 +2627,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             54027306
@@ -2569,6 +2648,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2607,6 +2687,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -2625,6 +2706,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2663,6 +2745,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -2681,6 +2764,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2714,6 +2798,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -2730,6 +2815,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -2768,6 +2854,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -2786,6 +2873,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -2828,6 +2916,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [
             2062815
@@ -2848,6 +2937,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2892,6 +2982,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -2912,6 +3003,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -2968,6 +3060,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -2988,6 +3081,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3030,6 +3124,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1
@@ -3050,6 +3145,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3090,6 +3186,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -3106,6 +3203,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3149,6 +3247,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -3165,6 +3264,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3203,6 +3303,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41690973
@@ -3227,6 +3328,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3268,6 +3370,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             108785713,
@@ -3296,6 +3399,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3343,6 +3447,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -3363,6 +3468,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3411,6 +3517,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             87008984
@@ -3431,6 +3538,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3475,6 +3583,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             54027306
@@ -3495,6 +3604,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3535,6 +3645,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -3553,6 +3664,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3593,6 +3705,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -3611,6 +3724,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3646,6 +3760,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -3662,6 +3777,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -3702,6 +3818,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -3720,6 +3837,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -3773,6 +3891,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "correct",
         "citations": {
           "vectors": [
             2062815
@@ -3794,6 +3913,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3845,6 +3965,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -3865,6 +3986,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -3918,6 +4040,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815,
@@ -3944,6 +4067,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4002,6 +4126,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1
@@ -4022,6 +4147,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4081,6 +4207,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             12,
@@ -4103,6 +4230,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4160,6 +4288,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1566927590
@@ -4180,6 +4309,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4233,6 +4363,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41693271
@@ -4253,6 +4384,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4309,6 +4441,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             108785714,
@@ -4331,6 +4464,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4384,6 +4518,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -4404,6 +4539,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4454,6 +4590,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [
             1566910279,
@@ -4480,6 +4617,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4534,6 +4672,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1558664,
@@ -4557,6 +4696,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4612,6 +4752,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             111666248
@@ -4636,6 +4777,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4691,6 +4833,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             39055
@@ -4711,6 +4854,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4762,6 +4906,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1594571783
@@ -4782,6 +4927,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -4836,6 +4982,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             111666248
@@ -4856,6 +5003,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -4911,6 +5059,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "correct",
         "citations": {
           "vectors": [
             2062815
@@ -4932,6 +5081,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -4963,6 +5113,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -4983,6 +5134,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5012,6 +5164,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5028,6 +5181,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -5057,6 +5211,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5074,6 +5229,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5103,6 +5259,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5119,6 +5276,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5148,6 +5306,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5165,6 +5324,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5194,6 +5354,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5210,6 +5371,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5241,6 +5403,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             108785713,
@@ -5263,6 +5426,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5290,6 +5454,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5304,6 +5469,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5333,6 +5499,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5347,6 +5514,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5376,6 +5544,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5393,6 +5562,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5424,6 +5594,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5440,6 +5611,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5471,6 +5643,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5487,6 +5660,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5516,6 +5690,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5532,6 +5707,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -5563,6 +5739,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -5579,6 +5756,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -5608,6 +5786,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [
             2062815
@@ -5626,6 +5805,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5673,6 +5853,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -5693,6 +5874,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5751,6 +5933,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2063004,
@@ -5777,6 +5960,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5825,6 +6009,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1
@@ -5845,6 +6030,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5895,6 +6081,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             12,
@@ -5917,6 +6104,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -5966,6 +6154,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1566927590
@@ -5986,6 +6175,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6033,6 +6223,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41693271
@@ -6053,6 +6244,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6102,6 +6294,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.5,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             108785714
@@ -6128,6 +6321,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6176,6 +6370,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -6196,6 +6391,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6244,6 +6440,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             87008984
@@ -6264,6 +6461,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6315,6 +6513,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             79311153,
@@ -6336,6 +6535,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6383,6 +6583,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -6401,6 +6602,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6448,6 +6650,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -6466,6 +6669,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6509,6 +6713,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -6525,6 +6730,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -6572,6 +6778,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -6590,6 +6797,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -6640,6 +6848,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [
             2062815
@@ -6661,6 +6870,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6798,6 +7008,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2062815
@@ -6818,6 +7029,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -6967,6 +7179,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             2063004,
@@ -6991,6 +7204,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -7128,6 +7342,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1
@@ -7148,6 +7363,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -7285,6 +7501,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "abstained",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -7301,6 +7518,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -7439,6 +7657,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             1566927590
@@ -7459,6 +7678,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -7598,6 +7818,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             41693271
@@ -7618,6 +7839,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -7754,6 +7976,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -7774,6 +7997,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -7911,6 +8135,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -7931,6 +8156,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -8070,6 +8296,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             87008984
@@ -8090,6 +8317,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -8225,6 +8453,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "hallucinated",
         "citations": {
           "vectors": [
             1558664
@@ -8245,6 +8474,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -8382,6 +8612,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -8400,6 +8631,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -8539,6 +8771,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -8557,6 +8790,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     },
@@ -8690,6 +8924,7 @@
         "table_coverage": 0.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [
             65201210
@@ -8710,6 +8945,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -8847,6 +9083,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 1.0,
         "overridden": false,
+        "auto_outcome": "",
         "citations": {
           "vectors": [],
           "vectors_invented": [],
@@ -8865,6 +9102,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": false,
       "group": "core"
     },
@@ -9003,6 +9241,7 @@
         "table_coverage": 1.0,
         "vector_coverage": 0.0,
         "overridden": true,
+        "auto_outcome": "correct",
         "citations": {
           "vectors": [
             2062815
@@ -9024,6 +9263,7 @@
         }
       },
       "false_claim": null,
+      "referral": false,
       "has_figures": true,
       "group": "core"
     }
@@ -9045,6 +9285,7 @@
       "correct_best": 14,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 0.93,
       "vector_coverage": 0.93,
       "ids_cited": 22,
@@ -9052,6 +9293,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 1.0,
+      "traceability_checked": 1.0,
       "release_mentions": 0.0,
       "tool_calls": 4.3,
       "seconds": 10.8,
@@ -9080,6 +9322,7 @@
       "correct_best": 15,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 0.87,
       "vector_coverage": 0.67,
       "ids_cited": 18,
@@ -9087,6 +9330,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 0.92,
+      "traceability_checked": 0.92,
       "release_mentions": 0.73,
       "tool_calls": 4.1,
       "seconds": 17.6,
@@ -9115,6 +9359,7 @@
       "correct_best": 14,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 0.87,
       "vector_coverage": 0.7,
       "ids_cited": 20,
@@ -9122,6 +9367,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 0.92,
+      "traceability_checked": 0.92,
       "release_mentions": 0.47,
       "tool_calls": 4.3,
       "seconds": 15.3,
@@ -9150,6 +9396,7 @@
       "correct_best": 14,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 0.87,
       "vector_coverage": 0.57,
       "ids_cited": 16,
@@ -9157,6 +9404,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 0.85,
+      "traceability_checked": 1.0,
       "release_mentions": 0.53,
       "tool_calls": 6.7,
       "seconds": 32.1,
@@ -9185,6 +9433,7 @@
       "correct_best": 12,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 0.87,
       "vector_coverage": 0.67,
       "ids_cited": 25,
@@ -9192,6 +9441,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 1.0,
+      "traceability_checked": 1.0,
       "release_mentions": 0.47,
       "tool_calls": 5.1,
       "seconds": 15.9,
@@ -9220,6 +9470,7 @@
       "correct_best": 2,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 0.93,
       "vector_coverage": 0.37,
       "ids_cited": 7,
@@ -9227,6 +9478,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 0.17,
+      "traceability_checked": 0.4,
       "release_mentions": 0.47,
       "tool_calls": 0,
       "seconds": 8.7,
@@ -9255,6 +9507,7 @@
       "correct_best": 15,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 1.0,
       "vector_coverage": 0.9,
       "ids_cited": 21,
@@ -9262,6 +9515,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 1.0,
+      "traceability_checked": 1.0,
       "release_mentions": 0.67,
       "tool_calls": 2.8,
       "seconds": 36.2,
@@ -9290,6 +9544,7 @@
       "correct_best": 12,
       "consistency": null,
       "false_claims": 0,
+      "referrals": 0,
       "table_coverage": 0.8,
       "vector_coverage": 0.73,
       "ids_cited": 17,
@@ -9297,6 +9552,7 @@
       "invented_ids": 0,
       "off_table_vectors": 0,
       "traceability": 0.92,
+      "traceability_checked": 1.0,
       "release_mentions": 0.13,
       "tool_calls": 2.9,
       "seconds": 11.5,

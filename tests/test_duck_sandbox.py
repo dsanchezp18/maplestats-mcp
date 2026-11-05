@@ -81,6 +81,10 @@ def test_clean_error_keeps_one_line_and_drops_paths():
         'Permission Error: Cannot access directory "<path>" - disabled'
     )
     assert "<path>" in duck_worker.clean_error(r"IO Error: C:\Users\someone\x.csv missing")
+    # Windows with no home folder in the worker's environment: one leading backslash.
+    assert duck_worker.clean_error(
+        r'Permission Error: Cannot access directory "\.duckdb\extensions\v2.0.0\windows_amd64"'
+    ) == ('Permission Error: Cannot access directory "<path>"')
     # Not paths: a date with slashes, a division.
     assert duck_worker.clean_error("Conversion Error: '2024/01/02' to DATE") == (
         "Conversion Error: '2024/01/02' to DATE"
