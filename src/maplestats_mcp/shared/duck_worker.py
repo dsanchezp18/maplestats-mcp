@@ -161,10 +161,12 @@ def _limit_resources(memory_mb: int, seconds: float) -> bool:
     about 1.2 GB of address space at connect (duckdb 2.0.0, Linux x86-64), most
     of it never touched. True when the address-space cap was set.
     """
-    try:
-        import resource
-    except ImportError:  # Windows
+    # A platform check pyright understands: with try/except ImportError alone
+    # it flagged every resource call on Windows, where the gate is run locally.
+    if sys.platform == "win32":
         return False
+    import resource
+
     try:
         used = resource.getrusage(resource.RUSAGE_SELF)
         cpu = int(used.ru_utime + used.ru_stime + seconds) + 2

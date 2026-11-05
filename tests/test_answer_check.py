@@ -537,6 +537,34 @@ async def test_bank_of_canada_series(monkeypatch):
         "USD/CAD today?", {"value": 1.30, "period": "2026-10-01", "boc_series": "FXUSDCAD"}
     )
     assert problems == [(0, "value"), (0, "newer_period")]
+    # Without a period the value is compared with the latest observation.
+    problems, _ = await _check("USD/CAD today?", {"value": 9.75, "boc_series": "FXUSDCAD"})
+    assert problems == [(0, "value")]
+    problems, _ = await _check("USD/CAD today?", {"value": 1.3978, "boc_series": "FXUSDCAD"})
+    assert problems == []
+    problems, _ = await _check(
+        "USD/CAD today?", {"value": 1.3978, "period": "late 2026", "boc_series": "FXUSDCAD"}
+    )
+    assert problems == [(0, "period")]
+
+
+async def test_bank_of_canada_outage_is_noted(monkeypatch):
+    calls = []
+
+    async def observations(names, start_date=None, end_date=None, recent=None, lang="en"):
+        calls.append(start_date)
+        if start_date:
+            raise UpstreamUnavailable("Valet is down.")
+        return SimpleNamespace(
+            observations=[SimpleNamespace(ref_date=date(2026, 11, 2), values={"FXUSDCAD": 1.4})]
+        )
+
+    monkeypatch.setattr(client.boc, "get_observations", observations)
+    problems, result = await _check(
+        "USD/CAD?", {"value": 9.0, "period": "2026-10-01", "boc_series": "FXUSDCAD"}
+    )
+    assert problems == []
+    assert any("not re-read" in note for note in result.notes)
 
 
 async def test_whole_numbers_are_precise_to_the_unit():
@@ -777,3 +805,11 @@ async def test_a_city_and_its_province_asks_for_the_city():
         {"value": 5.0, "period": "2026-09", "vector_id": 107, "geography": "Victoria, BC"},
     )
     assert problems == [(0, "geography")]
+
+
+def test_newer_period_compares_dates_not_labels():
+    # As text, "2026-Q3" sorted after "2026-07" and was flagged as newer.
+    assert client._newer(0, "2026-07", ("2026-Q3", 1.0), "x", "en") is None
+    assert client._newer(0, "2026-06", ("2026-Q3", 1.0), "x", "en") is not None
+    assert client._newer(0, "2026-09", ("2026-10", 1.0), "x", "en") is not None
+    assert client._newer(0, "2026-10", ("2026-10", 1.0), "x", "en") is None

@@ -279,8 +279,11 @@ async def get_water_levels(
         )
     cap = timedelta(days=constants.MAX_WINDOW_DAYS)
     whole_day_end = bool(end) and len((end or "").strip()) == 10
+    clamped_from = None
     if whole_day_end and cap < end_dt - start_dt <= cap + timedelta(days=1):
-        # A date-only end one day past the cap is read as "up to that date".
+        # A date-only end one day past the cap is read as "up to that date";
+        # limits names the hours left out, so the clamp is not silent.
+        clamped_from = end_dt
         end_dt = start_dt + cap
     if end_dt - start_dt > cap:
         raise lang_error(
@@ -361,6 +364,15 @@ async def get_water_levels(
                     "pour choisir",
                 )
                 if defaulted
+                else None,
+                fr_or_en(
+                    lang,
+                    f"end cut to {_iso(end_dt)} to stay within {constants.MAX_WINDOW_DAYS} days; "
+                    f"readings up to {_iso(clamped_from)} were not fetched",
+                    f"fin ramenée à {_iso(end_dt)} pour rester sous {constants.MAX_WINDOW_DAYS} "
+                    f"jours ; les relevés jusqu'à {_iso(clamped_from)} n'ont pas été demandés",
+                )
+                if clamped_from
                 else None,
                 fr_or_en(
                     lang,

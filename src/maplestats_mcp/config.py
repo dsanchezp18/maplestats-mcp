@@ -148,6 +148,15 @@ def get_max_concurrent_requests() -> int:
     return min(256, max(1, value))
 
 
+def get_max_requests_per_client() -> int:
+    """Requests one client may hold in flight; 0 (the default) means no cap
+    beyond MAPLE_MAX_CONCURRENT_REQUESTS. Off by default because Claude's
+    connectors and the chat demo reach a public instance from shared
+    addresses, where one bucket can be many people."""
+    value = _env_int("MAPLE_MAX_REQUESTS_PER_CLIENT", 0)
+    return min(256, max(0, value))
+
+
 def get_rate_limit_requests() -> int:
     value = _env_int("MAPLE_RATE_LIMIT_REQUESTS", 120)
     return min(10_000, max(0, value))

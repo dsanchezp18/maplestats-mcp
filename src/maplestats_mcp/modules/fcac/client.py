@@ -873,6 +873,19 @@ async def search_bank_accounts(
             "sort doit valoir 'monthly_fee', 'institution' ou 'name'.",
             lang,
         )
+    if account_type == "savings" and (max_monthly_fee is not None or sort == "monthly_fee"):
+        # Savings result rows show an interest rate, not a fee: every
+        # monthly_fee is None there, so the filter used to drop every
+        # account and report "no matching accounts".
+        _raise(
+            InvalidInput,
+            "Savings search results carry no monthly fee: drop max_monthly_fee and "
+            "sort='monthly_fee', and read the fee from fcac_get_bank_account.",
+            "Les résultats de recherche des comptes d'épargne n'indiquent pas de frais "
+            "mensuels : retirez max_monthly_fee et sort='monthly_fee', et lisez les frais "
+            "avec fcac_get_bank_account.",
+            lang,
+        )
     ordered_groups = sorted(set(groups), key=lambda g: constants.ACCOUNT_GROUPS[g][0])
 
     (total, accounts), cached = await _in_lang(

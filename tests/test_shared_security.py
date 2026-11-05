@@ -297,3 +297,63 @@ def test_hosted_app_answers_preflight_and_rejects_foreign_origin():
             headers={"Origin": "https://evil.example", "Accept": "application/json"},
         )
         assert evil.status_code == 403
+
+
+async def test_oversized_body_is_413_before_the_app_runs():
+    app = with_http_security(_ok_app, max_body_bytes=10)
+    big = [(b"content-length", b"11")]
+    assert await _call(app, _scope(headers=big)) == 413
+    assert await _call(app, _scope(headers=[(b"content-length", b"10")])) == 200
+
+
+async def test_chunked_body_past_the_cap_reads_as_a_disconnect():
+    seen: list[dict] = []
+
+    async def reader(scope, receive, send):
+        seen.append(await receive())
+        seen.append(await receive())
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    chunks = iter(
+        [
+            {"type": "http.request", "body": b"x" * 8, "more_body": True},
+            {"type": "http.request", "body": b"x" * 8, "more_body": False},
+        ]
+    )
+
+    async def receive():
+        return next(chunks)
+
+    async def send(message):
+        pass
+
+    app = with_http_security(reader, max_body_bytes=10)
+    await app(_scope(), receive, send)
+    assert seen[0]["type"] == "http.request" and seen[1] == {"type": "http.disconnect"}
+
+
+async def test_one_client_cannot_hold_every_slot():
+    release = asyncio.Event()
+
+    async def slow(scope, receive, send):
+        await release.wait()
+        await _ok_app(scope, receive, send)
+
+    app = with_http_security(slow, max_concurrent_requests=8, max_requests_per_client=2)
+    held = [asyncio.create_task(_call(app, _scope())) for _ in range(2)]
+    await asyncio.sleep(0)
+    assert await _call(app, _scope()) == 429
+    other = asyncio.create_task(_call(app, _scope(client=("5.6.7.8", 1))))
+    await asyncio.sleep(0)
+    release.set()
+    assert await other == 200
+    assert await asyncio.gather(*held) == [200, 200]
+
+
+def test_ipv6_addresses_share_their_slash_64_bucket():
+    assert security._bucket("2001:db8:1:2::1") == security._bucket("2001:db8:1:2:ffff::9")
+    assert security._bucket("2001:db8:1:2::1") != security._bucket("2001:db8:1:3::1")
+    assert security._bucket("::ffff:1.2.3.4") == "1.2.3.4"
+    assert security._bucket("1.2.3.4") == "1.2.3.4"
+    assert security._bucket("unknown") == "unknown"

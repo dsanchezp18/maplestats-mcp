@@ -15,7 +15,7 @@ import pytest
 
 from maplestats_mcp.modules.statcan.lang import use_lang
 from maplestats_mcp.modules.statcan.pumf import tabulate
-from maplestats_mcp.modules.statcan.pumf.schemas import PumfVariable
+from maplestats_mcp.modules.statcan.pumf.schemas import PumfVariable, ValueLabel
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 from maplestats_mcp.shared.remote_zip import ZipMember
 
@@ -50,6 +50,27 @@ def test_weighted_mean_skips_missing_values(tmp_path):
     by_prov = {r[0]: tabulate._estimates(r, 1, 1, "mean")[0] for r in rows}
     assert by_prov["48"] == pytest.approx(3000.0)  # the blank value is excluded
     assert by_prov["35"] == pytest.approx((200 * 4000 + 100 * 2000) / 300)
+
+
+def test_mean_leaves_out_labelled_reserve_codes(tmp_path):
+    path = tmp_path / "data.csv"
+    path.write_text(CSV + "48,1,100,9999\n48,1,100,9996\n")
+    variable = PumfVariable(
+        name="HRLYEARN",
+        values=[
+            ValueLabel(code="9996", label="Valid skip"),
+            ValueLabel(code="9999", label="Not stated"),
+            ValueLabel(code="0000", label="No earnings"),
+        ],
+    )
+    reserved = tabulate.reserve_codes(variable)
+    assert reserved == [9996.0, 9999.0]
+    source = tabulate.DataSource(path, False, _vars())
+    rows, _, _ = tabulate._run_query(
+        source, ["PROV"], ["FINALWT"], "mean", "HRLYEARN", {}, exclude_values=reserved
+    )
+    by_prov = {r[0]: tabulate._estimates(r, 1, 1, "mean")[0] for r in rows}
+    assert by_prov["48"] == pytest.approx(3000.0)
 
 
 def test_pick_member_prefers_csv_and_asks_when_ambiguous():

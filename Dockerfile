@@ -30,6 +30,10 @@ EXPOSE 8000
 ENV MAPLE_HOST=0.0.0.0
 ENV MAPLE_PORT=8000
 ENV MAPLE_TRANSPORT=http
+# The image listens on every interface, so it refuses to start without
+# MAPLE_AUTH_TOKEN unless a deployment opts out on purpose
+# (MAPLE_REQUIRE_AUTH=0: render.yaml and the Azure deploy in docker.yml).
+ENV MAPLE_REQUIRE_AUTH=1
 
 # Probes whichever scheme the server is actually serving: with
 # MAPLE_SSL_CERTFILE set, uvicorn terminates TLS and plain http fails.

@@ -317,5 +317,10 @@ async def test_vector_lists_past_wds_limits_are_refused_before_the_call():
         await client.get_data_from_vectors_and_latest_n_periods(list(range(1, 302)), 1)
     with pytest.raises(InvalidInput, match="positive numbers"):
         await client.get_data_from_vectors_and_latest_n_periods([999999999999], 1)
+    # Inline replies are bounded: 300 vectors x 5,000 periods is refused.
+    with pytest.raises(InvalidInput, match="too much to return"):
+        await client.get_data_from_vectors_and_latest_n_periods(list(range(1, 301)), 5000)
+    with pytest.raises(InvalidInput, match="too much to return"):
+        await client.get_data_from_vectors_and_latest_n_periods([1], 3001)
     with pytest.raises(InvalidInput, match="positive numbers"):
         await client.get_series_info_from_vector(0)

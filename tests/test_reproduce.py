@@ -56,6 +56,8 @@ async def test_table_all_languages_with_house_layout():
     assert set(code) == {"r", "python", "stata", "julia", "excel"}
     assert result.source_url == "https://www150.statcan.gc.ca/n1/tbl/csv/18100004-eng.zip"
     assert 'get_cansim("18-10-0004-01")' in code["r"] and "val_norm" in code["r"]
+    # Suppressed rows (missing val_norm) are kept, as in the other languages.
+    assert "filter(!is.na(val_norm))" not in code["r"]
     assert "http2=True" in code["python"]  # StatCan rejects HTTP/1.1-only clients
     assert 'pl.col("SCALAR_ID")' in code["python"]
     assert "real(value) * 10^real(scalar_id)" in code["stata"] and " cd " not in code["stata"]
@@ -122,6 +124,16 @@ async def test_vectors_flatten_one_object_per_vector():
     code = result.scripts[0].code
     assert "item['object']['vectorDataPoint']" in code and "client.post(" in code
     assert "scalarFactorCode" in code
+    # A FAILED vector (object without vectorDataPoint) is skipped, not a KeyError.
+    block = code[code.index("records = [") :]
+    block = block[: block.index("\n]\n") + 3]
+    payload = [
+        {"status": "FAILED", "object": {"vectorId": 1, "responseStatusCode": 1}},
+        {"status": "SUCCESS", "object": {"vectorId": 2, "vectorDataPoint": [{"value": 5}]}},
+    ]
+    namespace: dict = {"payload": payload}
+    exec(block, namespace)  # noqa: S102 - this repository's own generated code
+    assert namespace["records"] == [{"vectorId": 2, "value": 5}]
 
 
 async def test_bad_requests():
