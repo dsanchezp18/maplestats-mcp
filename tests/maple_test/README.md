@@ -400,6 +400,31 @@ was built; it is re-graded correct with that reason. These questions shaped earl
 accuracy here is in-sample; cost is not. Answers took longer (28.7 seconds) because two runs
 shared the machine.
 
+## Full run on every server (paused 2026-11-05)
+
+The whole v2 set (61 questions, three passes) on all eleven arms, MapleStats as merged in
+#146 (served from a frozen checkout of be91871). Paused because four parallel chains were
+too much for the laptop; to be finished in the cloud. Not graded yet.
+
+- **Done:** `runs_v2/2026-11-05_maplestats-1105_*` and `..._pipeworx-1105_*`, 183 answers
+  each. 21 MapleStats answers and 2 Pipeworx answers are run errors ("MCP tools were not
+  available": the server missed the CLI's start-up wait, before run.py set `MCP_TIMEOUT`);
+  ask them again with the same settings and record them under their pass numbers.
+- **To run:** the other nine arms. Their partial or failed files are in `runs_v2/paused/`
+  (and the first mcp-canada attempt, all run errors, in `runs_v2/errors/`): set aside, not
+  to be graded. Run one or two arms at a time, with the label `<arm>-1105`.
+- **Local-clone arms:** clone into a folder outside the repository and point `--alts` (or
+  `MAPLE_TEST_ALTS`) at it: `openmcp` (opendatafyi/openmcp, `venv` plus `catalog.duckdb`, which
+  takes about 85 s to start), `candata` (neobenjax/Canadian-Open-Data-Agentic-Platform, now at
+  e78de15), `gcode33_canada-data-agent` (PostgreSQL at its default `DATABASE_URL` with
+  `migrations/0002_http_cache.sql`), `opencanada` (OpenPublicDataMCP/OpenCanadaPublicDataMCP,
+  nine federal servers, each `uv sync` plus `mcp[cli]<2`).
+
+```bash
+uv run python -m tests.maple_test run --version v2 --repeat 3 --arm mcp_statcan --label mcp_statcan-1105
+uv run python -m tests.maple_test grade --version v2 --verify
+```
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP
