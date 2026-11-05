@@ -412,6 +412,23 @@
     });
   });
 
+  /* ---------- Open from link ---------- */
+
+  // A link to a folded section (connect.html#chatgpt-web) opens it, and any
+  // fold around the target, so the reader lands on the steps, not a summary.
+  feature("open from link", () => {
+    const openTarget = () => {
+      const id = decodeURIComponent(location.hash.slice(1));
+      let el = id && document.getElementById(id);
+      while (el) {
+        if (el.tagName === "DETAILS") el.open = true;
+        el = el.parentElement;
+      }
+    };
+    window.addEventListener("hashchange", openTarget);
+    openTarget();
+  });
+
   /* ---------- On this page ---------- */
 
   // The contents list is open in the HTML, so without scripts it shows in

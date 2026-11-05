@@ -35,48 +35,6 @@
   </div>
 </section>
 
-<section class="section thesis" id="why">
-  <div class="wrap">
-    <div class="verse">
-      <p class="verse-count">3</p>
-      <p class="verse-line">{en}MCPs for the statisticians, keepers of the weights and the margins,{fr}MCP pour les statisticiens, gardiens des poids et des marges,{/}</p>
-      <p class="verse-count">7</p>
-      <p class="verse-line">{en}for the demographers, counting who comes to stay,{fr}pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
-      <p class="verse-count">9</p>
-      <p class="verse-line">{en}for the financial analysts, doomed to explain the rate…{fr}pour les analystes financiers, condamnés à expliquer le taux…{/}</p>
-      <p class="verse-aside">{en}But MapleStats is the one MCP to rule them all.{fr}Mais MapleStats est le MCP unique pour les gouverner tous.{/}</p>
-    </div>
-    <div class="thesis-body">
-      <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
-      <p>{en}MCPs made it easier to connect AI agents to data, and people started building narrow servers for narrow pieces of the Canadian data ecosystem: one for Statistics Canada, another for the Bank of Canada, others for open-data portals. Each can be useful. Together they recreate an old Canadian data problem: too many choices before asking a relatively simple question. I built MapleStats to take the opposite approach: one MCP for Canadian open data.{fr}Les MCP ont facilité la connexion des agents IA aux données, et l'on s'est mis à construire des serveurs étroits pour des pans étroits de l'écosystème canadien : un pour Statistique Canada, un autre pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun peut être utile. Ensemble, ils recréent un vieux problème canadien : trop de choix avant de poser une question pourtant simple. J'ai conçu MapleStats pour prendre le chemin inverse : un seul MCP pour les données ouvertes canadiennes.{/}</p>
-    </div>
-    <div class="thesis-demo">{{chat_demo}}</div>
-    <div class="claims">
-      <div><h3>{en}Centralize the interface, not the data.{fr}Centraliser l'interface, pas les données.{/}</h3><p>{en}The server keeps no dataset of its own, only short-lived caches. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucun jeu de données, seulement des caches de courte durée. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
-      <div><h3>{en}One discovery layer, many adaptors.{fr}Une couche de découverte, de nombreux adaptateurs.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
-      <div><h3>{en}Start from the question, not the portal.{fr}Partir de la question, pas du portail.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="trust">
-  <div class="wrap">
-    <div class="section-head">
-      <p class="label">{en}Why MapleStats{fr}Pourquoi MapleStats{/}</p>
-      <h2>{en}Built by a statistician, for anyone who works with the numbers.{fr}Conçu par un statisticien, pour quiconque travaille avec les chiffres.{/}</h2>
-      <p>{en}Economists, demographers, policy analysts, researchers, journalists, students: anyone who needs a Canadian figure they can trust and cite. MapleStats is designed around the mistakes people actually make with official data, and we test it against other tools on public benchmarks: <a href="{{root}}benchmarks.html">see how it does</a>.{fr}Économistes, démographes, analystes de politiques, chercheurs, journalistes, étudiants : quiconque a besoin d'un chiffre canadien fiable et citable. MapleStats est conçu autour des erreurs que l'on fait réellement avec les données officielles, et nous le comparons à d'autres outils sur des bancs d'essai publics : <a href="{{root}}benchmarks.html">voyez ses résultats</a>.{/}</p>
-    </div>
-    <div class="claims">
-      <div><h3>{en}It knows the traps.{fr}Il connaît les pièges.{/}</h3><p>{en}Constant vs current dollars, family vs individual income, annual average vs December over December, survey rent vs listing rent: it warns in plain language, and each fitness-for-use caution rests on the publisher's own documentation.{fr}Dollars constants ou courants, revenu des familles ou des particuliers, moyenne annuelle ou décembre à décembre, loyer d'enquête ou loyer affiché : il prévient en langage clair, et chaque mise en garde sur l'usage des données s'appuie sur la documentation de l'éditeur lui-même.{/}</p></div>
-      <div><h3>{en}Every number names its source.{fr}Chaque chiffre nomme sa source.{/}</h3><p>{en}Every StatCan series carries a citation: the table and vector, the period, the release date, the unit, the geography and a link to the official table. Every other result names its source and licence.{fr}Chaque série de Statistique Canada porte sa citation : le tableau et le vecteur, la période, la date de diffusion, l'unité, la géographie et un lien vers le tableau officiel. Tout autre résultat nomme sa source et sa licence.{/}</p></div>
-      <div><h3>{en}It says when data do not exist.{fr}Il dit quand les données n'existent pas.{/}</h3><p>{en}A series that is not published, a period not released yet or a date with no data gets a plain no, the nearest figure that does exist, and where it could come from: public microdata you can tabulate yourself, or a custom tabulation, RTRA or a Research Data Centre (not public, approval needed).{fr}Une série non publiée, une période pas encore diffusée ou une date sans données reçoit un non clair, le chiffre existant le plus proche, et la façon de l'obtenir : des microdonnées publiques à totaliser soi-même, ou une totalisation personnalisée, l'accès à distance en temps réel (ADTR) ou un centre de données de recherche (non publics, approbation requise).{/}</p></div>
-      <div><h3>{en}The answer can be checked before you see it.{fr}La réponse peut être vérifiée avant que vous la voyiez.{/}</h3><p>{en}Before replying, the assistant can send the StatCan and Bank of Canada figures it cites to check_answer, which re-reads them from the source: the right value and scale, the latest period, the geography you asked for and the seasonally adjusted headline. "Use with caution", "too unreliable to be published", preliminary and revised are spelled out on every StatCan value.{fr}Avant de répondre, l'assistant peut envoyer les chiffres de Statistique Canada et de la Banque du Canada qu'il cite à check_answer, qui les relit à la source : la bonne valeur et la bonne échelle, la période la plus récente, la géographie demandée et le chiffre principal désaisonnalisé. « À utiliser avec prudence », « trop peu fiable pour être publié », provisoire et révisé sont écrits en clair pour chaque valeur de Statistique Canada.{/}</p></div>
-      <div><h3>{en}Your work stays reproducible.{fr}Votre travail reste reproductible.{/}</h3><p>{en}It writes the R, Python, Stata or Julia script, or the Excel query, that pulls the same data from the source.{fr}Il écrit le script R, Python, Stata ou Julia, ou la requête Excel, qui récupère les mêmes données à la source.{/}</p></div>
-      <div><h3>{en}It only reads, in English and French.{fr}Il ne fait que lire, en français et en anglais.{/}</h3><p>{en}The server only reads from public sources. The scripts it writes run only if you run them, and saving a workbook to disk is opt-in on a local server. Search, results and warnings work in both official languages.{fr}Le serveur ne fait que lire des sources publiques. Les scripts qu'il écrit ne s'exécutent que si vous les lancez, et l'enregistrement d'un classeur sur disque est facultatif, sur un serveur local. La recherche, les résultats et les mises en garde fonctionnent dans les deux langues officielles.{/}</p></div>
-    </div>
-  </div>
-</section>
-
 <section class="section try-demo" id="try">
   <div class="wrap">
     <div class="section-head">
@@ -112,26 +70,60 @@
           </ul>
         </div>
       </div>
-      <aside class="try-notice" aria-labelledby="try-notice-title">
-        <p class="try-notice-title" id="try-notice-title">{en}This is a demo{fr}Ceci est une démo{/}</p>
-        <ul>
-          <li><b>{en}Answers can be wrong.{fr}Le modèle peut se tromper.{/}</b> {en}Check the source each answer cites.{fr}Vérifiez la source citée dans chaque réponse.{/}</li>
-          <li><b>{en}The first question can be slow.{fr}La première question peut être lente.{/}</b> {en}It can take up to a minute while the hosted server wakes up.{fr}Elle peut prendre jusqu'à une minute, le temps que le serveur hébergé se réveille.{/}</li>
-          <li><b>{en}Your questions leave your browser.{fr}Vos questions quittent votre navigateur.{/}</b> {en}They are sent to the model provider, Anthropic, and to the MapleStats server.{fr}Elles sont transmises au fournisseur du modèle, Anthropic, et au serveur MapleStats.{/}</li>
-          <li><b>{en}The chat is experimental.{fr}Le clavardage est expérimental.{/}</b> {en}Feedback is welcome: <a href="{{repo}}/issues">open an issue</a>.{fr}Vos commentaires sont les bienvenus : <a href="{{repo}}/issues">ouvrez un signalement</a>.{/}</li>
-          <li><b>{en}It may go offline.{fr}Il peut être retiré.{/}</b> {en}It may be taken down if demand outgrows it. If you would like to keep using it, <a href="https://danielstats.io">contact me</a> for more information.{fr}Il pourrait être retiré si la demande dépasse ses capacités. Si vous souhaitez continuer à l'utiliser, <a href="https://danielstats.io">communiquez avec moi</a> pour en savoir plus.{/}</li>
-        </ul>
-      </aside>
+      <p class="try-note">{en}A demo: answers can be wrong, so check the source each one cites. The first question can take up to a minute. The chat lists the full terms.{fr}Une démo : les réponses peuvent être fausses, vérifiez la source citée. La première question peut prendre jusqu'à une minute. Le clavardage donne les conditions complètes.{/}</p>
     </div>
   </div>
 </section>
+
+<section class="section thesis" id="why">
+  <div class="wrap">
+    <div class="verse">
+      <p class="verse-count">3</p>
+      <p class="verse-line">{en}MCPs for the statisticians, keepers of the weights and the margins,{fr}MCP pour les statisticiens, gardiens des poids et des marges,{/}</p>
+      <p class="verse-count">7</p>
+      <p class="verse-line">{en}for the demographers, counting who comes to stay,{fr}pour les démographes, qui comptent ceux qui viennent s'établir,{/}</p>
+      <p class="verse-count">9</p>
+      <p class="verse-line">{en}for the financial analysts, doomed to explain the rate…{fr}pour les analystes financiers, condamnés à expliquer le taux…{/}</p>
+      <p class="verse-aside">{en}But MapleStats is the one MCP to rule them all.{fr}Mais MapleStats est le MCP unique pour les gouverner tous.{/}</p>
+    </div>
+    <div class="thesis-body">
+      <h2>{en}Too many places to look, too many interfaces to learn.{fr}Trop d'endroits où chercher, trop d'interfaces à apprendre.{/}</h2>
+      <p>{en}Most Canadian data MCPs cover one source each: one for Statistics Canada, one for the Bank of Canada, others for open-data portals. Each is useful. Together, they bring back an old problem: you have to know where to look before you can ask a simple question. I built MapleStats so you don't: one MCP for Canadian open data.{fr}La plupart des MCP de données canadiennes couvrent une seule source : un pour Statistique Canada, un pour la Banque du Canada, d'autres pour les portails de données ouvertes. Chacun est utile. Ensemble, ils ramènent un vieux problème : il faut savoir où chercher avant de poser une question simple. J'ai conçu MapleStats pour vous éviter cela : un seul MCP pour les données ouvertes canadiennes.{/}</p>
+    </div>
+    <div class="thesis-demo">{{chat_demo}}</div>
+    <div class="claims">
+      <div><h3>{en}The data stay with their publishers.{fr}Les données restent chez leurs éditeurs.{/}</h3><p>{en}The server keeps no dataset of its own, only short-lived caches. It calls each source directly, so every number comes from its publisher.{fr}Le serveur ne garde aucun jeu de données, seulement des caches de courte durée. Il interroge chaque source directement; chaque chiffre vient de son éditeur.{/}</p></div>
+      <div><h3>{en}One search covers every source.{fr}Une seule recherche couvre toutes les sources.{/}</h3><p>{en}Each agency keeps its own adaptor underneath. The agent sees one search across all of them.{fr}Chaque organisme garde son adaptateur. L'agent ne voit qu'une recherche commune à tous.{/}</p></div>
+      <div><h3>{en}Ask the question; it finds the source.{fr}Posez la question, il trouve la source.{/}</h3><p>{en}The agent does not need to know whether the answer is a StatCan table, a Valet series, a CMHC dataset or a CKAN resource.{fr}L'agent n'a pas à savoir si la réponse est un tableau de StatCan, une série Valet, un jeu de données de la SCHL ou une ressource CKAN.{/}</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="trust">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="label">{en}Why MapleStats{fr}Pourquoi MapleStats{/}</p>
+      <h2>{en}Built by a statistician, for anyone who works with the numbers.{fr}Conçu par un statisticien, pour quiconque travaille avec les chiffres.{/}</h2>
+      <p>{en}Economists, demographers, policy analysts, researchers, journalists, students: anyone who needs a Canadian figure they can trust and cite. Data tools are often built by developers who never use them in an actual analysis project. MapleStats is built by someone who does, around the mistakes people actually make with official data, and we test it against other tools on public benchmarks: <a href="{{root}}benchmarks.html">see how it does</a>.{fr}Économistes, démographes, analystes de politiques, chercheurs, journalistes, étudiants : quiconque a besoin d'un chiffre canadien fiable et citable. Les outils de données sont souvent conçus par des développeurs qui ne s'en servent jamais dans un vrai projet d'analyse. MapleStats est conçu par quelqu'un qui s'en sert, autour des erreurs que l'on fait réellement avec les données officielles, et nous le comparons à d'autres outils sur des bancs d'essai publics : <a href="{{root}}benchmarks.html">voyez ses résultats</a>.{/}</p>
+    </div>
+    <div class="claims">
+      <div><h3>{en}It knows the traps.{fr}Il connaît les pièges.{/}</h3><p>{en}Constant vs current dollars, family vs individual income, annual average vs December over December, survey rent vs listing rent: it warns in plain language, and each fitness-for-use caution rests on the publisher's own documentation.{fr}Dollars constants ou courants, revenu des familles ou des particuliers, moyenne annuelle ou décembre à décembre, loyer d'enquête ou loyer affiché : il prévient en langage clair, et chaque mise en garde sur l'usage des données s'appuie sur la documentation de l'éditeur lui-même.{/}</p></div>
+      <div><h3>{en}Every number names its source.{fr}Chaque chiffre nomme sa source.{/}</h3><p>{en}Every StatCan series carries a citation: the table and vector, the period, the release date, the unit, the geography and a link to the official table. Every other result names its source and licence.{fr}Chaque série de Statistique Canada porte sa citation : le tableau et le vecteur, la période, la date de diffusion, l'unité, la géographie et un lien vers le tableau officiel. Tout autre résultat nomme sa source et sa licence.{/}</p></div>
+      <div><h3>{en}It says when data do not exist.{fr}Il dit quand les données n'existent pas.{/}</h3><p>{en}A series that is not published, a period not released yet or a date with no data gets a plain no, the nearest figure that does exist, and where it could come from: public microdata you can tabulate yourself, or a custom tabulation, RTRA or a Research Data Centre (not public, approval needed).{fr}Une série non publiée, une période pas encore diffusée ou une date sans données reçoit un non clair, le chiffre existant le plus proche, et la façon de l'obtenir : des microdonnées publiques à totaliser soi-même, ou une totalisation personnalisée, l'accès à distance en temps réel (ADTR) ou un centre de données de recherche (non publics, approbation requise).{/}</p></div>
+      <div><h3>{en}The answer can be checked before you see it.{fr}La réponse peut être vérifiée avant que vous la voyiez.{/}</h3><p>{en}Before replying, the assistant can send the StatCan and Bank of Canada figures it cites to check_answer, which re-reads them from the source: the right value and scale, the latest period, the geography you asked for and the seasonally adjusted headline. "Use with caution", "too unreliable to be published", preliminary and revised are spelled out on every StatCan value.{fr}Avant de répondre, l'assistant peut envoyer les chiffres de Statistique Canada et de la Banque du Canada qu'il cite à check_answer, qui les relit à la source : la bonne valeur et la bonne échelle, la période la plus récente, la géographie demandée et le chiffre principal désaisonnalisé. « À utiliser avec prudence », « trop peu fiable pour être publié », provisoire et révisé sont écrits en clair pour chaque valeur de Statistique Canada.{/}</p></div>
+      <div><h3>{en}Your work stays reproducible.{fr}Votre travail reste reproductible.{/}</h3><p>{en}It writes the R, Python, Stata or Julia script, or the Excel query, that pulls the same data from the source.{fr}Il écrit le script R, Python, Stata ou Julia, ou la requête Excel, qui récupère les mêmes données à la source.{/}</p></div>
+      <div><h3>{en}It only reads, in English and French.{fr}Il ne fait que lire, en français et en anglais.{/}</h3><p>{en}The server only reads from public sources. The scripts it writes run only if you run them, and saving a workbook to disk is opt-in on a local server. Search, results and warnings work in both official languages.{fr}Le serveur ne fait que lire des sources publiques. Les scripts qu'il écrit ne s'exécutent que si vous les lancez, et l'enregistrement d'un classeur sur disque est facultatif, sur un serveur local. La recherche, les résultats et les mises en garde fonctionnent dans les deux langues officielles.{/}</p></div>
+    </div>
+  </div>
+</section>
+
 
 <section class="section" id="uses">
   <div class="wrap">
     <div class="section-head">
       <p class="label">{en}Demos{fr}Démos{/}</p>
       <h2>{en}What you can do with it{fr}Ce que vous pouvez en faire{/}</h2>
-      <p>{en}{{cases_word_cap}} questions, from {{cases_word}} kinds of work, each answered with MapleStats tool calls. Here is one of them: a macroeconomist reading the yield curve.{fr}{{cases_word_cap}} questions de {{cases_word}} métiers différents, chacune résolue par des appels aux outils de MapleStats. En voici une : celle d'un macroéconomiste qui lit la courbe des taux.{/}</p>
+      <p>{en}{{cases_word_cap}} questions, from {{cases_word}} kinds of work, each answered with MapleStats tool calls.{fr}{{cases_word_cap}} questions de {{cases_word}} métiers différents, chacune résolue par des appels aux outils de MapleStats.{/}</p>
     </div>
     <div class="feature-case">
       <div class="feature-text">

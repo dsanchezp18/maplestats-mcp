@@ -14,6 +14,8 @@
     <a href="https://github.com/dsanchezp18/maplestats-mcp/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/ci.yml?branch=main&label=CI" alt="CI status"></a>
     <a href="https://maplestats.danielstats.io/"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/pages.yml?branch=main&label=website" alt="Website build status"></a>
     <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
+    <a href="https://github.com/dsanchezp18/maplestats-mcp/actions/workflows/uptime.yml"><img src="https://img.shields.io/github/actions/workflow/status/dsanchezp18/maplestats-mcp/uptime.yml?branch=main&label=uptime" alt="Hosted server uptime check"></a>
+    <a href="https://github.com/microsoft/pyright"><img src="https://img.shields.io/badge/types-Pyright-1674b1" alt="Type-checked with Pyright"></a>
     <a href="https://m8ven.ai/mcp/dsanchezp18/maplestats-mcp"><img src="https://m8ven.ai/badge/mcp/dsanchezp18/maplestats-mcp" alt="M8ven Score"></a>
     <a href="https://mcplookup.com/server/io.github.dsanchezp18/maplestats-mcp"><img src="https://mcplookup.com/badge/io.github.dsanchezp18/maplestats-mcp" alt="MCPLookup Trust Index"></a>
     <a href="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp"><img src="https://glama.ai/mcp/servers/dsanchezp18/maplestats-mcp/badges/score.svg" alt="MapleStats MCP server quality and maintenance score on Glama"></a>

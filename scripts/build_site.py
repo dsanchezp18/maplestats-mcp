@@ -196,6 +196,27 @@ BADGES: tuple[tuple[str, str, str, str, str], ...] = (
         "Linted with Ruff",
         "Vérifié avec Ruff",
     ),
+    (
+        "dev",
+        f"{REPO}/actions/workflows/uptime.yml",
+        f"{_SHIELDS}/github/actions/workflow/status/dsanchezp18/maplestats-mcp/uptime.yml?branch=main&label=uptime",
+        "Hosted server uptime check",
+        "Vérification de disponibilité du serveur hébergé",
+    ),
+    (
+        "dev",
+        "https://github.com/microsoft/pyright",
+        f"{_SHIELDS}/badge/types-Pyright-1674b1",
+        "Type-checked with Pyright",
+        "Types vérifiés avec Pyright",
+    ),
+    (
+        "dev",
+        f"{REPO}/blob/main/LICENSE",
+        f"{_SHIELDS}/github/license/dsanchezp18/maplestats-mcp",
+        "License: MIT",
+        "Licence MIT",
+    ),
 )
 BADGE_HOSTS = frozenset(urlsplit(image).netloc for _, _, image, _, _ in BADGES)
 

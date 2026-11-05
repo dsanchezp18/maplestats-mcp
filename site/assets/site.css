@@ -3511,40 +3511,13 @@ dl.t-kw code {
   color: var(--accent);
 }
 
-/* The caveats: three short points under one heading, ruled like the
-   claims and steps elsewhere on the page. */
-.try-notice {
-  padding-left: 20px;
-  border-left: 3px solid var(--accent);
-}
-
-.try-notice-title {
+/* One line of caveats under the chat; the chat page lists them in full. */
+.try-note {
+  grid-column: 1 / -1;
+  margin: 0;
   font-size: 0.875rem;
-  font-weight: 800;
-  line-height: 1.4;
-  color: var(--ink);
-}
-
-.try-notice ul {
-  display: grid;
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.try-notice li {
-  padding-block: 12px;
-  border-top: 1px solid var(--rule);
+  line-height: 1.5;
   color: var(--ink-2);
-}
-
-.try-notice li:last-child {
-  padding-bottom: 0;
-}
-
-.try-notice b {
-  display: block;
-  color: var(--ink);
 }
 
 @media (max-width: 480px) {
@@ -5084,4 +5057,46 @@ details.how > summary,
 #hosted-1 {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Connect: each client's steps and the environment-variable table fold
+   away; a link to one opens it (site.js, "open from link"). */
+.client-guide {
+  border-top: 1px solid var(--rule);
+  padding-block: 14px;
+  scroll-margin-top: 80px;
+}
+
+.client-guide + p {
+  margin-top: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.client-guide > summary,
+.env-ref > summary {
+  cursor: pointer;
+  min-height: 32px;
+  color: var(--ink);
+}
+
+.client-guide > summary h3 {
+  display: inline;
+  margin: 0;
+}
+
+.client-guide[open] > summary {
+  margin-bottom: 10px;
+}
+
+.env-ref {
+  margin-top: 16px;
+}
+
+.env-ref > summary {
+  font-weight: 700;
+}
+
+.env-ref[open] > summary {
+  margin-bottom: 10px;
 }
