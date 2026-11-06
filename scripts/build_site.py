@@ -441,16 +441,16 @@ SOURCES: dict[str, Source] = {
         "CRA registered charities",
         "Organismes de bienfaisance enregistrés de l'ARC",
         "national",
-        "CRA",
-        "ARC",
+        "CRA charities",
+        "ARC : bienfaisance",
         domain="business",
     ),
     "cra_digital_economy_registry": Source(
         "CRA digital economy registry",
         "Registre de l'économie numérique de l'ARC",
         "national",
-        "CRA",
-        "ARC",
+        "CRA digital economy",
+        "ARC : économie numérique",
         domain="business",
     ),
     "crea": Source(
@@ -3216,9 +3216,12 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
         sum(1 for m in modules if m.source.level == "national")
         + coverage_counts()["local_source_count"]
     )
-    outer = sorted(
-        {m.source.short(lang) for m in modules if m.source.level == "national"}, key=alphabetical
-    )
+    national = [m for m in modules if m.source.level == "national"]
+    outer = sorted({m.source.short(lang) for m in national}, key=alphabetical)
+    # One name per national source, so the square counts what the Sources
+    # section counts; sibling modules of one publisher need distinct shorts.
+    if len(outer) != len(national):
+        raise SystemExit("two national sources share a short name; give each its own")
     by_subject: dict[str, int] = {}
     for module in modules:
         source = module.source
