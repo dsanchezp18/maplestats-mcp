@@ -7,6 +7,7 @@ series CanData's GTA benchmark asks about: v3823103 (Toronto two-bedroom rent,
 
 from __future__ import annotations
 
+import httpx
 import pytest
 from fastmcp.exceptions import NotFoundError, ToolError
 
@@ -14,7 +15,12 @@ from maplestats_mcp import config
 from maplestats_mcp.modules.statcan.wds import client, constants, context
 from maplestats_mcp.modules.statcan.wds.schemas import ObservationRow, VectorSeries
 from maplestats_mcp.shared.error_hints import with_hint
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 from maplestats_mcp.shared.response_budget import caveats_for, result_product_ids
 
 RENT_CUBE = {
@@ -336,6 +342,30 @@ def test_error_hints_by_class_and_cause():
     assert with_hint(coded, "en") is None
     assert str(hinted).startswith("[not_found] ")
     assert str(plain).startswith("[upstream_unavailable] ")
+
+
+def test_error_hints_code_a_5xx_upstream_error_as_unavailable():
+    # Borealis answered HTTP 500 on 2026-11-05; that is an outage, not a changed answer.
+    by_message = with_hint(UpstreamError("borealis:search_files returned HTTP 500."), "en")
+    assert str(by_message).startswith("[upstream_unavailable] ")
+    assert "source is down or slow" in str(by_message)
+    assert isinstance(by_message, UpstreamError)  # the class is kept for logs and counts
+
+    request = httpx.Request("GET", "https://borealisdata.ca/api/access/datafile/86556")
+    status = httpx.HTTPStatusError(
+        "server error", request=request, response=httpx.Response(503, request=request)
+    )
+    by_cause = UpstreamError("elections_results: the historical file failed.")
+    by_cause.__cause__ = status
+    assert str(with_hint(by_cause, "fr")).startswith("[upstream_unavailable] ")
+
+    # A 4xx or a changed shape stays an upstream error.
+    assert str(with_hint(UpstreamError("x returned HTTP 403."), "en")).startswith(
+        "[upstream_error] "
+    )
+    assert str(with_hint(UpstreamError("unexpected JSON shape"), "en")).startswith(
+        "[upstream_error] "
+    )
 
 
 def test_caveats_follow_the_result_tables():
