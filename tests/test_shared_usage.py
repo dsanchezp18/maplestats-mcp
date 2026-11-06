@@ -248,3 +248,9 @@ async def test_the_http_app_saves_the_counts_at_shutdown() -> None:
     await app({"type": "lifespan"}, receive, send)
     assert saved == [True]
     assert seen == ["lifespan.startup", "lifespan.shutdown"]
+
+
+def test_a_namespaced_name_counts_as_its_tool() -> None:
+    stats = UsageStats(("wds_search_cubes",))
+    stats.record("MapleStats.WDS_search_cubes", True)
+    assert stats.snapshot()["by_tool"] == {"wds_search_cubes": {"ok": 1, "error": 0}}

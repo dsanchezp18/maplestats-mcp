@@ -24,6 +24,7 @@ import json
 import logging
 import math
 import os
+import re
 import time
 from collections import Counter, deque
 from collections.abc import Iterable
@@ -48,6 +49,16 @@ FILE_VERSION = 1
 # Durations kept per tool for its percentiles: recent enough to show a slow
 # upstream today, and at most a few hundred kilobytes for every tool together.
 LATENCY_SAMPLES = 500
+
+
+def normalized_tool_name(name: str) -> str:
+    """The bare tool name: no namespace ("StatCan.", "maplestats:"), lower case, underscores.
+
+    call_tool runs a name that matches a tool once normalized (server.py), so the
+    count goes to that tool too, not to "other".
+    """
+    bare = re.split(r"[./:]", name.strip()[:200])[-1]
+    return re.sub(r"[\s-]+", "_", bare).lower()
 
 
 def _percentile(ordered: list[float], share: float) -> float:
@@ -87,7 +98,9 @@ class UsageStats:
         self.tool_names.update(names)
 
     def record(self, tool: str, ok: bool, seconds: float | None = None) -> None:
-        name = tool if tool in self.tool_names else "other"
+        name = tool if tool in self.tool_names else normalized_tool_name(tool)
+        if name not in self.tool_names:
+            name = "other"
         self.tools[(name, ok)] += 1
         self._new_tools[(name, ok)] += 1
         if self.forwarder is not None:

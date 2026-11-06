@@ -13,6 +13,8 @@ indicator's name from it.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import Any
 
 import httpx
@@ -41,11 +43,69 @@ def _localized(value: Any, lang: str) -> str | None:
     return None
 
 
+def _fold(text: str) -> str:
+    """Lower case without accents, so "Québec" and "quebec" compare equal."""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def _geo_from_text(value: str) -> int | None:
+    """A feed code from a number, a province name or an abbreviation, else None."""
+    text = value.strip()
+    if re.fullmatch(r"-?\d+", text):
+        return int(text)
+    return constants.GEO_NAMES_TO_FEED_CODE.get(_fold(text).replace(".", ""))
+
+
+def _geo_in_query(query: str) -> tuple[int | None, str]:
+    """Find a place named in `query`; return its feed code and the query without it.
+
+    Full names match in any case. Two-letter abbreviations match only in capitals
+    ("AB", "ON"), since "on" and "pe" are also ordinary words.
+    """
+    folded = _fold(query)
+    names = sorted(
+        (name for name in constants.GEO_NAMES_TO_FEED_CODE if len(name) > 3),
+        key=len,
+        reverse=True,
+    )
+    for name in names:
+        match = re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", folded)
+        if match:
+            rest = query[: match.start()] + " " + query[match.end() :]
+            return constants.GEO_NAMES_TO_FEED_CODE[name], rest
+    for token in re.findall(r"[A-Za-z.]+", query):
+        key = token.replace(".", "")
+        if key.isupper() and key.lower() in constants.GEO_NAMES_TO_FEED_CODE:
+            rest = re.sub(rf"(?<!\w){re.escape(token)}(?!\w)", " ", query, count=1)
+            return constants.GEO_NAMES_TO_FEED_CODE[key.lower()], rest
+    return None, query
+
+
+def _query_terms(query: str) -> list[tuple[str, ...]]:
+    """Each meaningful query word, with the forms a title may use for it."""
+    terms: list[tuple[str, ...]] = []
+    for word in re.findall(r"[\w%]+", _fold(query)):
+        if word in constants.QUERY_STOPWORDS:
+            continue
+        forms = constants.QUERY_ALIASES.get(word, (word,))
+        # "estimates" finds "estimate", "prices" finds "price".
+        if word not in constants.QUERY_ALIASES and len(word) > 4 and word.endswith("s"):
+            forms = (word, word[:-1])
+        terms.append(forms)
+    return terms
+
+
+def _matches(title: str, terms: list[tuple[str, ...]]) -> bool:
+    folded = _fold(title)
+    return all(any(form in folded for form in forms) for forms in terms)
+
+
 async def get_indicators(
     dataset: str = "all",
     query: str = "",
     *,
-    geo_code: int | None = None,
+    geo_code: int | str | None = None,
     lang: str = "en",
     limit: int = constants.SEARCH_LIMIT_DEFAULT,
 ) -> IndicatorList:
@@ -60,7 +120,7 @@ async def get_indicators(
                 f"statcan_indicators:get_indicators : dataset doit être l'une des valeurs {sorted(constants.DATASET_URLS)}, reçu {dataset!r}.",
             )
         )
-    if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
+    if limit < 1:
         raise InvalidInput(
             say(
                 f"statcan_indicators:get_indicators: limit must be between 1 and "
@@ -68,6 +128,17 @@ async def get_indicators(
                 f"statcan_indicators:get_indicators : limit doit être entre 1 et {constants.SEARCH_LIMIT_MAX}, reçu {limit}.",
             )
         )
+    notes: list[str] = []
+    # A model asking for "all of them" passes 500 or 1000; return the most
+    # allowed and say so rather than failing the call.
+    if limit > constants.SEARCH_LIMIT_MAX:
+        notes.append(
+            say(
+                f"limit {limit} lowered to the maximum, {constants.SEARCH_LIMIT_MAX}",
+                f"limit {limit} ramené au maximum, {constants.SEARCH_LIMIT_MAX}",
+            )
+        )
+        limit = constants.SEARCH_LIMIT_MAX
 
     async def fetch() -> Any:
         await _LIMITER.acquire()
@@ -110,7 +181,33 @@ async def get_indicators(
     # returned an empty list with no hint. A code the feed does not use but
     # that is a province/territory SGC code is mapped; 10-13 are valid feed
     # codes and are never reinterpreted as SGC.
-    note: str | None = None
+    if isinstance(geo_code, str):
+        parsed = _geo_from_text(geo_code)
+        if parsed is None:
+            valid = ", ".join(f"{code}={name}" for code, name in geo_names.items())
+            raise InvalidInput(
+                say(
+                    f"statcan_indicators:get_indicators: geo_code {geo_code!r} is not a place "
+                    f'this feed knows. Use a province name or abbreviation ("AB", '
+                    f'"Alberta") or one of: {valid}.',
+                    f"statcan_indicators:get_indicators : geo_code {geo_code!r} n'est pas un lieu "
+                    f"connu de ce fil. Utilisez le nom ou l'abréviation d'une province "
+                    f"(« AB », « Alberta ») ou l'un de ces codes : {valid}.",
+                )
+            )
+        geo_code = parsed
+    elif geo_code is None and query:
+        found, rest = _geo_in_query(query)
+        if found is not None and str(found) in geo_names:
+            notes.append(
+                say(
+                    f"the place named in the query was read as geo_code {found} "
+                    f"({geo_names[str(found)]})",
+                    f"le lieu nommé dans la requête a été lu comme geo_code {found} "
+                    f"({geo_names[str(found)]})",
+                )
+            )
+            geo_code, query = found, rest
     if geo_code is not None and str(geo_code) not in geo_names:
         mapped = constants.SGC_TO_FEED_GEO_CODE.get(geo_code)
         if mapped is None or str(mapped) not in geo_names:
@@ -122,20 +219,31 @@ async def get_indicators(
                     f"statcan_indicators:get_indicators : geo_code {geo_code} ne figure pas dans ce fil. Utilisez l'un de ces codes : {valid} (ou un code de province de la CGT, comme 48 pour l'Alberta).",
                 )
             )
-        note = say(
-            f"geo_code {geo_code} read as SGC code and mapped to feed code {mapped}",
-            f"geo_code {geo_code} lu comme un code de la CGT et associé au code {mapped} du fil",
+        notes.append(
+            say(
+                f"geo_code {geo_code} read as SGC code and mapped to feed code {mapped}",
+                f"geo_code {geo_code} lu comme un code de la CGT et associé au code {mapped} du fil",
+            )
         )
         geo_code = mapped
 
-    query_lower = query.strip().lower()
+    # Every meaningful word must appear in the title (in any order, accents ignored),
+    # not the whole query as one phrase: "unemployment rate Alberta", "inflation" and
+    # "GDP" all found nothing before (live, 2026-11-06). A title holding the whole
+    # phrase is listed first.
+    terms = _query_terms(query)
+    phrase = _fold(query.strip())
     matched: list[Indicator] = []
+    elsewhere: dict[str, set[str]] = {}
     for entry in results["indicators"]:
         title = _localized(entry.get("title"), lang) or ""
-        if query_lower and query_lower not in title.lower():
+        if terms and not _matches(title, terms):
             continue
         entry_geo_code = entry.get("geo_code")
         if geo_code is not None and entry_geo_code != geo_code:
+            name = geo_names.get(str(entry_geo_code))
+            if name:
+                elsewhere.setdefault(title, set()).add(name)
             continue
 
         growth_rate = entry.get("growth_rate") or {}
@@ -164,6 +272,13 @@ async def get_indicators(
             )
         )
 
+    if phrase:
+        matched.sort(key=lambda item: phrase not in _fold(item.title))
+    if not matched:
+        notes.append(
+            _empty_hint(results["indicators"], terms, elsewhere, geo_names, geo_code, lang)
+        )
+
     page = matched[:limit]
     return IndicatorList(
         dataset=dataset,
@@ -175,7 +290,49 @@ async def get_indicators(
             url=url,
             cached=was_cached,
             schema_name="statcan_indicators.IndicatorList",
-            limits=note,
+            limits="; ".join(notes) or None,
             lang=lang,
         ),
+    )
+
+
+def _empty_hint(
+    indicators: list[dict[str, Any]],
+    terms: list[tuple[str, ...]],
+    elsewhere: dict[str, set[str]],
+    geo_names: dict[str, str | None],
+    geo_code: int | None,
+    lang: str,
+) -> str:
+    """Say why nothing matched: another geography has it, or which titles come close."""
+    if elsewhere:
+        title, places = next(iter(elsewhere.items()))
+        where = geo_names.get(str(geo_code)) or str(geo_code)
+        listed = ", ".join(sorted(places)[:5])
+        return say(
+            f"no match for {where}; {title!r} is published for {listed} in this feed. "
+            "For other geographies, search the StatCan tables (wds_search_cubes)",
+            f"aucun résultat pour {where} ; {title!r} est publié pour {listed} dans ce fil. "
+            "Pour d'autres géographies, cherchez dans les tableaux de StatCan (wds_search_cubes)",
+        )
+    near: list[str] = []
+    for entry in indicators:
+        title = _localized(entry.get("title"), lang) or ""
+        folded = _fold(title)
+        if title not in near and any(form in folded for forms in terms for form in forms):
+            near.append(title)
+        if len(near) == 5:
+            break
+    if near:
+        return say(
+            "no title holds every word of the query; titles holding some of them: "
+            + "; ".join(near),
+            "aucun titre ne contient tous les mots de la requête ; titres qui en contiennent : "
+            + " ; ".join(near),
+        )
+    return say(
+        "no indicator title matches the query; this feed holds headline indicators only, "
+        "so search the StatCan tables (wds_search_cubes) instead",
+        "aucun titre d'indicateur ne correspond à la requête ; ce fil ne contient que les "
+        "indicateurs phares, cherchez plutôt dans les tableaux de StatCan (wds_search_cubes)",
     )
