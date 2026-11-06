@@ -157,11 +157,13 @@ jobs:
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
           az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
       # The image requires a token by default; the public endpoint opts out,
-      # as render.yaml does.
+      # as render.yaml does. The /stats counts are kept on the app's Azure Files
+      # share at /data, so a deploy no longer starts them from zero.
       - name: Deploy the image
         run: |
           az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
-            --image "$IMAGE:${HEAD_SHA::7}" --set-env-vars MAPLE_REQUIRE_AUTH=0 \
+            --image "$IMAGE:${HEAD_SHA::7}" \
+            --set-env-vars MAPLE_REQUIRE_AUTH=0 MAPLE_USAGE_STATS_FILE=/data/usage/stats.json \
             --only-show-errors --output none
       # The app keeps serving the previous revision until the new one passes
       # its probes, so a bad image fails this step without taking the server down.

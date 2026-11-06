@@ -28,6 +28,8 @@ services:
       MAPLE_LODE_CACHE_DIR: "/data/lode"
       MAPLE_LODE_CACHE_MAX_GB: "${MAPLE_LODE_CACHE_MAX_GB:-3}"
       MAPLE_CBSA_TARIFF_CACHE_DIR: "/data/cbsa_tariff"
+      # The /stats call counts, kept across restarts (shared/usage.py).
+      MAPLE_USAGE_STATS_FILE: "/data/usage/stats.json"
       # Browser origins allowed to call /mcp; unset keeps the defaults (the
       # project website and localhost). Add https://*.office.com for an
       # Office add-in. Clients that send no Origin are always allowed.
@@ -39,12 +41,13 @@ services:
     # restarts: pumf-cache holds PUMF microdata, ip-horizons-cache the CIPO
     # patent tables, and lode-cache the StatCan open-database (LODE) files
     # unpacked from their archives (without it every restart downloads them
-    # again). Everything else is in memory.
+    # again), and usage-stats the /stats call counts. Everything else is in memory.
     volumes:
       - pumf-cache:/data/pumf
       - ip-horizons-cache:/data/ip_horizons
       - lode-cache:/data/lode
       - cbsa-tariff-cache:/data/cbsa_tariff
+      - usage-stats:/data/usage
     restart: unless-stopped
 
 volumes:
@@ -52,3 +55,4 @@ volumes:
   ip-horizons-cache:
   lode-cache:
   cbsa-tariff-cache:
+  usage-stats:

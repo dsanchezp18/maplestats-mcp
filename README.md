@@ -321,6 +321,7 @@ error that says when to retry, instead of waiting for another timeout. The
 | `MAPLE_GOATCOUNTER_URL`, `MAPLE_GOATCOUNTER_TOKEN` | unset | With both set (an https GoatCounter site and an API token allowed to record pageviews), each counted tool call is also sent there as the event `mcp/<instance>/<tool>` (`/error` appended on failure), in batches each minute, so counts outlive restarts and several hosts add up; no arguments or addresses, `no_sessions` on |
 | `MAPLE_INSTANCE_NAME` | `server` | The `<instance>` label in those events (`azure`, `render`) |
 | `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
+| `MAPLE_USAGE_STATS_FILE` | unset | A JSON file the `/stats` call counts (per tool and per UTC day, kept 400 days) are read from at startup and saved to every minute and on exit, so a restart or deploy does not reset them; point it at a persistent volume. Several processes saving to one file add up rather than overwrite each other. Latencies stay in memory |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
 | `MAPLE_DELTA_INDEX_DIR` | system temp | Saved Delta File resume points (a few MB per day); `off` keeps them in memory only |
 

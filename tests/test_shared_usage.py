@@ -35,7 +35,7 @@ def test_caller_text_is_never_stored() -> None:
 
 def test_old_days_are_dropped() -> None:
     stats = UsageStats(("boc_get_observations", "wds_search_cubes"))
-    for n in range(100):
+    for n in range(MAX_DAYS + 10):
         stats.days[f"2020-01-01-{n:03d}"] = Counter({True: 1})
     stats.record("boc_get_observations", True)
     assert len(stats.days) == MAX_DAYS
@@ -146,3 +146,105 @@ async def test_a_call_made_inside_a_tool_is_not_counted_again() -> None:
         "outer_tool": {"ok": 1, "error": 0},
         "inner_tool": {"ok": 1, "error": 0},
     }
+
+
+# ---- MAPLE_USAGE_STATS_FILE: counts kept across restarts
+
+
+def test_counts_survive_a_restart(tmp_path) -> None:
+    path = tmp_path / "usage" / "stats.json"
+    first = UsageStats(("boc_get_observations",), path=path)
+    first.record("boc_get_observations", True)
+    first.record("boc_get_observations", False)
+    assert first.save()
+    second = UsageStats(("boc_get_observations",), path=path)
+    snap = second.snapshot()
+    assert snap["calls"] == 2 and snap["errors"] == 1 and snap["persisted"] is True
+    assert snap["counting_since"] == first.since.isoformat()
+    second.record("boc_get_observations", True)
+    assert second.save()
+    assert UsageStats(path=path).snapshot()["by_tool"] == {
+        "boc_get_observations": {"ok": 2, "error": 1}
+    }
+
+
+def test_two_processes_saving_to_one_file_add_up(tmp_path) -> None:
+    # During a rollout the old and new revisions both count calls into one file.
+    path = tmp_path / "stats.json"
+    old = UsageStats(("wds_search_cubes",), path=path)
+    old.record("wds_search_cubes", True)
+    old.save()
+    new = UsageStats(("wds_search_cubes",), path=path)
+    old.record("wds_search_cubes", True)
+    new.record("wds_search_cubes", True)
+    old.save()
+    new.save()
+    assert new.snapshot()["calls"] == 3
+    assert UsageStats(path=path).snapshot()["calls"] == 3
+
+
+def test_saving_twice_does_not_count_twice(tmp_path) -> None:
+    path = tmp_path / "stats.json"
+    stats = UsageStats(("wds_search_cubes",), path=path)
+    stats.record("wds_search_cubes", True)
+    stats.save()
+    stats.save()
+    assert UsageStats(path=path).snapshot()["calls"] == 1
+
+
+def test_a_bad_file_is_moved_aside_not_overwritten(tmp_path) -> None:
+    path = tmp_path / "stats.json"
+    path.write_text('{"version": 1, "by_tool": {"x": {"ok": -5, "error": 0}}}', encoding="utf-8")
+    stats = UsageStats(("wds_search_cubes",), path=path)
+    assert stats.snapshot()["calls"] == 0
+    assert (tmp_path / "stats.json.bad").exists()
+    stats.record("wds_search_cubes", True)
+    assert stats.save()
+    assert UsageStats(path=path).snapshot()["calls"] == 1
+
+
+def test_a_failed_save_keeps_the_calls_for_the_next_one(tmp_path) -> None:
+    blocker = tmp_path / "not-a-dir"
+    blocker.write_text("", encoding="utf-8")
+    stats = UsageStats(("wds_search_cubes",), path=blocker / "stats.json")
+    stats.record("wds_search_cubes", True)
+    assert not stats.save()
+    assert stats.snapshot()["calls"] == 1
+    blocker.unlink()
+    assert stats.save()
+    assert UsageStats(path=blocker / "stats.json").snapshot()["calls"] == 1
+
+
+def test_without_a_file_nothing_is_written(tmp_path) -> None:
+    stats = UsageStats(("wds_search_cubes",))
+    stats.record("wds_search_cubes", True)
+    assert not stats.save()
+    assert stats.snapshot()["persisted"] is False
+    assert list(tmp_path.iterdir()) == []
+
+
+async def test_the_http_app_saves_the_counts_at_shutdown() -> None:
+    from maplestats_mcp.asgi import with_shutdown_save
+
+    saved: list[bool] = []
+    seen: list[str] = []
+
+    async def inner(scope, receive, send):
+        while True:
+            message = await receive()
+            seen.append(message["type"])
+            if message["type"] == "lifespan.shutdown":
+                return
+
+    messages = iter([{"type": "lifespan.startup"}, {"type": "lifespan.shutdown"}])
+
+    async def receive():
+        return next(messages)
+
+    async def send(message):  # pragma: no cover - the inner app sends nothing
+        pass
+
+    app = with_shutdown_save(inner, lambda: saved.append(True))
+    await app({"type": "lifespan"}, receive, send)
+    assert saved == [True]
+    assert seen == ["lifespan.startup", "lifespan.shutdown"]
