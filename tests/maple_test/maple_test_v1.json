@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v1",
-  "built_at": "2026-11-02T22:35:16+00:00",
+  "built_at": "2026-11-06T03:20:58+00:00",
   "sources": "Statistics Canada WDS and Bank of Canada Valet, read directly with httpx",
   "questions": [
     {
@@ -361,8 +361,8 @@
       "eval_type": "numeric",
       "question": "What was Canada's merchandise trade balance with the world in August 2026?",
       "expected": {
-        "balance_aug_2026_millions": 4198.8,
-        "balance_jul_2026_millions": 786.6
+        "balance_aug_2026_millions": 4951.3,
+        "balance_jul_2026_millions": 905.3
       },
       "headline": [
         "balance_aug_2026_millions"
@@ -375,8 +375,8 @@
           "series_title": "Canada;Trade Balance;Balance of payments;Seasonally adjusted;All countries",
           "reference_period": "2026-08",
           "coordinate": "1.3.2.2.1",
-          "value": 4198.8,
-          "release_or_revision_date": "2026-10-06T08:30",
+          "value": 4951.3,
+          "release_or_revision_date": "2026-11-04T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101"
         },
         {
@@ -385,8 +385,8 @@
           "series_title": "Canada;Trade Balance;Balance of payments;Seasonally adjusted;All countries",
           "reference_period": "2026-07",
           "coordinate": "1.3.2.2.1",
-          "value": 786.6,
-          "release_or_revision_date": "2026-10-06T08:30",
+          "value": 905.3,
+          "release_or_revision_date": "2026-11-04T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101"
         }
       ],

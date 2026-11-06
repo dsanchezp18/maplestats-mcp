@@ -538,7 +538,7 @@
       "eval_type": "numeric",
       "question": "What was the value of Canada's merchandise exports to the United States in August 2026?",
       "expected": {
-        "exports_us_aug_2026_dollars": 54346500000
+        "exports_us_aug_2026_dollars": 54771600000
       },
       "headline": [
         "exports_us_aug_2026_dollars"
@@ -551,8 +551,8 @@
           "series_title": "Canada;Export;Balance of payments;Seasonally adjusted;United States",
           "reference_period": "2026-08",
           "coordinate": "1.2.2.2.2",
-          "value": 54346.5,
-          "release_or_revision_date": "2026-10-06T08:30",
+          "value": 54771.6,
+          "release_or_revision_date": "2026-11-04T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101"
         }
       ],

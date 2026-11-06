@@ -16,8 +16,10 @@ logging and usage counting still see NotFound, UpstreamUnavailable and so on.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
+import httpx
 from fastmcp.exceptions import NotFoundError, ToolError
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 
@@ -133,11 +135,41 @@ def _chain(exc: BaseException) -> list[BaseException]:
     return found
 
 
+_HTTP_5XX = re.compile(r"HTTP 5\d\d")
+
+
+def _server_error(chain: list[BaseException]) -> bool:
+    """True when an UpstreamError reports an HTTP 5xx: an outage, not a changed answer.
+
+    About 80 call sites raise a 5xx as a plain UpstreamError ("returned HTTP 500"). Coded
+    as upstream_error, Borealis's 500s of 2026-11-05 told agents the source had answered
+    with an error and failed the live smoke run as a regression; the publisher's server
+    was down, which is what upstream_unavailable says. Read from the httpx cause when it
+    is chained, else from the message (the rule scripts/_smoke_common.py applies).
+    """
+    if not any(isinstance(item, UpstreamError) for item in chain):
+        return False
+    return any(
+        (isinstance(item, httpx.HTTPStatusError) and item.response.status_code >= 500)
+        or (isinstance(item, UpstreamError) and _HTTP_5XX.search(str(item)) is not None)
+        for item in chain
+    )
+
+
+def _effective(cls: type[BaseException], chain: list[BaseException]) -> type[BaseException]:
+    """The class to code and hint by: UpstreamUnavailable for an UpstreamError that is a 5xx."""
+    if cls is UpstreamError and _server_error(chain):
+        return UpstreamUnavailable
+    return cls
+
+
 def hint_for(exc: BaseException, lang: str) -> str:
     french = normalize_lang(lang) == "fr"
     chain = _chain(exc)
-    for cls, en, fr in _HINTS:
+    for cls, _, _ in _HINTS:
         if any(isinstance(item, cls) for item in chain):
+            target = _effective(cls, chain)
+            en, fr = next((e, f) for c, e, f in _HINTS if c is target)
             return french_spacing(fr) if french else en
     return french_spacing(_FALLBACK[1]) if french else _FALLBACK[0]
 
@@ -157,9 +189,10 @@ _CODES: tuple[tuple[type[BaseException], str], ...] = (
 
 def error_code(exc: BaseException) -> str:
     chain = _chain(exc)
-    for cls, code in _CODES:
+    for cls, _ in _CODES:
         if any(isinstance(item, cls) for item in chain):
-            return code
+            target = _effective(cls, chain)
+            return next(code for c, code in _CODES if c is target)
     return "error"
 
 
