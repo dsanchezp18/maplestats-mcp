@@ -16,7 +16,7 @@ jobs:
   mcp:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Azure (LIDE's subscription, always on) is the public endpoint; Render's free
+    # Azure (self-funded, always on) is the public endpoint; Render's free
     # tier stays deployed as a backup. Each is checked on its own, so one failing
     # does not hide the other.
     strategy:
