@@ -658,7 +658,8 @@ Sources, by tool-name prefix:
   Warehouse), bc_lobbyists_ (BC Registrar of Lobbyists), drivebc_ (BC
   highway road events and closures), nl_opendata_,
   opendatasoft_vancouver_, eps_ (Edmonton police occurrences), ets_
-  (Edmonton real-time transit), epcor_ (Edmonton water quality),
+  (Edmonton real-time transit), bc_transit_ (BC Transit real-time:
+  Victoria, Kelowna and ten more systems), epcor_ (Edmonton water quality),
   electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including
   water flows at its dams), oeb_ (Ontario Energy Board: utility RRR
   filings, reliability, rates), on_fir_ (Ontario municipal Financial

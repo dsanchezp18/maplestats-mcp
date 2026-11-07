@@ -198,6 +198,12 @@ SOURCE_LICENCES: dict[str, str] = {
         "Edmonton Police Service", "https://communitysafetydataportal.edmontonpolice.ca"
     ),
     "ets": EDMONTON_TERMS,
+    "bc_transit": (
+        "BC Transit Open Data Terms of Use (https://www.bctransit.com/open-data/terms-of-use/): "
+        "a limited, revocable, non-exclusive licence to use, reproduce and redistribute the "
+        "data, indicating that BC Transit is the source; BC Transit's domain name and marks "
+        "may not be used. Source: BC Transit."
+    ),
     "provincial-election-results": (
         "Terms differ by election agency; see the per-province licence notes in limits."
     ),
@@ -580,6 +586,13 @@ _PROVINCIAL_FR: dict[str, str] = {
         "Service de police d'Edmonton", "https://communitysafetydataportal.edmontonpolice.ca"
     ),
     "ets": EDMONTON_TERMS_FR,
+    "bc_transit": (
+        "Conditions d'utilisation des données ouvertes de BC Transit "
+        "(https://www.bctransit.com/open-data/terms-of-use/) : licence limitée, révocable et "
+        "non exclusive d'utiliser, de reproduire et de redistribuer les données, en indiquant "
+        "BC Transit comme source ; le nom de domaine et les marques de BC Transit ne peuvent "
+        "pas être utilisés. Source : BC Transit."
+    ),
     "bc_lobbyists": (
         "Licence de données ouvertes du Bureau du registraire des lobbyistes de la "
         "Colombie-Britannique (Open Data Licence for the Office of the Registrar of Lobbyists for "
@@ -705,6 +718,8 @@ COMMERCIAL_USE: dict[str, CommercialUse] = {
 # Sources whose text in SOURCE_LICENCES is their own rather than a constant above.
 _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     "ab_wildfire": "allowed",
+    # "use, reproduce, and redistribute", no commercial restriction (read 2026-11-07).
+    "bc_transit": "allowed",
     "aer": "not_allowed",
     "epcor": "unknown",
     "eps": "unknown",
