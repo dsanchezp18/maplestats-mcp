@@ -3,8 +3,9 @@
 - The public endpoint (`https://mcp.maplestats.danielstats.io/mcp`) now offers
   `statcan_pumf_tabulate`. It runs on 1 vCPU and 2 GiB instead of 0.5 vCPU and 1 GiB,
   and keeps downloaded microdata files on its Azure file share (at most 5 GB), so only
-  the first table from a file waits for the download. Tool calls there may run 240 s
-  (`MAPLE_TOOL_TIMEOUT_SECONDS`) instead of 120 s, Container Apps' ingress limit. The
+  the first table from a file waits for the download. Tool calls there may run 230 s
+  (`MAPLE_TOOL_TIMEOUT_SECONDS`) instead of 120 s, just under Container Apps' 240 s
+  ingress limit. The
   README, the Connect, FAQ and StatCan pages no longer say the tool is off there. The
   Render backup keeps it off.
 
