@@ -21,6 +21,7 @@ fastmcp upgrade that moves one fails there by name.
 from __future__ import annotations
 
 import base64
+import difflib
 import hashlib
 import importlib
 import inspect
@@ -69,7 +70,7 @@ from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
-from maplestats_mcp.shared.usage import STATS, UsageMiddleware
+from maplestats_mcp.shared.usage import STATS, UsageMiddleware, normalized_tool_name
 from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationErrorMiddleware
 
 # Data tools read public sources. The workbook export can save a local file;
@@ -430,7 +431,11 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                 )
             # As fastmcp's proxy does: the name comes from the model, so it may
             # reach only what the model could have found through search_tools.
-            if not any(t.name == name for t in await transform.get_tool_catalog(ctx)):
+            catalog = [t.name for t in await transform.get_tool_catalog(ctx)]
+            if name not in catalog:
+                resolved = _resolve_tool_name(name, catalog)
+                if resolved is not None:
+                    return await ctx.fastmcp.call_tool(resolved, arguments)
                 switch = TOOL_SWITCHES.get(name)
                 if switch is not None and not switch():
                     raise InvalidInput(
@@ -440,7 +445,9 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                     )
                 # A name is echoed back, so a 100,000-character one is cut (live 2026-11-03).
                 shown = name if len(name) <= 100 else name[:100] + "..."
-                raise NotFoundError(f"Unknown tool: {shown!r}")
+                close = _close_tool_names(name, catalog)
+                hint = f" Did you mean {', '.join(close)}?" if close else ""
+                raise NotFoundError(f"Unknown tool: {shown!r}.{hint}")
             return await ctx.fastmcp.call_tool(name, arguments)
 
         tool = Tool.from_function(
@@ -452,6 +459,27 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
         )
         _title_annotations(tool)
         return tool
+
+
+def _resolve_tool_name(name: str, catalog: list[str]) -> str | None:
+    """The catalogue name `name` spells with only a namespace, case or separator changed.
+
+    Some clients prefix a server's tools ("maplestats.wds_get_data_from_vectors") or
+    change their case; the live /stats showed an unknown-name call on 2026-11-06.
+    Only an exact match after normalizing runs; a misspelling is suggested instead,
+    never run, since a near name can be a different tool.
+    """
+    if len(name) > 200:
+        return None
+    wanted = normalized_tool_name(name)
+    return next((tool for tool in catalog if tool == wanted), None)
+
+
+def _close_tool_names(name: str, catalog: list[str]) -> list[str]:
+    """Up to three catalogue names close to a misspelled one ("wds_get_data_from_vector")."""
+    if len(name) > 200:
+        return []
+    return difflib.get_close_matches(normalized_tool_name(name), catalog, n=3, cutoff=0.8)
 
 
 async def searchable_tools(server: FastMCP) -> list[Tool]:

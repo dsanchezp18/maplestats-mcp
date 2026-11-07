@@ -109,7 +109,11 @@ def _table_context(monkeypatch) -> None:
     async def no_legend():
         return None
 
+    async def no_prefetch(vector_ids):
+        return None
+
     monkeypatch.setattr(context, "describe", describe)
+    monkeypatch.setattr(context, "prefetch", no_prefetch)
     monkeypatch.setattr(wds_client, "observation_legend", no_legend)
 
 

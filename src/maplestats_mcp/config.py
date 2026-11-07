@@ -117,6 +117,16 @@ def get_usage_stats_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def get_usage_stats_file() -> Path | None:
+    """JSON file the /stats counts are kept in across restarts (MAPLE_USAGE_STATS_FILE).
+
+    Unset keeps them in memory only. A hosted deployment points it at a
+    persistent volume (the Azure app's file share at /data).
+    """
+    raw = os.environ.get("MAPLE_USAGE_STATS_FILE", "").strip()
+    return Path(raw) if raw else None
+
+
 def get_goatcounter_url() -> str | None:
     """GoatCounter site that receives the tool-call counts (MAPLE_GOATCOUNTER_URL).
 

@@ -15,6 +15,7 @@ tables, is read through WDS on www150. The separate real-time viewer
 
 from __future__ import annotations
 
+import asyncio
 import re
 import unicodedata
 from calendar import monthrange
@@ -793,8 +794,18 @@ def _check_vector_ids(vector_ids: list[int]) -> None:
 
 async def get_series_info_from_vector(vector_id: int) -> SeriesInfo:
     _check_vector_ids([vector_id])
-    items = await _post("getSeriesInfoFromVector", [{"vectorId": vector_id}])
-    obj = _unwrap_one(items[0], "getSeriesInfoFromVector")
+    method = "getSeriesInfoFromVector"
+
+    async def fetch() -> list[dict[str, Any]]:
+        return await _post(method, [{"vectorId": vector_id}])
+
+    # Cached under the same key as context._series_info_raw for one vector, so a
+    # transform's lookup and the context that follows make one request, not two
+    # (a yoy_pct_change call asked for it twice, and again on every repeat).
+    items, _ = await cached_fetch(
+        f"wds:{method}:{[vector_id]}", constants.CACHE_TTL_CUBE_METADATA_SECONDS, fetch
+    )
+    obj = _unwrap_one(items[0], method)
     return _series_info(obj, "getSeriesInfoFromVector")
 
 
@@ -1038,12 +1049,13 @@ async def get_data_from_vectors_and_latest_n_periods(
         body = [{"vectorId": v, "latestN": latest_n} for v in vector_ids]
         return await _post(method, body)
 
-    items, was_cached = await cached_fetch(
-        cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch
+    # The data and the code legend do not depend on each other; asked together
+    # they cost one round trip to StatCan instead of two.
+    (items, was_cached), legend = await asyncio.gather(
+        cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch),
+        observation_legend(),
     )
-    return _vector_data_set(
-        items, vector_ids, method=method, cached=was_cached, legend=await observation_legend()
-    )
+    return _vector_data_set(items, vector_ids, method=method, cached=was_cached, legend=legend)
 
 
 async def get_data_from_cube_pid_coord_and_latest_n_periods(
@@ -1054,7 +1066,9 @@ async def get_data_from_cube_pid_coord_and_latest_n_periods(
     if latest_n < 1:
         raise InvalidInput(_m("latest_n must be 1 or more.", "latest_n doit être 1 ou plus."))
     body = [{"productId": pid, "coordinate": coordinate, "latestN": latest_n}]
-    items = await _post("getDataFromCubePidCoordAndLatestNPeriods", body)
+    items, legend = await asyncio.gather(
+        _post("getDataFromCubePidCoordAndLatestNPeriods", body), observation_legend()
+    )
     try:
         obj = _unwrap_one(items[0], "getDataFromCubePidCoordAndLatestNPeriods")
     except (NotFound, UpstreamError):
@@ -1065,7 +1079,7 @@ async def get_data_from_cube_pid_coord_and_latest_n_periods(
         obj,
         source_url=f"{constants.BASE_URL}getDataFromCubePidCoordAndLatestNPeriods",
         cached=False,
-        legend=await observation_legend(),
+        legend=legend,
     )
 
 

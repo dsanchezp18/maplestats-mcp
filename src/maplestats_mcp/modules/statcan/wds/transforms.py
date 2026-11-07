@@ -11,6 +11,7 @@ go in the series' `transformed` block with their formula and unit.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -47,13 +48,16 @@ def _out_ppy(request: TransformRequest, source_ppy: int | None) -> int | None:
 async def series_infos(vector_ids: list[int]) -> dict[int, SeriesInfo]:
     """getSeriesInfoFromVector for each vector; one that WDS does not know is
     left out here and reported in the data call's `failed`, as without a transform."""
-    infos: dict[int, SeriesInfo] = {}
-    for vector_id in dict.fromkeys(vector_ids):
+
+    async def one(vector_id: int) -> SeriesInfo | None:
         try:
-            infos[vector_id] = await client.get_series_info_from_vector(vector_id)
+            return await client.get_series_info_from_vector(vector_id)
         except NotFound:
-            continue
-    return infos
+            return None
+
+    ids = list(dict.fromkeys(vector_ids))
+    found = await asyncio.gather(*(one(v) for v in ids))
+    return {v: info for v, info in zip(ids, found, strict=True) if info is not None}
 
 
 def base_months(index_base: str | None) -> int:

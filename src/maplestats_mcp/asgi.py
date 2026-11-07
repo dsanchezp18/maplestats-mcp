@@ -25,7 +25,7 @@ from maplestats_mcp.shared.security import (
     with_icon_routes,
     with_stats_endpoint,
 )
-from maplestats_mcp.shared.usage import public_snapshot
+from maplestats_mcp.shared.usage import STATS, public_snapshot
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 
@@ -80,6 +80,34 @@ def with_security_headers(app):
     return wrapped
 
 
+def with_shutdown_save(app, save):
+    """Run `save()` when the server shuts down, before the wrapped app's own shutdown.
+
+    The exit hook in shared/usage.py is not enough on its own: uvicorn re-raises
+    SIGTERM once it has shut down (checked with uvicorn 0.54 on 2026-11-06), so the
+    process ends by the signal and Python's atexit hooks never run. The ASGI
+    lifespan shutdown does run, so the /stats counts are saved there.
+    """
+
+    async def wrapped(scope, receive, send):
+        if scope["type"] != "lifespan":
+            await app(scope, receive, send)
+            return
+
+        async def receive_and_save():
+            message = await receive()
+            if message["type"] == "lifespan.shutdown":
+                try:
+                    save()
+                except Exception:  # never block the shutdown on the counts
+                    logger.exception("Saving the usage counts at shutdown failed")
+            return message
+
+        await app(scope, receive_and_save, send)
+
+    return wrapped
+
+
 def build_asgi_app():
     check_hosting_config()
     # Idle sessions are dropped after 5 minutes (the default is 30): a small instance
@@ -110,7 +138,8 @@ def build_asgi_app():
     healthy = with_health_endpoint(iconed, version=__version__)
     if not config.get_usage_stats_enabled():
         return with_security_headers(healthy)
-    return with_security_headers(with_stats_endpoint(healthy, snapshot=public_snapshot))
+    stats = with_stats_endpoint(healthy, snapshot=public_snapshot)
+    return with_security_headers(with_shutdown_save(stats, STATS.save))
 
 
 app = build_asgi_app()

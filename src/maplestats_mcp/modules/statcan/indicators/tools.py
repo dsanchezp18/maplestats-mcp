@@ -17,7 +17,7 @@ Dataset = Literal["all", "economic", "homepage"]
 async def statcan_indicators_get_indicators(
     dataset: Dataset = "all",
     query: str = "",
-    geo_code: int | None = None,
+    geo_code: int | str | None = None,
     lang: Literal["en", "fr"] = "en",
     limit: int = constants.SEARCH_LIMIT_DEFAULT,
 ) -> IndicatorList:
@@ -34,10 +34,7 @@ async def statcan_indicators_get_indicators(
     and a link to the Daily article that released it. geo_code filters
     to one geography using the feed's own numbering: 0 Canada, 1 NL,
     2 PEI, 3 NS, 4 NB, 5 QC, 6 ON, 7 MB, 8 SK, 9 AB, 10 BC, 11 YT,
-    12 NT, 13 NU (so BC is 10, not the SGC code 59). A province SGC code
-    the feed does not use (24, 35, 46, 47, 48, 59-62) is mapped for you
-    and noted in provenance.limits; any other code is rejected with the
-    valid list. Keywords: StatCan, indicator, current value, latest
+    12 NT, 13 NU; SGC codes (48), "AB" and "Alberta" are mapped. Keywords: StatCan, indicator, current value, latest
     statistics, growth rate, population, CPI, GDP, unemployment.
     Mots-clés : Statistique Canada, indicateur, valeur actuelle,
     dernières statistiques, taux de croissance, population, IPC, PIB,

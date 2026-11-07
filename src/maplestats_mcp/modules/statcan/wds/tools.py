@@ -8,6 +8,7 @@ MCP isError:true result; tools never return an error-shaped dict.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from typing import Literal
 
@@ -313,9 +314,12 @@ async def wds_get_data_from_vectors(
     request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
     request.check(lang)
     if not request.active:
-        return await _described(
-            await client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n)
+        client._check_vector_ids(vector_ids)
+        data, _ = await asyncio.gather(
+            client.get_data_from_vectors_and_latest_n_periods(vector_ids, latest_n),
+            context.prefetch(vector_ids),
         )
+        return await _described(data)
     if latest_n < 1:
         raise_error(InvalidInput, "error.invalid_input", lang, detail="latest_n must be 1 or more.")
     infos = await transforms.series_infos(vector_ids)
@@ -521,15 +525,14 @@ async def wds_get_data_by_reference_period_range(
     request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
     request.check(lang)
     if not request.active:
-        return _with_newer_data_note(
-            await _described(
-                await client.get_data_from_vector_by_reference_period_range(
-                    vector_ids, start_ref_period, end_ref_period
-                )
+        client._check_vector_ids(vector_ids)
+        data, _ = await asyncio.gather(
+            client.get_data_from_vector_by_reference_period_range(
+                vector_ids, start_ref_period, end_ref_period
             ),
-            end_ref_period,
-            lang,
+            context.prefetch(vector_ids),
         )
+        return _with_newer_data_note(await _described(data), end_ref_period, lang)
     start = date.fromisoformat(client._ref_period(start_ref_period, "start_ref_period", end=False))
     end = date.fromisoformat(client._ref_period(end_ref_period, "end_ref_period", end=True))
     infos = await transforms.series_infos(vector_ids)

@@ -24,6 +24,7 @@ with `context` left null and a note in provenance.limits.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 from typing import Any
 
@@ -296,6 +297,24 @@ def _context_for(
     )
 
 
+async def prefetch(vector_ids: list[int]) -> None:
+    """Fill the caches describe() reads (series info, then each table's metadata).
+
+    Run beside the data request, so a cold wds_get_data_from_vectors waits for the
+    slower of the two chains instead of every request in turn (6.4 s median on the
+    hosted server, 2026-11-06). A failure here is ignored: describe() asks again
+    and reports what it could not read.
+    """
+    try:
+        infos = await _series_info_raw(sorted(set(vector_ids)))
+        product_ids = {int(obj["productId"]) for obj in infos.values() if obj.get("productId")}
+        await asyncio.gather(
+            *(client.cube_metadata_raw(pid) for pid in product_ids), return_exceptions=True
+        )
+    except (*_SOFT_ERRORS, KeyError, ValueError, TypeError):  # describe() asks again
+        return
+
+
 async def describe(series: list[VectorSeries]) -> tuple[list[VectorSeries], str | None]:
     """`series` with `context` filled, and a limits note when metadata could not be read."""
     if not series:
@@ -354,19 +373,35 @@ async def _contexts(
     lang = "fr" if client._LANG.get() == "fr" else "en"
     missing: list[str] = [] if infos is not None else ["getSeriesInfoFromVector"]
     infos = infos or {}
+    # Every table's metadata, the code sets and the spans are independent requests;
+    # asked together, a three-table answer waits for the slowest, not the sum.
+    product_ids = list(dict.fromkeys(s.product_id for s in series))
+    empty_ids = list(empty)
+    cube_results, code_result, span_results = await asyncio.gather(
+        asyncio.gather(
+            *(client.cube_metadata_raw(pid) for pid in product_ids), return_exceptions=True
+        ),
+        asyncio.gather(client._code_sets_raw(), return_exceptions=True),
+        asyncio.gather(*(series_span(v) for v in empty_ids)),
+    )
     cubes: dict[int, dict[str, Any] | None] = {}
-    for product_id in dict.fromkeys(s.product_id for s in series):
-        try:
-            cubes[product_id], _ = await client.cube_metadata_raw(product_id)
-        except _SOFT_ERRORS:
+    for product_id, outcome in zip(product_ids, cube_results, strict=True):
+        if isinstance(outcome, _SOFT_ERRORS):
             cubes[product_id] = None
             missing.append(f"getCubeMetadata {product_id}")
-    try:
-        codes, _ = await client._code_sets_raw()
-    except _SOFT_ERRORS:
+        elif isinstance(outcome, BaseException):
+            raise outcome
+        else:
+            cubes[product_id] = outcome[0]
+    codes_outcome = code_result[0]
+    if isinstance(codes_outcome, _SOFT_ERRORS):
         codes = None
         missing.append("getCodeSets")
-    spans = {v: await series_span(v) for v in empty}
+    elif isinstance(codes_outcome, BaseException):
+        raise codes_outcome
+    else:
+        codes = codes_outcome[0]
+    spans = dict(zip(empty_ids, span_results, strict=True))
     contexts = [
         _context_for(
             s,
