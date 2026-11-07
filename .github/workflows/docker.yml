@@ -222,7 +222,9 @@ jobs:
           az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors
       # The chat's /stats counts (chat/usage.py) are kept on the Azure Files
       # storage the server already mounts at /data, so a deploy does not reset
-      # them. The first run adds the volume with a PATCH of the template only
+      # them. The chat mounts only the share's chat/ folder (subPath), at
+      # /data/chat: it faces the public and holds the model key, so it must not
+      # read or write the server's files. The first run adds the volume with a PATCH of the template only
       # (az containerapp update --yaml would resend the secrets without their
       # values); later runs find it mounted and change nothing. If the identity
       # may not attach the storage, the deploy goes on and the counts stay in
@@ -239,12 +241,12 @@ jobs:
           fi
           az containerapp show -g "$RESOURCE_GROUP" -n "$APP" --only-show-errors -o json > app.json
           mounted=$(jq '[.properties.template.containers[0].volumeMounts // [] | .[]
-            | select(.mountPath == "/data")] | length' app.json)
+            | select(.mountPath == "/data/chat")] | length' app.json)
           if [ "$mounted" = 0 ]; then
             jq --arg storage "$storage" '{properties: {template: (.properties.template
               | del(.revisionSuffix)
               | .volumes = ((.volumes // []) + [{name: "shared-data", storageType: "AzureFile", storageName: $storage}])
-              | .containers[0].volumeMounts = ((.containers[0].volumeMounts // []) + [{volumeName: "shared-data", mountPath: "/data"}]))}}' \
+              | .containers[0].volumeMounts = ((.containers[0].volumeMounts // []) + [{volumeName: "shared-data", mountPath: "/data/chat", subPath: "chat"}]))}}' \
               app.json > patch.json
             az rest --method patch --only-show-errors --output none --body @patch.json \
               --url "https://management.azure.com$(jq -r .id app.json)?api-version=2024-03-01"

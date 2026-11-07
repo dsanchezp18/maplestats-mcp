@@ -79,8 +79,8 @@ The counts are in memory unless `CHAT_USAGE_STATS_FILE` names a JSON file on a
 persistent volume: then they are read at startup, saved every minute and at shutdown,
 and a save adds this process's new counts to the file, so the old and new revisions
 running together during a deploy both count. On Azure, `docker.yml`'s
-`deploy-chat-azure` job mounts the Azure Files storage the MCP server already uses at
-`/data` (added once, with a PATCH of the app's template; later deploys find it) and
+`deploy-chat-azure` job mounts the `chat/` folder of the Azure Files storage the MCP
+server already uses at `/data/chat`, and nothing else of the share (added once, with a PATCH of the app's template; later deploys find it) and
 sets `CHAT_USAGE_STATS_FILE=/data/chat/stats.json`. If the deploy identity may not
 attach the storage, the job warns and the counts stay in memory; its last step prints
 `persisted` from `/stats`.
