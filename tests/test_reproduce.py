@@ -1093,6 +1093,47 @@ async def test_missing_field_in_the_response_is_an_upstream_error(monkeypatch):
     assert not isinstance(raised.value, InvalidInput)
 
 
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("upstream_unavailable", "UpstreamUnavailable"),
+        ("upstream_error", "UpstreamError"),
+        ("not_found", "NotFound"),
+        ("data_locked", "DataLocked"),
+        ("invalid_input", "InvalidInput"),
+    ],
+)
+async def test_failed_tool_keeps_its_error_class(monkeypatch, code, expected):
+    # An outage of the reproduced tool (open.canada.ca down, 2026-11-07) was raised
+    # again as [invalid_input], which tells the caller to change its arguments.
+    import fastmcp
+    from mcp.types import TextContent
+
+    from maplestats_mcp.shared import errors
+
+    class FailedResult:
+        is_error = True
+        content = (TextContent(type="text", text=f"[{code}] Error calling tool 'x': down"),)
+
+    class FakeClient:
+        def __init__(self, server):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def call_tool(self, *args, **kwargs):
+            return FailedResult()
+
+    monkeypatch.setattr(fastmcp, "Client", FakeClient)
+    with pytest.raises(getattr(errors, expected), match="nothing to reproduce") as raised:
+        await client._run_tool("cer_list_datasets", {"query": "keystone"})
+    assert type(raised.value) is getattr(errors, expected)
+
+
 async def test_missing_argument_is_still_reported(monkeypatch):
     from maplestats_mcp.modules.reproduce import client as reproduce_client
     from maplestats_mcp.shared.errors import InvalidInput

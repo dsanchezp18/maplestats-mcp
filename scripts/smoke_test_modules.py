@@ -1583,6 +1583,7 @@ async def main(modules: set[str]) -> int:
     if await _ourcommons_blocked_on_ci():
         print("SKIP ourcommons: ourcommons.ca answers HTTP 403 to this GitHub runner")
         DOWN_MODULES["ourcommons"] = "blocked on this runner (HTTP 403)"
+    step_tools = {step.tool for step in STEPS}
     async with Client(mcp) as client:
         for step in STEPS:
             if modules and step.module not in modules:
@@ -1595,8 +1596,19 @@ async def main(modules: set[str]) -> int:
             try:
                 args = step.args(ctx) if callable(step.args) else step.args
             except (KeyError, IndexError, TypeError) as exc:
-                failures.append(label)
-                print(f"SKIP {label}: no input from an earlier step ({exc!r})")
+                # An earlier step that was skipped or failed left nothing in ctx: that
+                # step is already counted, so this one is a skip. An earlier result
+                # that lacks the field this step reads is a regression.
+                if (
+                    isinstance(exc, KeyError)
+                    and exc.args
+                    and exc.args[0] in step_tools - ctx.keys()
+                ):
+                    skipped.append(label)
+                    print(f"SKIP {label}: no input from an earlier step ({exc!r})")
+                else:
+                    failures.append(label)
+                    print(f"FAIL {label}: earlier result has no input for it ({exc!r})")
                 continue
             result = await client.call_tool(
                 "call_tool", {"name": step.tool, "arguments": args}, raise_on_error=False
