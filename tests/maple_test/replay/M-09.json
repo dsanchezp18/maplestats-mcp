@@ -1,0 +1,151 @@
+{
+ "question_id": "M-09",
+ "version": "v1",
+ "recorded_on": "2026-11-07",
+ "server_commit": "d72372c",
+ "tool": "wds_get_data_from_vectors",
+ "arguments": {
+  "vector_ids": [
+   87008984
+  ],
+  "latest_n": 4
+ },
+ "requests": [
+  "114019d92fefda35",
+  "23e183155d834e44",
+  "6aaa9ed1228605cb",
+  "bdef00936ed4b92a"
+ ],
+ "result": {
+  "series": [
+   {
+    "product_id": 12100011,
+    "coordinate": "1.3.2.2.1.0.0.0.0.0",
+    "vector_id": 87008984,
+    "context": {
+     "citation": "Statistics Canada. Table 12-10-0011-01, International merchandise trade for all countries and by Principal Trading Partners, monthly. Vector v87008984. Released 2026-11-04.",
+     "table_id": "12-10-0011-01",
+     "table_title": "International merchandise trade for all countries and by Principal Trading Partners, monthly",
+     "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1210001101",
+     "series_title": "Canada;Trade Balance;Balance of payments;Seasonally adjusted;All countries",
+     "unit": "Dollars",
+     "scale": "millions",
+     "frequency": "Monthly",
+     "geography": "Canada",
+     "members": [
+      {
+       "dimension": "Geography",
+       "member": "Canada",
+       "member_id": 1
+      },
+      {
+       "dimension": "Trade",
+       "member": "Trade Balance",
+       "member_id": 3
+      },
+      {
+       "dimension": "Basis",
+       "member": "Balance of payments",
+       "member_id": 2
+      },
+      {
+       "dimension": "Seasonal adjustment",
+       "member": "Seasonally adjusted",
+       "member_id": 2
+      },
+      {
+       "dimension": "Principal trading partners",
+       "member": "All countries",
+       "member_id": 1
+      }
+     ],
+     "table_release_time": "2026-11-04T08:30",
+     "first_period": "1997-01-01",
+     "last_period": "2026-09-01",
+     "notes": [
+      "Unit is current (nominal) dollars, not adjusted for inflation.",
+      "StatCan footnote: totals are not equal to the sum of their components; do not add components to get a total.",
+      "Values are in millions: multiply value by scale_multiplier for the full figure."
+     ]
+    },
+    "observations": [
+     {
+      "ref_period": "2026-06-01",
+      "value": 4103.4,
+      "decimals": 1,
+      "scalar_factor_code": 6,
+      "scale_multiplier": 1000000,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-04T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-07-01",
+      "value": 905.3,
+      "decimals": 1,
+      "scalar_factor_code": 6,
+      "scale_multiplier": 1000000,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-04T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-08-01",
+      "value": 4951.3,
+      "decimals": 1,
+      "scalar_factor_code": 6,
+      "scale_multiplier": 1000000,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-04T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-09-01",
+      "value": 5350.1,
+      "decimals": 1,
+      "scalar_factor_code": 6,
+      "scale_multiplier": 1000000,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-04T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     }
+    ],
+    "transformed": null
+   }
+  ],
+  "failed": [],
+  "provenance": {
+   "source": "statcan-wds",
+   "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
+   "as_of": null,
+   "freshness": null,
+   "coverage": null,
+   "limits": null,
+   "cached": false,
+   "lang": "en",
+   "schema_name": "statcan.wds.VectorDataSet",
+   "licence": "Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence). Attribution: 'Source: Statistics Canada.'",
+   "commercial_use": "allowed",
+   "caveats": [
+    "Table 12-10-0011 holds each trade flow twice, on a customs basis and on a balance-of-payments basis, each unadjusted and seasonally adjusted. Statistics Canada's monthly trade release reports the balance-of-payments basis, seasonally adjusted, in millions of dollars: use that for a headline figure (exports, imports or the balance, total or with a partner) unless the question names another, and say which basis and adjustment you used. The CIMT database (cimt_ tools) is customs basis and not seasonally adjusted: use it for detail by product (HS code) or province, not for the headline total."
+   ],
+   "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
+  }
+ }
+}

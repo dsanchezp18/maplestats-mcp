@@ -49,6 +49,33 @@ uv run python -m tests.maple_test grade                 # writes results.md and 
 uv run pytest tests/test_maple_test.py                  # offline checks of the key and grader
 ```
 
+### On every pull request and on a schedule
+
+A run needs a model and the live sources, so two cheaper checks stand in for it:
+
+- **Replayed tool exchanges** (offline, in every `uv run pytest`). For ten questions
+  (M-01, M-07, M-09, M-11, M-12, M-14, C-01, C-06, C-19, C-22), [`replay/`](replay/) holds
+  the tool call that answers it, as a model makes it through `call_tool`, the HTTP the
+  server exchanged with StatCan or the Bank of Canada, and the result.
+  `tests/test_maple_test_replay.py` runs those calls against the checkout with the recorded
+  HTTP served locally (no source, no model) and fails if the result changed (a value, a
+  citation, a caveat, the shape), if it no longer holds the figures the answer key cites
+  (or holds one a refusal question says is unpublished), or if the server asks a source for
+  something that was not recorded. When a change is meant to alter these results, re-record
+  and explain the fixture diff in the pull request:
+
+  ```bash
+  uv run python -m tests.maple_test.replay record   # live; refuses if a result misses the key
+  ```
+
+  Re-record also after rebuilding a key these questions use. The HTTP bodies are in
+  `replay/http.json.gz` (about 100 KB; StatCan's code sets and cube metadata are most of it).
+- **[`maple-test.yml`](../../.github/workflows/maple-test.yml)** checks both keys against
+  the sources every Thursday (`smoke.yml` does on Mondays). Its benchmark job asks the 15 v1
+  questions through MapleStats and grades them; it calls a paid API (about USD 1 to 2 a
+  run), so it runs only when started by hand with `benchmark` ticked, and needs an
+  `ANTHROPIC_API_KEY` repository secret.
+
 `run` asks each question in an empty folder through headless Claude Code with built-in
 tools off and `ENABLE_TOOL_SEARCH=false`, the setup CanData used, so the two benchmarks'
 scores are read the same way. `--server-dir` serves a MapleStats checkout other than this

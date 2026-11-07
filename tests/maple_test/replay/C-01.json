@@ -1,0 +1,237 @@
+{
+ "question_id": "C-01",
+ "version": "v2",
+ "recorded_on": "2026-11-07",
+ "server_commit": "d72372c",
+ "tool": "wds_get_data_from_vectors",
+ "arguments": {
+  "vector_ids": [
+   2063951,
+   2063762
+  ],
+  "latest_n": 3
+ },
+ "requests": [
+  "4f9840b58458804c",
+  "bdef00936ed4b92a",
+  "dca13addd7278c51",
+  "dcf2db86238d1f5f"
+ ],
+ "result": {
+  "series": [
+   {
+    "product_id": 14100287,
+    "coordinate": "6.9.1.1.1.1.0.0.0.0",
+    "vector_id": 2063762,
+    "context": {
+     "citation": "Statistics Canada. Table 14-10-0287-01, Labour force characteristics, monthly, seasonally adjusted and trend-cycle. Vector v2063762. Released 2026-11-06.",
+     "table_id": "14-10-0287-01",
+     "table_title": "Labour force characteristics, monthly, seasonally adjusted and trend-cycle",
+     "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701",
+     "series_title": "Quebec;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+     "unit": "Percent",
+     "scale": "units",
+     "frequency": "Monthly",
+     "geography": "Quebec",
+     "members": [
+      {
+       "dimension": "Geography",
+       "member": "Quebec",
+       "member_id": 6
+      },
+      {
+       "dimension": "Labour force characteristics",
+       "member": "Employment rate",
+       "member_id": 9
+      },
+      {
+       "dimension": "Gender",
+       "member": "Total - Gender",
+       "member_id": 1
+      },
+      {
+       "dimension": "Age group",
+       "member": "15 years and over",
+       "member_id": 1
+      },
+      {
+       "dimension": "Statistics",
+       "member": "Estimate",
+       "member_id": 1
+      },
+      {
+       "dimension": "Data type",
+       "member": "Seasonally adjusted",
+       "member_id": 1
+      }
+     ],
+     "table_release_time": "2026-11-06T08:30",
+     "first_period": "1976-01-01",
+     "last_period": "2026-10-01",
+     "notes": []
+    },
+    "observations": [
+     {
+      "ref_period": "2026-08-01",
+      "value": 60.6,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-06T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-09-01",
+      "value": 59.9,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-06T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-10-01",
+      "value": 60.0,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-06T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     }
+    ],
+    "transformed": null
+   },
+   {
+    "product_id": 14100287,
+    "coordinate": "7.9.1.1.1.1.0.0.0.0",
+    "vector_id": 2063951,
+    "context": {
+     "citation": "Statistics Canada. Table 14-10-0287-01, Labour force characteristics, monthly, seasonally adjusted and trend-cycle. Vector v2063951. Released 2026-11-06.",
+     "table_id": "14-10-0287-01",
+     "table_title": "Labour force characteristics, monthly, seasonally adjusted and trend-cycle",
+     "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701",
+     "series_title": "Ontario;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+     "unit": "Percent",
+     "scale": "units",
+     "frequency": "Monthly",
+     "geography": "Ontario",
+     "members": [
+      {
+       "dimension": "Geography",
+       "member": "Ontario",
+       "member_id": 7
+      },
+      {
+       "dimension": "Labour force characteristics",
+       "member": "Employment rate",
+       "member_id": 9
+      },
+      {
+       "dimension": "Gender",
+       "member": "Total - Gender",
+       "member_id": 1
+      },
+      {
+       "dimension": "Age group",
+       "member": "15 years and over",
+       "member_id": 1
+      },
+      {
+       "dimension": "Statistics",
+       "member": "Estimate",
+       "member_id": 1
+      },
+      {
+       "dimension": "Data type",
+       "member": "Seasonally adjusted",
+       "member_id": 1
+      }
+     ],
+     "table_release_time": "2026-11-06T08:30",
+     "first_period": "1976-01-01",
+     "last_period": "2026-10-01",
+     "notes": []
+    },
+    "observations": [
+     {
+      "ref_period": "2026-08-01",
+      "value": 60.2,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-06T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-09-01",
+      "value": 60.1,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-06T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-10-01",
+      "value": 59.9,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-11-06T13:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     }
+    ],
+    "transformed": null
+   }
+  ],
+  "failed": [],
+  "provenance": {
+   "source": "statcan-wds",
+   "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
+   "as_of": null,
+   "freshness": null,
+   "coverage": null,
+   "limits": null,
+   "cached": false,
+   "lang": "en",
+   "schema_name": "statcan.wds.VectorDataSet",
+   "licence": "Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence). Attribution: 'Source: Statistics Canada.'",
+   "commercial_use": "allowed",
+   "caveats": [
+    "LFS and SEPH employment are different measures: do not compare their levels. The LFS is a household survey that counts employed people (a person with two jobs counts once), including the self-employed and agriculture; SEPH counts payroll jobs, so it leaves out the self-employed and agriculture, fishing and trapping, private household services, religious organisations and military personnel of the defence services. LFS estimates carry sampling error; preliminary SEPH estimates are revised. Compare trends over several months, not one month's change. For earnings in a detailed industry, such as provincial and territorial public administration (NAICS 912), use SEPH (14-10-0203 monthly, 14-10-0204 annual) and say why: the LFS wage table 14-10-0064 stops at broad sectors ('Public administration' as a whole).",
+    "LFS figures are survey estimates. Table 14-10-0287 publishes the standard error of each estimate, of its month-to-month change and of its year-over-year change (the Statistics dimension). A change is significant at the 5% level only when the change plus or minus two standard errors excludes zero, which many small monthly moves do not. Statistics Canada releases estimates with a CV up to 16.5% freely, with a warning up to 33.3%, and not above; estimates under a minimum size (1,500 for Canada) are suppressed. Seasonally adjusted series are revised once a year."
+   ],
+   "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
+  }
+ }
+}

@@ -1,0 +1,89 @@
+{
+ "question_id": "C-19",
+ "version": "v2",
+ "recorded_on": "2026-11-07",
+ "server_commit": "d72372c",
+ "tool": "boc_get_observations",
+ "arguments": {
+  "series_names": [
+   "V39079"
+  ],
+  "start_date": "2026-10-23",
+  "end_date": "2026-10-30"
+ },
+ "requests": [
+  "2289e91b655c6da3",
+  "bc357bb5b397df2a"
+ ],
+ "result": {
+  "series": {
+   "V39079": {
+    "name": "V39079",
+    "label": "Target for the overnight rate (business daily)",
+    "description": "Also called the policy interest rate, the average rate that the Bank of Canada wants to see in the market for overnight money market financing. (V39079)",
+    "unit": "Percent",
+    "frequency": "Business daily"
+   }
+  },
+  "observations": [
+   {
+    "ref_date": "2026-10-23",
+    "values": {
+     "V39079": 2.25
+    },
+    "non_numeric": null
+   },
+   {
+    "ref_date": "2026-10-26",
+    "values": {
+     "V39079": 2.25
+    },
+    "non_numeric": null
+   },
+   {
+    "ref_date": "2026-10-27",
+    "values": {
+     "V39079": 2.25
+    },
+    "non_numeric": null
+   },
+   {
+    "ref_date": "2026-10-28",
+    "values": {
+     "V39079": 2.25
+    },
+    "non_numeric": null
+   },
+   {
+    "ref_date": "2026-10-29",
+    "values": {
+     "V39079": 2.5
+    },
+    "non_numeric": null
+   },
+   {
+    "ref_date": "2026-10-30",
+    "values": {
+     "V39079": 2.5
+    },
+    "non_numeric": null
+   }
+  ],
+  "transformed": null,
+  "provenance": {
+   "source": "boc",
+   "url": "https://www.bankofcanada.ca/valet/observations/V39079/json?start_date=2026-10-23&end_date=2026-10-30",
+   "as_of": "2026-10-30T00:00:00Z",
+   "freshness": null,
+   "coverage": null,
+   "limits": "Newer data exist: the series runs to 2026-11-05, after the end of the range asked for (2026-10-30). Today is 2026-11-07; for the latest values pass recent, recent_months or recent_years instead of a date range.",
+   "cached": false,
+   "lang": "en",
+   "schema_name": "boc.ObservationsResult",
+   "licence": "Bank of Canada Terms of Use (https://www.bankofcanada.ca/terms/): attribute the Bank of Canada as the source and indicate if changes were made, without implying the Bank endorses the use; content passed on through paid services must be identified as obtained from the Bank's website.",
+   "commercial_use": "allowed",
+   "caveats": [],
+   "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
+  }
+ }
+}

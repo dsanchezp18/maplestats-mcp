@@ -1,0 +1,168 @@
+{
+ "question_id": "M-07",
+ "version": "v1",
+ "recorded_on": "2026-11-07",
+ "server_commit": "d72372c",
+ "tool": "wds_get_data_from_vectors",
+ "arguments": {
+  "vector_ids": [
+   108785715,
+   108785714
+  ],
+  "latest_n": 2
+ },
+ "requests": [
+  "1159f1fbf1ea0637",
+  "1c04aa11b84d99fb",
+  "838d559e9070a3b5",
+  "bdef00936ed4b92a"
+ ],
+ "result": {
+  "series": [
+   {
+    "product_id": 18100256,
+    "coordinate": "1.2.0.0.0.0.0.0.0.0",
+    "vector_id": 108785714,
+    "context": {
+     "citation": "Statistics Canada. Table 18-10-0256-01, Consumer Price Index (CPI) statistics, measures of core inflation and other related statistics - Bank of Canada definitions. Vector v108785714. Released 2026-10-19.",
+     "table_id": "18-10-0256-01",
+     "table_title": "Consumer Price Index (CPI) statistics, measures of core inflation and other related statistics - Bank of Canada definitions",
+     "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810025601",
+     "series_title": "Canada;Measure of core inflation based on a weighted median approach, CPI-median (year-over-year percent change)",
+     "unit": "Percent",
+     "scale": "units",
+     "frequency": "Monthly",
+     "geography": "Canada",
+     "members": [
+      {
+       "dimension": "Geography",
+       "member": "Canada",
+       "member_id": 1
+      },
+      {
+       "dimension": "Alternative measures",
+       "member": "Measure of core inflation based on a weighted median approach, CPI-median (year-over-year percent change)",
+       "member_id": 2
+      }
+     ],
+     "table_release_time": "2026-10-19T08:30",
+     "first_period": "1949-01-01",
+     "last_period": "2026-09-01",
+     "notes": []
+    },
+    "observations": [
+     {
+      "ref_period": "2026-08-01",
+      "value": 2.0,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-10-19T12:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-09-01",
+      "value": 1.9,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-10-19T12:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     }
+    ],
+    "transformed": null
+   },
+   {
+    "product_id": 18100256,
+    "coordinate": "1.3.0.0.0.0.0.0.0.0",
+    "vector_id": 108785715,
+    "context": {
+     "citation": "Statistics Canada. Table 18-10-0256-01, Consumer Price Index (CPI) statistics, measures of core inflation and other related statistics - Bank of Canada definitions. Vector v108785715. Released 2026-10-19.",
+     "table_id": "18-10-0256-01",
+     "table_title": "Consumer Price Index (CPI) statistics, measures of core inflation and other related statistics - Bank of Canada definitions",
+     "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810025601",
+     "series_title": "Canada;Measure of core inflation based on a trimmed mean approach, CPI-trim (year-over-year percent change)",
+     "unit": "Percent",
+     "scale": "units",
+     "frequency": "Monthly",
+     "geography": "Canada",
+     "members": [
+      {
+       "dimension": "Geography",
+       "member": "Canada",
+       "member_id": 1
+      },
+      {
+       "dimension": "Alternative measures",
+       "member": "Measure of core inflation based on a trimmed mean approach, CPI-trim (year-over-year percent change)",
+       "member_id": 3
+      }
+     ],
+     "table_release_time": "2026-10-19T08:30",
+     "first_period": "1949-01-01",
+     "last_period": "2026-09-01",
+     "notes": []
+    },
+    "observations": [
+     {
+      "ref_period": "2026-08-01",
+      "value": 1.9,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-10-19T12:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-09-01",
+      "value": 1.8,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-10-19T12:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     }
+    ],
+    "transformed": null
+   }
+  ],
+  "failed": [],
+  "provenance": {
+   "source": "statcan-wds",
+   "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
+   "as_of": null,
+   "freshness": null,
+   "coverage": null,
+   "limits": null,
+   "cached": false,
+   "lang": "en",
+   "schema_name": "statcan.wds.VectorDataSet",
+   "licence": "Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence). Attribution: 'Source: Statistics Canada.'",
+   "commercial_use": "allowed",
+   "caveats": [
+    "CPI-trim and CPI-median are built from seasonally adjusted prices and are revised: since the January 2026 CPI, each January revises the past three years and every other month revises one past month. CPI-common is revised as its factor model is re-estimated on all past data. Today's value for a past month may differ from what was first published: for what was known on a date, use table 18-10-0259 (real-time releases) or wds_get_series_as_of."
+   ],
+   "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
+  }
+ }
+}

@@ -1,0 +1,61 @@
+{
+ "question_id": "M-14",
+ "version": "v1",
+ "recorded_on": "2026-11-07",
+ "server_commit": "d72372c",
+ "tool": "boc_get_observations",
+ "arguments": {
+  "series_names": [
+   "FXUSDCAD"
+  ],
+  "start_date": "2026-10-30",
+  "end_date": "2026-11-02"
+ },
+ "requests": [
+  "68de4e045a4e7330",
+  "f865c50846e3b907"
+ ],
+ "result": {
+  "series": {
+   "FXUSDCAD": {
+    "name": "FXUSDCAD",
+    "label": "USD/CAD",
+    "description": "Daily average exchange rate of the US dollar in Canadian dollars.",
+    "unit": "Canadian dollars per US dollar",
+    "frequency": "Business daily"
+   }
+  },
+  "observations": [
+   {
+    "ref_date": "2026-10-30",
+    "values": {
+     "FXUSDCAD": 1.396
+    },
+    "non_numeric": null
+   },
+   {
+    "ref_date": "2026-11-02",
+    "values": {
+     "FXUSDCAD": 1.3978
+    },
+    "non_numeric": null
+   }
+  ],
+  "transformed": null,
+  "provenance": {
+   "source": "boc",
+   "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?start_date=2026-10-30&end_date=2026-11-02",
+   "as_of": "2026-11-02T00:00:00Z",
+   "freshness": null,
+   "coverage": null,
+   "limits": "Newer data exist: the series runs to 2026-11-06, after the end of the range asked for (2026-11-02). Today is 2026-11-07; for the latest values pass recent, recent_months or recent_years instead of a date range.",
+   "cached": false,
+   "lang": "en",
+   "schema_name": "boc.ObservationsResult",
+   "licence": "Bank of Canada Terms of Use (https://www.bankofcanada.ca/terms/): attribute the Bank of Canada as the source and indicate if changes were made, without implying the Bank endorses the use; content passed on through paid services must be identified as obtained from the Bank's website.",
+   "commercial_use": "allowed",
+   "caveats": [],
+   "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
+  }
+ }
+}
