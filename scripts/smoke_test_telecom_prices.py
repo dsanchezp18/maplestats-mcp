@@ -8,10 +8,12 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import skip_outage, verdict
+
 from maplestats_mcp.modules.telecom_prices import client
 
 
-async def main() -> int:
+async def checks() -> bool:
     ok = True
 
     # Confirmed live 2026-10-27: version 11 (2026-05-14), 2016-2025, 5 GB lowest
@@ -102,8 +104,18 @@ async def main() -> int:
         print(f"OK: quarterly {service} -> {other.total_matched} values since 2025")
         ok &= other.total_matched > 0
 
-    print("\nTELECOM PRICES SMOKE TEST PASSED" if ok else "\nTELECOM PRICES SMOKE TEST FAILED")
-    return 0 if ok else 1
+    return ok
+
+
+async def main() -> int:
+    # open.canada.ca timed out on the GitHub runner on 2026-11-07 (ConnectTimeout):
+    # an outage skips the run, any other error still fails it.
+    try:
+        ok = await checks()
+    except Exception as exc:  # noqa: BLE001
+        skip_outage("open.canada.ca", exc)
+        ok = True
+    return verdict("TELECOM PRICES", ok)
 
 
 if __name__ == "__main__":

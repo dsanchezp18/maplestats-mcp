@@ -48,6 +48,26 @@ async def test_a_timed_out_call_is_counted_as_an_error() -> None:
     assert stats.snapshot()["by_tool"] == {"slow": {"ok": 0, "error": 1}}
 
 
+async def test_a_timed_out_call_is_coded_upstream_unavailable() -> None:
+    # tc_recalls_search ran past 120 s on 2026-11-07 and was coded [error]; a slow
+    # source is an outage to retry, like a request timeout.
+    from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
+
+    server = FastMCP("t")
+    server.add_middleware(ErrorHintMiddleware())  # same order as server.py
+    server.add_middleware(ToolTimeoutMiddleware(0.05))
+
+    @server.tool
+    async def slow() -> str:
+        await asyncio.sleep(5)
+        return "x"
+
+    async with Client(server) as client:
+        with pytest.raises(ToolError) as caught:
+            await client.call_tool("slow", {})
+    assert str(caught.value).startswith("[upstream_unavailable] slow did not finish within")
+
+
 async def test_a_timeout_error_raised_by_the_tool_is_not_reported_as_the_deadline() -> None:
     server = FastMCP("t")
     server.add_middleware(ToolTimeoutMiddleware(30))
