@@ -1,0 +1,60 @@
+{
+  "search_tools": {
+    "tool": "search_tools",
+    "arguments": {
+      "query": "bank of canada exchange rate"
+    }
+  },
+  "search_none": {
+    "tool": "search_tools",
+    "arguments": {
+      "query": "zzqx"
+    }
+  },
+  "plan_query": {
+    "tool": "plan_query",
+    "arguments": {
+      "question": "Unemployment rate in Alberta"
+    }
+  },
+  "boc": {
+    "tool": "boc_get_observations",
+    "arguments": {
+      "series_names": [
+        "FXUSDCAD"
+      ],
+      "recent": 3
+    }
+  },
+  "wds": {
+    "tool": "wds_get_data_from_vectors",
+    "arguments": {
+      "vector_ids": [
+        2062815
+      ],
+      "latest_n": 3
+    }
+  },
+  "tool_error": {
+    "tool": "boc_get_observations",
+    "arguments": {
+      "series_names": [
+        "NOPE_XX"
+      ],
+      "recent": 3
+    }
+  },
+  "reproduce": {
+    "tool": "reproduce_code",
+    "arguments": {
+      "tool_name": "boc_get_observations",
+      "arguments": {
+        "series_names": [
+          "FXUSDCAD"
+        ],
+        "recent": 3
+      },
+      "language": "python"
+    }
+  }
+}
