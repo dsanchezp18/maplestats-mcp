@@ -145,6 +145,36 @@ async def test_hybrid_without_an_index_searches_by_bm25(monkeypatch, tmp_path: P
     assert hybrid._semantic is None and hybrid._semantic_tried
 
 
+class _ReversedIndex:
+    """A stand-in semantic index that ranks the catalogue backwards and counts its calls."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def rows(self, tools):
+        return list(range(len(tools)))
+
+    def ranking(self, query, rows, depth):
+        self.calls += 1
+        return list(reversed(range(len(rows))))[:depth]
+
+
+@pytest.mark.parametrize("query", ["14-10-0287-01", "v41690973", "boc_get_observations"])
+async def test_hybrid_ranks_an_identifier_query_by_bm25(tools, query: str):
+    # phase2.md, 2026-11-07: fused with an embedding, identifier probes fell from
+    # R@1 0.79 to 0.69 (vectors 1.00 to 0.50); an embedding does not read identifiers.
+    hybrid = server.AnnotatedBM25SearchTransform(max_results=5, mode="hybrid")
+    plain = server.AnnotatedBM25SearchTransform(max_results=5, mode="bm25")
+    stub = _ReversedIndex()
+    hybrid._semantic, hybrid._semantic_tried = stub, True  # type: ignore[assignment]
+    assert [t.name for t in await hybrid._search(tools, query)] == [
+        t.name for t in await plain._search(tools, query)
+    ]
+    assert stub.calls == 0
+    await hybrid._search(tools, "unemployment rate")
+    assert stub.calls == 1
+
+
 def test_a_changed_or_new_tool_has_no_vector_until_the_rebuild():
     np = pytest.importorskip("numpy")
 
