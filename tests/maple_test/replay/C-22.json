@@ -1,0 +1,108 @@
+{
+ "question_id": "C-22",
+ "version": "v2",
+ "recorded_on": "2026-11-07",
+ "server_commit": "d72372c",
+ "tool": "wds_get_data_from_vectors",
+ "arguments": {
+  "vector_ids": [
+   41690973
+  ],
+  "latest_n": 2
+ },
+ "requests": [
+  "5e3f34da23222465",
+  "9cc55ee47fda0d20",
+  "ade52856824da930",
+  "bdef00936ed4b92a"
+ ],
+ "result": {
+  "series": [
+   {
+    "product_id": 18100004,
+    "coordinate": "2.2.0.0.0.0.0.0.0.0",
+    "vector_id": 41690973,
+    "context": {
+     "citation": "Statistics Canada. Table 18-10-0004-01, Consumer Price Index, monthly, not seasonally adjusted. Vector v41690973. Released 2026-10-19.",
+     "table_id": "18-10-0004-01",
+     "table_title": "Consumer Price Index, monthly, not seasonally adjusted",
+     "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401",
+     "series_title": "Canada;All-items",
+     "unit": "2002=100",
+     "scale": "units",
+     "frequency": "Monthly",
+     "geography": "Canada",
+     "members": [
+      {
+       "dimension": "Geography",
+       "member": "Canada",
+       "member_id": 2
+      },
+      {
+       "dimension": "Products and product groups",
+       "member": "All-items",
+       "member_id": 2
+      }
+     ],
+     "table_release_time": "2026-10-19T08:30",
+     "first_period": "1914-01-01",
+     "last_period": "2026-09-01",
+     "notes": [
+      "Unit is an index (2002=100), not a price or dollar level: quote changes as percentages of the index."
+     ]
+    },
+    "observations": [
+     {
+      "ref_period": "2026-08-01",
+      "value": 169.8,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-09-14T12:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     },
+     {
+      "ref_period": "2026-09-01",
+      "value": 170.0,
+      "decimals": 1,
+      "scalar_factor_code": 0,
+      "scale_multiplier": 1,
+      "symbol_code": 0,
+      "status_code": 0,
+      "security_level_code": 0,
+      "release_time": "2026-10-19T12:30:00Z",
+      "symbol": "none",
+      "status": "normal",
+      "security_level": "public"
+     }
+    ],
+    "transformed": null
+   }
+  ],
+  "failed": [],
+  "provenance": {
+   "source": "statcan-wds",
+   "url": "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
+   "as_of": null,
+   "freshness": null,
+   "coverage": null,
+   "limits": null,
+   "cached": false,
+   "lang": "en",
+   "schema_name": "statcan.wds.VectorDataSet",
+   "licence": "Statistics Canada Open Licence (https://www.statcan.gc.ca/en/reference/licence). Attribution: 'Source: Statistics Canada.'",
+   "commercial_use": "allowed",
+   "caveats": [
+    "The official CPI (not seasonally adjusted, table 18-10-0004) is never revised once published. Seasonally adjusted indexes (18-10-0006) are the only CPI series revised: one month after release, and each January for the past 36 months; each is adjusted on its own, so they do not add up to the all-items index. The basket weights are updated every year since 2022.",
+    "Annual inflation for a calendar year is the change between two annual average indexes, which Statistics Canada publishes each January in table 18-10-0005-01 and computes from the published, rounded indexes. Read it there: averaging the 12 monthly values of 18-10-0004-01 yourself can differ by 0.1 point, and the December-to-December change is a different measure. Say which one you report.",
+    "Most CPI components are published for Canada and the provinces only. Mortgage interest cost is published for Canada alone: no province or city has it. For Toronto, tables 18-10-0004 and 18-10-0005 publish six series only: All-items, Shelter, Rented accommodation, Owned accommodation, Water, fuel and electricity, and All-items (1992=100). A city figure for any other component does not exist; say so and offer the national or provincial figure instead."
+   ],
+   "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
+  }
+ }
+}

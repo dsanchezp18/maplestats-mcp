@@ -1,0 +1,106 @@
+name: Maple Test
+
+# The Maple Test (tests/maple_test/) on a schedule. Pull requests are guarded offline
+# by tests/test_maple_test_replay.py in the ordinary test run; this workflow does the
+# parts that need the live sources or a model.
+#
+# - keys (scheduled): rebuild both answer keys from StatCan and the Bank of Canada and
+#   fail if a published figure was revised or a trap no longer holds. smoke.yml's
+#   answer-keys job runs the same check on Mondays; this one runs on Thursdays, so a
+#   revision in a weekly release (LFS on Fridays, CPI mid-month) is seen within days.
+# - benchmark (manual only): ask the 15 v1 questions through headless Claude Code with
+#   MapleStats, grade them, and upload the answers. It calls a paid model API, so it
+#   never runs on the schedule. Estimated cost: USD 0.06-0.12 per question (v2 runs,
+#   claude-sonnet-5-5), so USD 0.90-1.80 per run, about USD 4-8 a month if run weekly.
+#   It needs an ANTHROPIC_API_KEY repository secret.
+on:
+  schedule:
+    # Thursdays 07:41 UTC; an off-the-hour minute avoids the :00 queue spike.
+    - cron: "41 7 * * 4"
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Also run the v1 benchmark through claude-sonnet-5-5 (paid API, about USD 1-2)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maple-test
+  cancel-in-progress: false
+
+jobs:
+  keys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          version: "0.11.7" # same uv as both Dockerfiles; bump all three together
+      - run: uv sync --locked
+      - name: Check the Maple Test keys against the sources
+        run: |
+          status=0
+          for key in build_key build_key_v2; do
+            echo "== tests.maple_test.$key --check"
+            uv run python -m "tests.maple_test.$key" --check 2>&1 | tee -a keys.log || status=1
+          done
+          exit $status
+        shell: bash -o pipefail {0}
+      - name: Summarize drift
+        if: failure()
+        run: |
+          {
+            echo "### Maple Test answer keys no longer match the sources"
+            echo '```'
+            grep -v '^\s*$' keys.log | tail -n 40 || echo "(no log captured)"
+            echo '```'
+            echo "Rebuild the key that drifted, read the diff, and re-grade the runs it affects."
+            echo "Then re-record the replay fixtures: uv run python -m tests.maple_test.replay record"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  benchmark:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.benchmark }}
+    runs-on: ubuntu-latest
+    # 15 questions at up to 10 minutes each (run.TIMEOUT_S) is the worst case; a normal
+    # run takes about 10 minutes.
+    timeout-minutes: 90
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          version: "0.11.7"
+      - run: uv sync --locked
+      - name: Install Claude Code
+        run: |
+          test -n "$ANTHROPIC_API_KEY" || { echo "::error::Set the ANTHROPIC_API_KEY repository secret"; exit 1; }
+          npm install -g @anthropic-ai/claude-code@2.1.318
+      - name: Ask the v1 questions through MapleStats
+        run: uv run python -m tests.maple_test run --arm maplestats --label "ci-${{ github.run_id }}"
+      - name: Grade
+        run: |
+          run=$(ls tests/maple_test/runs/*_ci-${{ github.run_id }}_*.jsonl)
+          uv run python -m tests.maple_test grade "$run"
+          cost=$(jq -s 'map(.cost_usd // 0) | add' "$run")
+          {
+            echo "### Maple Test v1, MapleStats at ${GITHUB_SHA::7}"
+            echo "Cost: USD $cost. The grader reads numbers from the text: read every answer before trusting a grade (tests/maple_test/README.md)."
+            echo
+            cat tests/maple_test/results.md
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: maple-test-v1-${{ github.run_id }}
+          path: |
+            tests/maple_test/runs/*_ci-${{ github.run_id }}_*.jsonl
+            tests/maple_test/results.md
+            tests/maple_test/results.json
+          if-no-files-found: warn
