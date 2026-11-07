@@ -167,6 +167,10 @@ jobs:
       # MAPLE_DUCKDB_MEMORY_LIMIT=384MB), so two at once still fit with room.
       # Downloaded PUMFs go to the file share, capped at 5 GB (the Census
       # individuals file unpacks to 569 MB); the share's quota is 50 GiB.
+      # Tool calls may run 240 s, not the default 120 s: a Census tabulation took
+      # 80-90 s on a 20-core laptop and is slower on 1 vCPU over the file share.
+      # 240 s is also Container Apps' ingress request limit, so a call that reaches
+      # it may be cut by the ingress before the server's own timeout error arrives.
       - name: Deploy the image
         run: |
           az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
@@ -174,7 +178,7 @@ jobs:
             --cpu 1 --memory 2Gi \
             --set-env-vars MAPLE_REQUIRE_AUTH=0 MAPLE_USAGE_STATS_FILE=/data/usage/stats.json \
               MAPLE_PUMF_TABULATE=1 MAPLE_PUMF_CACHE_DIR=/data/pumf MAPLE_PUMF_CACHE_MAX_GB=5 \
-              MAPLE_DUCKDB_MEMORY_LIMIT=384MB \
+              MAPLE_DUCKDB_MEMORY_LIMIT=384MB MAPLE_TOOL_TIMEOUT_SECONDS=240 \
             --only-show-errors --output none
       # The app keeps serving the previous revision until the new one passes
       # its probes, so a bad image fails this step without taking the server down.
