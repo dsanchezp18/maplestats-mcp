@@ -562,6 +562,15 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="municipal_feed",
     ),
+    "bc_transit": Source(
+        "BC Transit real-time",
+        "BC Transit en temps réel",
+        "municipal",
+        "BC Transit real-time",
+        "BC Transit en temps réel",
+        places=("BC",),
+        row="municipal_feed",
+    ),
     "transit": Source(
         "Transit schedules (static GTFS)",
         "Horaires de transport en commun (GTFS statique)",

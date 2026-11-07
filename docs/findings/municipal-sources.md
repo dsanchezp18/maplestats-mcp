@@ -248,8 +248,9 @@ trips-on-date equal to the trips found in the streamed `stop_times.txt`.
 Victoria's route and stop counts and one stop's departure count (485) equal an
 independent `zipfile` read of the same download.
 
-**BC Transit real-time is not built.** The open-data page also links GTFS-RT
-for every system: `bct.tmix.se/gtfs-realtime/alerts.pb`, `tripupdates.pb` and
+**BC Transit real-time** was left out of this change and shipped on
+2026-11-07 (see [BC Transit real-time](#bc-transit-real-time)). The open-data
+page also links GTFS-RT for every system: `bct.tmix.se/gtfs-realtime/alerts.pb`, `tripupdates.pb` and
 `vehiclepositions.pb`, each with `?operatorIds=N`. They answer 200 with
 `application/x-protobuf` and no key (Victoria on 2026-10-02: alerts 8 KB,
 vehicle positions 28 KB, trip updates 810 KB). Adding it is not a copy of the
@@ -358,6 +359,43 @@ Quirks found against the live feeds:
   with repeated short names, so a route number can need the `route_id`.
 - STM and OC Transpo run trips past 24:00; the listing includes the previous
   service day's after-midnight trips and flags them.
+
+## BC Transit real-time
+
+Shipped 2026-11-07 as `modules/bc_transit/` (`bc_transit_*`, 3 tools). Feeds:
+`https://bct.tmix.se/gtfs-realtime/{alerts,tripupdates,vehiclepositions}.pb?operatorIds=N`,
+anonymous, `application/x-protobuf`, header GTFS-RT 1.0 `FULL_DATASET`.
+
+**Terms (read 2026-11-07).** The feeds are linked from bctransit.com/open-data
+under the same Open Data Terms of Use as the static zips: "a limited, revocable
+and non-exclusive license to use, reproduce, and redistribute the Data", on
+condition of indicating that BC Transit is the source and not using its domain
+name or marks. No commercial restriction; `commercial_use` is `allowed`.
+
+**What the live feeds hold (Victoria, operator 48, 2026-11-07 about 13:45 PT).**
+26 alerts (5 KB), 126 vehicles (19 KB), 399 trip updates with 13,695 stop
+updates (581 KB). All 12 static systems answer (Nanaimo 41, Kelowna 47,
+Kamloops 46, Prince George 22, Fraser Valley 13, North Okanagan 14, Comox
+Valley 45, Cowichan Valley 10, Campbell River 12, Squamish 43, Whistler 44),
+trip feeds 14 to 150 KB.
+
+- Route ids are `<short name>-<system suffix>` ("55-VIC"), the same ids as
+  routes.txt; the tools accept "55" or "55-VIC". Stop ids equal stops.txt's
+  `stop_id` and `stop_code` ("101567").
+- 19 of 399 trips were `CANCELED`; each still lists its stops with predicted
+  times, marked `SKIPPED`. The predictions tool keeps them, flagged, and counts
+  them in `cancelled_trips`; `include_cancelled=false` drops them.
+- Trips not yet started repeat the schedule (delay 0). Uncertainty is mostly 0
+  even for running trips (route 55: delay 141 s, uncertainty 0).
+- Alert headers are generic ("DETOUR"); the detail is in the description,
+  English, with no language tag and CRLF line breaks (normalised to LF).
+- Vehicles carry `occupancy_status`, `current_status` and `congestion_level`;
+  vehicle id and label are the same number.
+
+Smoke test (`scripts/smoke_test_bc_transit.py`, live 2026-11-07): every system's
+three feeds read (Victoria 129 vehicles, 25 alerts; Whistler 11 vehicles, 1
+alert); in Victoria the route filter returned the same count as a count over
+the unfiltered feed (route 55: 2), and the stop filter returned only that stop.
 
 ## EPCOR Edmonton water quality
 

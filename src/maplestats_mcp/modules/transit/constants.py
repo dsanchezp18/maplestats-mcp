@@ -243,14 +243,15 @@ def _bc_transit(key: str, system: str, operator_id: int, also: str = "") -> Agen
             "(5 to 25 s) and serves neither HEAD nor byte ranges, so this module downloads the "
             "whole zip and keeps it in memory for ten minutes. The terms require saying BC "
             "Transit is the source and bar use of its domain name and trade-marks. Real-time "
-            "feeds exist but are not built (docs/findings/municipal-sources.md)."
+            "positions, predictions and alerts for the same key are in bc_transit_*."
         ).replace("  ", " "),
         notes_fr=(
             f"Identifiant d'exploitant {operator_id}. {also} L'hôte de BC Transit construit "
             "chaque zip à la demande (5 à 25 s) et ne prend en charge ni HEAD ni les plages "
             "d'octets ; ce module télécharge donc le zip complet et le garde en mémoire dix "
             "minutes. Les conditions exigent d'indiquer BC Transit comme source et interdisent "
-            "l'usage de son nom de domaine et de ses marques de commerce."
+            "l'usage de son nom de domaine et de ses marques de commerce. Les positions, "
+            "prévisions et avis en temps réel pour la même clé sont dans bc_transit_*."
         ).replace("  ", " "),
         range_requests=False,
     )

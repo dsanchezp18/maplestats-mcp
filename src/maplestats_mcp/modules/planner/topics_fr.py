@@ -475,6 +475,11 @@ FR: dict[str, str] = {
     "scheduled departures: agency and stop (stop_id) on a given date": (
         "départs prévus : agency et stop (stop_id) à une date donnée"
     ),
+    "BC Transit real-time (Victoria, Kelowna, Kamloops, Nanaimo...): system "
+    "'bct_<city>' and stop_id or route_id": (
+        "BC Transit en temps réel (Victoria, Kelowna, Kamloops, Nanaimo...) : system "
+        "'bct_<ville>' et stop_id ou route_id"
+    ),
     "Edmonton transit, when the question is Edmonton": (
         "transport en commun d'Edmonton, si la question porte sur Edmonton"
     ),

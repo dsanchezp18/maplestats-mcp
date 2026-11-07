@@ -1311,6 +1311,12 @@ TOPICS: tuple[Topic, ...] = (
                 _TRANSIT_TERMS,
             ),
             PlanStep(
+                "bc_transit_get_stop_predictions",
+                "BC Transit real-time (Victoria, Kelowna, Kamloops, Nanaimo...): system "
+                "'bct_<city>' and stop_id or route_id",
+                _TRANSIT_TERMS,
+            ),
+            PlanStep(
                 "drivebc_search_events",
                 "BC highway closures, road work and incidents now: road, area or severity",
                 ("road closure", "highway", "road work", "drivebc", "fermeture de route"),
