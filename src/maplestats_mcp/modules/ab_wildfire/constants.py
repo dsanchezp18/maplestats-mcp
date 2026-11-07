@@ -27,6 +27,12 @@ FIRE_CONTROL_ORDERS = {
     "Fire Restriction": f"{SERVICES_ROOT}/alberta_fire_ban_system/FeatureServer/2",
     "Fire Advisory": f"{SERVICES_ROOT}/alberta_fire_ban_system/FeatureServer/1",
 }
+# Wildfires reported by municipalities outside the Forest Protection Area, drawn on the
+# status map as two layers (see the package docstring, point 9).
+MUNICIPAL_FIRES = {
+    "active": f"{SERVICES_ROOT}/Active_Municipal_Wildfire_Prod/FeatureServer/4",
+    "inactive": f"{SERVICES_ROOT}/Extinguished_Municipal_Wildfire_Prod/FeatureServer/4",
+}
 OHV_RESTRICTION = f"{SERVICES_ROOT}/off_highway_vehicle_ohv_restriction/FeatureServer/0"
 OHV_LABEL = "OHV Restriction"
 

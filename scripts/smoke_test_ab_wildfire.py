@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from collections.abc import Awaitable
 from datetime import datetime
@@ -10,6 +11,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from maplestats_mcp.modules.ab_wildfire import client
+from maplestats_mcp.modules.ab_wildfire import constants as c
 from maplestats_mcp.modules.ab_wildfire.client import FireFilters
 from maplestats_mcp.shared.errors import InvalidInput
 
@@ -212,7 +214,39 @@ async def main() -> int:
         client.get_fire_control_orders(alert_type="fire restriction", name_contains="park"),
     )
 
+    # Municipal-reported fires: the area total must equal the server's own sum
+    # over both layers, and a radius search must return only fires inside it.
+    municipal = await _check("list_municipal_fires()", client.list_municipal_fires(limit=2000))
+    server_sum = 0.0
+    for layer_url in c.MUNICIPAL_FIRES.values():
+        body = await client._query(
+            layer_url,
+            "smoke",
+            outStatistics=json.dumps(
+                [
+                    {
+                        "statisticType": "sum",
+                        "onStatisticField": "Hectares",
+                        "outStatisticFieldName": "ha",
+                    }
+                ]
+            ),
+        )
+        server_sum += float((body["features"][0]["attributes"] or {}).get("ha") or 0)
+    print(f"   municipal: {municipal.total_matches} fires, {municipal.total_area_ha} ha")
+    _require(abs(municipal.total_area_ha - server_sum) < 0.01, "municipal area != server sum")
+    _require(
+        all(f.latitude and 48.9 < f.latitude < 60.1 for f in municipal.fires),
+        "a municipal fire is outside Alberta (geometry not WGS84?)",
+    )
+    near = await _check(
+        "list_municipal_fires(near Edmonton, 50 km)",
+        client.list_municipal_fires(latitude=53.5461, longitude=-113.4938, radius_km=50),
+    )
+    _require(all((f.distance_km or 99) <= 50 for f in near.fires), "fire outside radius")
+
     for label, bad in (
+        ("municipal half a point", client.list_municipal_fires(latitude=53.0)),
         ("bad date", client.list_fires("current", FireFilters(start_date="2026/06/01"))),
         ("bad size class", client.list_fires("current", FireFilters(size_class="Z"))),
         ("half a point", client.list_fires("current", FireFilters(), latitude=53.0)),

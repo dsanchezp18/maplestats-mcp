@@ -15,6 +15,7 @@ FireGroupBy = Literal["status", "cause", "size_class", "forest_area", "fire_type
 DateBasis = Literal["assessed", "status_changed"]
 FireSort = Literal["latest", "largest"]
 PerimeterState = Literal["active", "extinguished"]
+MunicipalState = Literal["all", "active", "inactive"]
 
 
 class Fire(BaseModel):
@@ -225,4 +226,47 @@ class FireControlOrderList(BaseModel):
     counts_by_type: dict[str, int]
     orders: list[FireControlOrder]
     note: str | None = None
+    provenance: Provenance
+
+
+class MunicipalFire(BaseModel):
+    """One wildfire a municipality reported (outside the Forest Protection Area)."""
+
+    fire_number: str | None = Field(
+        default=None, description="Municipal-reported number, e.g. 'LMR-0076-2026'."
+    )
+    mutual_aid_number: str | None = Field(
+        default=None, description="Set when the province sent mutual aid."
+    )
+    status: str | None = Field(default=None, description="As reported: Extinguished, Inactive...")
+    layer: Literal["active", "inactive"] = Field(
+        description="The map layer: active, or inactive and extinguished."
+    )
+    area_ha: float | None = Field(default=None, description="Hectares, as reported.")
+    start_date: date | None = Field(default=None, description="Estimated start, Alberta date.")
+    inactive_at: datetime | None = Field(default=None, description="UTC.")
+    extinguished_at: datetime | None = Field(default=None, description="UTC.")
+    local_government: str | None = Field(
+        default=None, description="Reporting municipality, e.g. 'Lac La Biche County'."
+    )
+    mutual_aid_zone: str | None = Field(
+        default=None, description="Mutual aid contact zone, e.g. 'Calgary MACZ'."
+    )
+    info_website: str | None = None
+    info_phone: str | None = Field(default=None, description="The municipality's fire line.")
+    latitude: float | None = None
+    longitude: float | None = None
+    distance_km: float | None = Field(
+        default=None, description="Distance from the requested point, when one was given."
+    )
+    last_updated: datetime | None = Field(default=None, description="Record update, UTC.")
+
+
+class MunicipalFireList(BaseModel):
+    state: MunicipalState
+    total_matches: int
+    total_area_ha: float = Field(description="Hectares over every match, before limit.")
+    returned_count: int
+    offset: int
+    fires: list[MunicipalFire]
     provenance: Provenance
