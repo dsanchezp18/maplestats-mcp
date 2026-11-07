@@ -355,6 +355,13 @@ def _run_query(
     try:
         with duck.connect() as connection:
             connection.execute("SET enable_progress_bar = false")
+            # Each thread holds its own CSV buffers. Measured 2026-11-07 on 20 cores
+            # with MAPLE_DUCKDB_MEMORY_LIMIT=384MB: the default threads ran out of
+            # memory on the Census 2021 individuals file (16 replicate weights) and
+            # the EICS 2024 bootstrap join; two threads finished both, at about
+            # +400 MB and +215 MB of process memory, in about 80 s and 40 s (one
+            # thread: 88 s and 74 s). The default ran out at 512MB too, on EICS.
+            connection.execute("SET threads=2")
             rows = connection.execute(sql, params).fetchall()
             total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
     except duckdb.Error as exc:

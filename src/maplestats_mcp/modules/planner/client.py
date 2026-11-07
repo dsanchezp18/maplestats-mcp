@@ -142,7 +142,7 @@ def _ordered(topic: Topic, text: str, labels: list[str]) -> list[StepOut]:
 
 def _available(step: PlanStep) -> bool:
     """False for a tool a setting has switched off on this server (statcan_pumf_tabulate on
-    the hosted one), so a plan never sends the model to a tool call_tool will refuse."""
+    the Render backup), so a plan never sends the model to a tool call_tool will refuse."""
     switch = TOOL_SWITCHES.get(step.tool)
     return switch is None or switch()
 
