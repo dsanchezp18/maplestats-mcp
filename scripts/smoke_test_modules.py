@@ -1287,6 +1287,88 @@ STEPS: list[Step] = [
         },
         lambda data: [p["check"] for p in data["problems"]] == ["not_published"],
     ),
+    # Calculations across series. Hand-checked on 2026-11-07 against WDS and
+    # Valet directly: Alberta employment 2,608.5 over Canada's 21,009.9 thousand
+    # (14-10-0287, 2025-09) is 12.4156 %; the CPI's annual averages (v41690973,
+    # never revised) 126.5667 in 2015 and 164.1833 in 2025 grow 2.6363 % a year;
+    # the policy rate (V39079) was cut five times in 2024.
+    Step(
+        "calc",
+        "calc_ratio",
+        {
+            "numerator": {"product_id": "14-10-0287", "coordinate": "10.3.1.1.1.1"},
+            "denominator": {"vector_id": 2062811},
+            "start": "2025-09",
+            "end": "2025-09",
+            "multiplier": 100,
+        },
+        lambda data: (
+            len(data["points"]) == 1
+            and abs(
+                data["points"][0]["value"]
+                - data["points"][0]["numerator"] / data["points"][0]["denominator"] * 100
+            )
+            < 1e-9
+            and 11 < data["points"][0]["value"] < 14
+            and data["numerator"]["scale_multiplier"] == 1000
+            and data["unit"] == "percent"
+        ),
+    ),
+    Step(
+        "calc",
+        "calc_ratio",
+        {"numerator": {"vector_id": 41690973}, "denominator": {"vector_id": 62305783}},
+        expect_error="do not share a frequency",
+    ),
+    Step(
+        "calc",
+        "calc_rank",
+        {
+            "product_id": "14-10-0287",
+            "coordinate": "*.7.1.1.1.1",
+            "exclude_member_ids": [1],
+            "period": "2025-09",
+        },
+        lambda data: (
+            len(data["entries"]) == 10
+            and data["entries"][0]["rank"] == 1
+            and data["entries"][0]["value"] == max(e["value"] for e in data["entries"])
+            and data["unit"] == "Percent"
+        ),
+    ),
+    Step(
+        "calc",
+        "calc_rank",
+        {"series": [{"vector_id": 2062815}, {"vector_id": 2062811}]},
+        expect_error="not in one unit",
+    ),
+    Step(
+        "calc",
+        "calc_cagr",
+        {
+            "series": {"vector_id": 41690973},
+            "start": "2015",
+            "end": "2025",
+            "frequency": "annual",
+        },
+        lambda data: abs(data["cagr_percent"] - 2.6363) < 0.001 and data["years"] == 10,
+    ),
+    Step(
+        "calc",
+        "calc_cagr",
+        {"series": {"vector_id": 2062815}, "start": "2015-01", "end": "2025-01"},
+        expect_error="compound growth of a rate",
+    ),
+    Step(
+        "calc",
+        "calc_count_changes",
+        {"series": {"boc_series": "V39079"}, "start": "2024", "end": "2024", "lang": "fr"},
+        lambda data: (
+            data["changes"] == 5
+            and data["decreases"] == 5
+            and data["change_unit"] == "points de pourcentage"
+        ),
+    ),
     # Query planner (no network; checks registration through the server)
     Step(
         "planner",

@@ -173,6 +173,13 @@ Before replying with figures, the assistant can call `check_answer` with the
 StatCan and Bank of Canada figures it cites: it re-reads them from the source
 and returns only the problems (a different value, a missed scale factor, a
 newer period, another geography, an unadjusted series), each with a fix.
+The `calc_` tools do the arithmetic across series that assistants get wrong,
+from StatCan and Bank of Canada series, and return the formula and every
+input's citation with the result: `calc_ratio` (one series over another,
+aligned by period, scale factors applied), `calc_rank` (places ranked for one
+period, ties shared), `calc_cagr` (compound annual growth between two periods)
+and `calc_count_changes` (how many times a series moved, such as policy rate
+decisions). Mismatched frequencies or units are refused, not guessed.
 Every tool accepts `lang: "en"|"fr"`;
 some sources only publish English content (for example Yukon's CKAN portal,
 the World Bank's indicator definitions and the PMPRB), so there `lang`
@@ -213,7 +220,7 @@ by a person
 
 ## What it covers
 
-399 tools in 78 modules. Run `docs://catalogue` for the full, bilingual list.
+403 tools in 79 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
