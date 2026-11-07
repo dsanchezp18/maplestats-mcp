@@ -139,6 +139,15 @@ Microsoft's [terms](https://azure.microsoft.com/support/legal/) and [privacy sta
 clients: the [Connect](https://maplestats.danielstats.io/connect.html)
 page.
 
+### Teach your agent to use it well
+
+[`skills/maplestats/SKILL.md`](skills/maplestats/SKILL.md) is a portable
+instruction file (Agent Skills format) for Claude Code, Codex, Cursor and
+similar agents: start with `plan_query`, ask for the latest periods, read
+the caveats, cite table, vector and release date, and run `check_answer`
+before answering. Copy it into your agent's skills folder or project
+instructions.
+
 ## Install locally (optional)
 
 Prefer to run it on your machine? It works over stdio with no account or key.
