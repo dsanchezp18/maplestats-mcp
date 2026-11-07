@@ -184,3 +184,15 @@ jobs:
           working-directory: clients/r
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
+
+  # The Julia client (clients/julia/) is its own package; its tests use
+  # recorded responses and never reach the network. The runner image ships
+  # Julia.
+  client-julia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: JuliaFormatter
+        run: julia --startup-file=no -e 'using Pkg; Pkg.activate(temp=true); Pkg.add(name="JuliaFormatter", version="1"); using JuliaFormatter; format("clients/julia") || (run(`git diff`); exit(1))'
+      - name: Tests
+        run: julia --startup-file=no --project=clients/julia -e 'using Pkg; Pkg.test()'
