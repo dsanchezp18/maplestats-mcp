@@ -1,0 +1,3 @@
+event: message
+data: {"jsonrpc":"2.0","id":3,"result":{"_meta":{"fastmcp":{"wrap_result":true}},"content":[{"text":"No tools matched. Try topic words (for example 'rent Calgary' or 'taux de chômage Québec') rather than tool names, or call plan_query with the question.","type":"text"}],"isError":false,"structuredContent":{"result":"No tools matched. Try topic words (for example 'rent Calgary' or 'taux de chômage Québec') rather than tool names, or call plan_query with the question."}}}
+
