@@ -63,6 +63,10 @@ jobs:
       # reloading: reported as a warning and in the job summary, never as a pass and never
       # as a failure that opens the smoke-failure issue. A failure (exit 1) still fails.
       - name: Run ${{ matrix.script }}
+        # Unbuffered, so a job cut off at the timeout still shows the last call it
+        # made (smoke_test_eccc_coverages printed nothing in 40 minutes on 2026-11-07).
+        env:
+          PYTHONUNBUFFERED: "1"
         run: |
           run() { uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log; }
           skipped() {

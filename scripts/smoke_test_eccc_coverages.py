@@ -14,7 +14,7 @@ import asyncio
 import sys
 from typing import Any
 
-from _smoke_common import is_upstream_outage
+from _smoke_common import SKIPPED_EXIT, is_upstream_outage
 
 from maplestats_mcp.modules.eccc.coverages import client
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
@@ -303,7 +303,16 @@ async def main() -> int:
     ok &= await _fails(
         "feature collection id", client.describe_coverage("climate-daily"), InvalidInput
     )
-    return 0 if ok else 1
+    if not ok:
+        print("\nECCC COVERAGES SMOKE TEST FAILED")
+        return 1
+    # A read that timed out was printed as SKIP but used to exit 0, so the run looked
+    # like a pass; it is a skip (exit 75), as in the other smoke scripts.
+    if _OUTAGES:
+        print(f"\nECCC COVERAGES SMOKE TEST SKIPPED ({len(_OUTAGES)} reads unavailable)")
+        return SKIPPED_EXIT
+    print("\nECCC COVERAGES SMOKE TEST PASSED")
+    return 0
 
 
 if __name__ == "__main__":
