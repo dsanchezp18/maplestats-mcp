@@ -49,6 +49,14 @@ from maplestats_mcp.shared.errors import (
 from maplestats_mcp.shared.http import RecordedRequest, recording
 from maplestats_mcp.shared.i18n import pick
 
+# The code a failed tool's message starts with, and the class to raise it as again.
+_CODED_ERRORS: tuple[tuple[str, type[ValueError]], ...] = (
+    ("data_locked", DataLocked),
+    ("upstream_unavailable", UpstreamUnavailable),
+    ("upstream_error", UpstreamError),
+    ("not_found", NotFound),
+)
+
 # reproduce_workbook writes an .xlsx when it runs, so it must never be run here
 # to find a request to repeat.
 _NOT_DATA = (
@@ -114,7 +122,12 @@ async def _run_tool(
             )
     text = next((block.text for block in result.content if isinstance(block, TextContent)), "")
     if result.is_error:
-        raise InvalidInput(
+        # Keep the tool's own error class, so an outage stays [upstream_unavailable]
+        # (retry later) instead of reading as the caller's bad arguments.
+        error_class = next(
+            (cls for code, cls in _CODED_ERRORS if text.startswith(f"[{code}]")), InvalidInput
+        )
+        raise error_class(
             _say(
                 lang,
                 f"{tool} failed with these arguments, so there is nothing to reproduce: "
