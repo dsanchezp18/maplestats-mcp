@@ -8,7 +8,8 @@ import sys
 
 import httpx
 
-from maplestats_mcp.modules.ourcommons import client
+from maplestats_mcp.modules.ourcommons import client, expenditures
+from maplestats_mcp.shared.errors import NotFound
 from maplestats_mcp.shared.http import new_client
 
 
@@ -64,6 +65,39 @@ async def main() -> int:
             failures += 1
         else:
             print(f"OK: Ministry -> {len(ministry.ministers)} ministers")
+
+        # Members' expenditure reports: the top spender's detail CSVs must add up
+        # to the quarter's summary, in English and in French.
+        reports = await expenditures.list_expenditure_reports()
+        latest = reports.reports[0]
+        print(f"OK: {reports.total_reports} reports, latest {latest.fiscal_year} Q{latest.quarter}")
+        failures += reports.total_reports < 20
+        summary = await expenditures.get_member_expenditures(limit=500)
+        print(f"OK: summary -> {summary.members_in_report} members, {summary.totals.total} $")
+        failures += not 300 <= summary.members_in_report <= 500
+        ndp = await expenditures.get_member_expenditures(caucus="NPD", limit=500, lang="fr")
+        print(f"OK: NDP members in the French report -> {ndp.total_matches}")
+        failures += ndp.total_matches == 0
+        top = summary.members[0]
+        for lang in ("en", "fr"):
+            detail = await expenditures.get_member_expenditure_details(
+                top.name, top.constituency, lang=lang
+            )
+            sums = (
+                round(sum(t.total for t in detail.travel or []), 2),
+                round(sum(h.amount for h in detail.hospitality or []), 2),
+                round(sum(c.total for c in detail.contracts or []), 2),
+            )
+            expected = (top.travel, top.hospitality, top.contracts)
+            ok = all(abs(a - b) < 0.01 for a, b in zip(sums, expected, strict=True))
+            print(f"{'OK' if ok else 'FAIL'}: {top.name} ({lang}) {sums} vs summary {expected}")
+            failures += not ok
+        try:
+            await expenditures.get_member_expenditures(fiscal_year=2019, quarter=1)
+            print("FAIL: a quarter before the reports did not raise")
+            failures += 1
+        except NotFound:
+            print("OK: an unknown quarter raises NotFound")
     print("OURCOMMONS SMOKE TEST", "FAILED" if failures else "PASSED")
     return 1 if failures else 0
 

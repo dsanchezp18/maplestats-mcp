@@ -5,10 +5,11 @@ MODULE_DESCRIPTION = (
     "member's roles and history by person id (every seat with dates, caucus changes, "
     "parliamentary positions, committee memberships, parliamentary associations, and the "
     "election candidate record with results, going back to 1997 for former members); party "
-    "standings by province; and the Ministry (Cabinet) in order of precedence. Terms: House of "
-    "Commons open data disclaimer. Not covered: members' expenditure reports (they need a "
-    "document id from the page) and the Library of Parliament's ParlInfo, which blocks "
-    "automated access."
+    "standings by province; the Ministry (Cabinet) in order of precedence; and the quarterly "
+    "Members' Expenditures Reports (staff salaries, travel, hospitality and contracts per MP "
+    "since 2020-2021 Q2, with each MP's itemized trips, events and suppliers). Terms: House of "
+    "Commons open data disclaimer. Not covered: the Library of Parliament's ParlInfo, which "
+    "blocks automated access."
 )
 MODULE_DESCRIPTION_FR = (
     "Données ouvertes de la Chambre des communes (ourcommons.ca, flux XML officiels), outils "
@@ -17,7 +18,9 @@ MODULE_DESCRIPTION_FR = (
     "caucus, postes parlementaires, comités, associations parlementaires et dossier de "
     "candidat aux élections avec résultats, depuis 1997 pour les anciens députés); "
     "répartition des sièges par parti et province; et le Conseil des ministres par ordre de "
-    "préséance. "
-    "Non couverts : rapports de dépenses des députés (identifiant de document requis) et "
-    "ParlInfo de la Bibliothèque du Parlement, inaccessible aux requêtes automatisées."
+    "préséance; et les rapports trimestriels sur les dépenses des députés (salaires du "
+    "personnel, déplacements, accueil et contrats par député depuis le 2e trimestre de "
+    "2020-2021, avec le détail des voyages, activités et fournisseurs). "
+    "Non couvert : ParlInfo de la Bibliothèque du Parlement, inaccessible aux requêtes "
+    "automatisées."
 )

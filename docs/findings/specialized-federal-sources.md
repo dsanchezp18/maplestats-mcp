@@ -2912,10 +2912,47 @@ ministers in order of precedence). The constituencies feed
 (`/members/en/constituencies/xml`) is not wrapped: it repeats what the member
 list gives. A bad person id answers 302 to an error page.
 
-Not built: the members' expenditure reports, whose URL needs a "dynamic
-document id" from the page (the example pattern with `Id=0` returns 404);
-House votes, debates and committee evidence; and LEGISinfo's bills JSON.
-Person ids are the House's own.
+Not built: House votes, debates and committee evidence; and LEGISinfo's
+bills JSON. Person ids are the House's own.
+
+### Members' expenditure reports (added 2026-11-07)
+
+The open-data page still documents
+`PublicDisclosure/MemberExpenditures.aspx?Id=<dynamic document id>&...&FormatType=XML`,
+which answers 404 with any id. The reports moved to proactive disclosure:
+`www.ourcommons.ca/ProactiveDisclosure/en/members` (French:
+`www.noscommunes.ca/ProactiveDisclosure/fr/deputes`), which lists 24 quarterly
+reports, fiscal 2020-2021 Q2 to 2026-2027 Q1, as `/members/{fiscal year}/{quarter}?summaryId=<id>`
+(fiscal year 2027 is 2026-2027; Q1 is April to June). Older reports are on a
+separate "previous reports" page and are not read. robots.txt does not exclude
+these paths.
+
+- A quarter page answers without the summaryId. It carries a different id, the
+  report id, in its CSV link `/members/<report id>/csv`: the summary, one row
+  per member (Name, Constituency, Caucus, Salaries, Travel, Hospitality,
+  Contracts; UTF-8 with BOM; "Aboultaif,  Ziad" with two spaces). Q1 2026-2027
+  has 370 rows, $43,897,602.58 in all.
+- Each member row links `/{travel,hospitality,contract}/{fy}/{q}/<member id>`.
+  Member ids change from one report to the next and are the same in both
+  languages; the itemized CSV is `/{kind}/<report id>/<member id>/csv` (French
+  `voyage`, `accueil`, `contrat`), a title line, a header, then the lines.
+  French columns are in the same order.
+- A member with nothing in a category has no link for it; a member with
+  nothing at all has no member id.
+- Itemized lines add up to the summary: Aboultaif (Q1 2026-2027) travel
+  62,251.81 over 29 lines, hospitality 349.43, contracts 14,503.00 over 38 lines;
+  the same for Q4 2025-2026 in French (26,572.52, 967.09, 12,209.98) and for the
+  quarter's top spender (Deschênes) in both languages. Travel lines can start
+  before the quarter (late claims) and can be negative (corrections).
+  Hospitality events paid to several suppliers have a line per supplier, each
+  repeating the event total.
+- An unknown quarter or member id answers 302 to the error page.
+- Terms: the House of Commons notice used for the other feeds (reproduction
+  allowed if accurate and not presented as official; not for commercial use).
+
+Not built: the House Officers' Expenditures Report (quarterly CSVs at
+`/Content/Disclosure/HouseOfficers/HOER-<from>-<to>-Q<n>-e.csv`, linked from the
+Board of Internal Economy page) and House Administration disclosures.
 
 ## StatCan merchandise trade by commodity (CIMT)
 

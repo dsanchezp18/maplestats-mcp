@@ -480,6 +480,11 @@ FR: dict[str, str] = {
         "BC Transit en temps réel (Victoria, Kelowna, Kamloops, Nanaimo...) : system "
         "'bct_<ville>' et stop_id ou route_id"
     ),
+    "MPs' quarterly spending (staff, travel, hospitality, contracts); itemized "
+    "with ourcommons_get_member_expenditure_details": (
+        "dépenses trimestrielles des députés (personnel, déplacements, accueil, contrats) ; "
+        "le détail avec ourcommons_get_member_expenditure_details"
+    ),
     "Edmonton transit, when the question is Edmonton": (
         "transport en commun d'Edmonton, si la question porte sur Edmonton"
     ),

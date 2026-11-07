@@ -2282,6 +2282,15 @@ _LOCAL_REP_TERMS = (
     "conseiller municipal",
     "representative",
 )
+_MP_EXPENSE_TERMS = (
+    "mp expenses",
+    "mp spending",
+    "members' expenditures",
+    "travel expenses",
+    "hospitality expenses",
+    "depenses des deputes",
+    "frais de deplacement",
+)
 _CABINET_TERMS = (
     "cabinet",
     "minister",
@@ -2305,6 +2314,7 @@ REPRESENTATIVES = Topic(
         "mon depute",
         "deputes",
         "code postal",
+        *_MP_EXPENSE_TERMS,
     ),
     (
         PlanStep(
@@ -2327,6 +2337,12 @@ REPRESENTATIVES = Topic(
             "ourcommons_get_party_standings",
             "seats by party and province",
             ("party standings", "seats in the house"),
+        ),
+        PlanStep(
+            "ourcommons_get_member_expenditures",
+            "MPs' quarterly spending (staff, travel, hospitality, contracts); itemized "
+            "with ourcommons_get_member_expenditure_details",
+            _MP_EXPENSE_TERMS,
         ),
     ),
 )
