@@ -1,0 +1,32 @@
+Package: maplestats
+Title: Client for the MapleStats MCP Server (Canadian Open Data)
+Version: 0.1.0
+Authors@R:
+    person("Daniel", "Sanchez Pazmino", role = c("aut", "cre"),
+           email = "daniel@laboratoriolide.org")
+Description: Searches and calls the tools of the hosted MapleStats MCP
+    server, which serves Canadian open data from Statistics Canada, the
+    Bank of Canada, CMHC, provincial agencies and city portals. Results
+    come back as tibbles with their citation and provenance attached as
+    attributes. Talks to the server's streamable HTTP endpoint directly.
+License: MIT + file LICENSE
+URL: https://maplestats.danielstats.io/,
+    https://github.com/dsanchezp18/maplestats-mcp
+BugReports: https://github.com/dsanchezp18/maplestats-mcp/issues
+Depends:
+    R (>= 4.1.0)
+Imports:
+    httr2 (>= 1.0.0),
+    jsonlite,
+    purrr (>= 1.0.0),
+    rlang,
+    stats,
+    stringr,
+    tibble,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+Encoding: UTF-8
+RoxygenNote: 7.3.3
