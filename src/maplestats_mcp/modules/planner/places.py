@@ -246,6 +246,7 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "white rock": ("White Rock", (_arcgis("white_rock"),)),
     "penticton": ("Penticton", (_arcgis("penticton"),)),
     "new westminster": ("New Westminster", (_arcgis("new_westminster"),)),
+    "nanaimo": ("Nanaimo", (_arcgis("nanaimo"),)),
     "orangeville": ("Orangeville", (_arcgis("orangeville"),)),
     "canmore": ("Canmore", (_arcgis("canmore"),)),
 }

@@ -1053,6 +1053,7 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "white_rock": ("BC", _M),
         "penticton": ("BC", _M),
         "new_westminster": ("BC", _M),
+        "nanaimo": ("BC", _M),
         "orangeville": ("ON", _M),
         "canmore": ("AB", _M),
         "ntgs": ("NT", _P),

@@ -45,7 +45,7 @@ async def arcgis_hub_list_portals(lang: Lang = "en") -> PortalList:
     Oshawa, Niagara Falls, Niagara Region, St. Catharines, Thunder Bay,
     Peterborough, Coquitlam, Saanich, Kamloops, Prince George, Delta,
     Yellowknife, Cambridge, Maple Ridge, Pickering, Sarnia, Saint John,
-    Port Moody, White Rock, Penticton, New Westminster, Orangeville,
+    Port Moody, White Rock, Penticton, New Westminster, Nanaimo, Orangeville,
     Canmore, BC Energy Regulator, Toronto Police Service, Ottawa Police
     Service, Conservation Halton, Credit Valley, Niagara Peninsula,
     Hamilton and Central Lake Ontario conservation authorities, Quinte
