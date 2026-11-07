@@ -1505,6 +1505,12 @@ GUIDANCE_FR = tuple(
             "Avant de répondre, appelez check_answer avec la question et les chiffres de "
             "Statistique Canada et de la Banque du Canada que vous citerez."
         ),
+        (
+            "Pour un rapport, un classement de lieux, une croissance annuelle composée ou un "
+            "nombre de variations (décisions de taux) à partir de ces séries, appelez "
+            "calc_ratio, calc_rank, calc_cagr ou calc_count_changes plutôt que de faire le "
+            "calcul vous-même."
+        ),
     )
 )
 LIMITS_FR = french_text(

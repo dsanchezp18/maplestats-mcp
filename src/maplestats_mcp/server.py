@@ -580,6 +580,9 @@ Power Query that re-fetch the same data) and reproduce_workbook (the rows as
 an Excel workbook). docs://catalogue describes every module in one bilingual line.
 check_answer re-reads the StatCan and Bank of Canada figures an answer
 cites and returns only the problems, each with a fix.
+For ratios, rankings across places, compound annual growth or counts of
+changes (rate moves) across StatCan and Bank of Canada series, use calc_
+(the formula and citations come back); do not do that arithmetic yourself.
 Not published? Say so, give the closest published figure labelled, then public
 microdata (statcan_pumf_, own estimate), else a custom tabulation, RTRA or an
 RDC (approval or fee; MapleStats cannot run them).

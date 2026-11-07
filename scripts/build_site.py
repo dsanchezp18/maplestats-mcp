@@ -364,6 +364,7 @@ SOURCES: dict[str, Source] = {
         "Borealis",
         domain="statistics",
     ),
+    "calc": Source("Calculations across series", "Calculs entre séries", "utility"),
     "cbsa": Source(
         "Canada Border Services Agency: border wait times",
         "Agence des services frontaliers du Canada : temps d'attente à la frontière",

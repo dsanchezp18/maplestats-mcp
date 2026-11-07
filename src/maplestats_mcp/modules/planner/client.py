@@ -67,6 +67,11 @@ _GUIDANCE = (
         "check_answer re-reads the StatCan and Bank of Canada figures you will cite, "
         "given the question, and returns only the problems."
     ),
+    (
+        "For a ratio, a ranking of places, compound annual growth or a count of changes "
+        "(rate moves) across those series, call calc_ratio, calc_rank, calc_cagr or "
+        "calc_count_changes rather than doing the arithmetic yourself."
+    ),
 )
 # A step whose purpose names the place asked about ("Alberta fires...") moves
 # ahead of national steps; "BC" is how purposes name British Columbia.
