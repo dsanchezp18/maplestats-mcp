@@ -56,6 +56,33 @@ loop here, so it also works with a local MCP server (`CHAT_MCP_URL`). Model ids,
 base URLs and prices for the non-Anthropic providers change; check each provider's
 page.
 
+## Usage counts
+
+`/stats` answers with aggregate counts, as the MCP server's `/stats` does:
+
+- how each request to `/api/chat` ended: `answered`, `empty`, `failed`, `unavailable`,
+  `limited_address`, `limited_daily`, `limited_tokens` or `rejected`;
+- billed tokens by kind (`input`, `output`, `cache_write`, `cache_read`);
+- model calls, tool calls and tool errors, the tools by name, and the model's stop
+  reasons;
+- the turn number of each question, and the p50 and p95 time to an answer;
+- the same outcomes, tokens and calls per UTC day (400 days kept);
+- `today`: questions and tokens counted against `CHAT_DAILY_LIMIT` and
+  `CHAT_DAILY_TOKENS`, with the provider and model.
+
+It never keeps the question, the answer, tool arguments or results, or an address. A
+tool name is kept only when it looks like a MapleStats tool (lower case, digits and
+underscores); anything else, which a prompt could steer the model into, counts as
+`other`. `CHAT_USAGE_STATS=0` turns the route off.
+
+The counts are in memory unless `CHAT_USAGE_STATS_FILE` names a JSON file on a
+persistent volume: then they are read at startup, saved every minute and at shutdown,
+and a save adds this process's new counts to the file, so the old and new revisions
+running together during a deploy both count. The Azure app has no volume yet; to keep
+the counts across deploys, mount an Azure Files share on `maplestats-chat` (the
+container apps environment can reuse the storage the MCP server mounts at `/data`) at
+`/data` and set `CHAT_USAGE_STATS_FILE=/data/chat/stats.json`.
+
 ## Guards
 
 The endpoint is public and every call costs money. Defaults, all overridable by

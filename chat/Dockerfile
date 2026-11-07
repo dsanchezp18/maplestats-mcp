@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir uv==0.11.7
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev
 
-COPY app.py results.py ./
+COPY app.py results.py usage.py ./
 COPY static/ static/
 
 USER appuser

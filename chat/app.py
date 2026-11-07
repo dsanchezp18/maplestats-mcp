@@ -11,7 +11,9 @@
 #          series and sources those calls returned (drawn by the page)
 # ============================================================
 
+import asyncio
 import base64
+import contextlib
 import hashlib
 import ipaddress
 import json
@@ -36,6 +38,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 import results
+import usage
 
 # 0. Setup ----
 
@@ -65,6 +68,14 @@ DAILY_LIMIT = int(os.environ.get("CHAT_DAILY_LIMIT", "500"))
 # Input plus output tokens, summed from every model call's usage, across all
 # callers. The caps above count questions; this one counts what is billed.
 DAILY_TOKENS = int(os.environ.get("CHAT_DAILY_TOKENS", "3000000"))
+# Counts of how questions end, tokens and tool calls, public at /stats (usage.py).
+USAGE_STATS = os.environ.get("CHAT_USAGE_STATS", "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
+STATS = usage.stats_from_environment()
 ALLOWED_ORIGINS = [
     origin for origin in os.environ.get("CHAT_ALLOWED_ORIGINS", "").split(",") if origin
 ]
@@ -180,6 +191,18 @@ def _tokens_today() -> dict[str, Any]:
     return _daily_tokens
 
 
+# Each usage field, as the kind /stats reports it under. OpenAI-compatible
+# prompt_tokens include any cached input, so they count as input.
+TOKEN_KINDS = {
+    "input_tokens": "input",
+    "prompt_tokens": "input",
+    "output_tokens": "output",
+    "completion_tokens": "output",
+    "cache_creation_input_tokens": "cache_write",
+    "cache_read_input_tokens": "cache_read",
+}
+
+
 def add_tokens(usage: Any) -> None:
     """Add one model call's billed tokens (input, cached input and output).
 
@@ -200,7 +223,21 @@ def add_tokens(usage: Any) -> None:
         value = getattr(usage, field, None)
         if isinstance(value, int) and not isinstance(value, bool) and value > 0:
             total += value
+            STATS.tokens(TOKEN_KINDS[field], value)
     _tokens_today()["n"] += total
+
+
+DAILY_LIMIT_REASON = "The demo has reached its daily limit. Please try again tomorrow."
+TOKEN_LIMIT_REASON = (
+    "The demo has used its model budget for today. Please try again tomorrow."
+)
+ADDRESS_LIMIT_REASON = "Too many questions from this address. Please try again later."
+# Which limit refused a question, as /stats counts it.
+LIMIT_OUTCOMES = {
+    DAILY_LIMIT_REASON: "limited_daily",
+    TOKEN_LIMIT_REASON: "limited_tokens",
+    ADDRESS_LIMIT_REASON: "limited_address",
+}
 
 
 def over_limit(address: str) -> str | None:
@@ -210,11 +247,9 @@ def over_limit(address: str) -> str | None:
     if _daily_count["day"] != today:
         _daily_count.update(day=today, n=0)
     if _daily_count["n"] >= DAILY_LIMIT:
-        return "The demo has reached its daily limit. Please try again tomorrow."
+        return DAILY_LIMIT_REASON
     if _tokens_today()["n"] >= DAILY_TOKENS:
-        return (
-            "The demo has used its model budget for today. Please try again tomorrow."
-        )
+        return TOKEN_LIMIT_REASON
 
     # Drop every client whose hits have all aged out, so the table holds only
     # addresses seen in the last hour instead of every address ever seen.
@@ -227,7 +262,7 @@ def over_limit(address: str) -> str | None:
 
     hits = _hits_by_client.setdefault(address, deque())
     if len(hits) >= RATE_PER_HOUR:
-        return "Too many questions from this address. Please try again later."
+        return ADDRESS_LIMIT_REASON
 
     hits.append(now)
     _daily_count["n"] += 1
@@ -323,6 +358,7 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
                 )
                 billed = True
                 add_tokens(getattr(response, "usage", None))
+                STATS.model_call(getattr(response, "stop_reason", None))
                 model_calls += 1
                 for block in response.content:
                     if block.type == "mcp_tool_use":
@@ -330,10 +366,12 @@ async def ask_anthropic(messages: list[dict[str, str]]) -> dict[str, Any]:
                         tools_used.append(call)
                         names[str(getattr(block, "id", ""))] = call["name"]
                     elif block.type == "mcp_tool_result":
-                        if getattr(block, "is_error", False):
+                        name = names.get(str(getattr(block, "tool_use_id", "")), "")
+                        failed = bool(getattr(block, "is_error", False))
+                        STATS.tool_call(name, ok=not failed)
+                        if failed:
                             tool_errors += 1
                         else:
-                            name = names.get(str(getattr(block, "tool_use_id", "")), "")
                             content = getattr(block, "content", None)
                             returned.append((name, results.text_of(content)))
                 # pause_turn means the server paused a long turn; resume it unchanged.
@@ -420,6 +458,7 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
                 )
                 billed = True
                 add_tokens(getattr(response, "usage", None))
+                STATS.model_call(getattr(response.choices[0], "finish_reason", None))
                 message = response.choices[0].message
                 if not message.tool_calls:
                     return {
@@ -439,6 +478,7 @@ async def ask_openai_compatible(messages: list[dict[str, str]]) -> dict[str, Any
                     text = "\n".join(
                         part.text for part in result.content if hasattr(part, "text")
                     )
+                    STATS.tool_call(described["name"], ok=not result.is_error)
                     if not result.is_error:
                         returned.append(
                             (described["name"], result.structured_content or text)
@@ -511,6 +551,7 @@ async def chat(request: Request) -> JSONResponse:
     # for every origin not in CHAT_ALLOWED_ORIGINS.
     content_type = request.headers.get("content-type", "").strip().lower()
     if not content_type.startswith("application/json"):
+        STATS.outcome("rejected")
         return JSONResponse(
             {"error": "Content-Type must be application/json."}, status_code=415
         )
@@ -519,12 +560,14 @@ async def chat(request: Request) -> JSONResponse:
         # Check both declared and streamed sizes: chunked requests have no length header.
         declared = request.headers.get("content-length", "")
         if declared.isdigit() and int(declared) > MAX_BODY_BYTES:
+            STATS.outcome("rejected")
             return JSONResponse(
                 {"error": "Request body is too large."}, status_code=413
             )
         body = bytearray()
         async for chunk in request.stream():
             if len(body) + len(chunk) > MAX_BODY_BYTES:
+                STATS.outcome("rejected")
                 return JSONResponse(
                     {"error": "Request body is too large."}, status_code=413
                 )
@@ -535,27 +578,35 @@ async def chat(request: Request) -> JSONResponse:
         return JSONResponse({"error": "Client disconnected."}, status_code=499)
     except (ValueError, UnicodeDecodeError, RecursionError):
         # RecursionError: deeply nested brackets overflow json.loads, and it is not a ValueError.
+        STATS.outcome("rejected")
         return JSONResponse({"error": "Body must be JSON."}, status_code=400)
 
     messages = validate_messages(payload)
     if isinstance(messages, str):
+        STATS.outcome("rejected")
         return JSONResponse({"error": messages}, status_code=400)
 
     address = client_address(request)
     reason = over_limit(address)
     if reason:
+        STATS.outcome(LIMIT_OUTCOMES.get(reason, "limited_address"))
         return JSONResponse({"error": reason}, status_code=429)
 
+    STATS.turn(sum(1 for m in messages if m["role"] == "user"))
+    started = time.perf_counter()
     try:
         result = await ask_model(messages)
         # Keep our own answers valid when the browser sends them back on the next turn.
         answer = str(result.get("answer") or "").strip()
         if not answer:
             # The model call completed and was billed, so the request stays counted.
+            STATS.outcome("empty")
             return JSONResponse(
                 {"error": "The model returned no answer. Try again."}, status_code=502
             )
         result["answer"] = answer[:MAX_ASSISTANT_CHARS]
+        STATS.outcome("answered")
+        STATS.answered_in(time.perf_counter() - started)
         return JSONResponse(result)
     except Exception as error:  # noqa: BLE001 - any backend failure is a 502
         failure = error if isinstance(error, BackendFailure) else None
@@ -574,12 +625,14 @@ async def chat(request: Request) -> JSONResponse:
         # An unknown model (404) or a rejected key (401, 403) is a fault of this
         # deployment, not a blip: "try again" would send people into a loop.
         if getattr(cause, "status_code", None) in (401, 403, 404):
+            STATS.outcome("unavailable")
             return JSONResponse(
                 {
                     "error": "The demo is temporarily unavailable. Please try again later."
                 },
                 status_code=503,
             )
+        STATS.outcome("failed")
         return JSONResponse(
             {"error": "The model or the data server did not answer. Try again."},
             status_code=502,
@@ -588,6 +641,44 @@ async def chat(request: Request) -> JSONResponse:
 
 async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "provider": PROVIDER, "model": MODEL})
+
+
+async def stats(request: Request) -> JSONResponse:
+    """Aggregate counts (usage.py) and how much of today's limits is used."""
+    today = datetime.now(UTC).date()
+    questions = _daily_count["n"] if _daily_count["day"] == today else 0
+    return JSONResponse(
+        STATS.snapshot(
+            today={
+                "date": today.isoformat(),
+                "questions_counted": questions,
+                "question_limit": DAILY_LIMIT,
+                "tokens_used": _tokens_today()["n"],
+                "token_limit": DAILY_TOKENS,
+                "provider": PROVIDER,
+                "model": MODEL,
+            }
+        ),
+        headers={"cache-control": "no-store"},
+    )
+
+
+async def _save_periodically() -> None:
+    while True:
+        await asyncio.sleep(usage.SAVE_SECONDS)
+        STATS.save()
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: Starlette):
+    """Save the counts every minute and once more at shutdown (a deploy's SIGTERM)."""
+    task = asyncio.create_task(_save_periodically()) if STATS.path else None
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+        STATS.save()
 
 
 # The page is read once, at startup, and served from memory, so the hash of its
@@ -686,10 +777,12 @@ async def index(request: Request) -> Response:
 
 
 app = Starlette(
+    lifespan=lifespan,
     routes=[
         Route("/", index),
         Route("/health", health),
         Route("/api/chat", chat, methods=["POST"]),
+        *([Route("/stats", stats)] if USAGE_STATS else []),
     ],
     middleware=[
         Middleware(SecurityHeaders),
