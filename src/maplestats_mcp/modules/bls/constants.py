@@ -15,14 +15,13 @@ SURVEYS_URL = f"{BASE_URL}surveys"
 POPULAR_URL = f"{BASE_URL}timeseries/popular"
 SOURCE = "bls"
 
-# BLS FAQ table (2026-11-07): registered v2 users get 500 queries a day, 50
-# series and 20 years per query; unregistered users 25, 25 and 10. Both: 50
-# requests per 10 seconds. The daily count is per key, or per address
-# without one, so a hosted server without MAPLE_BLS_API_KEY shares 25.
-REGISTERED_MAX_SERIES = 50
-REGISTERED_MAX_YEARS = 20
-UNREGISTERED_MAX_SERIES = 25
-UNREGISTERED_MAX_YEARS = 10
+# The module uses the API without registration (MapleStats takes no source
+# that needs a key). BLS FAQ table (2026-11-07), unregistered: 25 queries a
+# day, 25 series and 10 years per query, 50 requests per 10 seconds. The
+# daily count is per address, so every user of a hosted server shares it.
+DAILY_QUERIES = 25
+MAX_SERIES = 25
+MAX_YEARS = 10
 # A long range is fetched in chunks of the year limit, newest first; capped so
 # one call spends at most three queries of the daily allowance.
 MAX_CHUNKS = 3
@@ -104,7 +103,7 @@ RELEASES: dict[str, Release] = {
 
 @dataclass(frozen=True)
 class KnownSeries:
-    """A series this module can describe without the API's catalog (which needs a key)."""
+    """A series this module can describe: the API sends no titles without registration."""
 
     title_en: str
     title_fr: str

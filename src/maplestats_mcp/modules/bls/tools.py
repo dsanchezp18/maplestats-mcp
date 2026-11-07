@@ -82,9 +82,9 @@ async def bls_get_series(
     Use for: any BLS series beyond the headline indicators: CPI components
     (CUSR0000SAH1 shelter), state unemployment (LASST...), industry
     payrolls (CES...), import prices from Canada (EIUCOCANTOT), the
-    Employment Cost Index, productivity. Takes up to 25 ids per call (50
-    with the server's BLS key) and a year range (default the last 5; at
-    most 30 years per call without a key). Returns tidy rows, oldest
+    Employment Cost Index, productivity. Takes up to 25 ids per call and a
+    year range (default the last 5; at most 30 years per call, one BLS
+    query per 10 years; the server shares 25 BLS queries a day). Returns tidy rows, oldest
     first, with seasonal adjustment, units, preliminary flags, change from
     the previous period, per cent change from a year earlier and the news
     release that publishes each series.

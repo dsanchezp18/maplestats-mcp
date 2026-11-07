@@ -2,10 +2,9 @@
 mocks) for every client function and every tool, per AGENTS.md's "lesson
 from auditing the StatCan module".
 
-Runs without a key, at the BLS's unregistered limits: 25 queries a day per
-address. A full run spends about 9; set MAPLE_BLS_API_KEY to use registered
-limits (and to see catalog titles). The keyless run is the one that matters
-most, since the server must work without one.
+The module uses the API without registration, so this script runs under the
+same limit as the server: 25 queries a day per address. A full run spends
+about 12; run it on a day with few other BLS calls from the same machine.
 
 Usage:
     uv run python scripts/smoke_test_bls.py
@@ -20,7 +19,6 @@ import sys
 from fastmcp import Client
 from mcp.types import TextContent
 
-from maplestats_mcp import config
 from maplestats_mcp.modules.bls import client, constants
 from maplestats_mcp.server import mcp
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
@@ -41,7 +39,6 @@ async def _expect_error(label: str, coro, exc_type: type[Exception]) -> bool:
 
 async def main() -> bool:
     ok = True
-    print(f"Key set: {config.get_bls_api_key() is not None}")
 
     surveys = await client.list_surveys()
     codes = {s.code for s in surveys.surveys}
@@ -56,10 +53,10 @@ async def main() -> bool:
     print("OK: search CU ->", [(m.series_id, m.popular) for m in found.matches[:4]])
     ok &= found.matches[0].series_id.endswith("SA0L1E")
 
-    # Every known series in one or two queries (25 ids per query unregistered).
+    # Every known series in one or two queries (25 ids per query).
     ids = list(constants.KNOWN_SERIES)
-    for start in range(0, len(ids), constants.UNREGISTERED_MAX_SERIES):
-        batch = ids[start : start + constants.UNREGISTERED_MAX_SERIES]
+    for start in range(0, len(ids), constants.MAX_SERIES):
+        batch = ids[start : start + constants.MAX_SERIES]
         result = await client.get_series(batch, 2025, 2026)
         got = {s.series_id for s in result.series}
         print(f"OK: {len(got)} of {len(batch)} known series have 2025-2026 data")

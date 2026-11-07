@@ -1,6 +1,9 @@
 """Client for the US Bureau of Labor Statistics Public Data API v2.
 
-Checked live on 2026-11-07 with the project's User-Agent and no key:
+Uses the API without registration: MapleStats takes no source that needs a
+key, so the unregistered limits apply (25 queries a day per address, 25
+series and 10 years per query) and are stated in every result's
+provenance.limits. Checked live on 2026-11-07 with the project's User-Agent:
 
 - `POST timeseries/data/` with `{"seriesid": [...], "startyear", "endyear"}`
   answers without a key, at the unregistered limits. The body always says
@@ -10,10 +13,13 @@ Checked live on 2026-11-07 with the project's User-Agent and no key:
   system-allowed limit of 10 years." A 2012-2026 request returned 2012-2021:
   the API keeps the oldest years, not the newest, so this client asks in
   chunks of the year limit, newest first.
-- `catalog: true` without a key is ignored with the message "The catalog has
-  been disabled for this request." Some JOLTS ids add "Unable to get Catalog
+- `catalog: true` is ignored without registration ("The catalog has been
+  disabled for this request."). Some JOLTS ids add "Unable to get Catalog
   Data for series ..." even when no catalog was asked for; the data still
-  comes. Titles therefore come from constants.KNOWN_SERIES unless a key is set.
+  comes. Titles therefore come from constants.KNOWN_SERIES.
+- Past the daily allowance the body says `"status": "REQUEST_NOT_PROCESSED"`
+  and "...the daily threshold for total number of requests allocated to the
+  user with registration key  has been reached." (recorded live).
 - `value` is a string; "-" marks a missing month (October 2025 for CPS
   series, footnoted "Data unavailable due to the 2025 lapse in
   appropriations."). Rows come newest first; `latest: "true"` marks the
@@ -36,7 +42,6 @@ from typing import Any, NoReturn
 
 import httpx
 
-from maplestats_mcp import config
 from maplestats_mcp.modules.bls import constants
 from maplestats_mcp.modules.bls.schemas import (
     IndicatorResult,
@@ -52,7 +57,7 @@ from maplestats_mcp.modules.bls.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
-from maplestats_mcp.shared.http import api_get, api_post, register_secret
+from maplestats_mcp.shared.http import api_get, api_post
 from maplestats_mcp.shared.i18n import normalize_lang, pick
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -77,17 +82,20 @@ def _licence(lang: str) -> str:
     return constants.LICENCE_FR if lang == "fr" else constants.LICENCE
 
 
-def _key() -> str | None:
-    key = config.get_bls_api_key()
-    if key:
-        register_secret(key, "YOUR_BLS_API_KEY")
-    return key
-
-
-def _limits(registered: bool) -> tuple[int, int]:
-    if registered:
-        return constants.REGISTERED_MAX_SERIES, constants.REGISTERED_MAX_YEARS
-    return constants.UNREGISTERED_MAX_SERIES, constants.UNREGISTERED_MAX_YEARS
+def _limits_text(lang: str) -> str:
+    return pick(
+        lang,
+        f"BLS access without registration: {constants.DAILY_QUERIES} queries a day per "
+        f"server address, shared by every user of this server; {constants.MAX_SERIES} series "
+        f"and {constants.MAX_YEARS} years per query (a longer range costs one query per "
+        f"{constants.MAX_YEARS} years, at most {constants.MAX_CHUNKS}). Answers are cached "
+        "for 6 hours.",
+        f"Accès au BLS sans enregistrement : {constants.DAILY_QUERIES} requêtes par jour par "
+        "adresse du serveur, partagées par tous ses utilisateurs ; "
+        f"{constants.MAX_SERIES} séries et {constants.MAX_YEARS} ans par requête (un "
+        f"intervalle plus long coûte une requête par tranche de {constants.MAX_YEARS} ans, "
+        f"au plus {constants.MAX_CHUNKS}). Les réponses sont mises en cache 6 heures.",
+    )
 
 
 def _raise_unavailable(exc: Exception, lang: str) -> NoReturn:
@@ -116,15 +124,13 @@ def _check_status(payload: Any, lang: str) -> list[str]:
     if "threshold" in joined.lower() or "limit" in joined.lower():
         raise_localized(
             UpstreamUnavailable,
-            f"The BLS refused the request: {joined} Without a registration key the BLS "
-            "allows 25 queries a day per address; the server operator can set "
-            "MAPLE_BLS_API_KEY (free at https://data.bls.gov/registrationEngine/) for 500. "
-            "Fix: retrying today will fail too; say the BLS daily limit was reached and the "
+            f"The BLS refused the request: {joined} This server uses the BLS API without "
+            "registration, which allows 25 queries a day per address, shared by all its "
+            "users. Fix: retrying today will fail too; say the BLS daily limit was reached and the "
             "data can be fetched tomorrow, or from bls.gov. Do not answer from memory.",
-            f"le BLS a refusé la requête : {joined} Sans clé d'enregistrement, le BLS "
-            "permet 25 requêtes par jour et par adresse ; l'exploitant du serveur peut "
-            "définir MAPLE_BLS_API_KEY (gratuite sur https://data.bls.gov/registrationEngine/) "
-            "pour en avoir 500. Solution : réessayer aujourd'hui échouera aussi ; dites que la "
+            f"le BLS a refusé la requête : {joined} Ce serveur utilise l'API du BLS sans "
+            "enregistrement, ce qui permet 25 requêtes par jour et par adresse, partagées par "
+            "tous ses utilisateurs. Solution : réessayer aujourd'hui échouera aussi ; dites que la "
             "limite quotidienne du BLS est atteinte et que les données pourront être obtenues "
             "demain, ou sur bls.gov. Ne répondez pas de mémoire.",
             lang,
@@ -198,14 +204,11 @@ async def _get(url: str, params: dict[str, str] | None, lang: str) -> Any:
 # ---------------------------------------------------------------- helpers
 
 
-def _seasonal(series_id: str, catalog: dict[str, Any] | None, lang: str) -> str | None:
-    text = str((catalog or {}).get("seasonality") or "").lower()
-    if not text:
-        code = series_id[2:3]
-        text = {"S": "seasonally adjusted", "U": "not seasonally adjusted"}.get(code, "")
-    if not text:
+def _seasonal(series_id: str, lang: str) -> str | None:
+    code = series_id[2:3]
+    if code not in {"S", "U"}:
         return None
-    adjusted = not text.startswith("not")
+    adjusted = code == "S"
     if lang == "fr":
         return "désaisonnalisé" if adjusted else "non désaisonnalisé"
     return "seasonally adjusted" if adjusted else "not seasonally adjusted"
@@ -309,20 +312,14 @@ def _release(survey: str, lang: str) -> Release | None:
 
 def _series(raw: dict[str, Any], lang: str) -> Series:
     series_id = str(raw.get("seriesID") or "")
-    catalog = raw.get("catalog") if isinstance(raw.get("catalog"), dict) else None
     title, units = _known_title(series_id, lang)
-    if catalog and catalog.get("series_title") and not title:
-        title = str(catalog["series_title"])
     observations = _observations(list_or_empty(raw, "data"))
     valued = [o for o in observations if o.value is not None]
     return Series(
         series_id=series_id,
         title=title,
         survey=series_id[:2],
-        survey_name=str(catalog.get("survey_name"))
-        if catalog and catalog.get("survey_name")
-        else None,
-        seasonal_adjustment=_seasonal(series_id, catalog, lang),
+        seasonal_adjustment=_seasonal(series_id, lang),
         units=units,
         frequency=_frequency([o.period for o in observations], lang),
         release=_release(series_id[:2], lang),
@@ -394,8 +391,7 @@ async def get_series(
     lang: str = "en",
 ) -> SeriesResult:
     lang = normalize_lang(lang)
-    key = _key()
-    max_series, max_years = _limits(key is not None)
+    max_series, max_years = constants.MAX_SERIES, constants.MAX_YEARS
     ids = _clean_ids(series_ids, lang, max_series)
     start, end = _years(start_year, end_year, lang)
     notes: list[str] = []
@@ -430,9 +426,6 @@ async def get_series(
                 "startyear": str(chunk_start),
                 "endyear": str(chunk_stop),
             }
-            if key:
-                body["registrationkey"] = key
-                body["catalog"] = True
             payload = await _post(body, lang)
             for message in _check_status(payload, lang):
                 if message not in messages:
@@ -444,11 +437,9 @@ async def get_series(
                 sid = str(raw["seriesID"])
                 entry = merged.setdefault(sid, {"seriesID": sid, "data": []})
                 entry["data"].extend(list_or_empty(raw, "data"))
-                if isinstance(raw.get("catalog"), dict):
-                    entry["catalog"] = raw["catalog"]
         return {"series": merged, "messages": messages}
 
-    cache_key = f"bls:data:{','.join(ids)}:{start}:{end}:{int(key is not None)}"
+    cache_key = f"bls:data:{','.join(ids)}:{start}:{end}"
     payload, cached = await cached_fetch(cache_key, constants.CACHE_TTL_DATA_SECONDS, fetch)
 
     series: list[Series] = []
@@ -478,7 +469,7 @@ async def get_series(
             )
         )
     # The year-range message is about our own chunks; the catalog ones only
-    # say a key is missing. The rest (bad ids, no data for a year) pass on.
+    # say there is no registration. The rest (bad ids, no data for a year) pass on.
     # "No Data Available for Series X Year: 1998" comes once per empty year;
     # one note per series with its first period says the same.
     sparse: list[str] = []
@@ -501,23 +492,20 @@ async def get_series(
                     f"{one.series_id} commence en {one.observations[0].date} dans cet intervalle.",
                 )
             )
-    if not key:
-        notes.append(
-            pick(
-                lang,
-                "Titles come from MapleStats' list of known series: without a registration key "
-                "the BLS sends no catalog. Seasonal adjustment is read from the id's third "
-                "character (S or U).",
-                "Les titres viennent de la liste de séries connues de MapleStats : sans clé, le "
-                "BLS n'envoie pas de catalogue. La désaisonnalisation est lue au troisième "
-                "caractère de l'identifiant (S ou U).",
-            )
+    notes.append(
+        pick(
+            lang,
+            "Titles come from MapleStats' list of known series (the BLS sends none without "
+            "registration). Seasonal adjustment is read from the id's third character (S or U).",
+            "Les titres viennent de la liste de séries connues de MapleStats (le BLS n'en envoie "
+            "pas sans enregistrement). La désaisonnalisation est lue au troisième caractère de "
+            "l'identifiant (S ou U).",
         )
+    )
     return SeriesResult(
         series=series,
         start_year=start,
         end_year=end,
-        registered=key is not None,
         notes=notes,
         provenance=make_provenance(
             source=constants.SOURCE,
@@ -525,13 +513,7 @@ async def get_series(
             cached=cached,
             schema_name="bls.SeriesResult",
             freshness=_FRESHNESS[lang],
-            limits=pick(
-                lang,
-                f"At most {max_series} series and {max_years} years per BLS query "
-                f"({'registered' if key else 'unregistered'} limits).",
-                f"Au plus {max_series} séries et {max_years} ans par requête au BLS (limites "
-                f"{'enregistrées' if key else 'non enregistrées'}).",
-            ),
+            limits=_limits_text(lang),
             licence=_licence(lang),
             lang=lang,
         ),
@@ -620,6 +602,7 @@ async def list_surveys(lang: str = "en") -> SurveyList:
             url=constants.SURVEYS_URL,
             cached=cached,
             schema_name="bls.SurveyList",
+            limits=_limits_text(lang),
             licence=_licence(lang),
             lang=lang,
         ),
@@ -653,7 +636,7 @@ def _match(series_id: str, popular: bool, lang: str) -> SeriesMatch:
         series_id=series_id,
         title=title,
         survey=series_id[:2],
-        seasonal_adjustment=_seasonal(series_id, None, lang),
+        seasonal_adjustment=_seasonal(series_id, lang),
         units=units,
         popular=popular,
     )
@@ -751,6 +734,7 @@ async def search_series(
             url=url,
             cached=cached,
             schema_name="bls.SearchResult",
+            limits=_limits_text(lang),
             licence=_licence(lang),
             lang=lang,
         ),

@@ -43,10 +43,9 @@ class Series(BaseModel):
     series_id: str
     title: str | None = Field(
         default=None,
-        description="From the API catalog (needs a key) or this module's list of known series.",
+        description="From this module's list of known series; None for other ids.",
     )
     survey: str = Field(description="Two-letter survey prefix, e.g. CE, LN, CU.")
-    survey_name: str | None = None
     seasonal_adjustment: str | None = Field(
         default=None, description="'seasonally adjusted', 'not seasonally adjusted' or None."
     )
@@ -64,7 +63,6 @@ class SeriesResult(BaseModel):
     series: list[Series]
     start_year: int
     end_year: int
-    registered: bool = Field(description="Whether the server sent a BLS registration key.")
     notes: list[str] = Field(default_factory=list)
     provenance: Provenance
 

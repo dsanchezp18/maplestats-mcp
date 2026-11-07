@@ -7,8 +7,9 @@
   `bls_get_series` takes any BLS series id; `bls_search_series` and
   `bls_list_surveys` help find one. Rows carry seasonal adjustment, units,
   preliminary flags, the change from the previous period, the per cent change
-  from a year earlier and the news release schedule. Works without a key at
-  the BLS's unregistered limits (25 queries a day); the new
-  `MAPLE_BLS_API_KEY` setting raises them. The planner now answers US
+  from a year earlier and the news release schedule. Uses the API without
+  registration, so the BLS's unregistered limits apply (25 queries a day per
+  server, 25 series and 10 years per query) and are stated in each result's
+  `provenance.limits`. The planner now answers US
   labour and price questions with the BLS plan instead of calling them out of
   scope.

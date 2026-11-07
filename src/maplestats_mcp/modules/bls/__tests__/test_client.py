@@ -14,7 +14,6 @@ import pytest
 
 from maplestats_mcp.modules.bls import client, constants
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
-from maplestats_mcp.shared.http import recording
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DATA = re.compile(r"https://api\.bls\.gov/publicAPI/v2/timeseries/data/")
@@ -24,11 +23,6 @@ POPULAR = re.compile(r"https://api\.bls\.gov/publicAPI/v2/timeseries/popular.*")
 
 def _fixture(name: str):
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
-
-
-@pytest.fixture(autouse=True)
-def _no_key(monkeypatch):
-    monkeypatch.delenv("MAPLE_BLS_API_KEY", raising=False)
 
 
 def _bodies(httpx_mock):
@@ -61,7 +55,6 @@ async def test_missing_value_and_changes(httpx_mock):
     assert latest.pct_change_from_year_ago == pytest.approx(
         round((latest.value / year_ago.value - 1) * 100, 2)
     )
-    assert not result.registered
     assert not any("catalog has been disabled" in n for n in result.notes)
     assert "public domain" in (result.provenance.licence or "")
 
@@ -74,7 +67,6 @@ async def test_long_range_is_fetched_newest_chunk_first(httpx_mock):
 
     bodies = _bodies(httpx_mock)
     assert [(b["startyear"], b["endyear"]) for b in bodies] == [("2017", "2026"), ("2007", "2016")]
-    assert "registrationkey" not in bodies[0]
     assert [s.series_id for s in result.series] == ["CES0000000001", "CUSR0000SA0L1E"]
     assert any("XXX123" in n for n in result.notes)
     assert not any("Year range" in n for n in result.notes)
@@ -89,26 +81,13 @@ async def test_range_beyond_three_chunks_is_trimmed(httpx_mock):
     assert "1980 to 1996" in result.notes[0]
 
 
-async def test_registered_key_widens_limits_and_is_masked(httpx_mock, monkeypatch):
-    monkeypatch.setenv("MAPLE_BLS_API_KEY", "secret-bls-key")
-    payload = _fixture("data_missing_value.json")
-    payload["message"] = []
-    payload["Results"]["series"][0]["catalog"] = {
-        "series_title": "(Seas) Unemployment Rate",
-        "seasonality": "Seasonally Adjusted",
-        "survey_name": "Labor Force Statistics from the Current Population Survey",
-    }
-    httpx_mock.add_response(url=DATA, method="POST", json=payload)
-    with recording() as requests:
-        result = await client.get_series(["LNS14000000", "CUUR0000SA0"], 2007, 2026)
-
+async def test_no_registration_is_sent_and_limits_are_stated(httpx_mock):
+    httpx_mock.add_response(url=DATA, method="POST", json=_fixture("data_missing_value.json"))
+    result = await client.get_series(["LNS14000000"], 2017, 2026)
     body = _bodies(httpx_mock)[0]
-    assert body["registrationkey"] == "secret-bls-key" and body["catalog"] is True
-    assert (body["startyear"], body["endyear"]) == ("2007", "2026")
-    assert b"secret-bls-key" not in requests[0].body
-    assert b"YOUR_BLS_API_KEY" in requests[0].body
-    assert result.registered
-    assert (result.series[0].survey_name or "").startswith("Labor Force")
+    assert "registrationkey" not in body and "catalog" not in body
+    limits = result.provenance.limits or ""
+    assert "25 queries a day" in limits and "10 years per query" in limits
 
 
 async def test_unknown_series_only_is_not_found(httpx_mock):
@@ -138,7 +117,7 @@ async def test_daily_threshold_is_unavailable_with_key_hint(httpx_mock):
             "Results": {},
         },
     )
-    with pytest.raises(UpstreamUnavailable, match="MAPLE_BLS_API_KEY") as caught:
+    with pytest.raises(UpstreamUnavailable, match="25 queries a day") as caught:
         await client.get_series(["LNS14000000"], 2025, 2026)
     assert "Fix:" in str(caught.value)
 
