@@ -650,7 +650,7 @@ Sources, by tool-name prefix:
 - Elections and Parliament: elections_results_ (federal results by
   riding), elections_financial_returns_ (candidate returns),
   elections_provincial_ (QC, AB, BC, SK, MB results), ourcommons_ (official
-  House of Commons MPs, roles, party standings), senate_ (Senate votes),
+  House of Commons MPs, roles, party standings, MPs' expenses), senate_ (Senate votes),
   represent_ (who represents a postal code; unofficial Open North).
 - Provincial and municipal sources: aer_ (Alberta Energy Regulator),
   ab_wildfire_ (Alberta wildfire status), bc_env_ (BC air quality,

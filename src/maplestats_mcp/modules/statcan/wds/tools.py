@@ -283,7 +283,8 @@ async def wds_get_data_from_vectors(
 
     Use for: getting the data for one or more StatCan vectors (recent
     values of known time series), and
-    year-over-year inflation from the CPI, monthly or annualized growth,
+    year-over-year inflation from the CPI (the latest Canadian inflation
+    rate, Canada or a province), monthly or annualized growth,
     or a quarterly average of a monthly series. Results come back
     inline, so this suits a handful of series; for a whole table or
     hundreds of vectors use wds_get_full_table_download. Vectors WDS

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -122,4 +122,102 @@ class Minister(BaseModel):
 
 class Ministry(BaseModel):
     ministers: list[Minister]
+    provenance: Provenance
+
+
+class ExpenditureReport(BaseModel):
+    fiscal_year: int = Field(description="The year the fiscal year ends: 2027 is 2026-2027.")
+    fiscal_year_label: str = Field(description="'2026-2027'.")
+    quarter: int = Field(description="1 is April to June, 4 is January to March.")
+    period_start: date
+    period_end: date
+    url: str
+
+
+class ExpenditureReports(BaseModel):
+    total_reports: int
+    reports: list[ExpenditureReport] = Field(description="Newest first.")
+    provenance: Provenance
+
+
+class MemberExpenditure(BaseModel):
+    name: str = Field(description="'Last, First' as the report writes it, with 'Hon.'.")
+    constituency: str
+    caucus: str
+    salaries: float = Field(description="Salaries of the member's employees, dollars.")
+    travel: float
+    hospitality: float
+    contracts: float = Field(
+        description="Service contracts, advertising, office leases and operations, gifts, training."
+    )
+    total: float = Field(description="Sum of the four categories.")
+
+
+class ExpenditureTotals(BaseModel):
+    salaries: float
+    travel: float
+    hospitality: float
+    contracts: float
+    total: float
+
+
+class MemberExpenditures(BaseModel):
+    fiscal_year: int
+    quarter: int
+    period_start: date
+    period_end: date
+    members_in_report: int
+    total_matches: int
+    totals: ExpenditureTotals = Field(description="Sums over every match, before limit.")
+    members: list[MemberExpenditure]
+    provenance: Provenance
+
+
+class TravelLine(BaseModel):
+    start_date: date | None
+    end_date: date | None
+    departure: str
+    places_visited: str
+    purpose: str
+    traveller_name: str | None = Field(description="Blank for some designated travellers.")
+    traveller_type: str = Field(description="Member, Designated Traveller, Dependant, Employee...")
+    transportation: float
+    accommodation: float
+    meals_and_incidentals: float
+    total: float = Field(description="Negative for a refund or correction of an earlier trip.")
+
+
+class HospitalityLine(BaseModel):
+    event_date: date | None
+    location: str
+    attendees: int | None
+    purpose: str
+    supplier: str
+    amount: float = Field(description="This supplier's amount.")
+    event_total: float = Field(
+        description="The event's total; an event paid to several suppliers has one line each."
+    )
+
+
+class ContractLine(BaseModel):
+    supplier: str
+    description: str
+    contract_date: date | None
+    total: float
+
+
+class MemberExpenditureDetails(BaseModel):
+    name: str
+    constituency: str
+    caucus: str
+    fiscal_year: int
+    quarter: int
+    period_start: date
+    period_end: date
+    travel_total: float = Field(description="As in the quarter's summary.")
+    hospitality_total: float
+    contracts_total: float
+    travel: list[TravelLine] | None = Field(description="None when not asked for.")
+    hospitality: list[HospitalityLine] | None
+    contracts: list[ContractLine] | None
     provenance: Provenance

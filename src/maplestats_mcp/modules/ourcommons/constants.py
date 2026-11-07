@@ -38,6 +38,23 @@ MINISTRY_URL = _ByLang(
 )
 OPEN_DATA_PAGE = SITE + "/en/open-data"
 
+# Members' expenditure reports (proactive disclosure), checked live 2026-11-07. The open-data
+# page still shows the old PublicDisclosure/MemberExpenditures.aspx?Id=<document id> pattern,
+# which answers 404; the reports moved to /ProactiveDisclosure, one page per fiscal quarter
+# (/{fiscal year}/{quarter}, no id needed) holding the report's id, which names the summary
+# CSV, and one id per member, which names that member's travel, hospitality and contract CSVs.
+# French is on www.noscommunes.ca under /deputes with voyage, accueil and contrat.
+DISCLOSURE_URL = _ByLang(
+    SITE + "/ProactiveDisclosure/en/members", SITE_FR + "/ProactiveDisclosure/fr/deputes"
+)
+DETAIL_PATHS = {
+    "en": {"travel": "travel", "hospitality": "hospitality", "contract": "contract"},
+    "fr": {"travel": "voyage", "hospitality": "accueil", "contract": "contrat"},
+}
+CACHE_TTL_EXPENDITURES_SECONDS = 6 * 60 * 60
+EXPENDITURES_LIMIT_DEFAULT = 50
+EXPENDITURES_LIMIT_MAX = 500
+
 RATE_LIMIT_SOURCE = "ourcommons"
 RATE_LIMIT_PER_SECOND = 2.0
 RATE_LIMIT_CAPACITY = 4.0
@@ -61,7 +78,8 @@ PARTY_GROUPS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("Liberal", "Libéral"), ("lpc", "plc", "liberal party", "parti liberal")),
     (("Bloc Québécois",), ("bq",)),
     (
-        ("NDP", "NPD"),
+        # The expenditure reports spell the caucus out in full.
+        ("NDP", "NPD", "New Democratic Party", "Nouveau Parti démocratique"),
         ("new democratic party", "new democrats", "nouveau parti democratique"),
     ),
     (("Green Party", "Parti vert"), ("green", "gpc", "pvc", "vert", "verts")),
