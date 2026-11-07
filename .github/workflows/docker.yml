@@ -224,9 +224,9 @@ jobs:
       # storage the server already mounts at /data, so a deploy does not reset
       # them. The chat mounts only the share's chat/ folder (subPath), at
       # /data/chat: it faces the public and holds the model key, so it must not
-      # read or write the server's files. The first run adds the volume with a PATCH of the template only
-      # (az containerapp update --yaml would resend the secrets without their
-      # values); later runs find it mounted and change nothing. If the identity
+      # read or write the server's files. The first run adds the volume with a
+      # PATCH of the template only (az containerapp update --yaml would resend
+      # the secrets without their values); later runs find it mounted and change nothing. If the identity
       # may not attach the storage, the deploy goes on and the counts stay in
       # memory, as before.
       - name: Mount the shared file storage for the usage counts
