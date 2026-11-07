@@ -9,6 +9,12 @@ from fastmcp.tools import tool
 from maplestats_mcp.modules.planner import client
 from maplestats_mcp.modules.planner.schemas import QueryPlan
 
+# The planner reads at most this much of a question. It runs on the event loop, and its
+# time grows faster than the length (0.2 s at 10k characters, 13.5 s at 400k, minutes at
+# 1 MB, timed 2026-11-06): one oversized question under the 2 MB body cap stalled every
+# request on the server, /health included. A real question is a sentence or two.
+MAX_QUESTION_CHARS = 2_000
+
 
 @tool
 async def plan_query(question: str, lang: Literal["en", "fr"] = "en") -> QueryPlan:
@@ -33,6 +39,7 @@ async def plan_query(question: str, lang: Literal["en", "fr"] = "en") -> QueryPl
     Mots-clés : planifier, quelle source de données, où trouver, combiner
     des sources, question, recherche, données canadiennes, statistiques.
     """
+    question = question[:MAX_QUESTION_CHARS]
     # lang defaults to "en", so a client that forgets lang='fr' on a French
     # question would get an English plan (one did); the question decides then.
     if lang == "en" and client.looks_french(question):

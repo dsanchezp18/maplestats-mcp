@@ -380,3 +380,20 @@ async def test_plan_query_answers_a_french_question_in_french_without_lang():
     assert result.structured_content is not None
     assert result.structured_content["provenance"]["lang"] == "fr"
     assert result.structured_content["guidance"][0].startswith("Exécutez")
+
+
+async def test_plan_query_reads_a_bounded_question(monkeypatch):
+    # A 1 MB question ran for minutes on the event loop and stalled the whole server.
+    from maplestats_mcp.modules.planner import tools
+
+    seen: list[str] = []
+    real_plan = client.plan
+
+    def spy(question: str, lang: str):
+        seen.append(question)
+        return real_plan(question, lang)
+
+    monkeypatch.setattr(client, "plan", spy)
+    plan = await tools.plan_query("rents in Calgary " * 100_000)
+    assert len(seen[0]) == tools.MAX_QUESTION_CHARS
+    assert plan.topics

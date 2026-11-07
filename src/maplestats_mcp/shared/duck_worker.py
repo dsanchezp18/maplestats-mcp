@@ -167,6 +167,15 @@ def _limit_resources(memory_mb: int, seconds: float) -> bool:
         return False
     import resource
 
+    # If the container runs out of memory anyway (two workers, the caches and downloads
+    # in flight can pass a 1 GiB limit), the kernel kills the process with the highest
+    # score: make that this worker, whose query fails, not the server, whose loss
+    # restarts the replica for every caller. Raising one's own score needs no privilege.
+    try:
+        with open("/proc/self/oom_score_adj", "w", encoding="ascii") as oom:
+            oom.write("1000")
+    except OSError:
+        pass
     try:
         used = resource.getrusage(resource.RUSAGE_SELF)
         cpu = int(used.ru_utime + used.ru_stime + seconds) + 2
