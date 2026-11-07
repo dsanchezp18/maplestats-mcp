@@ -1,0 +1,32 @@
+{
+ "BEAAPI": {
+  "Request": {
+   "RequestParam": [
+    {
+     "ParameterName": "USERID",
+     "ParameterValue": "Your-36Character-Key"
+    },
+    {
+     "ParameterName": "METHOD",
+     "ParameterValue": "GETPARAMETERVALUESFILTERED"
+    }
+   ]
+  },
+  "Results": {
+   "ParamValue": [
+    {
+     "Key": "1",
+     "Desc": "[SAINC1] Personal income"
+    },
+    {
+     "Key": "2",
+     "Desc": "[SAINC1] Population"
+    },
+    {
+     "Key": "3",
+     "Desc": "[SAINC1] Per capita personal income"
+    }
+   ]
+  }
+ }
+}

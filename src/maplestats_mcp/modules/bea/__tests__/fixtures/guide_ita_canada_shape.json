@@ -1,0 +1,51 @@
+{
+ "BEAAPI": {
+  "Request": {
+   "RequestParam": [
+    {
+     "ParameterName": "USERID",
+     "ParameterValue": "Your-36Character-Key"
+    },
+    {
+     "ParameterName": "METHOD",
+     "ParameterValue": "GETDATA"
+    },
+    {
+     "ParameterName": "DATASETNAME",
+     "ParameterValue": "ITA"
+    }
+   ]
+  },
+  "Results": {
+   "Data": [
+    {
+     "Indicator": "ExpGds",
+     "AreaOrCountry": "Canada",
+     "Frequency": "QSA",
+     "Year": "2026",
+     "TimeSeriesId": "TSI_ItaExpGds_Canada_QSA",
+     "TimeSeriesDescription": "Exports of goods; Canada; quarterly, seasonally adjusted",
+     "TimePeriod": "2026Q2",
+     "CL_UNIT": "USD",
+     "UNIT_MULT": "6",
+     "DataValue": "90,123",
+     "NoteRef": ""
+    },
+    {
+     "Indicator": "BalGds",
+     "AreaOrCountry": "Canada",
+     "Frequency": "QSA",
+     "Year": "2026",
+     "TimeSeriesId": "TSI_ItaBalGds_Canada_QSA",
+     "TimeSeriesDescription": "Balance on goods; Canada; quarterly, seasonally adjusted",
+     "TimePeriod": "2026Q2",
+     "CL_UNIT": "USD",
+     "UNIT_MULT": "6",
+     "DataValue": "-15,432",
+     "NoteRef": ""
+    }
+   ],
+   "Notes": []
+  }
+ }
+}

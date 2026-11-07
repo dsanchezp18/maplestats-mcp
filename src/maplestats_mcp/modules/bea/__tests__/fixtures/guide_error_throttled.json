@@ -1,0 +1,22 @@
+{
+ "BEAAPI": {
+  "Request": {
+   "RequestParam": [
+    {
+     "ParameterName": "USERID",
+     "ParameterValue": "Your-36Character-Key"
+    },
+    {
+     "ParameterName": "METHOD",
+     "ParameterValue": "GETDATASETLIST"
+    }
+   ]
+  },
+  "Results": {
+   "Error": {
+    "APIErrorCode": "7",
+    "APIErrorDescription": "Request Denied - exceeded Requests per minute quota."
+   }
+  }
+ }
+}

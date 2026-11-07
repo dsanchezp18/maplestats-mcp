@@ -1,0 +1,32 @@
+{
+ "BEAAPI": {
+  "Request": {
+   "RequestParam": [
+    {
+     "ParameterName": "USERID",
+     "ParameterValue": "Your-36Character-Key"
+    },
+    {
+     "ParameterName": "METHOD",
+     "ParameterValue": "GETDATASETLIST"
+    }
+   ]
+  },
+  "Results": {
+   "Dataset": [
+    {
+     "DatasetName": "NIPA",
+     "DatasetDescription": "Standard NIPA tables"
+    },
+    {
+     "DatasetName": "ITA",
+     "DatasetDescription": "International Transactions Accounts"
+    },
+    {
+     "DatasetName": "Regional",
+     "DatasetDescription": "Regional data sets"
+    }
+   ]
+  }
+ }
+}

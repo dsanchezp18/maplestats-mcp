@@ -44,6 +44,7 @@ QUESTIONS: list[tuple[str, str, str]] = [
         "bls_get_indicator",
     ),
     ("US unemployment rate", "united_states", "bls_get_indicator"),
+    ("US GDP growth from the Bureau of Economic Analysis", "united_states", "bea_get_nipa"),
     ("How much wheat did Canada export to China in 2023?", "agriculture", "cgc_exports_query"),
     ("interprovincial trade flows between provinces", "economy", "sdmx_space_search"),
     ("Population estimates for Nova Scotia", "population", "wds_search_cubes"),

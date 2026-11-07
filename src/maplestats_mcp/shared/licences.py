@@ -258,6 +258,10 @@ SOURCE_LICENCES: dict[str, str] = {
         "Source: World Bank, World Development Indicators. Creative Commons Attribution 4.0 "
         "(https://datacatalog.worldbank.org/public-licenses)."
     ),
+    "bea": (
+        "Source: U.S. Bureau of Economic Analysis. This product uses the BEA Data API but is "
+        "not endorsed or certified by BEA (https://apps.bea.gov/API/_pdf/bea_api_tos.pdf)."
+    ),
     "bls": (
         "Source: U.S. Bureau of Labor Statistics. Public domain; BLS asks to be cited as the "
         "source (https://www.bls.gov/opub/copyright-information.htm)."
@@ -444,6 +448,11 @@ LICENCES_FR: dict[str, str] = {
     SOURCE_LICENCES["worldbank-wdi"]: (
         "Source : Banque mondiale, Indicateurs du développement dans le monde. Licence Creative "
         "Commons Attribution 4.0 (https://datacatalog.worldbank.org/public-licenses)."
+    ),
+    SOURCE_LICENCES["bea"]: (
+        "Source : Bureau of Economic Analysis des États-Unis. Ce produit utilise l'API de "
+        "données du BEA sans être approuvé ni certifié par le BEA "
+        "(https://apps.bea.gov/API/_pdf/bea_api_tos.pdf)."
     ),
     SOURCE_LICENCES["bls"]: (
         "Source : Bureau of Labor Statistics des États-Unis. Domaine public ; le BLS demande "
@@ -749,6 +758,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     "worldbank-wdi": "allowed",
     # US federal works are public domain (17 U.S.C. 105).
     "bls": "allowed",
+    # The API terms allow services built on it, with the non-endorsement notice.
+    "bea": "allowed",
     "cbsa-tariff": "not_allowed",
     "electricity": "varies",
     "dfo-iwls": "unknown",

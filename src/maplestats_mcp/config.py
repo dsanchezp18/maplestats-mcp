@@ -164,6 +164,16 @@ def get_bls_api_key() -> str | None:
     return raw or None
 
 
+def get_bea_api_key() -> str | None:
+    """BEA API UserID (MAPLE_BEA_API_KEY), or None.
+
+    Required by the BEA tools: the BEA answers every request without a UserID
+    with error 1 ("Invalid API UserId"). Free at https://apps.bea.gov/api/signup/.
+    """
+    raw = os.environ.get("MAPLE_BEA_API_KEY", "").strip()
+    return raw or None
+
+
 def get_instance_name() -> str:
     """Label for this deployment in the forwarded counts ("azure", "render")."""
     raw = os.environ.get("MAPLE_INSTANCE_NAME", "").strip().lower()

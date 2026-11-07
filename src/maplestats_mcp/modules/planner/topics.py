@@ -433,12 +433,14 @@ TOPICS: tuple[Topic, ...] = (
     ),
     Topic(
         "united_states",
-        "United States comparators (BLS)",
+        "United States comparators (BLS, BEA)",
         (
             "united states",
             "american",
             "bls",
             "bureau of labor statistics",
+            "bea",
+            "bureau of economic analysis",
             "nonfarm payrolls",
             "jobs report",
             "etats-unis",
@@ -453,6 +455,27 @@ TOPICS: tuple[Topic, ...] = (
             ),
             PlanStep("bls_search_series", "find a BLS series id for any other US measure"),
             PlanStep("bls_get_series", "pull BLS series by id for the same period"),
+            PlanStep(
+                "bea_get_nipa",
+                "US GDP growth, GDP, personal income or PCE prices (NIPA table, needs the "
+                "server's BEA key)",
+                terms=(
+                    "gdp",
+                    "economic growth",
+                    "personal income",
+                    "pce",
+                    "bea",
+                    "bureau of economic analysis",
+                    "pib",
+                    "croissance economique",
+                    "revenu personnel",
+                ),
+            ),
+            PlanStep(
+                "bea_get_regional",
+                "US state personal income, per capita income or GDP, to set beside a province",
+                terms=("by state", "us states", "per capita", "par habitant", "etats americains"),
+            ),
         ),
         (
             (
@@ -3240,11 +3263,18 @@ US_COVERED_TERMS: tuple[str, ...] = (
     "job openings",
     "jolts",
     "producer price*",
+    "gdp",
+    "economic growth",
+    "personal income",
+    "per capita income",
     "chomage",
     "emploi*",
     "salaire*",
     "ipc",
     "prix a la consommation",
+    "pib",
+    "croissance economique",
+    "revenu personnel",
 )
 CROSS_BORDER_TERMS: tuple[str, ...] = (
     *_TRADE_TERMS,

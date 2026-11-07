@@ -117,7 +117,15 @@ FR: dict[str, str] = {
     "Canada's series for the indicator, compared with G7 or OECD countries": (
         "la série du Canada pour l'indicateur, comparée aux pays du G7 ou de l'OCDE"
     ),
-    "United States comparators (BLS)": "comparaisons avec les États-Unis (BLS)",
+    "United States comparators (BLS, BEA)": "comparaisons avec les États-Unis (BLS, BEA)",
+    "US GDP growth, GDP, personal income or PCE prices (NIPA table, needs the server's BEA key)": (
+        "croissance du PIB, PIB, revenu personnel ou prix PCE des États-Unis (tableau NIPA, "
+        "exige la clé BEA du serveur)"
+    ),
+    "US state personal income, per capita income or GDP, to set beside a province": (
+        "revenu personnel, revenu par habitant ou PIB d'un État américain, à comparer avec "
+        "une province"
+    ),
     "the US figure by indicator (nonfarm_payrolls, unemployment_rate, "
     "cpi_all_items, cpi_core, average_hourly_earnings, job_openings)": (
         "le chiffre américain par indicateur (indicator : nonfarm_payrolls, "

@@ -229,6 +229,12 @@ CASES = [
     ("BLS series id time series", "bls_get_series"),
     ("find the BLS series id for US shelter inflation", "bls_search_series"),
     ("list of Bureau of Labor Statistics surveys", "bls_list_surveys"),
+    # US Bureau of Economic Analysis, 2026-11-07.
+    ("US GDP growth national accounts BEA", "bea_get_nipa"),
+    ("per capita personal income by US state", "bea_get_regional"),
+    ("US trade balance with Canada goods and services BEA", "bea_get_international_transactions"),
+    ("Bureau of Economic Analysis datasets", "bea_list_datasets"),
+    ("BEA line codes for a regional table", "bea_list_parameter_values"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),
