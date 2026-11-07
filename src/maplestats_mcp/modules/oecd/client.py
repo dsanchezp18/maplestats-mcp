@@ -1206,7 +1206,9 @@ async def compare_countries(
             area_code=area.code,
             area_name=area.label,
             key=series_info.key,
-            unit=pick(lang, spec.unit_en, spec.unit_fr) if spec.unit_en else series_info.unit,
+            unit=pick(lang, spec.unit_en, spec.unit_fr or spec.unit_en)
+            if spec.unit_en
+            else series_info.unit,
             observations=[Observation(period=r.period, value=r.value) for r in rows],
             latest_period=series_info.latest_period,
             latest_value=series_info.latest_value,

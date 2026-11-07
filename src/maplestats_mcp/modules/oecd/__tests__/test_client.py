@@ -248,8 +248,10 @@ async def test_compare_puts_canada_first_and_ranks(httpx_mock):
     _mock_eo(httpx_mock)
     result = await client.compare_countries("real_gdp_growth", ["GB", "us", "NZ", "OECD"])
     # NZL is not in the (cut) availability constraint, so it is not asked for.
-    assert str(_data_requests(httpx_mock)[0].url).split("/")[-1].startswith(
-        "CAN+GBR+USA+OECD.GDPV_ANNPCT.A?lastNObservations=8"
+    assert (
+        str(_data_requests(httpx_mock)[0].url)
+        .split("/")[-1]
+        .startswith("CAN+GBR+USA+OECD.GDPV_ANNPCT.A?lastNObservations=8")
     )
     assert [c.area_code for c in result.countries] == ["CAN", "GBR", "USA"]
     assert result.countries[0].unit == "Percent per annum"
