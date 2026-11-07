@@ -158,3 +158,29 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pyright
       - run: uv run pytest -q
+
+  # The R client (clients/r/) is its own package; R CMD check runs its tests,
+  # which use recorded responses and never reach the network.
+  client-r:
+    runs-on: ubuntu-latest
+    env:
+      _R_CHECK_FORCE_SUGGESTS_: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          r-version: release
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          working-directory: clients/r
+          extra-packages: any::rcmdcheck, any::lintr
+          needs: check
+      - name: lintr
+        working-directory: clients/r
+        run: Rscript -e 'lints <- lintr::lint_package("."); print(lints); if (length(lints) > 0) quit(status = 1)'
+      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          working-directory: clients/r
+          args: 'c("--no-manual", "--as-cran")'
+          error-on: '"warning"'
