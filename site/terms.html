@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="{{lang}}" data-root="{{root}}">
+<head>
+{{> head}}
+<title>{en}Terms of service{fr}Conditions d'utilisation{/} · MapleStats MCP</title>
+<meta name="description" content="{en}The terms for using the hosted MapleStats MCP server, the chat demo and this website: free, no accounts, data as published, no warranty.{fr}Conditions d'utilisation du serveur MapleStats MCP hébergé, de la démo et de ce site : gratuit, sans compte, données telles que publiées, sans garantie.{/}">
+</head>
+<body>
+{{> header}}
+<main id="main">
+
+<section class="wrap page-head">
+  <p class="label">{en}Terms of service{fr}Conditions d'utilisation{/}</p>
+  <h1>{en}Terms of service{fr}Conditions d'utilisation{/}</h1>
+  <p class="lede">{en}These terms cover the hosted MapleStats MCP endpoint at <code>https://mcp.maplestats.danielstats.io/mcp</code>, the chat demo and this website. By using them you accept these terms. Last updated {{build_date}}.{fr}Ces conditions portent sur le point d'accès MapleStats MCP hébergé à l'adresse <code>https://mcp.maplestats.danielstats.io/mcp</code>, sur la démo de conversation et sur ce site. En les utilisant, vous acceptez ces conditions. Dernière mise à jour : {{build_date}}.{/}</p>
+</section>
+
+<section class="wrap faq" id="terms">
+  <div class="faq-group">
+    <h2 class="faq-h">{en}The service{fr}Le service{/}</h2>
+    <p>{en}MapleStats MCP is an independent, open-source project that lets AI assistants find and read Canadian open data from public sources such as Statistics Canada, the Bank of Canada and provincial and municipal portals. The hosted endpoint is free, has no accounts and is run by one maintainer, <a href="{{root}}about.html">Daniel Sánchez Pazmiño</a>, as a personal project. It is not affiliated with or endorsed by any government, data publisher or AI company.{fr}MapleStats MCP est un projet indépendant et libre qui permet aux assistants IA de trouver et de lire des données ouvertes canadiennes provenant de sources publiques comme Statistique Canada, la Banque du Canada et les portails provinciaux et municipaux. Le point d'accès hébergé est gratuit, sans compte, et il est exploité par un seul responsable, <a href="{{root}}about.html">Daniel Sánchez Pazmiño</a>, à titre de projet personnel. Il n'est ni affilié à un gouvernement, à un éditeur de données ou à une entreprise d'IA, ni approuvé par eux.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Acceptable use{fr}Utilisation acceptable{/}</h2>
+    <p>{en}You may use the service for any lawful purpose, including commercial work. Please do not:{fr}Vous pouvez utiliser le service à toute fin légale, y compris commerciale. Veuillez ne pas :{/}</p>
+    <ul>
+      <li>{en}try to get around the rate limit (60 requests a minute per client) or other limits, for example by spreading requests over many addresses;{fr}tenter de contourner la limite de débit (60 requêtes par minute par client) ou d'autres limites, par exemple en répartissant les requêtes sur plusieurs adresses;{/}</li>
+      <li>{en}use the service to overload, scrape in bulk or disrupt the publishers' own services; for large downloads, go to the publisher directly or <a href="{{root}}connect.html#by-hand">run MapleStats yourself</a>;{fr}vous servir du service pour surcharger, moissonner en masse ou perturber les services des éditeurs; pour de gros téléchargements, adressez-vous directement à l'éditeur ou <a href="{{root}}connect.html#by-hand">exécutez MapleStats vous-même</a>;{/}</li>
+      <li>{en}attack, probe for vulnerabilities in, or interfere with the server, except through the <a href="{{repo}}/security/advisories/new">private vulnerability report</a>;{fr}attaquer le serveur, y chercher des failles ou en perturber le fonctionnement, sauf au moyen du <a href="{{repo}}/security/advisories/new">signalement privé de vulnérabilité</a>;{/}</li>
+      <li>{en}send personal, confidential or sensitive information in tool calls or in the chat demo; the service does not need any.{fr}envoyer des renseignements personnels, confidentiels ou sensibles dans les appels d'outils ou dans la démo de conversation; le service n'en a pas besoin.{/}</li>
+    </ul>
+    <p>{en}Requests that break these terms, or that threaten the service's availability for others, may be limited or blocked without notice.{fr}Les requêtes qui enfreignent ces conditions, ou qui menacent la disponibilité du service pour les autres, peuvent être limitées ou bloquées sans préavis.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}The data and its licences{fr}Les données et leurs licences{/}</h2>
+    <p>{en}The data belong to their publishers. MapleStats passes them on as published and says where each value came from; your reuse of the data is governed by each publisher's own licence or terms, listed in the <a href="{{root}}faq.html#licences">FAQ</a>. Some publishers ask for attribution or limit reuse, and you are responsible for following their terms. The MapleStats code is under the <a href="{{repo}}/blob/main/LICENSE">MIT licence</a>.{fr}Les données appartiennent à leurs éditeurs. MapleStats les transmet telles que publiées et indique la provenance de chaque valeur; la réutilisation des données relève de la licence ou des conditions de chaque éditeur, énumérées dans la <a href="{{root}}faq.html#licences">FAQ</a>. Certains éditeurs exigent une mention de la source ou limitent la réutilisation, et il vous revient de respecter leurs conditions. Le code de MapleStats est publié sous la <a href="{{repo}}/blob/main/LICENSE">licence MIT</a>.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Accuracy and AI-written answers{fr}Exactitude et réponses rédigées par l'IA{/}</h2>
+    <p>{en}MapleStats returns values as the publishers publish them, but publishers revise figures, sources change without notice, and a tool can have bugs. What an AI assistant writes from those values can contain errors. Check any figure you rely on against the cited source before you use it for a decision, a publication or advice to others. MapleStats does not give financial, legal, medical or other professional advice.{fr}MapleStats renvoie les valeurs telles que les éditeurs les publient, mais les éditeurs révisent leurs chiffres, les sources changent sans préavis et un outil peut comporter des erreurs. Ce qu'un assistant IA rédige à partir de ces valeurs peut contenir des erreurs. Vérifiez tout chiffre important auprès de la source citée avant de l'employer pour une décision, une publication ou un conseil à autrui. MapleStats ne fournit aucun conseil financier, juridique, médical ou professionnel.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Availability{fr}Disponibilité{/}</h2>
+    <p>{en}The hosted service is offered in beta, free of charge and as available. It can be slow, down, rate-limited, changed or discontinued at any time, and tools can be added, changed or removed. Changes are recorded in the <a href="{{repo}}/blob/main/CHANGELOG.md">changelog</a>. If you need the service to stay up, run your own copy.{fr}Le service hébergé est offert en version bêta, gratuitement et selon sa disponibilité. Il peut être lent, indisponible, limité, modifié ou interrompu à tout moment, et des outils peuvent être ajoutés, modifiés ou retirés. Les changements sont consignés dans le <a href="{{repo}}/blob/main/CHANGELOG.md">journal des modifications</a>. Si vous avez besoin que le service reste disponible, exécutez votre propre copie.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}No warranty and limitation of liability{fr}Absence de garantie et limitation de responsabilité{/}</h2>
+    <p>{en}The service, the data it returns and the code are provided "as is", without warranty of any kind, express or implied, including fitness for a particular purpose, accuracy, completeness or availability. To the extent the law allows, the maintainer is not liable for any loss or damage arising from the use of, or inability to use, the service or the data, including decisions made on figures it returned.{fr}Le service, les données qu'il renvoie et le code sont fournis « tels quels », sans garantie d'aucune sorte, expresse ou implicite, notamment quant à l'adéquation à un usage particulier, à l'exactitude, à l'exhaustivité ou à la disponibilité. Dans la mesure permise par la loi, le responsable n'est pas responsable des pertes ou des dommages découlant de l'utilisation du service ou des données, ou de l'impossibilité de les utiliser, y compris des décisions prises à partir des chiffres renvoyés.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Privacy{fr}Confidentialité{/}</h2>
+    <p>{en}What the service receives and keeps is described in the <a href="{{root}}privacy.html">privacy policy</a>.{fr}Ce que le service reçoit et conserve est décrit dans la <a href="{{root}}privacy.html">politique de confidentialité</a>.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Third-party services{fr}Services de tiers{/}</h2>
+    <p>{en}Your AI assistant (ChatGPT, Claude or any other client), the publishers whose services the tools call, and the hosts that run the service each apply their own terms. These terms do not change theirs.{fr}Votre assistant IA (ChatGPT, Claude ou tout autre client), les éditeurs dont les outils appellent les services et les hébergeurs qui exécutent le service appliquent chacun leurs propres conditions. Les présentes conditions ne modifient pas les leurs.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Governing law{fr}Droit applicable{/}</h2>
+    <p>{en}These terms are governed by the laws of the Province of Alberta and the federal laws of Canada that apply there.{fr}Les présentes conditions sont régies par les lois de la province de l'Alberta et par les lois fédérales du Canada qui s'y appliquent.{/}</p>
+  </div>
+
+  <div class="faq-group">
+    <h2 class="faq-h">{en}Changes and contact{fr}Modifications et contact{/}</h2>
+    <p>{en}Changes to these terms are published on this page with a new date, and the full history is in the <a href="{{repo}}/commits/main/site/terms.html">repository</a>. Continuing to use the service after a change means you accept the new terms. For questions, <a href="{{repo}}/issues">open an issue</a>; for a security problem, use the <a href="{{repo}}/security/advisories/new">private vulnerability report</a>.{fr}Les modifications de ces conditions sont publiées sur cette page avec une nouvelle date, et l'historique complet se trouve dans le <a href="{{repo}}/commits/main/site/terms.html">dépôt</a>. Continuer d'utiliser le service après une modification signifie que vous acceptez les nouvelles conditions. Pour une question, <a href="{{repo}}/issues">ouvrez un signalement</a>; pour un problème de sécurité, utilisez le <a href="{{repo}}/security/advisories/new">signalement privé de vulnérabilité</a>.{/}</p>
+  </div>
+</section>
+
+</main>
+{{> footer}}
+</body>
+</html>

@@ -479,6 +479,41 @@ def with_stats_endpoint(inner_app: ASGIApp, *, snapshot: Callable[[], dict]) -> 
     return app
 
 
+OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge"
+
+
+def with_openai_apps_challenge(inner_app: ASGIApp, *, token: str | None) -> ASGIApp:
+    """Serve OpenAI's domain-verification token as plain text, bypassing security.
+
+    OpenAI's plugin submission portal fetches this path on the MCP host and
+    expects the body to be exactly the token, with no JSON around it. With no
+    token set the path answers 404, so an unconfigured server claims nothing.
+    """
+
+    async def app(scope: dict, receive: Callable, send: Callable) -> None:
+        if (
+            scope.get("type") == "http"
+            and scope.get("path") == OPENAI_APPS_CHALLENGE_PATH
+            and scope.get("method") in ("GET", "HEAD")
+        ):
+            status = 200 if token else 404
+            body = token.encode("utf-8") if token else b"Not Found"
+            headers = [
+                (b"content-type", b"text/plain; charset=utf-8"),
+                (b"content-length", str(len(body)).encode("utf-8")),
+                (b"cache-control", b"no-store"),
+            ]
+            await send({"type": "http.response.start", "status": status, "headers": headers})
+            await send(
+                {"type": "http.response.body", "body": b"" if scope["method"] == "HEAD" else body}
+            )
+            return
+
+        await inner_app(scope, receive, send)
+
+    return app
+
+
 def with_icon_routes(inner_app: ASGIApp, *, icons: dict[str, tuple[bytes, str]]) -> ASGIApp:
     """Serve static icon files by path, bypassing security.
 

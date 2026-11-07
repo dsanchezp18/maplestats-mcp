@@ -591,7 +591,8 @@ def test_every_page_has_canonical_and_social_metadata(built_site: Path):
         og_title = re.search(r'<meta property="og:title" content="([^"]*)">', text)
         og_description = re.search(r'<meta property="og:description" content="([^"]*)">', text)
         assert title and description and og_title and og_description, where
-        assert og_title.group(1) == title.group(1).strip(), where
+        # The og:title is attribute-escaped (an apostrophe becomes &#x27;).
+        assert html.unescape(og_title.group(1)) == html.unescape(title.group(1).strip()), where
         assert og_description.group(1) == description.group(1), where
         # Search results cut a longer description off.
         assert len(html.unescape(description.group(1))) <= 160, where

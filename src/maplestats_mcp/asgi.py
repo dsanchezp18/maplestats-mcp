@@ -23,6 +23,7 @@ from maplestats_mcp.shared.security import (
     with_health_endpoint,
     with_http_security,
     with_icon_routes,
+    with_openai_apps_challenge,
     with_stats_endpoint,
 )
 from maplestats_mcp.shared.usage import STATS, public_snapshot
@@ -135,7 +136,8 @@ def build_asgi_app():
             "/favicon.svg": (svg, "image/svg+xml"),
         },
     )
-    healthy = with_health_endpoint(iconed, version=__version__)
+    challenged = with_openai_apps_challenge(iconed, token=config.get_openai_apps_challenge())
+    healthy = with_health_endpoint(challenged, version=__version__)
     if not config.get_usage_stats_enabled():
         return with_security_headers(healthy)
     stats = with_stats_endpoint(healthy, snapshot=public_snapshot)
