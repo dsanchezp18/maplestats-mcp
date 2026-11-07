@@ -664,6 +664,14 @@ SOURCES: dict[str, Source] = {
         "BLS (États-Unis)",
         domain="statistics",
     ),
+    "oecd": Source(
+        "OECD Data Explorer statistics (Canada and peers)",
+        "Statistiques de l'Explorateur de données de l'OCDE (Canada et pays comparables)",
+        "national",
+        "OECD statistics",
+        "Statistiques de l'OCDE",
+        domain="statistics",
+    ),
     "worldbank": Source(
         "World Bank World Development Indicators (Canada and peers)",
         "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",

@@ -1,0 +1,720 @@
+{
+ "meta": {
+  "schema": "https://raw.githubusercontent.com/sdmx-twg/sdmx-json/develop/structure-message/tools/schemas/1.0/sdmx-json-structure-schema.json",
+  "contentLanguages": [
+   "en",
+   "fr"
+  ],
+  "id": "IDREF17198",
+  "prepared": "2026-11-07T02:37:43Z",
+  "test": false,
+  "sender": {
+   "id": "Unknown"
+  },
+  "receiver": [
+   {
+    "id": "Unknown"
+   }
+  ]
+ },
+ "data": {
+  "dataflows": [
+   {
+    "id": "SEEA_AEA_A",
+    "version": "1.4",
+    "agencyID": "ESTAT",
+    "isFinal": true,
+    "name": "Air Emissions Accounts",
+    "names": {
+     "en": "Air Emissions Accounts"
+    },
+    "description": "Air Emissions Accounts",
+    "descriptions": {
+     "en": "Air Emissions Accounts"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ESTAT:SEEAAIR(1.4)"
+   },
+   {
+    "id": "DSD_FUA_ENV@DF_POLLUTION",
+    "version": "1.5",
+    "agencyID": "OECD.CFE.EDS",
+    "isFinal": true,
+    "name": "Air pollution - Cities and FUAs",
+    "names": {
+     "en": "Air pollution - Cities and FUAs"
+    },
+    "description": "<p align=\"justify\">This dataset provides indicators of PM2.5, PM10 (particulate matter), ozone and nitrogen dioxide air pollution in FUAs and cities.</p>\n\n<h3>Data sources and methodology</h3>\n<p align=\"justify\">Air pollution exposure is estimated using Plume Labs air pollution exposure grids for 3 air pollutants: nitrogen dioxide (NO2), fine particulate matters (PM2.5) and coarse particulate matters (PM10). The OECD obtained this dataset thanks to the Development Data Partnership, a collaboration between international organisations and technology companies, facilitating the efficient and responsible use of third-party data in international development. Average population exposure to air pollution is estimated at the local scale by computing the population-weighted average air pollutant concentration, using the Global Human Settlement Layer population grid (GHS-POP). PlumeLabs is used as it provides global, harmonised air pollution grids ensuring international comparability, complete subnational coverage, and consistent measurement of multiple pollutants, including in areas where national monitoring networks are sparse or incomplete. </p>\n<p align=\"justify\">\nThese estimates may differ from official subnational air quality statistics due to differences in methodological approaches, such as the use of modelled, top down pollution surfaces versus ground based monitoring networks, as well as variations in input data sources, spatial resolution, satellite retrieval methods, and the models used to simulate or interpolate pollutant concentrations.\n</p>\n<h3>Defining FUAs and cities</h3>\n<p align=\"justify\">The OECD, in cooperation with the EU, has developed a harmonised <a href=\"https://www.oecd.org/en/data/datasets/oecd-definition-of-cities-and-functional-urban-areas.html\">definition of functional urban areas</a> (FUAs) to capture the economic and functional reach of cities based on daily commuting patterns <a href=https://doi.org/10.1787/9789264174108-en>(OECD, 2012)</a>. FUAs consist of:\n<ol>\n  <li><b>A city</b> – defined by urban centres in the degree of urbanisation, adapted to the closest local administrative units to define a city.</li>\n  <li><b>A commuting zone</b> – including all local areas where at least 15% of employed residents work in the city.</li>\n</ol>\nThe delineation process includes:\n<ul>\n  <li>Assigning municipalities surrounded by a single FUA to that FUA.</li>\n  <li>Excluding non-contiguous municipalities.</li>\n</ul>\n<p>The correspondence table between SAUs and FUAs/cities is available in <a href=https://webfs-cfe.oecd.org/files/.Stat/cities_local_areas/fua_cities_sau_mapping.parquet>parquet </a> and <a href=https://webfs-cfe.oecd.org/files/.Stat/cities_local_areas/fua_cities_sau_mapping.csv>csv</a> format.</p>\n<p>The definition identifies 1 272 FUAs and 1 269 cities in all OECD member countries except Costa Rica and four accession countries.</p>\n<h3>Cite this dataset</h3>\n<p>OECD Regions, cities and local areas database (<a href=\"http://data-explorer.oecd.org/s/1dg\">Air pollution - Cities and FUAs</a>), <a href=http://oe.cd/geostats>http://oe.cd/geostats</a></p>\n\n<h3>Further information</h3>\n<ul> \n<li> <a href=https://localdataportal.oecd.org/>OECD Local Data Portal </a> </li>\n<li> <a href=https://www.oecd.org/en/publications/oecd-regions-and-cities-at-a-glance-2024_f42db3bf-en.html/>OECD Regions and Cities at a Glance </a> </li>\n</ul>\n<p align=\"justify\">For questions and/or comments, please email  <a href=\"mailto:CitiesStat@oecd.org\">CitiesStat@oecd.org</a>",
+    "descriptions": {
+     "en": "<p align=\"justify\">This dataset provides indicators of PM2.5, PM10 (particulate matter), ozone and nitrogen dioxide air pollution in FUAs and cities.</p>\n\n<h3>Data sources and methodology</h3>\n<p align=\"justify\">Air pollution exposure is estimated using Plume Labs air pollution exposure grids for 3 air pollutants: nitrogen dioxide (NO2), fine particulate matters (PM2.5) and coarse particulate matters (PM10). The OECD obtained this dataset thanks to the Development Data Partnership, a collaboration between international organisations and technology companies, facilitating the efficient and responsible use of third-party data in international development. Average population exposure to air pollution is estimated at the local scale by computing the population-weighted average air pollutant concentration, using the Global Human Settlement Layer population grid (GHS-POP). PlumeLabs is used as it provides global, harmonised air pollution grids ensuring international comparability, complete subnational coverage, and consistent measurement of multiple pollutants, including in areas where national monitoring networks are sparse or incomplete. </p>\n<p align=\"justify\">\nThese estimates may differ from official subnational air quality statistics due to differences in methodological approaches, such as the use of modelled, top down pollution surfaces versus ground based monitoring networks, as well as variations in input data sources, spatial resolution, satellite retrieval methods, and the models used to simulate or interpolate pollutant concentrations.\n</p>\n<h3>Defining FUAs and cities</h3>\n<p align=\"justify\">The OECD, in cooperation with the EU, has developed a harmonised <a href=\"https://www.oecd.org/en/data/datasets/oecd-definition-of-cities-and-functional-urban-areas.html\">definition of functional urban areas</a> (FUAs) to capture the economic and functional reach of cities based on daily commuting patterns <a href=https://doi.org/10.1787/9789264174108-en>(OECD, 2012)</a>. FUAs consist of:\n<ol>\n  <li><b>A city</b> – defined by urban centres in the degree of urbanisation, adapted to the closest local administrative units to define a city.</li>\n  <li><b>A commuting zone</b> – including all local areas where at least 15% of employed residents work in the city.</li>\n</ol>\nThe delineation process includes:\n<ul>\n  <li>Assigning municipalities surrounded by a single FUA to that FUA.</li>\n  <li>Excluding non-contiguous municipalities.</li>\n</ul>\n<p>The correspondence table between SAUs and FUAs/cities is available in <a href=https://webfs-cfe.oecd.org/files/.Stat/cities_local_areas/fua_cities_sau_mapping.parquet>parquet </a> and <a href=https://webfs-cfe.oecd.org/files/.Stat/cities_local_areas/fua_cities_sau_mapping.csv>csv</a> format.</p>\n<p>The definition identifies 1 272 FUAs and 1 269 cities in all OECD member countries except Costa Rica and four accession countries.</p>\n<h3>Cite this dataset</h3>\n<p>OECD Regions, cities and local areas database (<a href=\"http://data-explorer.oecd.org/s/1dg\">Air pollution - Cities and FUAs</a>), <a href=http://oe.cd/geostats>http://oe.cd/geostats</a></p>\n\n<h3>Further information</h3>\n<ul> \n<li> <a href=https://localdataportal.oecd.org/>OECD Local Data Portal </a> </li>\n<li> <a href=https://www.oecd.org/en/publications/oecd-regions-and-cities-at-a-glance-2024_f42db3bf-en.html/>OECD Regions and Cities at a Glance </a> </li>\n</ul>\n<p align=\"justify\">For questions and/or comments, please email  <a href=\"mailto:CitiesStat@oecd.org\">CitiesStat@oecd.org</a>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA,TERRITORIAL_LEVEL",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "id": "@SDMX",
+      "title": "OBS_STATUS=A,FREQ=A,UNIT_MULT=0",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA=AUT+AT001F+AT002F+AT003F+AT004F+AT005F+AT006F+AT001C+AT002C+AT003C+AT004C+AT005C+AT006C,UNIT_MEASURE=MCG_M3,MEASURE=PM25_POP_EXP",
+      "type": "DEFAULT"
+     },
+     {
+      "id": "@SDMX",
+      "type": "EXT_RESOURCE",
+      "text": "FUAs and cities' boundaries (GPKG file)|https://stats.oecd.org/wbos/fileview2.aspx?IDFile=3b18f993-eae9-4870-918c-e098d9fcd6ff",
+      "texts": {
+       "en": "FUAs and cities' boundaries (GPKG file)|https://stats.oecd.org/wbos/fileview2.aspx?IDFile=3b18f993-eae9-4870-918c-e098d9fcd6ff"
+      }
+     },
+     {
+      "title": "COMBINED_REF_AREA:REF_AREA,TERRITORIAL_LEVEL",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_REF_AREA:Combined reference area",
+      "texts": {
+       "en": "COMBINED_REF_AREA:Combined reference area"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.CFE.EDS:DSD_FUA_ENV(1.5)"
+   },
+   {
+    "id": "DSD_REV_COMP_GLOBAL@DF_RSGLOBAL",
+    "version": "2.1",
+    "agencyID": "OECD.CTP.TPS",
+    "isFinal": true,
+    "name": "Global Revenue Statistics - Comparative tax revenues",
+    "names": {
+     "en": "Global Revenue Statistics - Comparative tax revenues"
+    },
+    "description": "<p>Internationally comparable tax revenue data from countries included in Global Revenue Statistics, presented as a percentage of GDP and as a share of total tax revenue, as well as in national currency and US dollars. Tax revenues are harmonised according to the OECD classification of taxes.</p><p>Related topics: Tax-to-GDP, Taxation, Tax structure, Tax mix, Regional average – change for each region, Domestic resource mobilisation, Public finance, Income tax, Social security contributions, Goods and services, Value added tax, VAT, Excise, Customs, Property tax.</p>",
+    "descriptions": {
+     "en": "<p>Internationally comparable tax revenue data from countries included in Global Revenue Statistics, presented as a percentage of GDP and as a share of total tax revenue, as well as in national currency and US dollars. Tax revenues are harmonised according to the OECD classification of taxes.</p><p>Related topics: Tax-to-GDP, Taxation, Tax structure, Tax mix, Regional average – change for each region, Domestic resource mobilisation, Public finance, Income tax, Social security contributions, Goods and services, Value added tax, VAT, Excise, Customs, Property tax.</p>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA,MEASURE,UNIT_MEASURE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REVENUE_CODE",
+      "type": "LAYOUT_FLAG"
+     },
+     {
+      "id": "@SDMX",
+      "title": "UNIT_MULT=0,OBS_STATUS=A,FREQ=A,MEASURE=TAX_REV,UNIT_MEASURE=XDC",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "STANDARD_REVENUE=_T,SECTOR=S13,UNIT_MEASURE=PT_B1GQ,LASTNPERIODS=10",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "COMBINED_MEASURE:STANDARD_REVENUE;COMBINED_UNIT_MEASURE:UNIT_MEASURE,CURRENCY,UNIT_MULT",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_MEASURE:Tax category;COMBINED_UNIT_MEASURE:Unit of measure",
+      "texts": {
+       "en": "COMBINED_MEASURE:Tax category;COMBINED_UNIT_MEASURE:Unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.CTP.TPS:DSD_REV_COMP_GLOBAL(1.2)"
+   },
+   {
+    "id": "DSD_REV_COMP_OECD@DF_RSOECD",
+    "version": "2.0",
+    "agencyID": "OECD.CTP.TPS",
+    "isFinal": true,
+    "name": "Revenue Statistics in OECD member countries - Comparative tax revenues",
+    "names": {
+     "en": "Revenue Statistics in OECD member countries - Comparative tax revenues"
+    },
+    "description": "<p>Internationally comparable tax revenue data for OECD countries presented as a percentage of GDP and as a share of total tax or non-tax revenues as well as in national currency and US dollars. Tax revenues are harmonised according to the OECD classification of taxes.</p><p>Related topics: Tax-to-GDP, Taxation, Tax structure, Tax mix, Regional average – change for each region, Domestic resource mobilisation, Public finance, Income tax, Social security contributions, Goods and services, Value added tax, VAT, Excise, Customs, Property tax.</p>",
+    "descriptions": {
+     "en": "<p>Internationally comparable tax revenue data for OECD countries presented as a percentage of GDP and as a share of total tax or non-tax revenues as well as in national currency and US dollars. Tax revenues are harmonised according to the OECD classification of taxes.</p><p>Related topics: Tax-to-GDP, Taxation, Tax structure, Tax mix, Regional average – change for each region, Domestic resource mobilisation, Public finance, Income tax, Social security contributions, Goods and services, Value added tax, VAT, Excise, Customs, Property tax.</p>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA,MEASURE,UNIT_MEASURE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REVENUE_CODE",
+      "type": "LAYOUT_FLAG"
+     },
+     {
+      "id": "@SDMX",
+      "title": "UNIT_MULT=0,OBS_STATUS=A,FREQ=A,MEASURE=TAX_REV,UNIT_MEASURE=XDC",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "STANDARD_REVENUE=_T,SECTOR=S13,UNIT_MEASURE=PT_B1GQ,LASTNPERIODS=10",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "COMBINED_MEASURE:STANDARD_REVENUE;COMBINED_UNIT_MEASURE:UNIT_MEASURE,CURRENCY,UNIT_MULT",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_MEASURE:Tax category;COMBINED_UNIT_MEASURE:Unit of measure",
+      "texts": {
+       "en": "COMBINED_MEASURE:Tax category;COMBINED_UNIT_MEASURE:Unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.CTP.TPS:DSD_REV_COMP_OECD(2.0)"
+   },
+   {
+    "id": "DSD_EO@DF_EO",
+    "version": "1.5",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": true,
+    "name": "Economic Outlook 119",
+    "names": {
+     "en": "Economic Outlook 119"
+    },
+    "description": "<div>\nThe OECD Economic Outlook presents the OECD’s analysis of the major global economic trends and prospects for the next two years. The Outlook puts forward a consistent set of projections for output, employment, government spending, prices and current balances based on a review of each member country and of the induced effect on each of them on international developments. <br />\nOECD (2026), OECD Economic Outlook No 119 (Edition 2026/1)\n</div>\n\n<ul>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/EO119_Database_documentation.pdf\">EO119 Database documentation</a>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/Last_Historical_observation_EO_119.xlsx\">EO119 Last historical points</a>\n</ul>\n<div style='visibility:hidden'>gdp inflation cpi population unemployment real gdp gdp per capita employment</div>\n<div>\nOECD Economic Outlook website: <a href=\"https://www.oecd.org/economic-outlook/\">https://www.oecd.org/economic-outlook/</a><br />\n<b><i>Contact</i></b>: <a href=\"mailto:eco.outlook@oecd.org\">eco.outlook@oecd.org</a><br />\n<b><i>Keywords</i></b>: Outlook, forecasts, forecast, GDP\n</div>",
+    "descriptions": {
+     "en": "<div>\nThe OECD Economic Outlook presents the OECD’s analysis of the major global economic trends and prospects for the next two years. The Outlook puts forward a consistent set of projections for output, employment, government spending, prices and current balances based on a review of each member country and of the induced effect on each of them on international developments. <br />\nOECD (2026), OECD Economic Outlook No 119 (Edition 2026/1)\n</div>\n\n<ul>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/EO119_Database_documentation.pdf\">EO119 Database documentation</a>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/Last_Historical_observation_EO_119.xlsx\">EO119 Last historical points</a>\n</ul>\n<div style='visibility:hidden'>gdp inflation cpi population unemployment real gdp gdp per capita employment</div>\n<div>\nOECD Economic Outlook website: <a href=\"https://www.oecd.org/economic-outlook/\">https://www.oecd.org/economic-outlook/</a><br />\n<b><i>Contact</i></b>: <a href=\"mailto:eco.outlook@oecd.org\">eco.outlook@oecd.org</a><br />\n<b><i>Keywords</i></b>: Outlook, forecasts, forecast, GDP\n</div>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA,COMBINED_UNIT_MEASURE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "DECIMALS",
+      "type": "LAYOUT_NOTE"
+     },
+     {
+      "id": "@SDMX",
+      "title": "UNIT_MULT=0,METHODOLOGY=_Z,FREQ=A",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE=GDPV_ANNPCT,FREQ=A",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "UNIT_MEASURE,UNIT_MULT,PRICE_BASE,ADJUSTMENT,METHODOLOGY,BASE_PER,CURRENCY",
+      "type": "UNIT_MEASURE_CONCEPTS"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,UNIT_MULT,PRICE_BASE,ADJUSTMENT,METHODOLOGY,BASE_PER,CURRENCY",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Combined unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Combined unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.ECO.MAD:DSD_EO(1.5)"
+   },
+   {
+    "id": "DSD_EO_114@DF_EO_114",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": true,
+    "name": "Economic Outlook No 114",
+    "names": {
+     "en": "Economic Outlook No 114"
+    },
+    "description": "The OECD Economic Outlook presents the OECD’s analysis of the major global economic trends and prospects for the next two years. The Outlook puts forward a consistent set of projections for output, employment, government spending, prices and current balances based on a review of each member country and of the induced effect on each of them on international developments. <br>\n\t\t\t\t\t\t<ul>\n\t\t\t\t\t\t\t<li>\n\t\t\t\t\t\t\t\t<a href=\"https://webfs-eco.oecd.org/files/.Stat/EO114/EO114_Database_Inventory.pdf\">EO114 Database inventory</a>\n\t\t\t\t\t\t\t</li>\n\t\t\t\t\t\t\t<li>\n\t\t\t\t\t\t\t\t<a href=\"https://webfs-eco.oecd.org/files/.Stat/EO114/Last Historical observation EO114.XLSX\">EO114 Last historical points</a>\n\t\t\t\t\t\t\t</li>\n\t\t\t\t\t\t</ul>\n\t\t\t\t\t\t<div> OECD Economic Outlook website: <a href=\"https://www.oecd.org/economic-outlook/\">https://www.oecd.org/economic-outlook/</a>\n\t\t\t\t\t\t\t<br/> Contact: <a href=\"mailto:eco.outlook@oecd.org\">eco.outlook@oecd.org</a>\n\t\t\t\t\t\t</div>",
+    "descriptions": {
+     "en": "The OECD Economic Outlook presents the OECD’s analysis of the major global economic trends and prospects for the next two years. The Outlook puts forward a consistent set of projections for output, employment, government spending, prices and current balances based on a review of each member country and of the induced effect on each of them on international developments. <br>\n\t\t\t\t\t\t<ul>\n\t\t\t\t\t\t\t<li>\n\t\t\t\t\t\t\t\t<a href=\"https://webfs-eco.oecd.org/files/.Stat/EO114/EO114_Database_Inventory.pdf\">EO114 Database inventory</a>\n\t\t\t\t\t\t\t</li>\n\t\t\t\t\t\t\t<li>\n\t\t\t\t\t\t\t\t<a href=\"https://webfs-eco.oecd.org/files/.Stat/EO114/Last Historical observation EO114.XLSX\">EO114 Last historical points</a>\n\t\t\t\t\t\t\t</li>\n\t\t\t\t\t\t</ul>\n\t\t\t\t\t\t<div> OECD Economic Outlook website: <a href=\"https://www.oecd.org/economic-outlook/\">https://www.oecd.org/economic-outlook/</a>\n\t\t\t\t\t\t\t<br/> Contact: <a href=\"mailto:eco.outlook@oecd.org\">eco.outlook@oecd.org</a>\n\t\t\t\t\t\t</div>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "DECIMALS",
+      "type": "LAYOUT_NOTE"
+     },
+     {
+      "id": "@SDMX",
+      "title": "UNIT_MULT=0,METHODOLOGY=_Z,FREQ=A",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE=GDPV_ANNPCT",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "UNIT_MEASURE,UNIT_MULT,PRICE_BASE,ADJUSTMENT,METHODOLOGY,BASE_PER,CURRENCY",
+      "type": "UNIT_MEASURE_CONCEPTS"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,UNIT_MULT,PRICE_BASE,ADJUSTMENT,METHODOLOGY,BASE_PER,CURRENCY",
+      "type": "COMBINED_CONCEPTS"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.ECO.MAD:DSD_EO_114(1.0)"
+   },
+   {
+    "id": "DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MPD",
+    "isFinal": true,
+    "name": "Analytical house prices indicators",
+    "names": {
+     "en": "Analytical house prices indicators"
+    },
+    "description": "<p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>Residential Property Prices Indices (RPPIs) &ndash; also named House price indices (HPIs), are index numbers that measure the prices of residential properties over time. RPPIs are key statistics not only for citizens and households across the world, but also for economic and monetary policy makers. They can help, for example, to monitor potential macroeconomic imbalances and the risk exposure of the household and financial sectors.</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>This dataset covers the OECD member countries and some non-member countries. In addition to the nominal RPPIs it contains information on real house prices, rental prices, and the ratios of nominal prices to rents and to disposable household income per capita. This dataset contains quarterly and annual statistics for each country. Annual figures refer to the average of the year.</p>",
+    "descriptions": {
+     "en": "<p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>Residential Property Prices Indices (RPPIs) &ndash; also named House price indices (HPIs), are index numbers that measure the prices of residential properties over time. RPPIs are key statistics not only for citizens and households across the world, but also for economic and monetary policy makers. They can help, for example, to monitor potential macroeconomic imbalances and the risk exposure of the household and financial sectors.</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>This dataset covers the OECD member countries and some non-member countries. In addition to the nominal RPPIs it contains information on real house prices, rental prices, and the ratios of nominal prices to rents and to disposable household income per capita. This dataset contains quarterly and annual statistics for each country. Annual figures refer to the average of the year.</p>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE,COMBINED_UNIT_MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "id": "@SDMX",
+      "title": "OBS_STATUS=A,UNIT_MULT=0,REF_AREA=WXOECD",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE=RHP,FREQ=Q,LASTNPERIODS=20",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,ADJUSTMENT,BASE_PER,UNIT_MULT",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.ECO.MPD:DSD_AN_HOUSE_PRICES(1.0)"
+   },
+   {
+    "id": "DSD_NAMAIN10@DF_TABLE4",
+    "version": "2.0",
+    "agencyID": "OECD.SDD.NAD",
+    "isFinal": true,
+    "name": "Annual Purchasing Power Parities and exchange rates",
+    "names": {
+     "en": "Annual Purchasing Power Parities and exchange rates"
+    },
+    "description": "This table shows annual Purchasing Power Parities (PPPs) for Gross Domestic Product (GDP), household final consumption expenditure and actual individual consumption. It also shows exchange rates (annual averages and end of period), sourced from the International Monetary Fund's database on International Financial Statistics.<br><br> Final consumption expenditure is the expenditure of resident households on consumption goods or services, while individual consumption is the sum of household consumption plus the individual (not collective) consumption of the non-profit institutions serving households (NPISH) and General Government sectors. \nThese indicators were presented in the previous dissemination system in the SNA_TABLE4 dataset.<br>   For further information on  (PPPs) please check the following link: Purchasing Power Parities and more precisely FAQ 2: <a href=\"https://www.oecd.org/en/data/insights/data-explainers/2024/06/purchasing-power-parities---frequently-asked-questions-faqs.html\">Purchasing power parities</a><br>OECD statistics contact: <a href=\"mailto:STAT.Contact@oecd.org\">STAT.Contact@oecd.org</a>",
+    "descriptions": {
+     "en": "This table shows annual Purchasing Power Parities (PPPs) for Gross Domestic Product (GDP), household final consumption expenditure and actual individual consumption. It also shows exchange rates (annual averages and end of period), sourced from the International Monetary Fund's database on International Financial Statistics.<br><br> Final consumption expenditure is the expenditure of resident households on consumption goods or services, while individual consumption is the sum of household consumption plus the individual (not collective) consumption of the non-profit institutions serving households (NPISH) and General Government sectors. \nThese indicators were presented in the previous dissemination system in the SNA_TABLE4 dataset.<br>   For further information on  (PPPs) please check the following link: Purchasing Power Parities and more precisely FAQ 2: <a href=\"https://www.oecd.org/en/data/insights/data-explainers/2024/06/purchasing-power-parities---frequently-asked-questions-faqs.html\">Purchasing power parities</a><br>OECD statistics contact: <a href=\"mailto:STAT.Contact@oecd.org\">STAT.Contact@oecd.org</a>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA,COMBINED_UNIT_MEASURE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "FREQ,OBS_STATUS=A,CONF_STATUS=F,TABLE_IDENTIFIER,ACTIVITY,TRANSFORMATION=N,UNIT_MULT",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TRANSACTION=PPP_B1GQ,REF_AREA=AUS+AUT+BEL+CAN+CHL+COL+CRI+CZE+DNK+EST+FIN+FRA+DEU+GRC+HUN+ISL+IRL+ISR+ITA+JPN+KOR+LVA+LTU+LUX+MEX+NLD+NZL+NOR+POL+PRT+SVK+SVN+ESP+SWE+CHE+TUR+GBR+USA,FREQ=A,LASTNPERIODS=10",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "PRICE_BASE,REF_YEAR_PRICE,UNIT_MULT,CURRENCY,TRANSFORMATION",
+      "type": "UNIT_MEASURE_CONCEPTS"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,PRICE_BASE,REF_YEAR_PRICE,UNIT_MULT,CURRENCY,TRANSFORMATION",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Combined unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Combined unit of measure"
+      }
+     },
+     {
+      "title": "1.0001",
+      "type": "SEARCH_WEIGHT"
+     },
+     {
+      "title": "V2/structure/dataflow/OECD.SDD.NAD/DSD_NAMAIN10@DF_TABLE1_EXPENDITURE_HVPVOB,DSD_NAMAIN10@DF_TABLE1_EXPENDITURE_HCPC,DSD_NAMAIN10@DF_TABLE1_EXPENDITURE_VPVOB,DSD_NAMAIN10@DF_TABLE1_EXPENDITURE_CPC,DSD_NAMAIN10@DF_TABLE1_MULT_INDICES,DSD_NAMAIN10@DF_TABLE4,DSD_NAMAIN10@DF_TABLE2_B6_VPVOP,DSD_NAMAIN10@DF_TABLE2_B9_CPC,DSD_NAMAIN10@DF_TABLE2_B5N_HVPVOB,DSD_NAMAIN10@DF_TABLE2_B5N_HCPC/latest",
+      "type": "RELATED_DATA"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.SDD.NAD:DSD_NAMAIN10(2.0)"
+   },
+   {
+    "id": "DSD_STES@DF_CLI",
+    "version": "4.1",
+    "agencyID": "OECD.SDD.STES",
+    "isFinal": true,
+    "name": "Composite leading indicators",
+    "names": {
+     "en": "Composite leading indicators"
+    },
+    "description": "The composite leading indicator is a times series, formed by aggregating a variety of component indicators which show a reasonably consistent relationship with a reference series (e.g. industrial production IIP up to March 2012 and since then the reference series is GDP) at turning points. The OECD CLI is designed to provide qualitative information on short-term economic movements, especially at the turning points, rather than quantitative measures. Therefore, the main message of CLI movements over time is the increase or decrease, rather than the amplitude of the changes.  The OECD’s headline indicator is the amplitude adjusted CLI. In practice, turning points in the de-trended reference series have been found about 4 to 8 months (on average) after the signals of turning points had been detected in the headline CLI. Detailed information on the OECD methodology for CLIs can be found on the OECD website at:  <a href=\"https://www.oecd.org/en/data/datasets/oecd-composite-leading-indicators-clis.html\">OECD CLIs</a><p />CLIs are calculated for G20 countries plus Spain and 5 zone aggregates. A country CLI comprises a set of component series selected from a wide range of key short-term economic indicators.  CLIs, reference series data (see below) and standardised business and consumer confidence indicators are presented in various forms. <p /><a href=\"https://www.oecd.org/content/dam/oecd/en/data/methods/OECD-System-of-Composite-Leading-Indicators.pdf\">OECD CLI methodology document</a><p /><a href=mailto:stat.contact@oecd.org>OECD statistics contact</a><p />",
+    "descriptions": {
+     "en": "The composite leading indicator is a times series, formed by aggregating a variety of component indicators which show a reasonably consistent relationship with a reference series (e.g. industrial production IIP up to March 2012 and since then the reference series is GDP) at turning points. The OECD CLI is designed to provide qualitative information on short-term economic movements, especially at the turning points, rather than quantitative measures. Therefore, the main message of CLI movements over time is the increase or decrease, rather than the amplitude of the changes.  The OECD’s headline indicator is the amplitude adjusted CLI. In practice, turning points in the de-trended reference series have been found about 4 to 8 months (on average) after the signals of turning points had been detected in the headline CLI. Detailed information on the OECD methodology for CLIs can be found on the OECD website at:  <a href=\"https://www.oecd.org/en/data/datasets/oecd-composite-leading-indicators-clis.html\">OECD CLIs</a><p />CLIs are calculated for G20 countries plus Spain and 5 zone aggregates. A country CLI comprises a set of component series selected from a wide range of key short-term economic indicators.  CLIs, reference series data (see below) and standardised business and consumer confidence indicators are presented in various forms. <p /><a href=\"https://www.oecd.org/content/dam/oecd/en/data/methods/OECD-System-of-Composite-Leading-Indicators.pdf\">OECD CLI methodology document</a><p /><a href=mailto:stat.contact@oecd.org>OECD statistics contact</a><p />"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "UNIT_MULT=0,OBS_STATUS=A,UNIT_MEASURE=IX,METHODOLOGY=N",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE=LI,ADJUSTMENT=AA,FREQ=M,METHODOLOGY=H,LASTNPERIODS=10",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:TRANSFORMATION,ADJUSTMENT,UNIT_MULT",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.SDD.STES:DSD_STES(4.1)"
+   },
+   {
+    "id": "DSD_PDB@DF_PDB",
+    "version": "2.0",
+    "agencyID": "OECD.SDD.TPS",
+    "isFinal": true,
+    "name": "Productivity database",
+    "names": {
+     "en": "Productivity database"
+    },
+    "description": "The OECD Productivity Database is the successor to the previous edition, offering improved coverage and detail. It consolidates and replaces earlier datasets, including those on productivity levels, productivity growth rates, and productivity by industry. The goal is to provide users with the most comprehensive, up-to-date, and granular productivity estimates available. Data are released on a rolling basis: each variable is published as soon as its underlying source is updated. The database includes annual labour productivity data -measured using both employment and hours worked - as well as detailed components of labour and capital inputs. In addition, quarterly estimates are available in a separate database covering productivity and unit labour costs.",
+    "descriptions": {
+     "en": "The OECD Productivity Database is the successor to the previous edition, offering improved coverage and detail. It consolidates and replaces earlier datasets, including those on productivity levels, productivity growth rates, and productivity by industry. The goal is to provide users with the most comprehensive, up-to-date, and granular productivity estimates available. Data are released on a rolling basis: each variable is published as soon as its underlying source is updated. The database includes annual labour productivity data -measured using both employment and hours worked - as well as detailed components of labour and capital inputs. In addition, quarterly estimates are available in a separate database covering productivity and unit labour costs."
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "id": "@SDMX",
+      "title": "OBS_STATUS=A,UNIT_MULT=0,TRANSFORMATION=_Z,ADJUSTMENT=_Z,PRICE_BASE=_Z,CONVERSION_TYPE=_Z,ASSET_CODE=_Z",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE=GVAHRS,ACTIVITY=_T,TRANSFORMATION=N,UNIT_MEASURE=XDC_H",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,PRICE_BASE,UNIT_MULT,BASE_PER,CONVERSION_TYPE",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Combined unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Combined unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.SDD.TPS:DSD_PDB(2.0)"
+   },
+   {
+    "id": "DSD_PDB@DF_PDB_LV",
+    "links": [
+     {
+      "href": "https://sdmx.oecd.org/archive/rest/dataflow/OECD.SDD.TPS/DSD_PDB@DF_PDB_LV/1.0",
+      "rel": "external"
+     }
+    ],
+    "version": "1.0",
+    "agencyID": "OECD.SDD.TPS",
+    "isExternalReference": true,
+    "isFinal": true,
+    "name": "Productivity levels",
+    "names": {
+     "en": "Productivity levels"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     }
+    ]
+   },
+   {
+    "id": "DSD_PDB@DF_PDB_ULC_Q",
+    "version": "1.0",
+    "agencyID": "OECD.SDD.TPS",
+    "isFinal": true,
+    "name": "Productivity and unit labour costs",
+    "names": {
+     "en": "Productivity and unit labour costs"
+    },
+    "description": "The OECD Productivity Database aims at providing users with the most comprehensive and the latest productivity estimates. The update cycle is on a rolling basis: each variable in the dataset is made publicly available as soon as it is updated in the sources databases. The productivity database contains data on labour productivity both measured using employment or hours worked and the compenents of capital and labour inputs. The productivity database in levels, in growth rates and by industry contains annual data, while the database on productivity and unit labour costs are quarterly estimates. Further information for all datasets and the methodology may be found in the attached file <a href=\"https://www.oecd.org/content/dam/oecd/en/data/methods/OECD-Productivity-Statistics-Database-metadata.pdf\">OECD-Productivity-Statistics-Database-metadata</a></p>",
+    "descriptions": {
+     "en": "The OECD Productivity Database aims at providing users with the most comprehensive and the latest productivity estimates. The update cycle is on a rolling basis: each variable in the dataset is made publicly available as soon as it is updated in the sources databases. The productivity database contains data on labour productivity both measured using employment or hours worked and the compenents of capital and labour inputs. The productivity database in levels, in growth rates and by industry contains annual data, while the database on productivity and unit labour costs are quarterly estimates. Further information for all datasets and the methodology may be found in the attached file <a href=\"https://www.oecd.org/content/dam/oecd/en/data/methods/OECD-Productivity-Statistics-Database-metadata.pdf\">OECD-Productivity-Statistics-Database-metadata</a></p>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "OBS_STATUS=A,UNIT_MULT=0,TRANSFORMATION=_Z,ADJUSTMENT=_Z,PRICE_BASE=_Z,ACTIVITY=_T,CONVERSION_TYPE=NC,CONVERSION_TYPE=_Z",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "title": "COMBINED_MEASURE:MEASURE,TRANSFORMATION,ADJUSTMENT;COMBINED_UNIT_MEASURE:UNIT_MEASURE,PRICE_BASE,UNIT_MULT,BASE_PER,CONVERSION_TYPE",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_MEASURE:Combined measure;COMBINED_UNIT_MEASURE:Combined unit of measure",
+      "texts": {
+       "en": "COMBINED_MEASURE:Combined measure;COMBINED_UNIT_MEASURE:Combined unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.SDD.TPS:DSD_PDB(1.0)"
+   },
+   {
+    "id": "DSD_RHPI@DF_RHPI_ALL",
+    "version": "1.1",
+    "agencyID": "OECD.SDD.TPS",
+    "isFinal": true,
+    "name": "National and regional house price indices",
+    "names": {
+     "en": "National and regional house price indices"
+    },
+    "description": "<p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;text-align:justify;'>Residential Property Price Indices (RPPIs) &ndash; also named House price indices (HPIs), are index numbers measuring the evolution of residential property prices over time. RPPIs are key statistics not only for citizens and households across the world, but also for economic and monetary policy makers. Among their professional uses, they serve, for example, to monitor macroeconomic imbalances and risk exposure of the financial sector.</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;text-align:justify;'>&ldquo;National and Regional House Price Indices&rdquo; datasets include RPPI compiled by official statistical agencies following international statistical guidelines. It covers all OECD member countries and some non-member countries. Whenever possible, these RPPIs are broken down by region, dwelling type (single- and multi-family dwellings) and vintage (new and existing dwellings).</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;text-align:justify;'>The dataset called &ldquo;National and Regional House Price Indices&rdquo; contains the full list of available RPPIs.</p>",
+    "descriptions": {
+     "en": "<p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;text-align:justify;'>Residential Property Price Indices (RPPIs) &ndash; also named House price indices (HPIs), are index numbers measuring the evolution of residential property prices over time. RPPIs are key statistics not only for citizens and households across the world, but also for economic and monetary policy makers. Among their professional uses, they serve, for example, to monitor macroeconomic imbalances and risk exposure of the financial sector.</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;text-align:justify;'>&ldquo;National and Regional House Price Indices&rdquo; datasets include RPPI compiled by official statistical agencies following international statistical guidelines. It covers all OECD member countries and some non-member countries. Whenever possible, these RPPIs are broken down by region, dwelling type (single- and multi-family dwellings) and vintage (new and existing dwellings).</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;text-align:justify;'>The dataset called &ldquo;National and Regional House Price Indices&rdquo; contains the full list of available RPPIs.</p>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "DWELLINGS,VINTAGE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA,UNIT_MEASURE,TRANSFORMATION,ADJUSTMENT",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "id": "@SDMX",
+      "title": "OBS_STATUS=A,ADJUSTMENT=N,TRANSFORMATION=_Z,UNIT_MULT=0",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "FREQ=Q,MEASURE=RHPI,REF_AREA_TYPE=COU,TRANSFORMATION=GY,LASTNPERIODS=9",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,BASE_PER,TRANSFORMATION,ADJUSTMENT",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Combined unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Combined unit of measure"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA:OECD.SDD.TPS:HCL_AREA_RHPI(1.1).H",
+      "type": "HIER_CONTEXT"
+     },
+     {
+      "title": "10000",
+      "type": "MAX_TABLE_DATA"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.SDD.TPS:DSD_RHPI(1.1)"
+   }
+  ]
+ }
+}

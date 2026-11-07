@@ -526,6 +526,14 @@ TOPICS: tuple[Topic, ...] = (
             "debt service ratio",
             "credit-to-gdp gap",
             "policy rates",
+            "economic outlook",
+            "oecd projections",
+            "productivity",
+            "unit labour costs",
+            "tax-to-gdp",
+            "leading indicator",
+            "perspectives economiques",
+            "productivite",
         ),
         (
             PlanStep("worldbank_search_indicators", "find the indicator code (query by words)"),
@@ -537,6 +545,12 @@ TOPICS: tuple[Topic, ...] = (
                 "bis_compare_countries",
                 "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
                 "service ratio, credit, house prices, inflation, exchange rate)",
+            ),
+            PlanStep(
+                "oecd_compare_countries",
+                "Canada beside G7 or OECD countries on an OECD indicator (Economic Outlook "
+                "projections, productivity, unit labour costs, PPPs, tax-to-GDP, house prices, "
+                "leading indicator)",
             ),
         ),
     ),

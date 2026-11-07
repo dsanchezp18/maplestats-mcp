@@ -1,0 +1,13 @@
+STRUCTURE,STRUCTURE_ID,ACTION,REF_AREA: Reference area,MEASURE: Measure,FREQ: Frequency of observation,TIME_PERIOD: Time period,OBS_VALUE: Observation value,OBS_STATUS: Observation status,UNIT_MEASURE: Unit of measure,UNIT_MULT: Unit multiplier,CURRENCY: Currency,BASE_PER: Base period,METHODOLOGY: Methodology,DECIMALS: Decimals,PRICE_BASE: Price base,ADJUSTMENT: Adjustment
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: United States,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2026,1.95006403656728,,PA: Percent per annum,0: Units,,2017,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: United States,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2027,1.79896206247722,,PA: Percent per annum,0: Units,,2017,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,GBR: United Kingdom,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2024,1.0395819435179,,PA: Percent per annum,0: Units,,2023,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,GBR: United Kingdom,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2025,1.38270805800541,,PA: Percent per annum,0: Units,,2023,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,GBR: United Kingdom,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2026,0.856495452084175,,PA: Percent per annum,0: Units,,2023,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,GBR: United Kingdom,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2027,1.05867630943136,,PA: Percent per annum,0: Units,,2023,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2024,2.04626608033469,,PA: Percent per annum,0: Units,,2017,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2025,1.74268534332855,,PA: Percent per annum,0: Units,,2017,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2026,1.15664600311551,,PA: Percent per annum,0: Units,,2017,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2027,1.6865854732046,,PA: Percent per annum,0: Units,,2017,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: United States,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2024,2.793187184646,,PA: Percent per annum,0: Units,,2017,,2: Two,,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: United States,"GDPV_ANNPCT: Gross domestic product, volume, growth",A: Annual,2025,2.10633762606889,,PA: Percent per annum,0: Units,,2017,,2: Two,,
