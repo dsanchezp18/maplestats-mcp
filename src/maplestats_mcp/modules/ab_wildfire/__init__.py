@@ -44,6 +44,20 @@ Facts confirmed live 2026-10-02, not taken from the map's prose:
    polygons per municipality or park with a start date but no end date;
    entries from 2023 and 2025 were still listed. One jurisdiction can appear
    as several polygons.
+9. Municipal-reported wildfires (checked 2026-11-07): fires that local
+   governments report outside the Forest Protection Area, in
+   `Active_Municipal_Wildfire_Prod` and `Extinguished_Municipal_Wildfire_Prod`
+   (layer 4 each). Both are operational layers of the "Alberta Wildfire
+   Status Map" web maps, so they fall under the same open.alberta.ca dataset
+   and licence; the items carry no licence text of their own. The
+   extinguished layer held 254 points (253 Extinguished, 1 Inactive,
+   395.58 ha) starting 2026-01-02, so it is the current season; the active
+   layer was empty. Fields: MRFireNumber ("LMR-0076-2026"), status,
+   Hectares, estimated start (stored at Alberta midnight), inactive and
+   extinguished times, LocalGovernment, the municipality's fire phone and
+   website, mutual aid contact zone. There are no numeric lat/lon fields
+   (only "54° 27.5650" strings) and the geometry is Web Mercator, so the
+   client asks for outSR=4326; the result matched the strings.
 """
 
 MODULE_NAME = "ab_wildfire"
@@ -52,8 +66,9 @@ MODULE_DESCRIPTION = (
     "current-season fire locations with status, cause, size class and forest "
     "area (active and extinguished, plus same-date comparison with the previous "
     "five years), mapped fire perimeters, fire danger rating by point or area, "
-    "fire bans, restrictions and advisories, and the season statistics against "
-    "5, 10 and 25-year averages. Active layers are empty off-season."
+    "fire bans, restrictions and advisories, the season statistics against "
+    "5, 10 and 25-year averages, and wildfires that municipalities report outside "
+    "the Forest Protection Area. Active layers are empty off-season."
 )
 MODULE_DESCRIPTION_FR = (
     "État des feux de forêt en Alberta (gouvernement de l'Alberta, licence "
@@ -61,6 +76,7 @@ MODULE_DESCRIPTION_FR = (
     "de superficie et zone forestière (actifs et éteints, plus comparaison à "
     "la même date des cinq années précédentes), périmètres cartographiés, "
     "danger d'incendie à un point ou sur une zone, interdictions, restrictions "
-    "et avis de feu, et statistiques de la saison par rapport aux moyennes sur "
-    "5, 10 et 25 ans. Les couches de feux actifs sont vides hors saison."
+    "et avis de feu, statistiques de la saison par rapport aux moyennes sur "
+    "5, 10 et 25 ans, et feux signalés par les municipalités hors de la zone de "
+    "protection des forêts. Les couches de feux actifs sont vides hors saison."
 )

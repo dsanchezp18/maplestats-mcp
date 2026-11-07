@@ -18,6 +18,8 @@ from maplestats_mcp.modules.ab_wildfire.schemas import (
     FireList,
     FireSort,
     FireSummary,
+    MunicipalFireList,
+    MunicipalState,
     PerimeterList,
     PerimeterState,
     SeasonStatistics,
@@ -334,5 +336,61 @@ async def ab_wildfire_get_fire_restrictions(
         alert_type=alert_type,
         name_contains=name_contains,
         limit=limit,
+        lang=lang,
+    )
+
+
+@tool
+async def ab_wildfire_get_municipal_fires(
+    state: MunicipalState = "all",
+    local_government: str | None = None,
+    mutual_aid_zone: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+    radius_km: float | None = None,
+    sort_by: FireSort = "latest",
+    limit: int = 20,
+    offset: int = 0,
+    lang: Lang = "en",
+) -> MunicipalFireList:
+    """Wildfires that Alberta municipalities reported outside the Forest
+    Protection Area (the settled south and east, where counties and municipal
+    districts fight grass and brush fires), as shown on Alberta Wildfire's
+    status map: fire number, status, hectares, estimated start date, when it
+    went inactive or out, the reporting local government and its fire info
+    phone and website, mutual aid zone and location. Fires inside the Forest
+    Protection Area are in ab_wildfire_get_fires.
+
+    state "all" (default), "active" (empty off-season) or "inactive"
+    (inactive and extinguished). local_government and mutual_aid_zone are
+    substrings ("Lac La Biche", "Calgary MACZ"). start_date/end_date
+    (YYYY-MM-DD, inclusive) apply to the estimated start. latitude,
+    longitude and radius_km (up to 300) give fires near a point, nearest
+    first; otherwise sort_by "latest" (default, by start) or "largest".
+    total_area_ha sums every match. limit 1-2000, page with offset.
+    Use for: grass fires reported by a county, wildfires near a town in
+    southern or central Alberta, how many fires municipalities fought this
+    year, who to call about a local fire.
+    Keywords: Alberta, municipal wildfire, grass fire, county fire, local
+    government, municipal district, outside forest protection area, mutual
+    aid, fire department, wildfire map, Alberta Wildfire.
+    Mots-clés : Alberta, feu de forêt municipal, feu d'herbe, feu de
+    broussailles, comté, district municipal, administration locale, hors de
+    la zone de protection des forêts, entraide, service d'incendie.
+    """
+    return await client.list_municipal_fires(
+        state,
+        local_government=local_government,
+        mutual_aid_zone=mutual_aid_zone,
+        start_date=start_date,
+        end_date=end_date,
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
+        sort_by=sort_by,
+        limit=limit,
+        offset=offset,
         lang=lang,
     )
