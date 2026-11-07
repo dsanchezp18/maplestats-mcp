@@ -229,7 +229,7 @@ by a person
 
 ## What it covers
 
-409 tools in 80 modules. Run `docs://catalogue` for the full, bilingual list.
+413 tools in 81 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -242,7 +242,7 @@ by a person
 | Parliament and elected officials | `ourcommons_`, `senate_`, `represent_` | MPs and their roles, party standings, Cabinet, Senate votes; elected officials and districts for a postal code via Open North's Represent (unofficial) |
 | Provincial agencies | `aer_`, `bcgw_`, `bc_stats_`, `bc_env_`, `bc_lobbyists_`, `drivebc_`, `ab_economic_`, `ab_opendata_`, `isq_`, `nl_stats_`, `yukon_stats_`, `nwt_stats_`, `elections_provincial_`, `on_fir_` | Alberta Energy Regulator, BC Geographic Warehouse, BC Stats Excel tables, BC environmental monitoring (air quality, snow, groundwater, streamflow), BC lobbyists registry, DriveBC road events, Alberta Economic Dashboard, Open Alberta files, Institut de la statistique du Québec, the Newfoundland and Labrador, Yukon and Northwest Territories statistics bureaus, provincial general election results (Quebec, Alberta, British Columbia, Saskatchewan, Manitoba), Ontario's municipal Financial Information Return (every schedule of every municipality, 2000 on) |
 | Housing (links only) | `crea_` | Links, release timing and terms for CREA's MLS® Home Price Index; no values, because CREA's terms allow private, non-commercial analysis only |
-| International | `worldbank_`, `bis_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0); Bank for International Settlements statistics: policy rates, debt service ratios, credit, house prices, banking and payment statistics (free reuse with citation) |
+| International | `worldbank_`, `bis_`, `bls_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0); Bank for International Settlements statistics: policy rates, debt service ratios, credit, house prices, banking and payment statistics (free reuse with citation); US Bureau of Labor Statistics comparators: payrolls, unemployment, CPI, wages, job openings, producer and import prices (public domain, BLS cited) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
 | Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
 | Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, the BC Transit systems and the Quebec networks listed on Données Québec (exo, RTC, STL, STS and others), plus further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
@@ -337,6 +337,7 @@ error that says when to retry, instead of waiting for another timeout. The
 | `MAPLE_GOATCOUNTER_URL`, `MAPLE_GOATCOUNTER_TOKEN` | unset | With both set (an https GoatCounter site and an API token allowed to record pageviews), each counted tool call is also sent there as the event `mcp/<instance>/<tool>` (`/error` appended on failure), in batches each minute, so counts outlive restarts and several hosts add up; no arguments or addresses, `no_sessions` on |
 | `MAPLE_INSTANCE_NAME` | `server` | The `<instance>` label in those events (`azure`, `render`) |
 | `MAPLE_OPENAI_APPS_CHALLENGE` | unset | Token served as plain text at `GET /.well-known/openai-apps-challenge` (no auth), which OpenAI's plugin portal fetches to verify the domain; unset, that path answers 404 |
+| `MAPLE_BLS_API_KEY` | unset | BLS Public Data API registration key (free at data.bls.gov/registrationEngine, renewed yearly). Unset, the `bls_` tools still work at the BLS's unregistered limits: 25 queries a day per server address, 25 series and 10 years per query, no catalog titles; set, 500 queries a day, 50 series, 20 years |
 | `MAPLE_USAGE_STATS` | `1` | Counts calls and durations per tool name and UTC day, and upstream errors per host (never arguments or client addresses), in memory, and serves them at the public `/stats` route; `0` turns both off |
 | `MAPLE_USAGE_STATS_FILE` | unset | A JSON file the `/stats` call counts (per tool and per UTC day, kept 400 days) are read from at startup and saved to every minute and on exit, so a restart or deploy does not reset them; point it at a persistent volume. Several processes saving to one file add up rather than overwrite each other. Latencies stay in memory |
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |

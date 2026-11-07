@@ -153,6 +153,17 @@ def get_goatcounter_token() -> str | None:
     return raw or None
 
 
+def get_bls_api_key() -> str | None:
+    """BLS Public Data API registration key (MAPLE_BLS_API_KEY), or None.
+
+    Optional: without it the BLS tools run at the unregistered limits (25
+    queries a day per address, 25 series and 10 years per query, no series
+    titles). With it: 500 queries a day, 50 series, 20 years, catalog titles.
+    """
+    raw = os.environ.get("MAPLE_BLS_API_KEY", "").strip()
+    return raw or None
+
+
 def get_instance_name() -> str:
     """Label for this deployment in the forwarded counts ("azure", "render")."""
     raw = os.environ.get("MAPLE_INSTANCE_NAME", "").strip().lower()

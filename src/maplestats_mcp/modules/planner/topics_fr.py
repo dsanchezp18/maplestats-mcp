@@ -117,6 +117,26 @@ FR: dict[str, str] = {
     "Canada's series for the indicator, compared with G7 or OECD countries": (
         "la série du Canada pour l'indicateur, comparée aux pays du G7 ou de l'OCDE"
     ),
+    "United States comparators (BLS)": "comparaisons avec les États-Unis (BLS)",
+    "the US figure by indicator (nonfarm_payrolls, unemployment_rate, "
+    "cpi_all_items, cpi_core, average_hourly_earnings, job_openings)": (
+        "le chiffre américain par indicateur (indicator : nonfarm_payrolls, "
+        "unemployment_rate, cpi_all_items, cpi_core, average_hourly_earnings, job_openings)"
+    ),
+    "find a BLS series id for any other US measure": (
+        "trouver l'identifiant de série du BLS pour toute autre mesure américaine"
+    ),
+    "pull BLS series by id for the same period": (
+        "récupérer les séries du BLS par identifiant pour la même période"
+    ),
+    "US and Canadian definitions differ: the US unemployment rate covers ages 16 "
+    "and over, Canada's Labour Force Survey 15 and over; the US CPI-U and Canada's "
+    "CPI use different baskets and treat owned housing differently.": (
+        "Les définitions américaines et canadiennes diffèrent : le taux de chômage américain "
+        "porte sur les 16 ans et plus, l'Enquête sur la population active du Canada sur les "
+        "15 ans et plus ; le CPI-U américain et l'IPC canadien n'ont pas le même panier et ne "
+        "traitent pas le logement occupé par son propriétaire de la même façon."
+    ),
     "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
     "service ratio, credit, house prices, inflation, exchange rate)": (
         "le Canada à côté du G7 ou d'autres économies pour un indicateur de la BRI (taux "

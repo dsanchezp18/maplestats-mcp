@@ -258,6 +258,10 @@ SOURCE_LICENCES: dict[str, str] = {
         "Source: World Bank, World Development Indicators. Creative Commons Attribution 4.0 "
         "(https://datacatalog.worldbank.org/public-licenses)."
     ),
+    "bls": (
+        "Source: U.S. Bureau of Labor Statistics. Public domain; BLS asks to be cited as the "
+        "source (https://www.bls.gov/opub/copyright-information.htm)."
+    ),
     # Quebec
     "isq": ISQ_LICENCE,
     # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
@@ -440,6 +444,10 @@ LICENCES_FR: dict[str, str] = {
     SOURCE_LICENCES["worldbank-wdi"]: (
         "Source : Banque mondiale, Indicateurs du développement dans le monde. Licence Creative "
         "Commons Attribution 4.0 (https://datacatalog.worldbank.org/public-licenses)."
+    ),
+    SOURCE_LICENCES["bls"]: (
+        "Source : Bureau of Labor Statistics des États-Unis. Domaine public ; le BLS demande "
+        "d'être cité comme source (https://www.bls.gov/opub/copyright-information.htm)."
     ),
     SOURCE_LICENCES["electricity"]: (
         "Les conditions diffèrent selon l'exploitant ; voir les conditions de l'exploitant dans "
@@ -739,6 +747,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     # Commercial use is allowed if the BIS figures are not charged for separately.
     "bis": "allowed",
     "worldbank-wdi": "allowed",
+    # US federal works are public domain (17 U.S.C. 105).
+    "bls": "allowed",
     "cbsa-tariff": "not_allowed",
     "electricity": "varies",
     "dfo-iwls": "unknown",

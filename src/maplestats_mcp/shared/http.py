@@ -83,6 +83,25 @@ _recorded: ContextVar[list[RecordedRequest] | None] = ContextVar(
 _pending: dict[int, RecordedRequest] = {}
 
 
+# API keys a module sends (BLS registration key, BEA UserID) mapped to the
+# placeholder reproduce_code writes instead, so a generated script never
+# carries the server's own key.
+_SECRETS: dict[str, str] = {}
+
+
+def register_secret(value: str, placeholder: str) -> None:
+    """Mask `value` as `placeholder` in every recorded request (URL and body)."""
+    if value:
+        _SECRETS[value] = placeholder
+
+
+def redact_secrets(text: str) -> str:
+    """`text` with every registered secret replaced by its placeholder."""
+    for value, placeholder in _SECRETS.items():
+        text = text.replace(value, placeholder)
+    return text
+
+
 async def _record_request(request: httpx.Request) -> None:
     requests = _recorded.get()
     if requests is None:
@@ -93,9 +112,11 @@ async def _record_request(request: httpx.Request) -> None:
         body = request.content
     except httpx.RequestNotRead:
         body = b""
+    if _SECRETS:
+        body = redact_secrets(body.decode("utf-8", "replace")).encode("utf-8") if body else body
     entry = RecordedRequest(
         method=request.method,
-        url=str(request.url),
+        url=redact_secrets(str(request.url)),
         body=body,
         content_type=request.headers.get("content-type", ""),
         accept=request.headers.get("accept", ""),
