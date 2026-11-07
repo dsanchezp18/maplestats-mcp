@@ -239,7 +239,13 @@ jobs:
             echo "::warning::$SERVER_APP mounts no Azure Files storage; the chat's counts stay in memory."
             exit 0
           fi
-          az containerapp show -g "$RESOURCE_GROUP" -n "$APP" --only-show-errors -o json > app.json
+          # Read and PATCH with the same API version: the CLI's own version can
+          # return fields an older one refuses (cooldownPeriod, pollingInterval).
+          api=2025-07-01
+          app_id=$(az containerapp show -g "$RESOURCE_GROUP" -n "$APP" --only-show-errors \
+            --query id -o tsv)
+          az rest --method get --only-show-errors \
+            --url "https://management.azure.com$app_id?api-version=$api" > app.json
           mounted=$(jq '[.properties.template.containers[0].volumeMounts // [] | .[]
             | select(.mountPath == "/data/chat")] | length' app.json)
           if [ "$mounted" = 0 ]; then
@@ -249,7 +255,7 @@ jobs:
               | .containers[0].volumeMounts = ((.containers[0].volumeMounts // []) + [{volumeName: "shared-data", mountPath: "/data/chat", subPath: "chat"}]))}}' \
               app.json > patch.json
             az rest --method patch --only-show-errors --output none --body @patch.json \
-              --url "https://management.azure.com$(jq -r .id app.json)?api-version=2024-03-01"
+              --url "https://management.azure.com$app_id?api-version=$api"
             # The PATCH returns before the new revision exists; the image update
             # below would be refused while it is still provisioning.
             for _ in $(seq 1 40); do
