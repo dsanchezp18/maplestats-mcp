@@ -30,6 +30,8 @@ import argparse
 import asyncio
 import json
 import logging
+import math
+import sys
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -56,12 +58,44 @@ Ranker = Callable[[str], list[int]]
 
 
 def rss_mb() -> float:
-    """Resident memory of this process (Linux); 0 where /proc is absent."""
+    """Resident memory of this process: VmRSS on Linux, the working set on Windows."""
     try:
         status = Path("/proc/self/status").read_text()
     except OSError:
-        return 0.0
+        return _working_set_mb()
     return int(status.split("VmRSS:")[1].split()[0]) / 1024
+
+
+def _working_set_mb(peak: bool = False) -> float:
+    """Windows' working set (or its peak), the nearest thing to VmRSS; 0 elsewhere."""
+    if sys.platform != "win32":
+        return 0.0
+    import ctypes
+    from ctypes import wintypes
+
+    class Counters(ctypes.Structure):
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("PageFaultCount", wintypes.DWORD),
+            ("PeakWorkingSetSize", ctypes.c_size_t),
+            ("WorkingSetSize", ctypes.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+            ("PagefileUsage", ctypes.c_size_t),
+            ("PeakPagefileUsage", ctypes.c_size_t),
+        ]
+
+    counters = Counters()
+    counters.cb = ctypes.sizeof(Counters)
+    psapi = ctypes.WinDLL("psapi")
+    psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD]
+    handle = ctypes.windll.kernel32.GetCurrentProcess()
+    if not psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
+        return 0.0
+    size = counters.PeakWorkingSetSize if peak else counters.WorkingSetSize
+    return size / 1024 / 1024
 
 
 # %% 1. Rankers
@@ -175,14 +209,20 @@ def fused_ranker(
     embeddings: Embeddings,
     boosts: bool,
     semantic_weight: float = 1.0,
+    lexical_on_ids: bool = False,
 ) -> Ranker:
     def rank(query: str) -> list[int]:
         scores = index.scores(query)
+        found = search.identifier_boosts(query, tools)
+        if lexical_on_ids and found:
+            # The server's hybrid does the same (AnnotatedBM25SearchTransform._search):
+            # an embedding does not read identifiers, so BM25 with the boosts ranks them.
+            return search.top_indices(search.apply_boosts(scores, found), DEPTH)
         fused = semantic.fuse(scores, [])
         for position, i in enumerate(embeddings.ranking(query), start=1):
             fused[i] += semantic_weight / (semantic.RRF_K + position)
         if boosts:
-            fused = search.apply_boosts(fused, search.identifier_boosts(query, tools))
+            fused = search.apply_boosts(fused, found)
         return search.top_indices(fused, DEPTH)
 
     return rank
@@ -250,6 +290,45 @@ def score_probes(
     return {"summary": summary, "ranks": ranks}
 
 
+def sign_test(gained: int, lost: int) -> float:
+    """Exact two-sided sign test (McNemar's exact test) on the discordant questions."""
+    n = gained + lost
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, k) for k in range(min(gained, lost) + 1)) / 2**n
+    return min(1.0, 2 * tail)
+
+
+def paired(
+    report: dict[str, Any], baseline: str, queries: Sequence[runner.Query]
+) -> dict[str, dict[str, Any]]:
+    """Per ranker, the questions it gains and loses against `baseline` at ranks 1 and 5."""
+    base = report["rankers"][baseline]["top10"]
+    out: dict[str, dict[str, Any]] = {}
+    for name, result in report["rankers"].items():
+        if name == baseline:
+            continue
+        row: dict[str, Any] = {}
+        for k in (1, 5):
+            gained, lost = [], []
+            for q in queries:
+                before = runner.first_rank(base[q.id], q.search_accepted)
+                after = runner.first_rank(result["top10"][q.id], q.search_accepted)
+                hit_before = before is not None and before <= k
+                hit_after = after is not None and after <= k
+                if hit_after and not hit_before:
+                    gained.append(q.id)
+                elif hit_before and not hit_after:
+                    lost.append(q.id)
+            row[f"at_{k}"] = {
+                "gained": gained,
+                "lost": lost,
+                "p": sign_test(len(gained), len(lost)),
+            }
+        out[name] = row
+    return out
+
+
 # %% 3. Report
 
 
@@ -284,6 +363,16 @@ def render(report: dict[str, Any]) -> str:
             f"{_fmt(summary[k]['recall_at_1'])} / {_fmt(summary[k]['recall_at_5'])}" for k in kinds
         ]
         lines.append(f"| {name} | " + " | ".join(cells) + " |")
+    lines += ["", f"## Paired against {report['paired_baseline']}", ""]
+    lines.append("Questions gained and lost; p is the exact two-sided sign test on those.")
+    lines += ["", "| ranker | @1 gained / lost | @1 p | @5 gained / lost | @5 p |"]
+    lines.append("|---|---:|---:|---:|---:|")
+    for name, row in report["paired"].items():
+        one, five = row["at_1"], row["at_5"]
+        lines.append(
+            f"| {name} | {len(one['gained'])} / {len(one['lost'])} | {one['p']:.2f} | "
+            f"{len(five['gained'])} / {len(five['lost'])} | {five['p']:.2f} |"
+        )
     lines += ["", "## Cost", "", "| ranker | query p50 ms | query p95 ms |", "|---|---:|---:|"]
     for name, result in report["rankers"].items():
         lines.append(f"| {name} | {result['p50_ms']:.1f} | {result['p95_ms']:.1f} |")
@@ -344,6 +433,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         rankers[f"{emb.label}: rrf (semantic x0.5) + ids"] = fused_ranker(
             index, tools, emb, boosts=True, semantic_weight=0.5
         )
+        rankers[f"{emb.label}: rrf + ids, lexical on ids"] = fused_ranker(
+            index, tools, emb, boosts=True, lexical_on_ids=True
+        )
 
     report: dict[str, Any] = {
         "meta_line": (
@@ -371,6 +463,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             overall["recall_at_10"],
             overall["mrr"],
         )
+    report["paired_baseline"] = "bm25 + ids"
+    report["paired"] = paired(report, "bm25 + ids", queries)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "phase2.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8"

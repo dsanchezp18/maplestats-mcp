@@ -1,4 +1,4 @@
-# Discovery Phase 2: hybrid semantic search, measured (2026-10-27)
+# Discovery Phase 2: hybrid semantic search, measured (2026-10-27, re-measured 2026-11-07)
 
 Phase 2 of the discovery plan (`docs/ROADMAP.md`): an optional index of tool metadata,
 BM25 against multilingual embeddings and reciprocal-rank fusion, exact-identifier boosts,
@@ -15,6 +15,101 @@ hybrid ships as a prototype behind `MAPLE_SEARCH=hybrid` and the `semantic` extr
 default. EmbeddingGemma ranks best of all (R@1 0.65, R@5 0.88, R@10 0.95, MRR 0.76) but needs
 about 0.7 GB once loaded and three to four times that while it embeds, plus Gemma's licence
 terms: not a candidate for the hosted server.
+
+## Re-measured on 2026-11-07
+
+Same 129 reviewed questions and 29 probes, the catalogue now 398 tools (374 on Oct. 27), on a
+Windows 11 laptop (Python 3.13, onnxruntime through the `semantic` extra; memory is the working
+set, Windows' nearest equivalent of VmRSS). Two things changed since Oct. 27: the hosted server
+is now Azure Container Apps with 1 vCPU and 2 GiB (not Render's 512 MB), and the hybrid now ranks
+an identifier query by BM25 and the boosts alone (below). `phase2.py` gained that ranker row, a
+paired comparison with an exact sign test, and a memory reading on Windows.
+
+**Outcome: the gate is still not met.** The hybrid ties BM25 at the top five and is ahead at
+rank one, but the rank-one gain is not distinguishable from noise on 129 questions, and the
+top five trades named places and portals for vague and French questions one for one. Cost now
+fits the host. The hybrid stays off by default.
+
+Baseline (`search_tools`, BM25 with boosts, the default): R@1 0.58, R@5 0.84, R@10 0.91,
+MRR 0.69; French R@1 0.53, R@5 0.85. R@5 was 0.87 on Oct. 27: the 24 tools added since then
+pushed four questions out of the top five (`statcan-en-11` gender wage gap articles,
+`statcan-fr-06` CPI release date, `ckan_provincial-en-06` Manitoba school divisions,
+`municipal-fr-06` Gatineau, displaced by `jobbank_get_wages`, `statcan_daily_get_release_files`,
+`telecom_*` and others) and let one in (`boc-fr-02`). `plan_query`: R@1 0.54, R@5 0.85, expected
+tool anywhere in the plan 0.90 (105 plan-scored questions), unchanged from Oct. 27 within 0.01.
+
+| ranker (n = 129) | R@1 | R@5 | R@10 | MRR | FR R@1 | FR R@5 | probes R@1 / R@5 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| bm25 + ids (default) | 0.58 | 0.84 | 0.91 | 0.69 | 0.53 | 0.85 | 0.79 / 0.97 |
+| e5-small int8: semantic | 0.60 | 0.84 | 0.88 | 0.70 | 0.64 | 0.85 | 0.34 / 0.72 |
+| e5-small int8: rrf + ids (Oct. 27 prototype) | 0.62 | 0.84 | 0.91 | 0.73 | 0.70 | 0.85 | 0.69 / 1.00 |
+| **e5-small int8: rrf + ids, lexical on ids** (now `MAPLE_SEARCH=hybrid`) | 0.62 | 0.84 | 0.91 | 0.73 | 0.70 | 0.85 | 0.79 / 1.00 |
+| e5-small int8: rrf (semantic x0.5) + ids (sensitivity row) | 0.61 | 0.87 | 0.90 | 0.72 | 0.66 | 0.89 | 0.72 / 1.00 |
+
+The same hybrid through `search_tools` end to end (`MAPLE_SEARCH=hybrid python -m
+tests.discovery_benchmark`) gives R@1 0.62, R@5 0.84, R@10 0.91, MRR 0.73, with the server's
+top five equal to the runner's on every question.
+
+Paired against `bm25 + ids` (questions that change; p is the exact two-sided sign test):
+
+| ranker | rank 1 gained / lost | p | top 5 gained / lost | p |
+|---|---:|---:|---:|---:|
+| semantic alone | 22 / 20 | 0.88 | 11 / 11 | 1.00 |
+| rrf + ids, lexical on ids | 15 / 10 | 0.42 | 5 / 5 | 1.00 |
+| rrf (semantic x0.5) + ids | 9 / 5 | 0.42 | 6 / 3 | 0.51 |
+
+The five top-five losses are the Oct. 27 pattern again, each a question naming a place or a
+portal: `ckan_provincial-en-04` (New Brunswick, rank 1 to 7), `municipal-en-02` (Edmonton, out
+of the top ten), `municipal-fr-01` (Montréal, 2 to 6), `statcan-fr-07` (crude oil exports to the
+US, 2 to 7), `ambiguity-en-06` (median household income in Ontario, out of the top ten). The five
+gains are vague or French: `statcan-en-11`, `statcan-fr-06`, `boc-en-02`, `ambiguity-en-03`
+(poverty rate, from outside the top ten to 3), `ambiguity-fr-08`. Category R@5 moves the same way:
+ambiguity 0.60 to 0.65, BoC 0.83 to 0.92, but municipal 0.94 to 0.81 and provincial CKAN 0.67 to
+0.58. The half-weight row looks better at the top five (6 gained, 3 lost) but was not chosen in
+advance as the candidate, and p = 0.51; picking it now would tune on the benchmark.
+
+**The identifier guard.** Fused with the embedding, the identifier probes fell from R@1 0.79 to
+0.69 (vectors 1.00 to 0.50, tables 0.83 to 0.67): the embedding moved a wrong tool among the
+boosted ones to the top. Oct. 27 had found that an embedding does not read identifiers, so the
+hybrid now skips fusion when `identifier_boosts` finds an identifier (a tool name or family
+prefix, a StatCan table number, a vector) and ranks as in bm25 mode. It changes no reviewed
+question (the six reviewed identifier questions were already right) and brings the probes back
+to R@1 0.79 with R@5 1.00 (0.97 for `bm25 + ids`). The probes are still unreviewed.
+`tests/test_search_ranking.py::test_hybrid_ranks_an_identifier_query_by_bm25` holds it.
+
+**Cost**, `search_tools` through an in-process client, 129 questions, two runs per mode:
+
+| | bm25 | hybrid (e5-small int8) |
+|---|---:|---:|
+| working set after the first search | 120 MB | 326 MB (+206 MB) |
+| peak working set | 123 MB | 408 MB (+285 MB, while the model loads) |
+| first search | 0.85 s | 3.3 to 3.9 s |
+| `search_tools` p50 / p95 | 21 / 33 ms | 30 to 39 / 48 to 50 ms |
+
+On the hosted server (2 GiB), the worst case the server already plans for is about 120 MB at
+rest, plus a PUMF tabulation (+400 MB measured for the Census 2021 individuals file with two
+DuckDB threads, `statcan/pumf/tabulate.py`), plus two `wds_query_series` workers at their default
+256 MB each: about 1.0 GB. The hybrid's +206 MB (+285 MB once, at the first search after a start)
+brings that to about 1.3 GB, inside 2 GiB with about 700 MB to spare. Memory is no longer the
+reason the gate fails; the image would grow by about 124 MB of dependencies plus 123 MB of model
+(or a download at start), and the first search after each start would wait about 3 s.
+
+**What would pass the gate.** The retrieval part is the obstacle, and these 129 questions cannot
+settle it, and tuning a fusion rule on them would make the benchmark measure itself. At rank one
+the hybrid wins 15 of the 25 questions that change (60 per cent); a sign test needs about 190
+such questions to detect that with 80 per cent power, about 1,000 questions at this rate of
+change. A rule that avoids most of the losses (say 80 per cent of changes won) needs about 20
+changed questions, so 150 to 200 new questions. In order:
+
+1. A held-out set of new questions (150 to 200, English and French, weighted toward the places,
+   portals and vague questions where the rankers disagree), written and reviewed by two sessions
+   that have not seen any ranker's output, as Phase 1's key was. Freeze it before any tuning.
+2. A fusion rule chosen on the existing 129 and judged on the held-out set only. The candidate
+   the losses point to: keep BM25's order when the query names a place or portal the catalogue
+   knows (the `PORTAL_PLACES` and provinces in `scripts/build_site.py`, the CKAN, ArcGIS Hub and
+   Socrata `PORTALS`), fuse otherwise; or the half-weight fusion above.
+3. The gate then needs, on the held-out set, a top-five gain with p below 0.05 and no loss in
+   French or identifiers, with cost as measured here.
 
 ## Method
 

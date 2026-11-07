@@ -345,7 +345,11 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
             self._index, self._indexed, self._last_hash = index, list(tools), current_hash
             self._semantic_rows = []
         scores = self._index.scores(query)
-        if self._mode == "hybrid":
+        boosts = search.identifier_boosts(query, self._indexed)
+        # An embedding does not read identifiers (phase2.md: alone, it finds the
+        # vector tools for one vector query in four), so a query that names a
+        # tool, table or vector is ranked by BM25 and the boosts, as in bm25 mode.
+        if self._mode == "hybrid" and not boosts:
             if not self._semantic_tried:
                 self._load_semantic()
             if self._semantic is not None:
@@ -363,7 +367,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                         )
                 ranking = self._semantic.ranking(query, self._semantic_rows, semantic.FUSION_DEPTH)
                 scores = semantic.fuse(scores, ranking)
-        scores = search.apply_boosts(scores, search.identifier_boosts(query, self._indexed))
+        scores = search.apply_boosts(scores, boosts)
         # The catalog is deduplicated by name; resolve the current version's schema.
         by_name = {t.name: t for t in tools}
         return [
