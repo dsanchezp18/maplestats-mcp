@@ -82,6 +82,7 @@ PortalKey = Literal[
     "white_rock",
     "penticton",
     "new_westminster",
+    "nanaimo",
     "orangeville",
     "canmore",
     "ntgs",

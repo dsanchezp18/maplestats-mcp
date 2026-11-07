@@ -660,13 +660,8 @@ Not added:
   Application, web page or guessed domain (`opendata.<city>`, `data-<city>.
   opendata.arcgis.com`, 401, 400 or no DNS) turned up a public portal. The
   ArcGIS Online hits for "Richmond" are Richmond, Virginia.
-- Nanaimo: `data.nanaimo.ca` redirects to nanaimo.ca's Open Data Catalogue, the
-  City's own Open Data Publisher with a REST API; different platform with no
-  adaptor.
-- Whitehorse: `data.whitehorse.ca` is a static download page, not a platform
-  with an API; different platform with no adaptor.
-- District of North Vancouver: `geoweb.dnv.org/data` is the district's custom
-  GEOweb (the City of North Vancouver is a separate municipality); no adaptor.
+- Nanaimo, Whitehorse and the District of North Vancouver: rechecked
+  2026-11-07, see the next section (Nanaimo added).
 - Langley (City): `data-langleycity.opendata.arcgis.com` answers 404 on the
   search API; unchanged from the earlier finding.
 - Belleville (43 datasets): the item licence limits use to personal,
@@ -813,3 +808,49 @@ Procurement and regulatory filings: CanadaBuys stays removed (terms, see
 [specialized federal sources](specialized-federal-sources.md#canadabuys-pspc-procurement)).
 Regulatory filings already have their own modules (CER, AER, OEB, CFIA, the Canada
 Gazette); no municipal portal holds a filings register worth routing.
+
+## Nanaimo, Whitehorse and District of North Vancouver (2026-11-07)
+
+Rechecked from the "Open candidates" row of the roadmap: platform first, then
+licence.
+
+**Nanaimo: added** as `arcgis_hub_*` (`portal="nanaimo"`). `data.nanaimo.ca`
+now redirects to nanaimo.ca's Maps & Data page, and its GIS Downloads page
+redirects to `gisdata.nanaimo.ca`, an ArcGIS Hub site ("GIS Open Data
+Portal", org id D2GiQOd2jzaj2Pzh). The Hub Search API has no `dataset`
+collection; `all` holds 97 items: 86 Feature Services (owner
+open.data_cityofnanaimo), 6 PDFs, 3 Experience Builder apps, a Hub page and a
+scene package, so searches default to Feature Service, as for New
+Westminster. 85 of the Feature Services' licence fields link the Open Data
+Catalogue Licence page, which publishes the Open Government Licence - Nanaimo:
+OGL-BC 2.0 with the City in place of the Province, "including for commercial
+purposes", attribution "Contains information licenced under the Open
+Government Licence - Nanaimo." Smoke test passed: search ("water", 11),
+detail, CSV, shapefile and GeoJSON links (302) and KML and file geodatabase
+(202), feature query.
+
+**Whitehorse: not built (terms).** `data.whitehorse.ca` and the
+`gisext.whitehorse.ca` it points to both answered with a "Scheduled
+Maintenance" page on 2026-11-07, and www.whitehorse.ca answered HTTP 403. The
+Internet Archive copy of data.whitehorse.ca from 2026-08-14 shows a static
+folder listing (99 zip, 92 DWG, 90 KML files, aerial imagery, two Excel
+files), no API, and the City's Terms of Use: Whitehorse Open Data "is intended
+for the User's own internal business and personal purpose" and may not be
+reproduced, published or disseminated "for commercial purposes, without the
+prior written consent of the City of Whitehorse." A public server cannot meet
+that for its callers. Yukon-wide data from the Yukon Bureau of Statistics and
+open.yukon.ca are already covered (`yukon_stats_`, `ckan_` with `portal="yt"`).
+
+**District of North Vancouver: not built (needs its own adaptor).** GEOweb
+(`geoweb.dnv.org/data`) lists 140 datasets, each a set of zipped files under
+`/Products/Data/<format>/<name>_<format>.zip` (CSV, DWG, shapefile, ASCII grid
+and others) with a `metadata.php?dataset=<name>` page. The licence is fine: the
+Open Government Licence - North Vancouver, OGL-BC 2.0 with the District in
+place of the Province, commercial use allowed with the attribution "Contains
+information licensed under the Open Government Licence - North Vancouver."
+But there is no Hub, CKAN, Socrata or Opendatasoft catalogue. The ArcGIS Server
+behind GEOweb (`geoweb.dnv.org/arcgis/rest/services`, version 11.1, folders
+Cityworks, Fire, Hosted, MobileApps, Utilities) answers, but it is a service
+directory without a search API, and `arcgis_hub_*` reads through the Hub Search
+API. Wrapping GEOweb would mean a new module that parses the data page, reads
+the metadata pages and opens the zipped CSVs. Left as an open candidate.

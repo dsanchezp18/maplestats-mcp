@@ -500,6 +500,21 @@ PORTALS: dict[str, Portal] = {
         collection="all",
         default_item_type="Feature Service",
     ),
+    "nanaimo": Portal(
+        "gisdata.nanaimo.ca",
+        "City of Nanaimo GIS Open Data Portal",
+        "Portail de données ouvertes SIG de la Ville de Nanaimo",
+        note=(
+            "British Columbia. data.nanaimo.ca and nanaimo.ca's GIS Downloads page lead here. "
+            "Only the 'all' collection exists (97 items, checked 2026-11-07), so searches "
+            "default to Feature Service (86 layers, owner open.data_cityofnanaimo). Open "
+            "Government Licence - Nanaimo (https://www.nanaimo.ca/your-government/maps-data/"
+            "open-data-catalogue/open-data-catalogue-licence), based on OGL-BC 2.0: commercial "
+            "use allowed with attribution."
+        ),
+        collection="all",
+        default_item_type="Feature Service",
+    ),
     "orangeville": Portal(
         "open-orangeville.hub.arcgis.com",
         "Town of Orangeville Open Data",
@@ -643,6 +658,15 @@ NOTES_FR: dict[str, str] = {
         "gouvernement ouvert – Ville de New Westminster v1.0 "
         "(https://opendata.newwestcity.ca/pages/terms-of-use), fondée sur la licence de la "
         "Colombie-Britannique 2.0 : usage commercial permis avec mention de la source."
+    ),
+    "nanaimo": (
+        "Colombie-Britannique. data.nanaimo.ca et la page GIS Downloads de nanaimo.ca mènent "
+        "ici. Seule la collection « all » existe (97 éléments, vérifié le 2026-11-07) : les "
+        "recherches se limitent donc par défaut aux Feature Service (86 couches, propriétaire "
+        "open.data_cityofnanaimo). Licence du gouvernement ouvert – Nanaimo "
+        "(https://www.nanaimo.ca/your-government/maps-data/open-data-catalogue/"
+        "open-data-catalogue-licence), fondée sur la licence de la Colombie-Britannique 2.0 : "
+        "usage commercial permis avec mention de la source."
     ),
     "durham": (
         "Les éléments pointent vers une couche d'un MapServer commun de plus de 200 couches ; "

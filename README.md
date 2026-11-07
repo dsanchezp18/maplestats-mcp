@@ -239,7 +239,9 @@ Not covered: CAPP's Statistics Handbook, Petrinex and Payments Canada were
 not built, because their terms or download hosts do not permit automated
 access. CanadaBuys, OpenParliament.ca and the Toronto Transit Commission's
 own schedule download were removed for the same reason (the TTC schedule is
-still served from Statistics Canada's national transit database). The
+still served from Statistics Canada's national transit database). The City
+of Whitehorse's open data files are not built: its terms bar commercial
+reproduction without the City's written consent. The
 City of Hamilton's portal and Niagara Open Data (niagaraopendata.ca) are left
 out because they answer automated requests with a Cloudflare challenge. The 2006-2016 census data tables and the 2016 Census Profile service were removed because Statistics Canada's www12 host answers automated clients with a bot challenge, 503 errors or timeouts (the 2021 profile and the WDS tables remain). Justice Laws (federal statutes and
 regulations) is out of scope, because legislation text is not data this
