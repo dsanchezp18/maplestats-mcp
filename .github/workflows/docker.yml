@@ -159,11 +159,22 @@ jobs:
       # The image requires a token by default; the public endpoint opts out,
       # as render.yaml does. The /stats counts are kept on the app's Azure Files
       # share at /data, so a deploy no longer starts them from zero.
+      #
+      # 1 vCPU and 2 GiB (memory must be twice the vCPU) so statcan_pumf_tabulate
+      # can run. Measured 2026-11-07: the server's working set peaked at 660 MB on
+      # 0.5 vCPU and 1 GiB, and one tabulation adds about 400 MB (Census 2021
+      # individuals, 16 replicate weights, under the app's
+      # MAPLE_DUCKDB_MEMORY_LIMIT=384MB), so two at once still fit with room.
+      # Downloaded PUMFs go to the file share, capped at 5 GB (the Census
+      # individuals file unpacks to 569 MB); the share's quota is 50 GiB.
       - name: Deploy the image
         run: |
           az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
             --image "$IMAGE:${HEAD_SHA::7}" \
+            --cpu 1 --memory 2Gi \
             --set-env-vars MAPLE_REQUIRE_AUTH=0 MAPLE_USAGE_STATS_FILE=/data/usage/stats.json \
+              MAPLE_PUMF_TABULATE=1 MAPLE_PUMF_CACHE_DIR=/data/pumf MAPLE_PUMF_CACHE_MAX_GB=5 \
+              MAPLE_DUCKDB_MEMORY_LIMIT=384MB \
             --only-show-errors --output none
       # The app keeps serving the previous revision until the new one passes
       # its probes, so a bad image fails this step without taking the server down.

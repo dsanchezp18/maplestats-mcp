@@ -125,14 +125,12 @@ The default is the hosted server: nothing to install, no account, no key.
    ```
 2. Tell the user to restart or reload the client, then check that the
    `search_tools` tool is listed.
-3. Only if the client cannot use remote servers, or the user wants the
-   microdata tabulation tool or everything kept on their own machine, run it
-   locally instead: `claude mcp add --scope user maplestats -- uvx maplestats-mcp`
+3. Only if the client cannot use remote servers, or the user wants
+   everything kept on their own machine, run it locally instead: `claude mcp add --scope user maplestats -- uvx maplestats-mcp`
    (needs [uv](https://docs.astral.sh/uv/)), or the equivalent `uvx
    maplestats-mcp` entry for other clients (see [Install](#install)).
 
-Each client gets 60 requests a minute, and the microdata tabulation tool is
-switched off there. Your agent's tool calls (a search phrase, a table number)
+Each client gets 60 requests a minute. Your agent's tool calls (a search phrase, a table number)
 reach the server and its host, Microsoft Azure (Canada Central). The code keeps
 no log of them, but its in-memory cache can hold a search phrase or filter in a
 key or a response until the entry expires or the server restarts. Check
