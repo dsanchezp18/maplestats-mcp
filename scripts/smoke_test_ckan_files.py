@@ -26,6 +26,8 @@ import sys
 import time
 from collections.abc import Awaitable, Callable
 
+from _smoke_common import is_upstream_outage, skip_outage, verdict
+
 from maplestats_mcp.modules.ckan import files
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
@@ -121,9 +123,10 @@ async def on() -> None:
         UpstreamError,
         files.read_resource("on", "43aa4b94-8040-459a-a219-d4e9949390c0"),
         "web page",
-        # Since 2026-10-26 omafra.gov.on.ca answers GitHub runners with 403
-        # instead of the HTML page; either way the reader must raise, not parse.
-        "HTTP 403",
+        # Since 2026-10-26 omafra.gov.on.ca answers GitHub runners with an HTTP
+        # error (403, or 502 on 2026-11-07) instead of the HTML page; either way
+        # the reader must raise, not parse.
+        "returned HTTP",
     )
     await expect_error(
         "on file off the host list",
@@ -237,14 +240,18 @@ async def run(name: str, step: Callable[[], Awaitable[None]]) -> None:
     try:
         await step()
     except Exception as exc:  # noqa: BLE001
-        check(False, f"{name}: {type(exc).__name__}: {str(exc)[:200]}")
+        # A portal that is down (open.canada.ca timed out on 2026-11-07) skips its
+        # remaining checks; the other portals still run.
+        if is_upstream_outage(exc):
+            skip_outage(name, exc, rest_runs=True)
+        else:
+            check(False, f"{name}: {type(exc).__name__}: {str(exc)[:200]}")
 
 
 async def main(selected: list[str]) -> int:
     chosen = {k: v for k, v in PORTALS.items() if not selected or k in selected}
     await asyncio.gather(*(run(k, v) for k, v in chosen.items()))
-    print("CKAN FILES SMOKE TEST", "FAILED" if failures else "PASSED")
-    return 1 if failures else 0
+    return verdict("CKAN FILES", not failures)
 
 
 if __name__ == "__main__":
