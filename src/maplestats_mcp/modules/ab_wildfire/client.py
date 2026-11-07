@@ -29,6 +29,9 @@ from maplestats_mcp.modules.ab_wildfire.schemas import (
     FireSort,
     FireSummary,
     Headline,
+    MunicipalFire,
+    MunicipalFireList,
+    MunicipalState,
     Perimeter,
     PerimeterList,
     PerimeterState,
@@ -1327,6 +1330,201 @@ async def get_fire_control_orders(
                 f"{len(shown)} entrées distinctes renvoyées sur {len(orders)} ; une entrée peut "
                 "compter plusieurs polygones (voir `polygons`). Types, noms et administrations "
                 "sont ceux de la couche, en anglais seulement",
+            ),
+            lang=lang,
+        ),
+    )
+
+
+# --------------------------------------------------------- municipal fires
+
+_MUNICIPAL_FIELDS = (
+    "MRFireNumber,MutualAidNumber,FireIncidentStatus,Hectares,EstimatedStartDate,"
+    "FireInactiveDate,FireExtinguishedDate,LocalGovernment,Fire_Info_Website,"
+    "Fire_Info_Phone_Num,MutualAidContactZone,GISFeatureLastUpdated,OBJECTID"
+)
+
+
+def _text_or_none(value: object) -> str | None:
+    return (value.strip() or None) if isinstance(value, str) else None
+
+
+def _to_municipal(feature: dict[str, Any], layer: str) -> MunicipalFire:
+    attrs = feature.get("attributes") or {}
+    geometry = feature.get("geometry") or {}
+    hectares = attrs.get("Hectares")
+    return MunicipalFire(
+        fire_number=_text_or_none(attrs.get("MRFireNumber")),
+        mutual_aid_number=_text_or_none(attrs.get("MutualAidNumber")),
+        status=_text_or_none(attrs.get("FireIncidentStatus")),
+        layer="active" if layer == "active" else "inactive",
+        area_ha=float(hectares) if isinstance(hectares, (int, float)) else None,
+        # Start dates are stored at Alberta midnight (06:00 or 07:00 UTC), like order dates.
+        start_date=_utc_date(attrs.get("EstimatedStartDate")),
+        inactive_at=_utc(attrs.get("FireInactiveDate")),
+        extinguished_at=_utc(attrs.get("FireExtinguishedDate")),
+        local_government=_text_or_none(attrs.get("LocalGovernment")),
+        mutual_aid_zone=_text_or_none(attrs.get("MutualAidContactZone")),
+        info_website=_text_or_none(attrs.get("Fire_Info_Website")),
+        info_phone=_text_or_none(attrs.get("Fire_Info_Phone_Num")),
+        latitude=geometry.get("y"),
+        longitude=geometry.get("x"),
+        last_updated=_utc(attrs.get("GISFeatureLastUpdated")),
+    )
+
+
+async def _municipal_layer(layer: str) -> tuple[list[MunicipalFire], bool]:
+    url = c.MUNICIPAL_FIRES[layer]
+
+    async def fetch() -> list[MunicipalFire]:
+        body = await _query(
+            url,
+            "municipal_fires",
+            outFields=_MUNICIPAL_FIELDS,
+            # The layer stores Web Mercator and has no numeric lat/lon field (only
+            # "54° 27.5650" strings), so ask for WGS84 geometry (checked 2026-11-07).
+            returnGeometry="true",
+            outSR=4326,
+            orderByFields="OBJECTID",
+            resultRecordCount=c.LIMIT_MAX,
+        )
+        if body.get("exceededTransferLimit"):
+            raise UpstreamError(
+                f"ab_wildfire: the {layer} municipal layer has more than {c.LIMIT_MAX} rows; "
+                "paging is needed."
+            )
+        return [_to_municipal(f, layer) for f in body.get("features") or []]
+
+    return await cached_fetch(f"ab_wildfire:municipal:{layer}", c.CACHE_TTL_FIRES, fetch)
+
+
+def _check_circle(
+    latitude: float | None, longitude: float | None, radius_km: float | None, lang: str
+) -> tuple[float, float, float] | None:
+    if latitude is None and longitude is None and radius_km is None:
+        return None
+    if latitude is None or longitude is None or radius_km is None:
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "latitude, longitude and radius_km must be given together.",
+            "latitude, longitude et radius_km doivent être fournis ensemble.",
+        )
+    _check_point(latitude, longitude, lang)
+    if not 0 < radius_km <= c.MAX_RADIUS_KM:
+        raise lang_error(
+            InvalidInput,
+            lang,
+            f"radius_km must be above 0 and at most {c.MAX_RADIUS_KM:g}.",
+            f"radius_km doit être supérieur à 0 et d'au plus {c.MAX_RADIUS_KM:g}.",
+        )
+    return latitude, longitude, radius_km
+
+
+async def list_municipal_fires(
+    state: MunicipalState = "all",
+    *,
+    local_government: str | None = None,
+    mutual_aid_zone: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+    radius_km: float | None = None,
+    sort_by: FireSort = "latest",
+    limit: int = c.LIMIT_DEFAULT,
+    offset: int = 0,
+    lang: str = "en",
+) -> MunicipalFireList:
+    """Wildfires reported by municipalities, newest start first, largest first, or
+    nearest a point."""
+    _check_page(limit, offset, c.LIMIT_MAX, lang)
+    if state not in ("all", "active", "inactive"):
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "state must be 'all', 'active' or 'inactive'.",
+            "state doit être « all », « active » ou « inactive ».",
+        )
+    if sort_by not in ("latest", "largest"):
+        raise lang_error(
+            InvalidInput,
+            lang,
+            "sort_by must be 'latest' or 'largest'.",
+            "sort_by doit être « latest » ou « largest ».",
+        )
+    circle = _check_circle(latitude, longitude, radius_km, lang)
+    first = _parse_iso_date(start_date, "start_date", lang) if start_date else None
+    last = _parse_iso_date(end_date, "end_date", lang) if end_date else None
+    layers = ("active", "inactive") if state == "all" else (state,)
+    fetched = await asyncio.gather(*(_municipal_layer(layer) for layer in layers))
+    # Copies, so setting distance_km never touches the cached rows.
+    fires = [fire.model_copy() for rows, _ in fetched for fire in rows]
+    was_cached = all(cached for _, cached in fetched)
+
+    def keep(fire: MunicipalFire) -> bool:
+        government = (fire.local_government or "").casefold()
+        zone = (fire.mutual_aid_zone or "").casefold()
+        if local_government and local_government.casefold() not in government:
+            return False
+        if mutual_aid_zone and mutual_aid_zone.casefold() not in zone:
+            return False
+        if first and (fire.start_date is None or fire.start_date < first):
+            return False
+        return not (last and (fire.start_date is None or fire.start_date > last))
+
+    fires = [fire for fire in fires if keep(fire)]
+    if circle:
+        centre_lat, centre_lon, radius = circle
+        for fire in fires:
+            if fire.latitude is not None and fire.longitude is not None:
+                fire.distance_km = round(
+                    haversine_km(centre_lat, centre_lon, fire.latitude, fire.longitude), 2
+                )
+        fires = sorted(
+            (f for f in fires if f.distance_km is not None and f.distance_km <= radius),
+            key=lambda f: f.distance_km or 0.0,
+        )
+    elif sort_by == "largest":
+        fires.sort(key=lambda f: f.area_ha or 0.0, reverse=True)
+    else:
+        fires.sort(key=lambda f: f.start_date or date.min, reverse=True)
+    page = fires[offset : offset + limit]
+    as_of = [t for t in [await _layer_as_of(c.MUNICIPAL_FIRES[x]) for x in layers] if t]
+    return MunicipalFireList(
+        state=state,
+        total_matches=len(fires),
+        total_area_ha=round(sum(f.area_ha or 0.0 for f in fires), 2),
+        returned_count=len(page),
+        offset=offset,
+        fires=page,
+        provenance=_prov(
+            "MunicipalFireList",
+            f"{c.MUNICIPAL_FIRES[layers[-1]]}/query",
+            was_cached,
+            as_of=max(as_of) if as_of else None,
+            freshness=_fires_freshness(lang),
+            coverage=fr_or_en(
+                lang,
+                "Wildfires that municipalities report outside the Forest Protection Area in "
+                "the current fire season, as drawn on the Alberta Wildfire Status Map (layers "
+                "Active_Municipal_Wildfire_Prod and Extinguished_Municipal_Wildfire_Prod); "
+                "fires inside it are in ab_wildfire_get_fires.",
+                "Feux de forêt signalés par les municipalités hors de la zone de protection "
+                "des forêts pendant la saison en cours, tels que la carte d'Alberta Wildfire "
+                "les affiche (couches Active_Municipal_Wildfire_Prod et "
+                "Extinguished_Municipal_Wildfire_Prod) ; les feux dans cette zone sont dans "
+                "ab_wildfire_get_fires.",
+            ),
+            limits=_with_english_only(
+                lang,
+                fr_or_en(
+                    lang,
+                    "Areas and dates are as each municipality reported them; the active layer "
+                    "is empty off-season",
+                    "Superficies et dates telles que chaque municipalité les a déclarées ; la "
+                    "couche des feux actifs est vide hors saison",
+                ),
             ),
             lang=lang,
         ),

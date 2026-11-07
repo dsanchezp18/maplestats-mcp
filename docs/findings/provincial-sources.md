@@ -240,9 +240,27 @@ about 9 kB.
 
 **Not built.** Evacuation orders: no layer in the owner's 63 items; the
 municipal and emergency-management evacuation maps are separate systems.
-Municipal-reported wildfires (`Extinguished_Municipal_Wildfire_Prod`, 252
-rows with local government and contact fields) and fire centre and forest
-area boundaries are available on the same host and could be added. Provincial
+Fire centre and forest area boundaries are available on the same host and
+could be added.
+
+**Municipal-reported wildfires, added 2026-11-07** as
+`ab_wildfire_get_municipal_fires`. `Active_Municipal_Wildfire_Prod` and
+`Extinguished_Municipal_Wildfire_Prod` (layer 4 each; the non-Prod services
+with layer 1 are older copies) hold fires that local governments report outside
+the Forest Protection Area. Their ArcGIS items have an empty licence field, but
+both are operational layers of the two "Alberta Wildfire Status Map" web maps
+(326fa4b0..., abe316ce...), the map that the open.alberta.ca dataset
+`alberta-wildfire-status-map` (OGL - Alberta) publishes, so the module's licence
+and attribution apply. On 2026-11-07 the extinguished layer had 254 points
+(253 Extinguished, 1 Inactive, 395.58 ha, starts from 2026-01-02 to 2026-10-17)
+and the active layer none. Fields: `MRFireNumber`, `MutualAidNumber`,
+`FireIncidentStatus`, `Hectares`, `EstimatedStartDate` (Alberta midnight),
+`FireInactiveDate`, `FireExtinguishedDate`, `LocalGovernment`,
+`Fire_Info_Website`, `Fire_Info_Phone_Num` (the municipality's line, not a
+person's), `MutualAidContactZone`. Location is only in degree-minute strings
+and Web Mercator geometry; the tool requests `outSR=4326`, and the result
+matched the strings (LMR-0076-2026: 54° 27.565' = 54.4594). Smoke test: the
+tool's area total equals the layers' `outStatistics` sum. Provincial
 parks fire-ban markers (`provincial_parks_fire_ban_markers`) were not checked.
 
 ## Open Alberta files (ab_opendata)

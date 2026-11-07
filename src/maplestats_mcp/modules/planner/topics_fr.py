@@ -351,6 +351,10 @@ FR: dict[str, str] = {
     "Alberta fires by status, cause and size (provincial status map)": (
         "feux en Alberta par état, cause et superficie (carte provinciale de la situation)"
     ),
+    "Alberta grass and brush fires municipalities report outside the forest area": (
+        "feux d'herbe et de broussailles signalés par les municipalités albertaines hors de "
+        "la zone forestière"
+    ),
     "Alberta season totals by year": "totaux de la saison en Alberta, par année",
     "Alberta fire danger rating at a point: latitude, longitude (from nrcan_geo_locate)": (
         "indice de danger d'incendie en Alberta à un point : latitude, longitude (tirées "

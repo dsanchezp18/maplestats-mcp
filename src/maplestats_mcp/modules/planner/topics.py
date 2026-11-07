@@ -970,6 +970,11 @@ TOPICS: tuple[Topic, ...] = (
                 _FIRE_TERMS,
             ),
             PlanStep(
+                "ab_wildfire_get_municipal_fires",
+                "Alberta grass and brush fires municipalities report outside the forest area",
+                _FIRE_TERMS,
+            ),
+            PlanStep(
                 "ab_wildfire_get_season_statistics", "Alberta season totals by year", _FIRE_TERMS
             ),
             PlanStep(
