@@ -11,7 +11,7 @@ import asyncio
 import sys
 import time
 
-from _smoke_common import skip_outage
+from _smoke_common import skip_outage, skip_reloading, verdict
 
 from maplestats_mcp.modules.proactive_disclosure import client
 
@@ -29,7 +29,15 @@ async def main() -> int:
                 f"OK: list_datasets {info.dataset}: {info.row_count:,} rows, "
                 f"in package={info.resource_in_package}, modified {info.last_modified}"
             )
-            ok &= info.resource_in_package and (info.row_count or 0) > 10_000
+            ok &= info.resource_in_package
+        # An empty table means open.canada.ca is reloading: the other tables can then hold
+        # duplicate rows (contracts held each row twice on 2026-11-05), so nothing below
+        # can be trusted until the reload ends.
+        empty = [info.dataset for info in listing.datasets if not info.row_count]
+        if empty:
+            skip_reloading("open.canada.ca DataStore", ", ".join(empty))
+            return verdict("PROACTIVE DISCLOSURE", ok)
+        ok &= all((info.row_count or 0) > 10_000 for info in listing.datasets)
         french = await client.list_datasets("fr")
         ok &= french.datasets[0].dataset_url.startswith("https://open.canada.ca/data/fr/")
 
@@ -163,12 +171,7 @@ async def main() -> int:
     except Exception as exc:  # noqa: BLE001 - only an outage is skipped
         skip_outage("open.canada.ca DataStore", exc)
 
-    print(
-        "\nPROACTIVE DISCLOSURE SMOKE TEST PASSED"
-        if ok
-        else "\nPROACTIVE DISCLOSURE SMOKE TEST FAILED"
-    )
-    return 0 if ok else 1
+    return verdict("PROACTIVE DISCLOSURE", ok)
 
 
 if __name__ == "__main__":
