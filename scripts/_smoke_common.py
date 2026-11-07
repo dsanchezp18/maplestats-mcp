@@ -36,6 +36,17 @@ def skip_outage(source: str, exc: BaseException, *, rest_runs: bool = False) -> 
     print(f"SKIP: {source} unavailable ({exc}); {rest}")
 
 
+def skip_reloading(source: str, table: str) -> None:
+    """Report a DataStore table that is empty because its publisher is reloading it.
+
+    open.canada.ca reloads its proactive disclosure tables in place: on 2026-11-05 the
+    grants table answered 0 rows for hours while contracts held every row twice. An
+    empty table is that reload, not a regression, so the checks that read it are skipped.
+    """
+    _skipped.append(source)
+    print(f"SKIP: {source} is reloading ({table} has 0 rows); the remaining checks did not run")
+
+
 def verdict(name: str, ok: bool) -> int:
     """Print the run's verdict and return its exit status.
 

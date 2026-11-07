@@ -9,9 +9,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
+import _smoke_common  # pyright: ignore[reportMissingImports]
 from _smoke_common import (  # pyright: ignore[reportMissingImports]
+    SKIPPED_EXIT,
     is_upstream_outage,
     skip_outage,
+    skip_reloading,
+    verdict,
 )
 
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
@@ -33,3 +37,18 @@ def test_an_outage_is_reported_and_the_caller_goes_on_to_its_verdict(capsys) -> 
 def test_anything_else_is_raised_again() -> None:
     with pytest.raises(UpstreamError, match="HTTP 404"):
         skip_outage("the source", UpstreamError("x returned HTTP 404: gone"))
+
+
+def test_an_empty_table_is_a_reload_and_the_run_is_skipped(capsys, monkeypatch) -> None:
+    monkeypatch.setattr(_smoke_common, "_skipped", [])
+    skip_reloading("open.canada.ca DataStore", "grants")
+    assert verdict("PROACTIVE DISCLOSURE", True) == SKIPPED_EXIT
+    out = capsys.readouterr().out
+    assert "SKIP: open.canada.ca DataStore is reloading (grants has 0 rows)" in out
+    assert "SKIPPED" in out
+
+
+def test_a_failed_check_before_the_reload_still_fails(monkeypatch) -> None:
+    monkeypatch.setattr(_smoke_common, "_skipped", [])
+    skip_reloading("open.canada.ca DataStore", "grants")
+    assert verdict("PROACTIVE DISCLOSURE", False) == 1
