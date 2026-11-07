@@ -609,8 +609,9 @@ Sources, by tool-name prefix:
   Excel and CSV files).
 - Borealis (Canadian Dataverse): borealis_ (Beyond 20/20 tables from
   university libraries; ODESI DDI metadata, public files only).
-- Bank of Canada Valet: boc_. CMHC housing: cmhc_ (HMIP tables), cmhc_dt_
-  (Excel data tables). CREA MLS Home Price Index: crea_ (links, terms and
+- Bank of Canada Valet: boc_ (also business and consumer survey results,
+  Monetary Policy Report and staff projections). CMHC housing: cmhc_ (HMIP
+  tables), cmhc_dt_ (Excel data tables). CREA MLS Home Price Index: crea_ (links, terms and
   attribution only, no values). ECCC weather, climate, hydrometric: eccc_;
   gridded climate projections (CMIP6/CMIP5, SSP/RCP): eccc_coverages_;
   Data Catalogue files (browse, search, read CSV/Excel; NPRI and GHGRP

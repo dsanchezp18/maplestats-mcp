@@ -396,6 +396,115 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "outlook",
+        "Expectations and forecasts: Bank of Canada surveys and projections",
+        (
+            "expect*",
+            "forecast*",
+            "projection*",
+            "outlook",
+            "gdp forecast",
+            "inflation forecast",
+            "growth forecast",
+            "business outlook survey",
+            "business sentiment",
+            "business confidence",
+            "consumer expectations",
+            "consumer sentiment",
+            "bos",
+            "csce",
+            "monetary policy report",
+            "mpr",
+            "staff projection*",
+            "anticipation*",
+            "attentes",
+            "prevision*",
+            "prevoi*",
+            "prevoir",
+            "inflation expectation*",
+            "attentes d'inflation",
+            "perspectives des entreprises",
+            "attentes des consommateurs",
+            "rapport sur la politique monetaire",
+            "rpm",
+            "epe",
+            "ecac",
+            "projections du personnel",
+        ),
+        (
+            PlanStep(
+                "boc_get_business_outlook",
+                "Business Outlook Survey: firms' expectations for sales, prices, wages and "
+                "inflation, newest quarter (quarter='2026Q3' for another)",
+                ("business*", "firm*", "compan*", "bos", "entreprise*", "epe"),
+            ),
+            PlanStep(
+                "boc_get_consumer_expectations",
+                "Canadian Survey of Consumer Expectations: households' inflation expectations "
+                "at 1, 2 and 5 years, wages, jobs and spending, newest quarter",
+                ("consumer*", "household*", "csce", "consommateur*", "menage*", "ecac"),
+            ),
+            PlanStep(
+                "boc_get_mpr_projection",
+                "Monetary Policy Report projections: real GDP growth and CPI inflation, newest "
+                "Report (report='2026M10' for another)",
+                (
+                    "forecast*",
+                    "gdp",
+                    "bank of canada",
+                    "banque du canada",
+                    "mpr",
+                    "monetary policy report",
+                    "prevision*",
+                    "rpm",
+                    "rapport sur la politique monetaire",
+                ),
+            ),
+            PlanStep(
+                "boc_get_staff_projections",
+                "staff economic projections by vintage (released with a five-year lag), for "
+                "forecast evaluation",
+                ("staff", "vintage*", "real-time", "personnel", "millesime*"),
+            ),
+        ),
+        (
+            (
+                "Survey answers are expectations, not forecasts. The Monetary Policy Report "
+                "projection is the Bank's base case; staff projections are released five years "
+                "late and are not the Report's projection."
+            ),
+        ),
+        # A weather forecast, life expectancy, population projections and wait
+        # times are other topics' questions.
+        (
+            "weather forecast",
+            "previsions meteo",
+            "prevision meteo",
+            "life expectancy",
+            "esperance de vie",
+            "population projection",
+            "projections demographiques",
+            "wait times",
+            "temps d'attente",
+        ),
+        patterns=(
+            (
+                r"\b(?P<who>business\w*|firms?|compan\w+|consumers?|households?|entreprises?"
+                r"|consommateurs?|menages?)\b.*\b(?:expect\w*|anticip\w*|sentiment|confiden\w+"
+                r"|confiance)\b"
+            ),
+            (
+                r"\b(?P<bank>bank of canada|banque du canada)\b.*\b(?:forecast\w*|project\w*"
+                r"|prevo\w*|prevision\w*|expect\w*)\b"
+            ),
+            # "Que prévoit la Banque du Canada ...": the verb comes first.
+            (
+                r"\b(?:forecast\w*|project\w*|prevo\w*|prevision\w*|expect\w*)\b.*"
+                r"\b(?P<bank_after>bank of canada|banque du canada)\b"
+            ),
+        ),
+    ),
+    Topic(
         "international",
         "Canada compared with other countries",
         (
