@@ -1,0 +1,99 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "maplestats",
+  "description": "Canadian open data for ChatGPT: official figures from Statistics Canada, the Bank of Canada, CMHC, provincial statistics agencies and municipal open-data portals, each returned with its source, reference period and release date. English and French.",
+  "author": {
+    "name": "Daniel Sánchez Pazmiño",
+    "url": "https://maplestats.danielstats.io/about.html"
+  },
+  "homepage": "https://maplestats.danielstats.io/",
+  "repository": "https://github.com/dsanchezp18/maplestats-mcp",
+  "license": "MIT",
+  "keywords": [
+    "canada",
+    "statistics",
+    "statcan",
+    "open data",
+    "census",
+    "bank of canada",
+    "economics",
+    "french"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "MapleStats",
+        "shortDescription": "Canadian official statistics",
+        "longDescription": "MapleStats connects ChatGPT to Canadian open data. Ask a question in English or French and it finds and reads the official figures from Statistics Canada (tables, vectors, the 2021 Census Profile, The Daily, public use microdata), the Bank of Canada (interest and exchange rates), CMHC housing data, provincial and territorial statistics agencies, federal open data, and municipal open-data portals.\n\nEvery value comes back as the publisher released it, with its table or series, unit, geography, reference period, release date and licence, so answers can cite their source. Caveats travel with the data: seasonal adjustment, census rounding, survey sampling error, revisions, and whether two sources can be compared.\n\nWho it is for: economists, analysts, journalists, students, public servants and anyone who needs a Canadian figure they can trust and check.\n\nHow it works: the app has three tools. plan_query lists, in order, the data tools to call for a question that spans several sources; search_tools finds the right data tool among several hundred from a plain-language description; call_tool runs that data tool. All tools only read public data. There are no accounts and nothing to configure.\n\nLimits: it covers published open data only, not confidential microdata, custom tabulations or data behind a login. It does not forecast, give financial or legal advice, or hold anything about individuals. Publishers revise figures and sometimes change their services, so check important numbers against the cited source. The hosted service is a free, independent, open-source project (MIT), not affiliated with or endorsed by any government.",
+        "developerName": "Daniel Sánchez Pazmiño",
+        "category": "Research",
+        "capabilities": [],
+        "websiteURL": "https://maplestats.danielstats.io/",
+        "supportURL": "https://github.com/dsanchezp18/maplestats-mcp/issues",
+        "privacyPolicyURL": "https://maplestats.danielstats.io/privacy.html",
+        "termsOfServiceURL": "https://maplestats.danielstats.io/terms.html",
+        "defaultPrompt": [
+          "What was Canada's CPI inflation rate in the latest month?",
+          "Compare the unemployment rate in Alberta and Ontario over the past year.",
+          "Quel est le dernier taux de change du dollar américain selon la Banque du Canada ?"
+        ],
+        "brandColor": "#C8221A",
+        "brandColorDark": "#FF5A4D",
+        "logo": "./assets/logo.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Latest national CPI inflation from Statistics Canada, with its citation. The model finds the CPI series (or follows plan_query) and reads the latest month from table 18-10-0004-01.",
+              "prompt": "What was Canada's year-over-year CPI inflation rate in the latest month? Cite the table.",
+              "tools_triggered": "search_tools, call_tool",
+              "expected_behavior": "call_tool runs a Statistics Canada tool (wds_get_data_from_vectors on vector v41690973 with transform yoy_pct_change, or statcan_indicators_get_indicators). The answer gives the all-items CPI 12-month change for the latest reference month, names table 18-10-0004-01 and its release date, and says the series is not seasonally adjusted."
+            },
+            {
+              "description": "The Bank of Canada's current policy interest rate from the Valet API.",
+              "prompt": "What is the Bank of Canada's current policy interest rate, and when was it last observed?",
+              "tools_triggered": "search_tools, call_tool",
+              "expected_behavior": "call_tool runs boc_get_observations on series V39079 (target for the overnight rate) with recent=1. The answer gives the rate in percent with the observation date and cites the Bank of Canada."
+            },
+            {
+              "description": "Latest monthly unemployment rate for one province from the Labour Force Survey.",
+              "prompt": "What is the latest unemployment rate in Alberta from the Labour Force Survey?",
+              "tools_triggered": "plan_query, call_tool",
+              "expected_behavior": "plan_query returns a labour topic whose steps include statcan_indicators_get_indicators; call_tool runs it for Alberta. The answer gives the seasonally adjusted Alberta unemployment rate for the latest reference month, its monthly change, the release date and source table 14-10-0287, and notes that LFS estimates carry sampling error."
+            },
+            {
+              "description": "A 2021 Census count for one municipality from the Census Profile API.",
+              "prompt": "What was the population of the City of Calgary in the 2021 Census?",
+              "tools_triggered": "plan_query, call_tool",
+              "expected_behavior": "call_tool runs statcan_census_profile_search_geography (census_subdivisions, query Calgary) to get code 2021A00054806016, then statcan_census_profile_get_data for that code and the 2021 population characteristic. The answer gives the 2021 population of the City of Calgary (census subdivision), cites the 2021 Census Profile, and notes that census counts are randomly rounded."
+            },
+            {
+              "description": "A question in French answered in French: the latest Bank of Canada USD/CAD daily exchange rate.",
+              "prompt": "Quel est le dernier taux de change quotidien du dollar américain publié par la Banque du Canada ?",
+              "tools_triggered": "plan_query, call_tool",
+              "expected_behavior": "plan_query (lang fr) points to boc_search_series and boc_get_observations; call_tool runs boc_get_observations on FXUSDCAD with recent=1 and lang fr. The answer is in French and gives the rate in Canadian dollars per US dollar with its date, citing the Banque du Canada."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Out of scope: a live stock quote is not Canadian open data. Expected: MapleStats is not used, or its search finds no matching tool and the assistant says MapleStats covers official Canadian statistics, not market quotes.",
+              "prompt": "What is Tesla's stock price right now?"
+            },
+            {
+              "description": "Personal information: MapleStats holds no data about named individuals. Expected: the assistant declines to look up a private person's income and, if MapleStats is used at all, offers only published aggregate statistics (for example median income for the area).",
+              "prompt": "Find the income and address of my neighbour John Smith in Calgary."
+            },
+            {
+              "description": "Confidential data is not available: Census master files and postal-code-level microdata are only accessible in Statistics Canada Research Data Centres. Expected: the assistant does not claim to download them; it says they are confidential and points to the public alternatives (public use microdata files, published census tables) or an RDC application.",
+              "prompt": "Download the confidential 2021 Census master file microdata for my postal code."
+            }
+          ]
+        },
+        "demo_recording_url": "",
+        "commerce": false,
+        "commerce_description": "MapleStats is free. It does not sell products or process payments."
+      }
+    }
+  }
+}

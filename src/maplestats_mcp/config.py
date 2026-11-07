@@ -111,6 +111,17 @@ def get_auth_token() -> str | None:
     return raw or None
 
 
+def get_openai_apps_challenge() -> str | None:
+    """Token served at /.well-known/openai-apps-challenge (MAPLE_OPENAI_APPS_CHALLENGE).
+
+    OpenAI's plugin portal checks that the submitter controls the MCP host by
+    fetching this path and comparing the body with the token its dashboard
+    shows. Unset or blank leaves the route answering 404.
+    """
+    raw = os.environ.get("MAPLE_OPENAI_APPS_CHALLENGE", "").strip()
+    return raw or None
+
+
 def get_usage_stats_enabled() -> bool:
     """Whether tool calls are counted (names and outcomes only) and /stats is served."""
     raw = os.environ.get("MAPLE_USAGE_STATS", "1").strip().lower()
