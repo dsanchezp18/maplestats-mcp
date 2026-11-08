@@ -741,7 +741,7 @@
   },
   "maplestats/X-02#2": {
     "outcome": "partial",
-    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 \u00b0C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 \u00b0C."
+    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 °C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 °C."
   },
   "maplestats/X-04#0": {
     "outcome": "partial",
@@ -753,7 +753,7 @@
   },
   "maplestats_after/X-02#1": {
     "outcome": "partial",
-    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 \u00b0C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 \u00b0C."
+    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 °C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 °C."
   },
   "mcp_canada/A-01#1": {
     "outcome": "abstained",
@@ -1953,7 +1953,9 @@
     "reason": "Review: Annualized its own average of monthly GDP by industry (3.8%), labelled as an estimate on a different basis from the official quarterly figure."
   },
   "pipeworx/C-14#0": {
-    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis.",
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
   },
   "pipeworx/C-14#1": {
     "outcome": "partial",
@@ -1977,7 +1979,7 @@
   },
   "pipeworx/X-02#2": {
     "outcome": "partial",
-    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 \u00b0C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 \u00b0C."
+    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 °C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 °C."
   },
   "pipeworx/X-03#0": {
     "referral": true
@@ -2372,5 +2374,2501 @@
   "maplestats-cost/C-14#0": {
     "outcome": "correct",
     "reason": "Review: $54,771.6 million (balance-of-payments basis, v87008956) is August 2026 as revised in StatCan's 2026-11-04 release, checked against WDS on 2026-11-05; the key ($54,346.5 million) was built before that revision."
+  },
+  "opencanada-1105/A-01#1": {
+    "outcome": "abstained",
+    "reason": "Review: The all-ages rate given as context while the child rate is declined: abstained."
+  },
+  "opencanada-1105/A-01#2": {
+    "outcome": "abstained",
+    "reason": "Review: The all-ages rate given as context while the child rate is declined: abstained."
+  },
+  "mcp_canada-1105/A-01#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: abstained (referral when it points to the table)."
+  },
+  "mcp_canada-1105/A-01#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: abstained (referral when it points to the table)."
+  },
+  "no_tools-1105/A-01#2": {
+    "referral": true
+  },
+  "no_tools-1105/A-01#0": {
+    "referral": true
+  },
+  "no_tools-1105/A-01#1": {
+    "referral": true
+  },
+  "arose26-1105/A-02#1": {
+    "outcome": "partial",
+    "reason": "Review: All of public administration (LFS 14-10-0064, NAICS 91) for Alberta, clearly labelled as not provincial-only; SEPH publishes NAICS 912."
+  },
+  "candata_mcp-1105/A-02#2": {
+    "outcome": "partial",
+    "reason": "Review: All of public administration (LFS 14-10-0064, NAICS 91) for Alberta, clearly labelled as not provincial-only; SEPH publishes NAICS 912."
+  },
+  "statcan2-1105/A-02#2": {
+    "false_claim": "Calls July 2026 the latest month; August 2026 was published on 2026-10-29."
+  },
+  "statcan2-1105/A-02#1": {
+    "false_claim": "Calls July 2026 the latest month; August 2026 was published on 2026-10-29."
+  },
+  "no_tools-1105/A-02#2": {
+    "referral": true
+  },
+  "no_tools-1105/A-02#0": {
+    "referral": true
+  },
+  "no_tools-1105/A-02#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/A-03#1": {
+    "outcome": "partial",
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
+  },
+  "mcp_statcan-1105/A-03#1": {
+    "outcome": "partial",
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
+  },
+  "statcan2-1105/A-03#2": {
+    "outcome": "partial",
+    "reason": "Review: Gave the all-persons series from 11-10-0091 ($63,200 average), a different published series from the key's excluding-zeros $66,100 / $48,100."
+  },
+  "mcp_statcan-1105/A-03#2": {
+    "false_claim": "Says the figures are in current dollars (not adjusted for inflation); table 11-10-0239 is in constant 2024 dollars."
+  },
+  "canada_data_agent-1105/A-03#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: declined and pointed to table 11-10-0239."
+  },
+  "mcp_canada-1105/A-03#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: declined and pointed to table 11-10-0239."
+  },
+  "no_tools-1105/A-03#2": {
+    "referral": true
+  },
+  "no_tools-1105/A-03#0": {
+    "referral": true
+  },
+  "no_tools-1105/A-03#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/A-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: declined and pointed to the table."
+  },
+  "opencanada-1105/A-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: declined and pointed to the table."
+  },
+  "mcp_statcan-1105/A-04#1": {
+    "false_claim": "Says the CIS figure is in current dollars; table 11-10-0190 is in constant 2024 dollars."
+  },
+  "no_tools-1105/A-04#0": {
+    "false_claim": "Says table 11-10-0237-01 gives median income of households ('All households'); it reports economic families and persons not in an economic family.",
+    "referral": true
+  },
+  "no_tools-1105/A-04#1": {
+    "false_claim": "Says the Canadian Income Survey reports median household income by province; it reports economic families and persons not in an economic family.",
+    "referral": true
+  },
+  "no_tools-1105/A-04#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/A-05#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; did not say no Alberta rate is published.",
+    "false_claim": "Points to table 11-10-0090-01 and tells the user to choose Alberta; the table is Canada only."
+  },
+  "mcp_canada-1105/A-05#2": {
+    "false_claim": "Points to table 11-10-0090-01 and tells the user to choose Alberta; the table is Canada only."
+  },
+  "no_tools-1105/A-05#0": {
+    "false_claim": "Says table 11-10-0090-01 covers the provinces and to set Geography to Alberta; it is Canada only.",
+    "referral": true
+  },
+  "no_tools-1105/A-05#1": {
+    "false_claim": "Says table 11-10-0090-01 covers the provinces and to set Geography to Alberta; it is Canada only.",
+    "referral": true
+  },
+  "no_tools-1105/A-05#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; did not say no Alberta rate is published.",
+    "false_claim": "Says the CIS publishes the poverty rate by disability status broken down by province; 11-10-0090 is Canada only and no Alberta rate is published."
+  },
+  "mcp_statcan-1105/A-05#2": {
+    "outcome": "correct",
+    "reason": "Review: Said the table has a single (Canada) geography and gave no Alberta figure."
+  },
+  "opencanada-1105/A-05#1": {
+    "outcome": "correct",
+    "reason": "Review: Said the table has a single (Canada) geography and gave no Alberta figure."
+  },
+  "canada_data_agent-1105/R-01#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (November) and pointed to the release schedule; the grader matched today's date.",
+    "referral": true
+  },
+  "no_tools-1105/R-01#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (November) and pointed to the release schedule; the grader matched today's date.",
+    "referral": true
+  },
+  "mcp_canada-1105/R-01#0": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (November) and pointed to the release schedule; the grader matched today's date.",
+    "referral": true
+  },
+  "canada_data_agent-1105/R-01#0": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (November) and pointed to the release schedule; the grader matched today's date.",
+    "referral": true
+  },
+  "mcp_canada-1105/R-01#1": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (November) and pointed to the release schedule; the grader matched today's date.",
+    "referral": true
+  },
+  "canada_data_agent-1105/R-01#1": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (November) and pointed to the release schedule; the grader matched today's date.",
+    "referral": true
+  },
+  "candata_mcp-1105/R-01#0": {
+    "outcome": "abstained",
+    "reason": "Review: No PTEA date: noted a 2026-11-05 update of 36-10-0487 but said it could not tell whether it held 2025."
+  },
+  "statcan2-1105/R-01#2": {
+    "referral": true
+  },
+  "opencanada-1105/R-01#1": {
+    "referral": true
+  },
+  "arose26-1105/R-01#1": {
+    "referral": true
+  },
+  "statcan2-1105/R-01#1": {
+    "referral": true
+  },
+  "arose26-1105/R-01#0": {
+    "referral": true
+  },
+  "no_tools-1105/R-01#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-01#2": {
+    "referral": true
+  },
+  "statcan2-1105/R-01#0": {
+    "referral": true
+  },
+  "opencanada-1105/R-01#2": {
+    "referral": true
+  },
+  "arose26-1105/R-01#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-02#1": {
+    "outcome": "abstained",
+    "reason": "Review: No date given; pointed to the table page and the release schedule.",
+    "referral": true
+  },
+  "statcan2-1105/R-02#1": {
+    "outcome": "partial",
+    "reason": "Review: The 2022 date (2025-11-06) is right; no date for the 2023 tables: one of the two."
+  },
+  "no_tools-1105/R-02#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-02#0": {
+    "referral": true
+  },
+  "no_tools-1105/R-02#0": {
+    "referral": true
+  },
+  "arose26-1105/R-02#1": {
+    "referral": true
+  },
+  "arose26-1105/R-02#2": {
+    "referral": true
+  },
+  "arose26-1105/R-02#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-02#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/R-03#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave 5 November 2026 (the table's latest update, with the PTEA) as the publication date; 2025 GDP by industry was published 2026-05-01."
+  },
+  "statcan2-1105/R-03#0": {
+    "outcome": "partial",
+    "reason": "Review: Right table (36-10-0711-01) but no date: half of the answer."
+  },
+  "statcan2-1105/R-03#2": {
+    "outcome": "partial",
+    "reason": "Review: Right table (36-10-0711-01) but no date: half of the answer.",
+    "referral": true
+  },
+  "statcan2-1105/R-03#1": {
+    "outcome": "partial",
+    "reason": "Review: Right table (36-10-0711-01) but no date: half of the answer.",
+    "referral": true
+  },
+  "arose26-1105/R-03#0": {
+    "outcome": "partial",
+    "reason": "Review: Right table (36-10-0711-01) but no date: half of the answer."
+  },
+  "arose26-1105/R-03#2": {
+    "outcome": "partial",
+    "reason": "Review: Right table (36-10-0711-01) but no date: half of the answer.",
+    "referral": true
+  },
+  "arose26-1105/R-03#1": {
+    "outcome": "partial",
+    "reason": "Review: Right table (36-10-0711-01) but no date: half of the answer.",
+    "referral": true
+  },
+  "mcp_canada-1105/R-03#1": {
+    "outcome": "abstained",
+    "reason": "Review: No date; named 36-10-0402 from memory as unverified."
+  },
+  "no_tools-1105/R-03#1": {
+    "false_claim": "Names 36-10-0402-01 as the table for the 2025 provincial figures; it is inactive and stops at 2024 (2025 is in 36-10-0711-01).",
+    "referral": true
+  },
+  "no_tools-1105/R-03#0": {
+    "false_claim": "Names 36-10-0402-01 as the table for the 2025 provincial figures; it is inactive and stops at 2024 (2025 is in 36-10-0711-01).",
+    "referral": true
+  },
+  "canada_data_agent-1105/R-03#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-03#1": {
+    "referral": true
+  },
+  "no_tools-1105/R-03#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (early November) and pointed to the release schedule; the grader matched today's date.",
+    "referral": true
+  },
+  "arose26-1105/R-04#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-04#1": {
+    "referral": true
+  },
+  "opencanada-1105/R-04#1": {
+    "referral": true
+  },
+  "opencanada-1105/R-04#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/R-05#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text."
+  },
+  "mcp_statcan-1105/R-05#0": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text."
+  },
+  "mcp_statcan-1105/R-05#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text."
+  },
+  "opencanada-1105/R-05#2": {
+    "false_claim": "Calls the Monthly Survey of Manufacturing survey 3701; it is survey 2101 (3701 is the Labour Force Survey).",
+    "referral": true
+  },
+  "statcan2-1105/R-05#2": {
+    "false_claim": "Calls the Monthly Survey of Manufacturing survey 3701; it is survey 2101 (3701 is the Labour Force Survey).",
+    "referral": true
+  },
+  "arose26-1105/R-05#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/R-05#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-05#0": {
+    "referral": true
+  },
+  "no_tools-1105/R-05#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-05#1": {
+    "referral": true
+  },
+  "arose26-1105/R-05#2": {
+    "referral": true
+  },
+  "no_tools-1105/R-05#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/R-05#0": {
+    "referral": true
+  },
+  "arose26-1105/R-05#1": {
+    "referral": true
+  },
+  "opencanada-1105/R-05#1": {
+    "referral": true
+  },
+  "opencanada-1105/R-05#0": {
+    "referral": true
+  },
+  "statcan2-1105/R-05#1": {
+    "referral": true
+  },
+  "statcan2-1105/R-05#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-05#2": {
+    "referral": true
+  },
+  "no_tools-1105/R-05#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-05#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-05#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/R-05#1": {
+    "referral": true
+  },
+  "maplestats-1105/R-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Gave the 2025 accounts' date (2026-11-05), labelled as reference period 2025, and did not say that no date is set for the 2026 accounts."
+  },
+  "maplestats-1105/R-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Gave the 2025 accounts' date (2026-11-05), labelled as reference period 2025, and did not say that no date is set for the 2026 accounts."
+  },
+  "opencanada-1105/R-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; gave the 2025 accounts' 2026-11-05 release as context and did not say no date is set for the 2026 accounts."
+  },
+  "candata_mcp-1105/R-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; gave the 2025 accounts' 2026-11-05 release as context and did not say no date is set for the 2026 accounts."
+  },
+  "canada_data_agent-1105/R-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; gave only the usual timing and did not say no date is set for the 2026 accounts.",
+    "referral": true
+  },
+  "no_tools-1105/R-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; gave only the usual timing and did not say no date is set for the 2026 accounts.",
+    "referral": true
+  },
+  "no_tools-1105/R-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; gave only the usual timing and did not say no date is set for the 2026 accounts.",
+    "referral": true
+  },
+  "arose26-1105/R-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; gave only the usual timing and did not say no date is set for the 2026 accounts.",
+    "referral": true
+  },
+  "arose26-1105/R-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; gave only the usual timing and did not say no date is set for the 2026 accounts.",
+    "referral": true
+  },
+  "mcp_canada-1105/R-06#2": {
+    "referral": true
+  },
+  "arose26-1105/R-06#1": {
+    "referral": true
+  },
+  "no_tools-1105/R-06#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-06#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-06#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-06#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-06#1": {
+    "referral": true
+  },
+  "opencanada-1105/R-06#0": {
+    "referral": true
+  },
+  "opencanada-1105/R-06#1": {
+    "referral": true
+  },
+  "statcan2-1105/R-06#0": {
+    "referral": true
+  },
+  "statcan2-1105/R-06#2": {
+    "referral": true
+  },
+  "statcan2-1105/R-06#1": {
+    "referral": true
+  },
+  "arose26-1105/R-07#0": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-to-late October) and pointed to The Daily; the grader matched another date in the text.",
+    "referral": true
+  },
+  "opencanada-1105/R-07#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-to-late October) and pointed to The Daily; the grader matched another date in the text.",
+    "referral": true
+  },
+  "statcan2-1105/R-07#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-to-late October) and pointed to The Daily; the grader matched another date in the text.",
+    "referral": true
+  },
+  "no_tools-1105/R-07#1": {
+    "referral": true
+  },
+  "no_tools-1105/R-07#2": {
+    "referral": true
+  },
+  "arose26-1105/R-07#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-07#2": {
+    "referral": true
+  },
+  "no_tools-1105/R-07#0": {
+    "referral": true
+  },
+  "opencanada-1105/R-07#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-07#0": {
+    "referral": true
+  },
+  "statcan2-1105/R-07#0": {
+    "referral": true
+  },
+  "arose26-1105/R-07#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-07#1": {
+    "referral": true
+  },
+  "opencanada-1105/R-07#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/R-08#2": {
+    "outcome": "abstained",
+    "reason": "Review: No exact date: gave a range (the week of November 12 to 18) inferred from the usual timing."
+  },
+  "mcp_canada-1105/R-08#2": {
+    "outcome": "abstained",
+    "reason": "Review: No exact date: gave a range (12 to 16 November) inferred from the usual timing."
+  },
+  "mcp_statcan-1105/R-08#0": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text."
+  },
+  "statcan2-1105/R-08#1": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text.",
+    "referral": true
+  },
+  "candata_mcp-1105/R-08#0": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text."
+  },
+  "opencanada-1105/R-08#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text."
+  },
+  "statcan2-1105/R-08#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text.",
+    "referral": true
+  },
+  "mcp_statcan-1105/R-08#2": {
+    "outcome": "abstained",
+    "reason": "Review: No date: gave only the usual timing (mid-November) and pointed to the release schedule; the grader matched another date in the text."
+  },
+  "statcan2-1105/R-08#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-08#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/R-08#0": {
+    "referral": true
+  },
+  "opencanada-1105/R-08#1": {
+    "referral": true
+  },
+  "arose26-1105/R-08#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/R-08#1": {
+    "referral": true
+  },
+  "opencanada-1105/R-08#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-08#1": {
+    "referral": true
+  },
+  "no_tools-1105/R-08#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-08#2": {
+    "referral": true
+  },
+  "arose26-1105/R-08#0": {
+    "referral": true
+  },
+  "arose26-1105/R-08#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/R-08#0": {
+    "referral": true
+  },
+  "arose26-1105/C-01#0": {
+    "outcome": "partial",
+    "reason": "Review: Opens by naming Quebec higher, then corrects itself to Ontario higher (60.1% vs 59.9%); right figures, but the answer contradicts itself."
+  },
+  "opencanada-1105/C-01#2": {
+    "outcome": "partial",
+    "reason": "Review: Opens by naming Quebec higher, then corrects itself to Ontario higher (60.1% vs 59.9%); right figures, but the answer contradicts itself."
+  },
+  "mcp_canada-1105/C-01#1": {
+    "outcome": "partial",
+    "reason": "Review: Opens by naming Quebec higher, then corrects itself to Ontario higher (60.1% vs 59.9%); right figures, but the answer contradicts itself."
+  },
+  "arose26-1105/C-01#1": {
+    "outcome": "partial",
+    "reason": "Review: Opens by naming Quebec higher, then corrects itself to Ontario higher (60.1% vs 59.9%); right figures, but the answer contradicts itself."
+  },
+  "statcan2-1105/C-01#0": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026; gave August, labelled, and declined September."
+  },
+  "statcan2-1105/C-01#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026; gave August, labelled, and declined September."
+  },
+  "statcan2-1105/C-01#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026; gave August, labelled, and declined September."
+  },
+  "statcan2-1105/C-02#0": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave September 2025 (14.6%) and August 2026 (12.9%, labelled), declined September 2026."
+  },
+  "statcan2-1105/C-02#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave September 2025 (14.6%) and August 2026 (12.9%, labelled), declined September 2026."
+  },
+  "statcan2-1105/C-02#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave September 2025 (14.6%) and August 2026 (12.9%, labelled), declined September 2026."
+  },
+  "mcp_canada-1105/C-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: the data calls failed and it declined to estimate."
+  },
+  "statcan2-1105/C-05#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in July 2026: gave July, labelled, and declined August."
+  },
+  "statcan2-1105/C-05#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in July 2026: gave July, labelled, and declined August."
+  },
+  "statcan2-1105/C-05#0": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in July 2026: gave July, labelled, and declined August."
+  },
+  "canada_data_agent-1105/C-05#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: the data calls failed and it declined to estimate."
+  },
+  "no_tools-1105/C-05#0": {
+    "false_claim": "Describes table 14-10-0371-01 as seasonally adjusted; it is the unadjusted monthly table (the adjusted one is 14-10-0432-01).",
+    "referral": true
+  },
+  "no_tools-1105/C-05#1": {
+    "false_claim": "Describes table 14-10-0371-01 as seasonally adjusted; it is the unadjusted monthly table (the adjusted one is 14-10-0432-01).",
+    "referral": true
+  },
+  "no_tools-1105/C-05#2": {
+    "false_claim": "Describes table 14-10-0371-01 as seasonally adjusted; it is the unadjusted monthly table (the adjusted one is 14-10-0432-01).",
+    "referral": true
+  },
+  "statcan2-1105/C-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave the 12 months to August (3.0%), labelled, and declined September."
+  },
+  "statcan2-1105/C-06#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave the 12 months to August (3.0%), labelled, and declined September."
+  },
+  "statcan2-1105/C-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends in August 2026: gave the 12 months to August (3.0%), labelled, and declined September."
+  },
+  "no_tools-1105/C-06#2": {
+    "false_claim": "Says table 18-10-0006-01 publishes the 12-month percent change of the all-items CPI directly; 18-10-0006-01 is the seasonally adjusted CPI table, while the official 12-month change is from the unadjusted table 18-10-0004-01.",
+    "referral": true
+  },
+  "no_tools-1105/C-09#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-09#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-09#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/C-10#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure (the data service returned errors); declined and pointed to the StatCan table and Bank of Canada pages."
+  },
+  "no_tools-1105/C-10#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-10#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-10#2": {
+    "referral": true
+  },
+  "statcan2-1105/C-11#0": {
+    "false_claim": "Presents the 0.8% quarter-over-quarter change as the annualized rate; annualized growth was 3.3%."
+  },
+  "statcan2-1105/C-11#1": {
+    "false_claim": "Presents the 0.8% quarter-over-quarter change as the annualized rate; annualized growth was 3.3%."
+  },
+  "no_tools-1105/C-11#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-11#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-12#1": {
+    "false_claim": "Points to table 20-10-0008-01 for August 2026 retail sales; that table is discontinued (its series end in December 2022) and was replaced by 20-10-0056-01.",
+    "referral": true
+  },
+  "no_tools-1105/C-12#2": {
+    "false_claim": "Points to table 20-10-0008-01 for August 2026 retail sales; that table is discontinued (its series end in December 2022) and was replaced by 20-10-0056-01.",
+    "referral": true
+  },
+  "no_tools-1105/C-12#0": {
+    "false_claim": "Points to table 20-10-0008-01 for August 2026 retail sales; that table is discontinued (its series end in December 2022) and was replaced by 20-10-0056-01.",
+    "referral": true
+  },
+  "opencanada-1105/C-13#0": {
+    "outcome": "partial",
+    "reason": "Review: Gave real sales in 2017 dollars ($54,075 million, +0.03%), clearly labelled as real, not the current-dollar headline."
+  },
+  "opencanada-1105/C-13#1": {
+    "outcome": "partial",
+    "reason": "Review: Gave real sales in 2017 dollars ($54,075 million, +0.03%), clearly labelled as real, not the current-dollar headline."
+  },
+  "opencanada-1105/C-13#2": {
+    "outcome": "partial",
+    "reason": "Review: Gave real sales in 2017 dollars ($54,075 million, +0.03%), clearly labelled as real, not the current-dollar headline."
+  },
+  "no_tools-1105/C-13#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-13#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-13#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/C-14#0": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "arose26-1105/C-14#2": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "canada_data_agent-1105/C-14#0": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "arose26-1105/C-14#0": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "mcp_canada-1105/C-14#2": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "mcp_canada-1105/C-14#0": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "candata_mcp-1105/C-14#2": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "mcp_statcan-1105/C-14#1": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "canada_data_agent-1105/C-14#1": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million)."
+  },
+  "candata_mcp-1105/C-14#1": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million).",
+    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+  },
+  "arose26-1105/C-14#1": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million).",
+    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+  },
+  "candata_mcp-1105/C-14#0": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million).",
+    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+  },
+  "canada_data_agent-1105/C-14#2": {
+    "outcome": "partial",
+    "reason": "Review: Customs basis only ($54,291.4 million SA; $52,021.9 million unadjusted), labelled; the headline is the balance-of-payments basis ($54,771.6 million).",
+    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+  },
+  "mcp_statcan-1105/C-14#2": {
+    "false_claim": "Calls the seasonally adjusted customs-basis figure the headline measure; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+  },
+  "opencanada-1105/C-14#0": {
+    "false_claim": "Says StatCan's headline figure is usually the seasonally adjusted, customs-basis value; Statistics Canada's monthly trade release is on a balance-of-payments basis."
+  },
+  "no_tools-1105/C-14#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-14#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-14#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-15#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-15#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-16#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-16#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-16#0": {
+    "referral": true
+  },
+  "opencanada-1105/C-18#2": {
+    "outcome": "abstained",
+    "reason": "Review: Listed nine unlabelled rows and declined to say which is study permit only."
+  },
+  "canada_data_agent-1105/C-19#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: Saw 2.50% but called 2.25% the most likely answer; the target was 2.50% on October 30."
+  },
+  "mcp_statcan-1105/C-19#2": {
+    "outcome": "hallucinated",
+    "reason": "Review: Derived 2.25% from the Bank Rate at October 28; the target rose to 2.50% on October 29."
+  },
+  "statcan2-1105/C-19#2": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends on September 25: gave 2.25% (inferred from the Bank Rate) labelled as September and declined October 30."
+  },
+  "statcan2-1105/C-19#1": {
+    "outcome": "abstained",
+    "reason": "Review: Its data copy ends on September 25: gave 2.25% labelled as September and declined October 30."
+  },
+  "statcan2-1105/C-19#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/C-19#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure given: the data service returned an error and the answer declined."
+  },
+  "no_tools-1105/C-19#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined without data access; no figure given.",
+    "referral": true
+  },
+  "opencanada-1105/C-19#0": {
+    "false_claim": "Reads series V80691310 (the Bank Rate) as the overnight target, and so says the target was 2.50% on October 28 and 2.75% on November 4; the target was 2.25% until October 28 and 2.50% from October 29."
+  },
+  "opencanada-1105/C-19#1": {
+    "false_claim": "Reads series V80691310 (the Bank Rate) as the overnight target, and so says the target was 2.50% on October 28 and 2.75% on November 4; the target was 2.25% until October 28 and 2.50% from October 29."
+  },
+  "opencanada-1105/C-19#2": {
+    "false_claim": "Reads series V80691310 (the Bank Rate) as the overnight target, and so says the target was 2.50% on October 28 and 2.75% on November 4; the target was 2.25% until October 28 and 2.50% from October 29."
+  },
+  "candata_mcp-1105/C-20#2": {
+    "outcome": "abstained",
+    "reason": "Review: Gave a monthly October value, labelled as not the October 30 yield, and declined."
+  },
+  "canada_data_agent-1105/C-21#2": {
+    "false_claim": "Says the BCPI is published by the Bank of Canada and out of reach of its Statistics Canada tools; StatCan republishes it in 10-10-0132-01.",
+    "referral": true
+  },
+  "canada_data_agent-1105/C-21#0": {
+    "false_claim": "Says the BCPI is published by the Bank of Canada, not Statistics Canada; StatCan republishes it in 10-10-0132-01.",
+    "referral": true
+  },
+  "canada_data_agent-1105/C-21#1": {
+    "false_claim": "Says it has no Statistics Canada table for the BCPI and gives its base as 2022=100; StatCan republishes it in 10-10-0132-01, base 1972=100.",
+    "referral": true
+  },
+  "mcp_statcan-1105/C-21#2": {
+    "false_claim": "Says the BCPI isn't published by Statistics Canada and that table 10-10-0132-01 is a different index; it is the Bank of Canada's BCPI (Fisher index, US dollars, 1972=100) as republished by Statistics Canada.",
+    "referral": true
+  },
+  "statcan2-1105/C-21#1": {
+    "false_claim": "Says the tables it can search don't include the BCPI and that table 10-10-0132-01 is a different index; it is the Bank of Canada's BCPI (Fisher index, US dollars, 1972=100) as republished by Statistics Canada.",
+    "referral": true
+  },
+  "mcp_statcan-1105/C-23#1": {
+    "false_claim": "Calls the Q1 and Q2 2026 changes (0.1%, 0.8%) seasonally adjusted annual rates; they are quarter-over-quarter changes (Q2 annualized was 3.3%)."
+  },
+  "mcp_canada-1105/C-24#1": {
+    "false_claim": "Cites vector v52300157 as table 34-10-0156-01 covering centres of 10,000 and over; the series is in table 34-10-0158-01 and covers all areas of Canada."
+  },
+  "mcp_statcan-1105/X-01#2": {
+    "referral": true
+  },
+  "arose26-1105/X-01#2": {
+    "false_claim": "Calls the Toronto City station (climate ID 6158355) 'Toronto City Centre'; Toronto City Centre is the separate island-airport station (6158359).",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-01#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-01#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-01#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-01#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-01#0": {
+    "false_claim": "Says the 'Toronto City' station is Toronto City Centre; Toronto City (6158355, downtown) and Toronto City Centre (6158359, island airport) are different stations.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-01#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-01#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-01#0": {
+    "referral": true
+  },
+  "arose26-1105/X-01#0": {
+    "referral": true
+  },
+  "arose26-1105/X-01#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-01#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-01#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-01#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-02#2": {
+    "referral": true
+  },
+  "arose26-1105/X-02#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-02#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-02#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-02#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-02#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-02#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-02#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-02#0": {
+    "false_claim": "Gives Ottawa CDA's climate ID as 6105978; that is Ottawa CDA RCS, and Ottawa CDA is 6105976.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-02#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-02#1": {
+    "referral": true
+  },
+  "arose26-1105/X-02#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-02#2": {
+    "referral": true
+  },
+  "arose26-1105/X-02#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-02#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-02#1": {
+    "false_claim": "Gives Ottawa CDA's climate ID as 6158731; that is Toronto Intl A, and Ottawa CDA is 6105976 (the 36.0/22.7 °C figures are Toronto's)."
+  },
+  "candata_mcp-1105/X-02#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figures (tool connection failed); referred to ECCC."
+  },
+  "maplestats-1105/X-02#0": {
+    "outcome": "partial",
+    "reason": "Review: Gave the co-located automated station Ottawa CDA RCS (6105978: 35.1/20.8 °C), named as such; Ottawa CDA (6105976) recorded 36.0/21.0 °C."
+  },
+  "candata_mcp-1105/X-03#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-03#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-03#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-03#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-03#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-03#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-03#1": {
+    "referral": true
+  },
+  "arose26-1105/X-03#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-03#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-03#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-03#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-03#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-03#0": {
+    "referral": true
+  },
+  "arose26-1105/X-03#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-03#2": {
+    "referral": true
+  },
+  "arose26-1105/X-03#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-03#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure (tool connection failed); referred to the Water Survey of Canada."
+  },
+  "no_tools-1105/X-04#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-04#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "arose26-1105/X-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "statcan2-1105/X-04#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "arose26-1105/X-04#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-04#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "statcan2-1105/X-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "statcan2-1105/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "no_tools-1105/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "arose26-1105/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "no_tools-1105/X-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag; referred to ECCC.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-04#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag (catalogue search failed); referred to ECCC."
+  },
+  "candata_mcp-1105/X-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag (catalogue search failed); referred to ECCC."
+  },
+  "mcp_canada-1105/X-04#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC."
+  },
+  "mcp_canada-1105/X-04#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC."
+  },
+  "mcp_canada-1105/X-04#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure and no flag (found null daily values but not the closure); referred to ECCC."
+  },
+  "opencanada-1105/X-04#1": {
+    "outcome": "partial",
+    "reason": "Review: Flagged that 6158733's record ended in 2013, without the successor station's July 2024 figure (215.4 mm)."
+  },
+  "opencanada-1105/X-04#2": {
+    "outcome": "partial",
+    "reason": "Review: Flagged that 6158733's record ended in 2013, without the successor station's July 2024 figure (215.4 mm)."
+  },
+  "arose26-1105/X-05#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-05#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-05#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-05#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-05#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-05#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-05#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-05#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-05#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-05#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-05#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-05#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-05#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-05#2": {
+    "referral": true
+  },
+  "arose26-1105/X-05#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-05#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-05#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-05#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-05#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-05#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-05#2": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about US$53,000 from memory (flagged as unconfirmed); the World Bank figure is US$54,848."
+  },
+  "arose26-1105/X-05#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about US$53,000 from memory (flagged as unconfirmed); the World Bank figure is US$54,848."
+  },
+  "statcan2-1105/X-05#2": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about US$53,000 from memory (flagged as unconfirmed); the World Bank figure is US$54,848."
+  },
+  "statcan2-1105/X-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-06#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "statcan2-1105/X-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "opencanada-1105/X-06#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the World Bank figure and gave Statistics Canada's July 1, 2023 estimate (40,022,704), labelled as a different source.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-06#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-06#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-06#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-06#1": {
+    "referral": true
+  },
+  "arose26-1105/X-06#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-06#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-06#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-06#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-06#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-06#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-06#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-06#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-06#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-06#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-06#0": {
+    "referral": true
+  },
+  "arose26-1105/X-06#1": {
+    "referral": true
+  },
+  "arose26-1105/X-06#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-06#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-06#2": {
+    "referral": true
+  },
+  "arose26-1105/X-07#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-07#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-07#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-07#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-07#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-07#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-07#2": {
+    "referral": true
+  },
+  "arose26-1105/X-07#1": {
+    "referral": true
+  },
+  "arose26-1105/X-07#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-07#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-07#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-07#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-07#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-07#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-07#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-07#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-07#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-07#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-07#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-07#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-07#1": {
+    "false_claim": "Says EN.GHG.CO2.MT.CE.AR5 is 'Total greenhouse gas emissions excluding LULUCF'; that code is the CO2-only series (total GHG is EN.GHG.ALL.MT.CE.AR5).",
+    "referral": true
+  },
+  "no_tools-1105/X-07#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-07#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-07#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-08#0": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
+  },
+  "mcp_canada-1105/X-08#2": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
+  },
+  "no_tools-1105/X-08#1": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
+  },
+  "opencanada-1105/X-08#0": {
+    "outcome": "abstained",
+    "reason": "Review: Could not check the World Bank; declined and only suggested a 2025 value may not be published yet.",
+    "referral": true
+  },
+  "no_tools-1105/X-08#2": {
+    "referral": true
+  },
+  "arose26-1105/X-08#0": {
+    "referral": true
+  },
+  "arose26-1105/X-08#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-08#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-08#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-08#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-08#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-08#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-08#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-08#1": {
+    "referral": true
+  },
+  "arose26-1105/X-08#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-08#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-08#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-08#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-08#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-08#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-08#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-08#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-09#0": {
+    "false_claim": "Presents series V80691310 (the Bank Rate, 25 bp above the target) as the target for the overnight rate."
+  },
+  "opencanada-1105/X-09#1": {
+    "false_claim": "Presents series V80691310 (the Bank Rate, 25 bp above the target) as the target for the overnight rate."
+  },
+  "opencanada-1105/X-09#2": {
+    "false_claim": "Presents series V80691310 (the Bank Rate, 25 bp above the target) as the target for the overnight rate."
+  },
+  "canada_data_agent-1105/X-09#2": {
+    "false_claim": "Says the Bank Rate was 4.95% on July 15 and 4.70% at the end of July 2024; the Bank Rate is 25 bp above the target, so it was 5.00% and 4.75%."
+  },
+  "canada_data_agent-1105/X-09#1": {
+    "false_claim": "Says the Bank Rate was 4.95% on July 15 and 4.70% at the end of July 2024; the Bank Rate is 25 bp above the target, so it was 5.00% and 4.75%."
+  },
+  "mcp_statcan-1105/X-09#0": {
+    "false_claim": "Says V39079 is the overnight money market financing rate, not the policy target; V39079 is the target for the overnight rate."
+  },
+  "candata_mcp-1105/X-09#1": {
+    "false_claim": "Says V39079 shows 4.50% from July 24, 2024; the series shows 4.75% on July 24 and 4.50% from July 25."
+  },
+  "mcp_canada-1105/X-10#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-10#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-10#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-10#0": {
+    "referral": true
+  },
+  "arose26-1105/X-10#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-10#1": {
+    "referral": true
+  },
+  "arose26-1105/X-10#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-10#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-10#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-10#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-10#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-10#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-10#1": {
+    "referral": true
+  },
+  "arose26-1105/X-10#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-10#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-10#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-10#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-10#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-10#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-10#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-10#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-10#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-11#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the BIS figure and gave Statistics Canada's own ratio (14.67%), labelled as a different measure; the question asks for the BIS series.",
+    "referral": true
+  },
+  "statcan2-1105/X-11#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the BIS figure and gave Statistics Canada's own ratio (14.67%), labelled as a different measure; the question asks for the BIS series.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-11#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined the BIS figure and gave Statistics Canada's own ratio (14.67%), labelled as a different measure; the question asks for the BIS series.",
+    "referral": true
+  },
+  "no_tools-1105/X-11#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-11#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-11#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-11#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-11#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-11#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-11#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-11#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-11#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-11#0": {
+    "referral": true
+  },
+  "arose26-1105/X-11#2": {
+    "referral": true
+  },
+  "arose26-1105/X-11#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-11#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-11#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-11#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-11#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-11#1": {
+    "referral": true
+  },
+  "arose26-1105/X-11#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-11#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-11#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-11#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-12#1": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "mcp_canada-1105/X-12#0": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-12#0": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "mcp_canada-1105/X-12#2": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-12#1": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "statcan2-1105/X-12#2": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "arose26-1105/X-12#2": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "false_claim": "Says the Federal Reserve's household debt service ratio adds rent, auto leases and property taxes; those are in the Fed's financial obligations ratio, not the DSR.",
+    "referral": true
+  },
+  "arose26-1105/X-12#1": {
+    "outcome": "abstained",
+    "reason": "Review: Gave Canada's StatCan ratio (14.68%) only and declined the comparison.",
+    "referral": true
+  },
+  "mcp_canada-1105/X-12#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-12#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-12#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-12#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-12#0": {
+    "referral": true
+  },
+  "arose26-1105/X-12#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-12#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-12#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-12#0": {
+    "false_claim": "Says the Federal Reserve's household debt service ratio includes rent and auto lease payments; those are in the Fed's financial obligations ratio, not the DSR.",
+    "referral": true
+  },
+  "statcan2-1105/X-12#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-12#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-12#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-12#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-12#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-12#1": {
+    "false_claim": "Says the Federal Reserve's household debt service ratio includes some rent, auto lease and homeowners' insurance payments; those are in the Fed's financial obligations ratio, not the DSR.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-12#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-13#0": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (empty lookup or timeouts); referred to the DPD."
+  },
+  "opencanada-1105/X-13#1": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (empty lookup or timeouts); referred to the DPD."
+  },
+  "opencanada-1105/X-13#2": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (empty lookup or timeouts); referred to the DPD."
+  },
+  "no_tools-1105/X-13#0": {
+    "outcome": "abstained",
+    "reason": "Review: No answer; declined and referred to the DPD.",
+    "referral": true
+  },
+  "statcan2-1105/X-13#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-13#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-13#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-13#0": {
+    "referral": true
+  },
+  "arose26-1105/X-13#1": {
+    "referral": true
+  },
+  "arose26-1105/X-13#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-13#2": {
+    "referral": true
+  },
+  "arose26-1105/X-13#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-13#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-13#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-13#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-13#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-13#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-13#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-13#2": {
+    "referral": true
+  },
+  "arose26-1105/X-14#1": {
+    "referral": true
+  },
+  "arose26-1105/X-14#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-14#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-14#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-14#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-14#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-14#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-14#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-14#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-14#1": {
+    "referral": true
+  },
+  "arose26-1105/X-14#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-14#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-14#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-14#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-14#0": {
+    "false_claim": "Says the Drug Product Database returned no record for DIN 02242705; the DPD lists it as AROMASIN (exemestane 25 mg).",
+    "referral": true
+  },
+  "candata_mcp-1105/X-14#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-14#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-14#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-14#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-14#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses."
+  },
+  "no_tools-1105/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses."
+  },
+  "candata_mcp-1105/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses."
+  },
+  "no_tools-1105/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "arose26-1105/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "arose26-1105/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "statcan2-1105/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "arose26-1105/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "statcan2-1105/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; Dormant appears only in a list of possible statuses.",
+    "referral": true
+  },
+  "statcan2-1105/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; referred to the DPD.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; referred to the DPD.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; referred to the DPD.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined to give a status; referred to the DPD.",
+    "referral": true
+  },
+  "opencanada-1105/X-15#2": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (status lookup failed); referred to the DPD."
+  },
+  "opencanada-1105/X-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (status lookup failed); referred to the DPD."
+  },
+  "opencanada-1105/X-15#0": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (status lookup failed); referred to the DPD."
+  },
+  "arose26-1105/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "no_tools-1105/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "statcan2-1105/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "arose26-1105/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "statcan2-1105/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "statcan2-1105/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "no_tools-1105/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "no_tools-1105/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "arose26-1105/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-16#2": {
+    "outcome": "abstained",
+    "reason": "Review: Declined; cancelled appears only as a possibility, not as the checked status.",
+    "referral": true
+  },
+  "candata_mcp-1105/X-16#0": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (lookups failed); referred to the DPD."
+  },
+  "candata_mcp-1105/X-16#1": {
+    "outcome": "abstained",
+    "reason": "Review: No answer (lookups failed); referred to the DPD."
+  },
+  "opencanada-1105/X-16#2": {
+    "outcome": "partial",
+    "reason": "Review: Named the company on file (Sanofi Consumer Health) but could not confirm the status; the DIN is Cancelled Post Market."
+  },
+  "opencanada-1105/X-16#1": {
+    "outcome": "partial",
+    "reason": "Review: Named the company on file (Sanofi Consumer Health) but could not confirm the status; the DIN is Cancelled Post Market."
+  },
+  "opencanada-1105/X-16#0": {
+    "outcome": "partial",
+    "reason": "Review: Named the company on file (Sanofi Consumer Health) but could not confirm the status; the DIN is Cancelled Post Market."
+  },
+  "mcp_statcan-1105/X-17#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-17#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-17#1": {
+    "referral": true
+  },
+  "arose26-1105/X-17#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-17#2": {
+    "referral": true
+  },
+  "arose26-1105/X-17#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-17#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-17#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-17#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figures; referred to IRCC.",
+    "referral": true
+  },
+  "opencanada-1105/X-17#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-17#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-17#2": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-17#2": {
+    "referral": true
+  },
+  "arose26-1105/X-17#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-17#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-17#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-17#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-17#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-17#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-17#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-17#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-17#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-17#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figures (catalogue search failed); referred to IRCC."
+  },
+  "statcan2-1105/X-18#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-18#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-18#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-18#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-18#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-18#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-18#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-18#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-18#0": {
+    "referral": true
+  },
+  "arose26-1105/X-18#1": {
+    "referral": true
+  },
+  "arose26-1105/X-18#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-18#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-18#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-18#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-18#1": {
+    "referral": true
+  },
+  "arose26-1105/X-18#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-18#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-18#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-18#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-18#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-18#2": {
+    "referral": true
+  },
+  "statcan2-1105/X-18#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-18#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-19#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-19#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-19#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-19#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-19#2": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-19#0": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-19#2": {
+    "referral": true
+  },
+  "arose26-1105/X-19#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-19#1": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-19#2": {
+    "referral": true
+  },
+  "arose26-1105/X-19#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-19#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-19#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-19#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-19#0": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-19#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-19#0": {
+    "referral": true
+  },
+  "arose26-1105/X-19#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-19#0": {
+    "referral": true
+  },
+  "statcan2-1105/X-19#1": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-20#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-20#1": {
+    "outcome": "abstained",
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
+  },
+  "arose26-1105/X-20#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-20#0": {
+    "outcome": "abstained",
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
+  },
+  "mcp_statcan-1105/X-20#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-20#2": {
+    "referral": true
+  },
+  "arose26-1105/X-20#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-20#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-20#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-20#1": {
+    "referral": true
+  },
+  "mcp_statcan-1105/X-20#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-20#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-20#0": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-20#0": {
+    "referral": true
+  },
+  "opencanada-1105/X-20#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-20#2": {
+    "outcome": "abstained",
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
+  },
+  "canada_data_agent-1105/X-20#2": {
+    "referral": true
+  },
+  "opencanada-1105/X-20#2": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-20#2": {
+    "outcome": "abstained",
+    "reason": "Review: No cut-off; did not say the round has not been held; referred to IRCC.",
+    "referral": true
+  },
+  "arose26-1105/X-20#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-20#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-20#1": {
+    "referral": true
+  },
+  "statcan2-1105/X-20#1": {
+    "referral": true
+  },
+  "candata_mcp-1105/X-21#2": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: abstained."
+  },
+  "canada_data_agent-1105/X-21#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: abstained."
+  },
+  "no_tools-1105/X-21#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: abstained.",
+    "referral": true
+  },
+  "no_tools-1105/X-21#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-21#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-22#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about $98,000 from memory (flagged as unverified); the Census figure is $100,000."
+  },
+  "mcp_canada-1105/X-22#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-22#0": {
+    "referral": true
+  },
+  "no_tools-1105/X-22#2": {
+    "referral": true
+  },
+  "canada_data_agent-1105/X-23#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about 47% from memory (flagged as unverified); the census share is 48.1%."
+  },
+  "opencanada-1105/X-23#2": {
+    "outcome": "hallucinated",
+    "reason": "Review: Gave about 47% from memory (flagged as unverified); the census share is 48.1%."
+  },
+  "candata_mcp-1105/X-23#1": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: abstained."
+  },
+  "opencanada-1105/X-23#0": {
+    "outcome": "abstained",
+    "reason": "Review: No figure: abstained."
+  },
+  "no_tools-1105/X-23#0": {
+    "referral": true
+  },
+  "mcp_canada-1105/X-23#1": {
+    "referral": true
+  },
+  "no_tools-1105/X-23#2": {
+    "referral": true
+  },
+  "no_tools-1105/X-23#1": {
+    "referral": true
+  },
+  "opencanada-1105/X-24#1": {
+    "outcome": "correct",
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
+  },
+  "mcp_canada-1105/X-24#2": {
+    "outcome": "correct",
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
+  },
+  "candata_mcp-1105/X-24#0": {
+    "outcome": "correct",
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
+  },
+  "mcp_canada-1105/X-24#1": {
+    "outcome": "correct",
+    "reason": "Review: Flagged that 2026 counts are not out and gave the 2021 count rounded to about 1.42 million, labelled 2021."
+  },
+  "no_tools-1105/C-21#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-18#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-02#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-02#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-24#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-06#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-07#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-21#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-06#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-04#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-18#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-21#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-08#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-03#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-03#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-04#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-20#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-19#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-07#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-17#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-08#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-01#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-24#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-17#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-18#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-02#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-01#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-03#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-20#1": {
+    "referral": true
+  },
+  "no_tools-1105/C-08#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-19#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-24#0": {
+    "referral": true
+  },
+  "no_tools-1105/C-04#2": {
+    "referral": true
+  },
+  "no_tools-1105/C-01#0": {
+    "referral": true
+  },
+  "maplestats_after/C-14#0": {
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
+  },
+  "maplestats_after/C-14#1": {
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
+  },
+  "maplestats_after/C-14#2": {
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
+  },
+  "mcp_canada/C-14#2": {
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
+  },
+  "opencanada/C-14#0": {
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
+  },
+  "opencanada/C-14#1": {
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
+  },
+  "opencanada/C-14#2": {
+    "outcome": "correct",
+    "reason": "Review: $54,346.5 million (balance-of-payments basis) is August 2026 as published before StatCan revised it on 2026-11-04 (now $54,771.6 million); the answer was given on 2026-11-03, before the revision."
   }
 }
