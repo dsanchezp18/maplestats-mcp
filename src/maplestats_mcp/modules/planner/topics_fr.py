@@ -157,6 +157,13 @@ FR: dict[str, str] = {
         "PIB, inflation IPCH, chômage, dette, prix des logements), avec la série canadienne "
         "à mettre en regard"
     ),
+    "Canada beside G7 or other countries on an ILOSTAT labour indicator "
+    "(unemployment, youth unemployment, participation, employment rate, hours "
+    "worked, earnings and minimum wage in PPP dollars, labour income share)": (
+        "le Canada à côté du G7 ou d'autres pays pour un indicateur du travail d'ILOSTAT "
+        "(chômage, chômage des jeunes, taux d'activité, taux d'emploi, heures travaillées, "
+        "gains et salaire minimum en dollars PPA, part du revenu du travail)"
+    ),
     "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
     "service ratio, credit, house prices, inflation, exchange rate)": (
         "le Canada à côté du G7 ou d'autres économies pour un indicateur de la BRI (taux "

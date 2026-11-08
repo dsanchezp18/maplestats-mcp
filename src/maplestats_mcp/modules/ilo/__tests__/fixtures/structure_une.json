@@ -1,0 +1,2584 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "DF_UNE_DEAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Unemployment rate by sex and age",
+    "names": {
+     "en": "Unemployment rate by sex and age"
+    },
+    "description": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>.",
+    "descriptions": {
+     "en": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>."
+    },
+    "annotations": [
+     {
+      "title": "01/11/2026 07:13:16",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "366500",
+      "type": "ORDER"
+     },
+     {
+      "title": "633500",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:UNE_DEAP_SEX_AGE_RT(1.0)"
+   }
+  ],
+  "conceptSchemes": [
+   {
+    "id": "CS_CLASSIF_TYPE",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Classification types",
+    "names": {
+     "en": "Classification types"
+    },
+    "isPartial": true,
+    "concepts": [
+     {
+      "id": "SEX",
+      "name": "Sex",
+      "names": {
+       "en": "Sex"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_SEX(1.0)"
+      }
+     },
+     {
+      "id": "AGE",
+      "name": "Age",
+      "names": {
+       "en": "Age"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_AGE(1.0)"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_ILOSTAT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "ILOSTAT Concepts",
+    "names": {
+     "en": "ILOSTAT Concepts"
+    },
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "REF_AREA",
+      "name": "Reference area",
+      "names": {
+       "en": "Reference area"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_AREA(1.0)"
+      }
+     },
+     {
+      "id": "FREQ",
+      "name": "Frequency",
+      "names": {
+       "en": "Frequency"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_FREQ(1.0)"
+      }
+     },
+     {
+      "id": "OBS_VALUE",
+      "name": "Observation value",
+      "names": {
+       "en": "Observation value"
+      }
+     },
+     {
+      "id": "TIME_PERIOD",
+      "name": "Time period",
+      "names": {
+       "en": "Time period"
+      }
+     },
+     {
+      "id": "DECIMALS",
+      "name": "Decimals",
+      "names": {
+       "en": "Decimals"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_DECIMALS(1.0)"
+      }
+     },
+     {
+      "id": "OBS_STATUS",
+      "name": "Observation status",
+      "names": {
+       "en": "Observation status"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_OBS_STATUS(1.0)"
+      }
+     },
+     {
+      "id": "UNIT_MEASURE_TYPE",
+      "name": "Unit of measure type",
+      "names": {
+       "en": "Unit of measure type"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_UNIT_MEASURE_TYPE(1.0)"
+      }
+     },
+     {
+      "id": "UNIT_MEASURE",
+      "name": "Unit of measure",
+      "names": {
+       "en": "Unit of measure"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_UNIT_MEASURE(1.0)"
+      }
+     },
+     {
+      "id": "UNIT_MULT",
+      "name": "Unit multiplier",
+      "names": {
+       "en": "Unit multiplier"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_UNIT_MULT(1.0)"
+      }
+     },
+     {
+      "id": "MEASURE",
+      "name": "Measure",
+      "names": {
+       "en": "Measure"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_MEASURE(1.0)"
+      }
+     },
+     {
+      "id": "UPPER_BOUND",
+      "name": "Upper bound of Observation Value",
+      "names": {
+       "en": "Upper bound of Observation Value"
+      }
+     },
+     {
+      "id": "LOWER_BOUND",
+      "name": "Lower bound of Observation Value",
+      "names": {
+       "en": "Lower bound of Observation Value"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_NOTE_TYPE",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Note Types",
+    "names": {
+     "en": "Note Types"
+    },
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "SOURCE",
+      "name": "Source",
+      "names": {
+       "en": "Source"
+      }
+     },
+     {
+      "id": "NOTE_SOURCE",
+      "name": "Source Notes",
+      "names": {
+       "en": "Source Notes"
+      }
+     },
+     {
+      "id": "NOTE_INDICATOR",
+      "name": "Indicator Notes",
+      "names": {
+       "en": "Indicator Notes"
+      }
+     },
+     {
+      "id": "NOTE_CLASSIF",
+      "name": "Classification Notes",
+      "names": {
+       "en": "Classification Notes"
+      }
+     }
+    ]
+   }
+  ],
+  "codelists": [
+   {
+    "id": "CL_AGE",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Classification: AGE",
+    "names": {
+     "en": "Classification: AGE"
+    },
+    "isPartial": true,
+    "codes": [
+     {
+      "id": "AGE_YTHADULT",
+      "name": "Youth and adults",
+      "names": {
+       "en": "Youth and adults"
+      },
+      "annotations": [
+       {
+        "title": "1021",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ]
+     },
+     {
+      "id": "AGE_AGGREGATE",
+      "name": "Aggregate age bands",
+      "names": {
+       "en": "Aggregate age bands"
+      },
+      "annotations": [
+       {
+        "title": "1023",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ]
+     },
+     {
+      "id": "AGE_10YRBANDS",
+      "name": "10-year age bands",
+      "names": {
+       "en": "10-year age bands"
+      },
+      "annotations": [
+       {
+        "title": "1024",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ]
+     },
+     {
+      "id": "AGE_5YRBANDS",
+      "name": "5-year age bands",
+      "names": {
+       "en": "5-year age bands"
+      },
+      "annotations": [
+       {
+        "title": "1025",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ]
+     },
+     {
+      "id": "AGE_YTHADULT_YGE15",
+      "name": "15+",
+      "names": {
+       "en": "15+"
+      },
+      "annotations": [
+       {
+        "title": "10090",
+        "type": "ORDER"
+       },
+       {
+        "title": "Y",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_YTHADULT"
+     },
+     {
+      "id": "AGE_YTHADULT_Y15-64",
+      "name": "15-64",
+      "names": {
+       "en": "15-64"
+      },
+      "annotations": [
+       {
+        "title": "10100",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_YTHADULT"
+     },
+     {
+      "id": "AGE_YTHADULT_Y15-24",
+      "name": "15-24",
+      "names": {
+       "en": "15-24"
+      },
+      "annotations": [
+       {
+        "title": "10110",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_YTHADULT"
+     },
+     {
+      "id": "AGE_YTHADULT_YGE25",
+      "name": "25+",
+      "names": {
+       "en": "25+"
+      },
+      "annotations": [
+       {
+        "title": "10120",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_YTHADULT"
+     },
+     {
+      "id": "AGE_AGGREGATE_YGE15",
+      "name": "15+",
+      "names": {
+       "en": "15+"
+      },
+      "annotations": [
+       {
+        "title": "10170",
+        "type": "ORDER"
+       },
+       {
+        "title": "Y",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_AGGREGATE"
+     },
+     {
+      "id": "AGE_AGGREGATE_Y15-24",
+      "name": "15-24",
+      "names": {
+       "en": "15-24"
+      },
+      "annotations": [
+       {
+        "title": "10190",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_AGGREGATE"
+     },
+     {
+      "id": "AGE_AGGREGATE_Y25-54",
+      "name": "25-54",
+      "names": {
+       "en": "25-54"
+      },
+      "annotations": [
+       {
+        "title": "10200",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_AGGREGATE"
+     },
+     {
+      "id": "AGE_AGGREGATE_Y55-64",
+      "name": "55-64",
+      "names": {
+       "en": "55-64"
+      },
+      "annotations": [
+       {
+        "title": "10220",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_AGGREGATE"
+     },
+     {
+      "id": "AGE_AGGREGATE_YGE65",
+      "name": "65+",
+      "names": {
+       "en": "65+"
+      },
+      "annotations": [
+       {
+        "title": "10230",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_AGGREGATE"
+     },
+     {
+      "id": "AGE_AGGREGATE_Y65-74",
+      "name": "65-74",
+      "names": {
+       "en": "65-74"
+      },
+      "annotations": [
+       {
+        "title": "10231",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_AGGREGATE"
+     },
+     {
+      "id": "AGE_AGGREGATE_YGE75",
+      "name": "75+",
+      "names": {
+       "en": "75+"
+      },
+      "annotations": [
+       {
+        "title": "10232",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_AGGREGATE"
+     },
+     {
+      "id": "AGE_10YRBANDS_YGE15",
+      "name": "15+",
+      "names": {
+       "en": "15+"
+      },
+      "annotations": [
+       {
+        "title": "10240",
+        "type": "ORDER"
+       },
+       {
+        "title": "Y",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_Y15-24",
+      "name": "15-24",
+      "names": {
+       "en": "15-24"
+      },
+      "annotations": [
+       {
+        "title": "10260",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_Y25-34",
+      "name": "25-34",
+      "names": {
+       "en": "25-34"
+      },
+      "annotations": [
+       {
+        "title": "10270",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_Y35-44",
+      "name": "35-44",
+      "names": {
+       "en": "35-44"
+      },
+      "annotations": [
+       {
+        "title": "10280",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_Y45-54",
+      "name": "45-54",
+      "names": {
+       "en": "45-54"
+      },
+      "annotations": [
+       {
+        "title": "10290",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_Y55-64",
+      "name": "55-64",
+      "names": {
+       "en": "55-64"
+      },
+      "annotations": [
+       {
+        "title": "10300",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_YGE65",
+      "name": "65+",
+      "names": {
+       "en": "65+"
+      },
+      "annotations": [
+       {
+        "title": "10310",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_Y65-74",
+      "name": "65-74",
+      "names": {
+       "en": "65-74"
+      },
+      "annotations": [
+       {
+        "title": "10311",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_10YRBANDS_YGE75",
+      "name": "75+",
+      "names": {
+       "en": "75+"
+      },
+      "annotations": [
+       {
+        "title": "10312",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_10YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_YGE15",
+      "name": "15+",
+      "names": {
+       "en": "15+"
+      },
+      "annotations": [
+       {
+        "title": "10320",
+        "type": "ORDER"
+       },
+       {
+        "title": "Y",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y15-19",
+      "name": "15-19",
+      "names": {
+       "en": "15-19"
+      },
+      "annotations": [
+       {
+        "title": "10360",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y20-24",
+      "name": "20-24",
+      "names": {
+       "en": "20-24"
+      },
+      "annotations": [
+       {
+        "title": "10370",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y25-29",
+      "name": "25-29",
+      "names": {
+       "en": "25-29"
+      },
+      "annotations": [
+       {
+        "title": "10380",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y30-34",
+      "name": "30-34",
+      "names": {
+       "en": "30-34"
+      },
+      "annotations": [
+       {
+        "title": "10390",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y35-39",
+      "name": "35-39",
+      "names": {
+       "en": "35-39"
+      },
+      "annotations": [
+       {
+        "title": "10400",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y40-44",
+      "name": "40-44",
+      "names": {
+       "en": "40-44"
+      },
+      "annotations": [
+       {
+        "title": "10410",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y45-49",
+      "name": "45-49",
+      "names": {
+       "en": "45-49"
+      },
+      "annotations": [
+       {
+        "title": "10420",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y50-54",
+      "name": "50-54",
+      "names": {
+       "en": "50-54"
+      },
+      "annotations": [
+       {
+        "title": "10430",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y55-59",
+      "name": "55-59",
+      "names": {
+       "en": "55-59"
+      },
+      "annotations": [
+       {
+        "title": "10440",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y60-64",
+      "name": "60-64",
+      "names": {
+       "en": "60-64"
+      },
+      "annotations": [
+       {
+        "title": "10450",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_YGE65",
+      "name": "65+",
+      "names": {
+       "en": "65+"
+      },
+      "annotations": [
+       {
+        "title": "10460",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y65-69",
+      "name": "65-69",
+      "names": {
+       "en": "65-69"
+      },
+      "annotations": [
+       {
+        "title": "10461",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_Y70-74",
+      "name": "70-74",
+      "names": {
+       "en": "70-74"
+      },
+      "annotations": [
+       {
+        "title": "10462",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     },
+     {
+      "id": "AGE_5YRBANDS_YGE75",
+      "name": "75+",
+      "names": {
+       "en": "75+"
+      },
+      "annotations": [
+       {
+        "title": "10463",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ],
+      "parent": "AGE_5YRBANDS"
+     }
+    ]
+   },
+   {
+    "id": "CL_AREA",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Reference Area",
+    "names": {
+     "en": "Reference Area"
+    },
+    "isPartial": true,
+    "codes": [
+     {
+      "id": "CAN",
+      "name": "Canada",
+      "names": {
+       "en": "Canada"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10175",
+        "texts": {
+         "en": "10175"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "CA",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "124",
+        "type": "M49Code"
+       },
+       {
+        "title": "X21",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "GBR",
+      "name": "United Kingdom of Great Britain and Northern Ireland",
+      "names": {
+       "en": "United Kingdom of Great Britain and Northern Ireland"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "11180",
+        "texts": {
+         "en": "11180"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "GB",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "826",
+        "type": "M49Code"
+       },
+       {
+        "title": "X60",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "ITA",
+      "name": "Italy",
+      "names": {
+       "en": "Italy"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10530",
+        "texts": {
+         "en": "10530"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "IT",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "380",
+        "type": "M49Code"
+       },
+       {
+        "title": "X60",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "X92",
+      "name": "European Union 27",
+      "names": {
+       "en": "European Union 27"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "6020",
+        "texts": {
+         "en": "6020"
+        }
+       },
+       {
+        "title": "Y",
+        "type": "GROUP"
+       },
+       {
+        "title": "_Z",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "_Z",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "X01",
+      "name": "World",
+      "names": {
+       "en": "World"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "900",
+        "texts": {
+         "en": "900"
+        }
+       },
+       {
+        "title": "Y",
+        "type": "GROUP"
+       },
+       {
+        "title": "001",
+        "type": "M49Code"
+       },
+       {
+        "title": "_Z",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "_Z",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "JPN",
+      "name": "Japan",
+      "names": {
+       "en": "Japan"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10540",
+        "texts": {
+         "en": "10540"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "JP",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "392",
+        "type": "M49Code"
+       },
+       {
+        "title": "X40",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "AUS",
+      "name": "Australia",
+      "names": {
+       "en": "Australia"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10055",
+        "texts": {
+         "en": "10055"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "AU",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "036",
+        "type": "M49Code"
+       },
+       {
+        "title": "X40",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "USA",
+      "name": "United States of America",
+      "names": {
+       "en": "United States of America"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "11185",
+        "texts": {
+         "en": "11185"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "US",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "840",
+        "type": "M49Code"
+       },
+       {
+        "title": "X21",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "DEU",
+      "name": "Germany",
+      "names": {
+       "en": "Germany"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10390",
+        "texts": {
+         "en": "10390"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "DE",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "276",
+        "type": "M49Code"
+       },
+       {
+        "title": "X60",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     },
+     {
+      "id": "FRA",
+      "name": "France",
+      "names": {
+       "en": "France"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10360",
+        "texts": {
+         "en": "10360"
+        }
+       },
+       {
+        "title": "N",
+        "type": "GROUP"
+       },
+       {
+        "title": "FR",
+        "type": "ISO2Code"
+       },
+       {
+        "title": "250",
+        "type": "M49Code"
+       },
+       {
+        "title": "X60",
+        "type": "ILO_REGION"
+       },
+       {
+        "title": "X05",
+        "type": "WB_INCOME_GROUP"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_DECIMALS",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "DECIMALS",
+    "names": {
+     "en": "DECIMALS"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "0",
+      "names": {
+       "en": "0"
+      },
+      "annotations": [
+       {
+        "title": "0",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "1",
+      "name": "1",
+      "names": {
+       "en": "1"
+      },
+      "annotations": [
+       {
+        "title": "1",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "2",
+      "name": "2",
+      "names": {
+       "en": "2"
+      },
+      "annotations": [
+       {
+        "title": "2",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "3",
+      "name": "3",
+      "names": {
+       "en": "3"
+      },
+      "annotations": [
+       {
+        "title": "3",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "4",
+      "name": "4",
+      "names": {
+       "en": "4"
+      },
+      "annotations": [
+       {
+        "title": "4",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "5",
+      "name": "5",
+      "names": {
+       "en": "5"
+      },
+      "annotations": [
+       {
+        "title": "5",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "6",
+      "name": "6",
+      "names": {
+       "en": "6"
+      },
+      "annotations": [
+       {
+        "title": "6",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "7",
+      "name": "7",
+      "names": {
+       "en": "7"
+      },
+      "annotations": [
+       {
+        "title": "7",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "8",
+      "name": "8",
+      "names": {
+       "en": "8"
+      },
+      "annotations": [
+       {
+        "title": "8",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "9",
+      "name": "9",
+      "names": {
+       "en": "9"
+      },
+      "annotations": [
+       {
+        "title": "9",
+        "type": "ORDER"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_FREQ",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "FREQ",
+    "names": {
+     "en": "FREQ"
+    },
+    "isPartial": true,
+    "codes": [
+     {
+      "id": "A",
+      "name": "Annual",
+      "names": {
+       "en": "Annual"
+      },
+      "annotations": [
+       {
+        "title": "20",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "Q",
+      "name": "Quarterly",
+      "names": {
+       "en": "Quarterly"
+      },
+      "annotations": [
+       {
+        "title": "210",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "M",
+      "name": "Monthly",
+      "names": {
+       "en": "Monthly"
+      },
+      "annotations": [
+       {
+        "title": "220",
+        "type": "ORDER"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_MEASURE",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Measure",
+    "names": {
+     "en": "Measure"
+    },
+    "isPartial": true,
+    "codes": [
+     {
+      "id": "UNE_DEAP_RT",
+      "name": "Unemployment rate (previous ILO definition - ICLS13)",
+      "names": {
+       "en": "Unemployment rate (previous ILO definition - ICLS13)"
+      },
+      "description": "Data are aligned with internationally-agreed definitions wherever possible, which may lead to discrepancies with official national statistics. This series follows the previous international statistical standards and definitions, as established by the 13th International Conference of Labour Statisticians (ILO, 1982). The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment.",
+      "descriptions": {
+       "en": "Data are aligned with internationally-agreed definitions wherever possible, which may lead to discrepancies with official national statistics. This series follows the previous international statistical standards and definitions, as established by the 13th International Conference of Labour Statisticians (ILO, 1982). The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment."
+      },
+      "annotations": [
+       {
+        "title": "2060",
+        "type": "ORDER"
+       },
+       {
+        "type": "NAME_COMPLEMENT"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_OBS_STATUS",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "OBS_STATUS",
+    "names": {
+     "en": "OBS_STATUS"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "B",
+      "name": "Break in series",
+      "names": {
+       "en": "Break in series"
+      },
+      "annotations": [
+       {
+        "title": "1",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "A",
+      "name": "Adjusted",
+      "names": {
+       "en": "Adjusted"
+      },
+      "annotations": [
+       {
+        "title": "1",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "L",
+      "name": "Computed value",
+      "names": {
+       "en": "Computed value"
+      },
+      "annotations": [
+       {
+        "title": "10",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "C",
+      "name": "Confidential",
+      "names": {
+       "en": "Confidential"
+      },
+      "annotations": [
+       {
+        "title": "20",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "E",
+      "name": "Estimate",
+      "names": {
+       "en": "Estimate"
+      },
+      "annotations": [
+       {
+        "title": "30",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "F",
+      "name": "Forecast",
+      "names": {
+       "en": "Forecast"
+      },
+      "annotations": [
+       {
+        "title": "40",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "M",
+      "name": "Model-based extrapolation",
+      "names": {
+       "en": "Model-based extrapolation"
+      },
+      "annotations": [
+       {
+        "title": "50",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "X",
+      "name": "Not applicable",
+      "names": {
+       "en": "Not applicable"
+      },
+      "annotations": [
+       {
+        "title": "80",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "N",
+      "name": "Not available",
+      "names": {
+       "en": "Not available"
+      },
+      "annotations": [
+       {
+        "title": "90",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "P",
+      "name": "Provisional",
+      "names": {
+       "en": "Provisional"
+      },
+      "annotations": [
+       {
+        "title": "100",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "S",
+      "name": "Not significant",
+      "names": {
+       "en": "Not significant"
+      },
+      "annotations": [
+       {
+        "title": "110",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "U",
+      "name": "Unreliable",
+      "names": {
+       "en": "Unreliable"
+      },
+      "annotations": [
+       {
+        "title": "120",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "R",
+      "name": "Real value",
+      "names": {
+       "en": "Real value"
+      },
+      "annotations": [
+       {
+        "title": "130",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "Z",
+      "name": "Non-official estimated value",
+      "names": {
+       "en": "Non-official estimated value"
+      },
+      "annotations": [
+       {
+        "title": "150",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "I",
+      "name": "Imputation",
+      "names": {
+       "en": "Imputation"
+      },
+      "annotations": [
+       {
+        "title": "160",
+        "type": "ORDER"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_SEX",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Classification: SEX",
+    "names": {
+     "en": "Classification: SEX"
+    },
+    "isPartial": true,
+    "codes": [
+     {
+      "id": "SEX_T",
+      "name": "Total",
+      "names": {
+       "en": "Total"
+      },
+      "annotations": [
+       {
+        "title": "10010",
+        "type": "ORDER"
+       },
+       {
+        "title": "Y",
+        "type": "IS_TOTAL"
+       }
+      ]
+     },
+     {
+      "id": "SEX_M",
+      "name": "Male",
+      "names": {
+       "en": "Male"
+      },
+      "annotations": [
+       {
+        "title": "10020",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ]
+     },
+     {
+      "id": "SEX_F",
+      "name": "Female",
+      "names": {
+       "en": "Female"
+      },
+      "annotations": [
+       {
+        "title": "10030",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ]
+     },
+     {
+      "id": "SEX_O",
+      "name": "Other",
+      "names": {
+       "en": "Other"
+      },
+      "annotations": [
+       {
+        "title": "10040",
+        "type": "ORDER"
+       },
+       {
+        "title": "N",
+        "type": "IS_TOTAL"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MEASURE",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "UNIT_MEASURE",
+    "names": {
+     "en": "UNIT_MEASURE"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "PS",
+      "name": "Persons",
+      "names": {
+       "en": "Persons"
+      },
+      "annotations": [
+       {
+        "title": "20",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "JS",
+      "name": "Jobs",
+      "names": {
+       "en": "Jobs"
+      },
+      "annotations": [
+       {
+        "title": "30",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "MN",
+      "name": "Minutes",
+      "names": {
+       "en": "Minutes"
+      },
+      "annotations": [
+       {
+        "title": "35",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "HR",
+      "name": "Hours",
+      "names": {
+       "en": "Hours"
+      },
+      "annotations": [
+       {
+        "title": "40",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "DS",
+      "name": "Days",
+      "names": {
+       "en": "Days"
+      },
+      "annotations": [
+       {
+        "title": "50",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "WK",
+      "name": "Weeks",
+      "names": {
+       "en": "Weeks"
+      },
+      "annotations": [
+       {
+        "title": "60",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "MH",
+      "name": "Months",
+      "names": {
+       "en": "Months"
+      },
+      "annotations": [
+       {
+        "title": "70",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "YR",
+      "name": "Years",
+      "names": {
+       "en": "Years"
+      },
+      "annotations": [
+       {
+        "title": "80",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "CS",
+      "name": "Cases",
+      "names": {
+       "en": "Cases"
+      },
+      "annotations": [
+       {
+        "title": "85",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "CR",
+      "name": "Currency",
+      "names": {
+       "en": "Currency"
+      },
+      "annotations": [
+       {
+        "title": "89",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "LC",
+      "name": "Local currency",
+      "names": {
+       "en": "Local currency"
+      },
+      "annotations": [
+       {
+        "title": "90",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "PP",
+      "name": "US Dollar converted using PPPs",
+      "names": {
+       "en": "US Dollar converted using PPPs"
+      },
+      "annotations": [
+       {
+        "title": "100",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "HH",
+      "name": "Households",
+      "names": {
+       "en": "Households"
+      },
+      "annotations": [
+       {
+        "title": "110",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "XT",
+      "name": "Per 1000 workers",
+      "names": {
+       "en": "Per 1000 workers"
+      },
+      "annotations": [
+       {
+        "title": "130",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "WP",
+      "name": "Workplaces",
+      "names": {
+       "en": "Workplaces"
+      },
+      "annotations": [
+       {
+        "title": "180",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "PT",
+      "name": "Percentage",
+      "names": {
+       "en": "Percentage"
+      },
+      "annotations": [
+       {
+        "title": "190",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "RT",
+      "name": "Rate",
+      "names": {
+       "en": "Rate"
+      },
+      "annotations": [
+       {
+        "title": "200",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "IN",
+      "name": "Base year = 100",
+      "names": {
+       "en": "Base year = 100"
+      },
+      "annotations": [
+       {
+        "title": "210",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "US",
+      "name": "US Dollar",
+      "names": {
+       "en": "US Dollar"
+      },
+      "annotations": [
+       {
+        "title": "220",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "SC",
+      "name": "Score",
+      "names": {
+       "en": "Score"
+      },
+      "annotations": [
+       {
+        "title": "230",
+        "type": "ORDER"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MEASURE_TYPE",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "UNIT_MEASURE_TYPE",
+    "names": {
+     "en": "UNIT_MEASURE_TYPE"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "NB",
+      "name": "Number",
+      "names": {
+       "en": "Number"
+      },
+      "annotations": [
+       {
+        "title": "20",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "RT",
+      "name": "Rate",
+      "names": {
+       "en": "Rate"
+      },
+      "annotations": [
+       {
+        "title": "30",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "IN",
+      "name": "Index",
+      "names": {
+       "en": "Index"
+      },
+      "annotations": [
+       {
+        "title": "50",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "DT",
+      "name": "Distribution",
+      "names": {
+       "en": "Distribution"
+      },
+      "annotations": [
+       {
+        "title": "80",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "GR",
+      "name": "Annual growth rate",
+      "names": {
+       "en": "Annual growth rate"
+      },
+      "annotations": [
+       {
+        "title": "90",
+        "type": "ORDER"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MULT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "UNIT_MULT",
+    "names": {
+     "en": "UNIT_MULT"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Units",
+      "names": {
+       "en": "Units"
+      },
+      "annotations": [
+       {
+        "title": "10",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "3",
+      "name": "Thousands",
+      "names": {
+       "en": "Thousands"
+      },
+      "annotations": [
+       {
+        "title": "40",
+        "type": "ORDER"
+       }
+      ]
+     },
+     {
+      "id": "6",
+      "name": "Millions",
+      "names": {
+       "en": "Millions"
+      },
+      "annotations": [
+       {
+        "title": "70",
+        "type": "ORDER"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "dataStructures": [
+   {
+    "id": "UNE_DEAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Unemployment rate by sex and age",
+    "names": {
+     "en": "Unemployment rate by sex and age"
+    },
+    "description": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>.",
+    "descriptions": {
+     "en": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>."
+    },
+    "dataStructureComponents": {
+     "attributeList": {
+      "id": "AttributeDescriptor",
+      "attributes": [
+       {
+        "id": "OBS_STATUS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).OBS_STATUS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_OBS_STATUS(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "UNIT_MEASURE_TYPE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).UNIT_MEASURE_TYPE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_UNIT_MEASURE_TYPE(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "UNIT_MEASURE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).UNIT_MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_UNIT_MEASURE(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "UNIT_MULT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).UNIT_MULT",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_UNIT_MULT(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "SOURCE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_NOTE_TYPE(1.0).SOURCE",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "REF_AREA",
+          "MEASURE",
+          "TIME_PERIOD"
+         ]
+        }
+       },
+       {
+        "id": "NOTE_SOURCE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_NOTE_TYPE(1.0).NOTE_SOURCE",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "REF_AREA",
+          "MEASURE",
+          "TIME_PERIOD"
+         ]
+        }
+       },
+       {
+        "id": "NOTE_INDICATOR",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_NOTE_TYPE(1.0).NOTE_INDICATOR",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "REF_AREA",
+          "MEASURE",
+          "TIME_PERIOD"
+         ]
+        }
+       },
+       {
+        "id": "NOTE_CLASSIF",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_NOTE_TYPE(1.0).NOTE_CLASSIF",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "DECIMALS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).DECIMALS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_DECIMALS(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "UPPER_BOUND",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).UPPER_BOUND",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "LOWER_BOUND",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).LOWER_BOUND",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       }
+      ]
+     },
+     "dimensionList": {
+      "id": "DimensionDescriptor",
+      "dimensions": [
+       {
+        "id": "REF_AREA",
+        "position": 0,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).REF_AREA",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_AREA(1.0)"
+        }
+       },
+       {
+        "id": "FREQ",
+        "position": 1,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).FREQ",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_FREQ(1.0)"
+        }
+       },
+       {
+        "id": "MEASURE",
+        "position": 2,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_MEASURE(1.0)"
+        }
+       },
+       {
+        "id": "SEX",
+        "position": 3,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_CLASSIF_TYPE(1.0).SEX",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_SEX(1.0)"
+        }
+       },
+       {
+        "id": "AGE",
+        "position": 4,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_CLASSIF_TYPE(1.0).AGE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ILO:CL_AGE(1.0)"
+        }
+       }
+      ],
+      "timeDimensions": [
+       {
+        "id": "TIME_PERIOD",
+        "position": 5,
+        "type": "TimeDimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).TIME_PERIOD",
+        "localRepresentation": {
+         "textFormat": {
+          "textType": "ObservationalTimePeriod",
+          "isSequence": false,
+          "isMultiLingual": false
+         }
+        }
+       }
+      ]
+     },
+     "measureList": {
+      "id": "MeasureDescriptor",
+      "primaryMeasure": {
+       "id": "OBS_VALUE",
+       "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ILO:CS_ILOSTAT(1.0).OBS_VALUE",
+       "localRepresentation": {
+        "textFormat": {
+         "textType": "Double",
+         "isSequence": false,
+         "isMultiLingual": false
+        }
+       }
+      }
+     }
+    }
+   }
+  ],
+  "contentConstraints": [
+   {
+    "id": "CCA_DF_UNE_DEAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Content Constraint on dataflow DF_UNE_DEAP_SEX_AGE_RT",
+    "names": {
+     "en": "Content Constraint on dataflow DF_UNE_DEAP_SEX_AGE_RT"
+    },
+    "type": "Actual",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=ILO:DF_UNE_DEAP_SEX_AGE_RT(1.0)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "keyValues": [
+       {
+        "id": "REF_AREA",
+        "values": [
+         "AUS",
+         "CAN",
+         "DEU",
+         "FRA",
+         "GBR",
+         "ITA",
+         "JPN",
+         "USA",
+         "X01",
+         "X92"
+        ]
+       },
+       {
+        "id": "FREQ",
+        "values": [
+         "A",
+         "Q",
+         "M"
+        ]
+       },
+       {
+        "id": "MEASURE",
+        "values": [
+         "UNE_DEAP_RT"
+        ]
+       },
+       {
+        "id": "SEX",
+        "values": [
+         "SEX_T",
+         "SEX_M",
+         "SEX_F",
+         "SEX_O"
+        ]
+       },
+       {
+        "id": "AGE",
+        "values": [
+         "AGE_YTHADULT",
+         "AGE_AGGREGATE",
+         "AGE_10YRBANDS",
+         "AGE_5YRBANDS",
+         "AGE_YTHADULT_YGE15",
+         "AGE_YTHADULT_Y15-64",
+         "AGE_YTHADULT_Y15-24",
+         "AGE_YTHADULT_YGE25",
+         "AGE_AGGREGATE_YGE15",
+         "AGE_AGGREGATE_Y15-24",
+         "AGE_AGGREGATE_Y25-54",
+         "AGE_AGGREGATE_Y55-64",
+         "AGE_AGGREGATE_YGE65",
+         "AGE_AGGREGATE_Y65-74",
+         "AGE_AGGREGATE_YGE75",
+         "AGE_10YRBANDS_YGE15",
+         "AGE_10YRBANDS_Y15-24",
+         "AGE_10YRBANDS_Y25-34",
+         "AGE_10YRBANDS_Y35-44",
+         "AGE_10YRBANDS_Y45-54",
+         "AGE_10YRBANDS_Y55-64",
+         "AGE_10YRBANDS_YGE65",
+         "AGE_10YRBANDS_Y65-74",
+         "AGE_10YRBANDS_YGE75",
+         "AGE_5YRBANDS_YGE15",
+         "AGE_5YRBANDS_Y15-19",
+         "AGE_5YRBANDS_Y20-24",
+         "AGE_5YRBANDS_Y25-29",
+         "AGE_5YRBANDS_Y30-34",
+         "AGE_5YRBANDS_Y35-39",
+         "AGE_5YRBANDS_Y40-44",
+         "AGE_5YRBANDS_Y45-49",
+         "AGE_5YRBANDS_Y50-54",
+         "AGE_5YRBANDS_Y55-59",
+         "AGE_5YRBANDS_Y60-64",
+         "AGE_5YRBANDS_YGE65",
+         "AGE_5YRBANDS_Y65-69",
+         "AGE_5YRBANDS_Y70-74",
+         "AGE_5YRBANDS_YGE75"
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

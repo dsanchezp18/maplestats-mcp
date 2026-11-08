@@ -231,6 +231,10 @@ CASES = [
     ("euro area HICP inflation compared with Germany and France", "eurostat_compare"),
     ("find a Eurostat dataset code for EU statistics", "eurostat_search_datasets"),
     ("Eurostat dataset dimensions codes and status flags", "eurostat_describe_dataset"),
+    # ILOSTAT, 2026-11-08.
+    ("ILO unemployment rate Canada compared with G7 countries", "ilo_compare_countries"),
+    ("search ILOSTAT labour statistics datasets", "ilo_search_datasets"),
+    ("dimensions and codes of an ILOSTAT dataset series key", "ilo_describe_dataset"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),
