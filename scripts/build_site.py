@@ -676,7 +676,7 @@ SOURCES: dict[str, Source] = {
     "ilo": Source(
         "ILOSTAT labour statistics (Canada and peers)",
         "Statistiques du travail d'ILOSTAT (Canada et pays comparables)",
-        "national",
+        "international",
         "ILOSTAT (International Labour Organization)",
         "ILOSTAT (Organisation internationale du Travail)",
         domain="statistics",
