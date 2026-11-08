@@ -225,7 +225,23 @@ QUESTIONS: list[tuple[str, str, str]] = [
         "business_licences",
         "opendatasoft_vancouver_query_records",
     ),
-    ("Restaurant inspections in Toronto", "food_inspections", "ckan_datastore_search"),
+    ("Restaurant inspections in Toronto", "food_inspections", "toronto_search_dinesafe"),
+    (
+        "Which Toronto wards have the worst RentSafeTO apartment building scores?",
+        "housing",
+        "toronto_summarize_apartment_scores",
+    ),
+    (
+        "How many Airbnb short-term rentals are registered in Toronto by ward?",
+        "housing",
+        "toronto_summarize_short_term_rentals",
+    ),
+    (
+        "Population of the Annex neighbourhood in Toronto in the 2016 census",
+        "population",
+        "toronto_get_neighbourhood_profile",
+    ),
+    ("How many housing starts were there in Toronto last year?", "housing", "cmhc_list_categories"),
     (
         "Restaurant inspection results in Surrey",
         "food_inspections",

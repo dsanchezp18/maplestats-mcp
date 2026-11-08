@@ -391,9 +391,9 @@ async def test_bc_access_only_licence_carries_a_warning(httpx_mock):
 
 async def test_toronto_files_are_not_read():
     # The reader refuses Toronto's files before any request is made.
-    with pytest.raises(InvalidInput, match="automated file downloads"):
+    with pytest.raises(InvalidInput, match="robots.txt disallows"):
         await files.read_resource("toronto", RES)
-    with pytest.raises(InvalidInput, match="automated file downloads"):
+    with pytest.raises(InvalidInput, match="robots.txt disallows"):
         await files.describe_resource("toronto", RES)
 
 

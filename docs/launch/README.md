@@ -7,6 +7,7 @@ The blog post and the LinkedIn post are published. The outreach messages are sti
 | [`blog-post.md`](blog-post.md) | "One MCP to Rule Them All", for the website (published) |
 | [`linkedin-post.md`](linkedin-post.md) | Short announcement (published) |
 | [`outreach.md`](outreach.md) | Draft, one message each: Jens von Bergmann (cansim, CMHC, canivt), OSI Data Analyst Network, Edmonton Data Society, Vancouver group, NRCan (Torben), SFU Economics |
+| [`toronto-open-data-awards.md`](toronto-open-data-awards.md) | Drafts, not sent: eligibility email to opendata@toronto.ca and the Open Data Infrastructure entry for the Toronto Open Data Awards 2026 (deadline 2026-12-04) |
 
 ## Where each number comes from
 

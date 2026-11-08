@@ -785,7 +785,7 @@ Read and routed (portal, id, what it holds):
 | | Edmonton | `edmonton` `24uj-dj8v` | General building permits from 2009, with construction value and units added |
 | | Winnipeg | `winnipeg` `it4w-cpf4` | Detailed permits; `p5sy-gt7y` aggregates, several processing-time tables |
 | | Vancouver | `issued-building-permits` | 52,487 records; project value, type of work, contractor |
-| | Toronto | `toronto` resources `6d0229af-…` (active), `a96c0ba4-…` (cleared since 2017) | DataStore rows read; files not (Toronto's terms) |
+| | Toronto | `toronto` resources `6d0229af-…` (active), `a96c0ba4-…` (cleared since 2017) | DataStore rows read; files not (Toronto's robots.txt) |
 | | Montreal | `montreal` `5232a72d-235a-48eb-ae20-bb9d501300ad` | Construction, alteration and demolition permits; CC BY 4.0 |
 | | Laval | `qc` `d4731ee2-b1e5-4a31-bc56-4e13115e74ef` | From 1991; CC BY 4.0 |
 | | Regina | `regina` `dcea70fc-87dd-4e04-bc34-b3ce6580daac` | One XLSX a year (2020-2026), read with `ckan_read_resource` |
@@ -892,3 +892,68 @@ Cityworks, Fire, Hosted, MobileApps, Utilities) answers, but it is a service
 directory without a search API, and `arcgis_hub_*` reads through the Hub Search
 API. Wrapping GEOweb would mean a new module that parses the data page, reads
 the metadata pages and opens the zipped CSVs. Left as an open candidate.
+
+## City of Toronto curated tools
+
+Checked 2026-11-08 against `ckan0.cf.opendata.inter.prod-toronto.ca`, the
+Action API host behind open.toronto.ca.
+
+**Terms.** The Open Government Licence – Toronto
+(https://open.toronto.ca/open-data-licence/) is OGL-Ontario 1.0 with the City
+in place of the Province. It grants "a worldwide, royalty-free, perpetual,
+non-exclusive licence to use the Information, including for commercial
+purposes", with the attribution "Contains information licensed under the Open
+Government Licence – Toronto." It says nothing about how the data may be
+fetched. The open.toronto.ca site has no separate terms-of-use page (the
+`/terms-of-use/` path is a 404), and its own robots.txt only disallows
+`/wp-admin/`. The CKAN host's robots.txt, for `User-agent: *`:
+
+```text
+# disallow dataset download URLs
+Disallow: /dataset/*/resource/*/download/*
+# allow map iframe and explore interface URLs
+Allow: /dataset/*/resource/*/view/*
+# allow api requests
+Allow: /api/
+```
+
+Every file on the portal sits under the disallowed path (`resource_show`
+for the TTC's complete GTFS, the 2026 311 requests and the 2021
+neighbourhood profiles all return `/dataset/<id>/resource/<id>/download/...`),
+so `ckan_read_resource` keeps refusing Toronto. DataStore reads go through
+`/api/3/action/datastore_search`, which robots.txt allows. The one tension:
+each dataset page's "For Developers" tab (`page-dataset.js`) gives Python
+that calls `/datastore/dump/<id>` and, for a file, says "From here, you can
+use the 'url' attribute to download this file", and its R snippet uses
+`opendatatoronto::get_resource()`, which downloads files too. A question to
+opendata@toronto.ca is drafted in `docs/launch/toronto-open-data-awards.md`;
+the refusal stays until the City says otherwise.
+
+**Datasets** (the ones ReyemTech's mcp-canada exposes, plus DineSafe):
+
+| Dataset | DataStore table | Built |
+|---|---|---|
+| Neighbourhood Profiles | 2016, 2011, 2006, 2001 (140-neighbourhood model): `7f8eee5e-…`, `9a9e9cf1-…`, `5bbad0da-…`, `90787000-…`; 2021 (158 model) is an XLSX only | `toronto_get_neighbourhood_profile` for the four DataStore years |
+| Apartment Building Evaluations (RentSafeTO) | "2023 - current" `244f7a02-…` (7,151 evaluations, 3,608 buildings); "Pre-2023" `b987be09-…` | `toronto_get_apartment_evaluations`, `toronto_summarize_apartment_scores` (2023 on) |
+| Short Term Rentals Registration | `f4659cc1-…` (8,620 rows) | `toronto_summarize_short_term_rentals` (counts only) |
+| DineSafe | `75dbb3ff-…` (126,282 rows from 2023-11-10) | `toronto_search_dinesafe` |
+| 311 Service Requests – Customer Initiated | none: one ZIP per year, 2010 to 2026 | Not built (files) |
+| TTC Routes and Schedules / Merged GTFS | none: ZIPs | Not built (files); the TTC feed stays in `transit_*` from StatCan's national database |
+
+Quirks the client handles: the 2016 profile names its label column
+"Characteristic" and keeps a "Data Source" column, the older years call it
+"Attribute"; 2016 values are text with thousands separators ("525,835"),
+older ones numbers; leading spaces in a label mark its level ("  Renter").
+RentSafeTO values are text except YEAR BUILT, YEAR EVALUATED and NO OF
+AREAS EVALUATED; one YEAR EVALUATED is 202510 (the date column is used
+instead) and one score is "81.1". 149 RentSafeTO buildings have no
+coordinates. DineSafe's address carries the word "None" where the unit is
+empty, and `q` accepts a JSON object for a per-column full-text search
+(`{"estName": "pizza"}`). Short-term rental rows hold the operator's
+registration number and street address; the tool counts them and returns
+neither.
+
+Smoke test (`scripts/smoke_test_toronto.py`) passed 2026-11-08: Annex renters
+2016 (9,870), Regent Park in 2011, 2006 and 2001, 3,608 buildings in 25
+wards (mean 90.87, lowest 45), 8,620 rental registrations in 25 wards,
+538 DineSafe closure rows.

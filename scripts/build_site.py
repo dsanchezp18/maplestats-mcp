@@ -563,6 +563,15 @@ SOURCES: dict[str, Source] = {
         places=("AB",),
         row="municipal_feed",
     ),
+    "toronto": Source(
+        "City of Toronto open data",
+        "Données ouvertes de la Ville de Toronto",
+        "municipal",
+        "Toronto open data",
+        "Données ouvertes de Toronto",
+        places=("ON",),
+        row="municipal_feed",
+    ),
     "bc_transit": Source(
         "BC Transit real-time",
         "BC Transit en temps réel",

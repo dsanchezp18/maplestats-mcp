@@ -216,6 +216,12 @@ SOURCE_LICENCES: dict[str, str] = {
         "data, indicating that BC Transit is the source; BC Transit's domain name and marks "
         "may not be used. Source: BC Transit."
     ),
+    "toronto": (
+        "Open Government Licence - Toronto (https://open.toronto.ca/open-data-licence/): use, "
+        "copy, adapt and publish, commercially too, acknowledging the source. Attribution: "
+        "'Contains information licensed under the Open Government Licence - Toronto.' "
+        "Source: City of Toronto, open.toronto.ca."
+    ),
     "provincial-election-results": (
         "Terms differ by election agency; see the per-province licence notes in limits."
     ),
@@ -677,6 +683,13 @@ _PROVINCIAL_FR: dict[str, str] = {
         "BC Transit comme source ; le nom de domaine et les marques de BC Transit ne peuvent "
         "pas être utilisés. Source : BC Transit."
     ),
+    "toronto": (
+        "Licence du gouvernement ouvert – Toronto (Open Government Licence – Toronto, "
+        "https://open.toronto.ca/open-data-licence/) : utiliser, copier, adapter et publier, "
+        "y compris à des fins commerciales, en mentionnant la source. Mention : « Contains "
+        "information licensed under the Open Government Licence – Toronto. » Source : Ville de "
+        "Toronto, open.toronto.ca."
+    ),
     "bc_lobbyists": (
         "Licence de données ouvertes du Bureau du registraire des lobbyistes de la "
         "Colombie-Britannique (Open Data Licence for the Office of the Registrar of Lobbyists for "
@@ -807,6 +820,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     "ab_wildfire": "allowed",
     # "use, reproduce, and redistribute", no commercial restriction (read 2026-11-07).
     "bc_transit": "allowed",
+    # "including for commercial purposes", attribution required (read 2026-11-08).
+    "toronto": "allowed",
     "aer": "not_allowed",
     "epcor": "unknown",
     "eps": "unknown",

@@ -278,15 +278,16 @@ PORTALS: dict[str, Portal] = {
         ),
         resource_extra_fields=("record_count",),
         file_reader_off_reason=(
-            "Toronto's portal does not permit automated file downloads, so this server "
-            "does not download its files. Rows of resources with an active DataStore can be "
-            "read with ckan_datastore_search."
+            "Toronto's CKAN robots.txt disallows /dataset/*/resource/*/download/* (the path of "
+            "every file on the portal) for all automated agents, so this server does not "
+            "download its files. Rows of resources with an active DataStore can be read with "
+            "ckan_datastore_search, and toronto_* reads several of them as tidy tables."
         ),
         file_reader_off_reason_fr=(
             "le serveur CKAN de Toronto interdit à tous les agents automatisés le chemin "
             "/dataset/*/resource/*/download/*; ce serveur ne télécharge donc pas ses fichiers. "
             "Les lignes des ressources dont le DataStore est actif se lisent avec "
-            "ckan_datastore_search."
+            "ckan_datastore_search, et toronto_* en présente plusieurs en tableaux ordonnés."
         ),
     ),
     "regina": Portal(

@@ -1,0 +1,639 @@
+{
+ "profile_2016": {
+  "resource_id": "7f8eee5e-85fb-415c-aef3-c3bd4998445f",
+  "fields": [
+   {
+    "id": "_id",
+    "type": "int"
+   },
+   {
+    "id": "Category",
+    "type": "text"
+   },
+   {
+    "id": "Topic",
+    "type": "text"
+   },
+   {
+    "id": "Data Source",
+    "type": "text"
+   },
+   {
+    "id": "Characteristic",
+    "type": "text"
+   },
+   {
+    "id": "City of Toronto",
+    "type": "text"
+   },
+   {
+    "id": "Annex",
+    "type": "text"
+   },
+   {
+    "id": "Regent Park",
+    "type": "text"
+   },
+   {
+    "id": "Mimico (includes Humber Bay Shores)",
+    "type": "text"
+   },
+   {
+    "id": "Bedford Park-Nortown",
+    "type": "text"
+   }
+  ],
+  "records": [
+   {
+    "_id": 1,
+    "Category": "Neighbourhood Information",
+    "Topic": "Neighbourhood Information",
+    "Data Source": "City of Toronto",
+    "Characteristic": "Neighbourhood Number",
+    "City of Toronto": null,
+    "Annex": "95",
+    "Regent Park": "72",
+    "Mimico (includes Humber Bay Shores)": "17",
+    "Bedford Park-Nortown": "39"
+   },
+   {
+    "_id": 2,
+    "Category": "Neighbourhood Information",
+    "Topic": "Neighbourhood Information",
+    "Data Source": "City of Toronto",
+    "Characteristic": "TSNS2020 Designation",
+    "City of Toronto": null,
+    "Annex": "No Designation",
+    "Regent Park": "NIA",
+    "Mimico (includes Humber Bay Shores)": "No Designation",
+    "Bedford Park-Nortown": "No Designation"
+   },
+   {
+    "_id": 3,
+    "Category": "Population",
+    "Topic": "Population and dwellings",
+    "Data Source": "Census Profile 98-316-X2016001",
+    "Characteristic": "Population, 2016",
+    "City of Toronto": "2,731,571",
+    "Annex": "30,526",
+    "Regent Park": "10,803",
+    "Mimico (includes Humber Bay Shores)": "33,964",
+    "Bedford Park-Nortown": "23,236"
+   },
+   {
+    "_id": 4,
+    "Category": "Population",
+    "Topic": "Population and dwellings",
+    "Data Source": "Census Profile 98-316-X2016001",
+    "Characteristic": "Population, 2011",
+    "City of Toronto": "2,615,060",
+    "Annex": "29,177",
+    "Regent Park": "10,007",
+    "Mimico (includes Humber Bay Shores)": "26,541",
+    "Bedford Park-Nortown": "23,185"
+   },
+   {
+    "_id": 1628,
+    "Category": "Housing",
+    "Topic": "Household characteristics",
+    "Data Source": "Census Profile 98-316-X2016001",
+    "Characteristic": "Total - Private households by tenure - 25% sample data",
+    "City of Toronto": "1,112,930",
+    "Annex": "15,930",
+    "Regent Park": "4,955",
+    "Mimico (includes Humber Bay Shores)": "17,790",
+    "Bedford Park-Nortown": "8,610"
+   },
+   {
+    "_id": 1630,
+    "Category": "Housing",
+    "Topic": "Household characteristics",
+    "Data Source": "Census Profile 98-316-X2016001",
+    "Characteristic": "  Renter",
+    "City of Toronto": "525,835",
+    "Annex": "9,870",
+    "Regent Park": "3,700",
+    "Mimico (includes Humber Bay Shores)": "8,635",
+    "Bedford Park-Nortown": "2,595"
+   },
+   {
+    "_id": 1677,
+    "Category": "Housing",
+    "Topic": "Household characteristics",
+    "Data Source": "Census Profile 98-316-X2016001",
+    "Characteristic": "Total -  Owner and tenant households with household total income greater than zero; in non-farm; non-reserve private dwellings by shelter-cost-to-income ratio - 25% sample data",
+    "City of Toronto": "1,110,735",
+    "Annex": "15,855",
+    "Regent Park": "4,940",
+    "Mimico (includes Humber Bay Shores)": "17,760",
+    "Bedford Park-Nortown": "8,590"
+   },
+   {
+    "_id": 1693,
+    "Category": "Housing",
+    "Topic": "Core housing need",
+    "Data Source": "Catalogue no. 98-509-X2016001",
+    "Characteristic": "Rate of unaffordable housing, owner-households",
+    "City of Toronto": "27.4",
+    "Annex": null,
+    "Regent Park": null,
+    "Mimico (includes Humber Bay Shores)": null,
+    "Bedford Park-Nortown": null
+   },
+   {
+    "_id": 1694,
+    "Category": "Housing",
+    "Topic": "Core housing need",
+    "Data Source": "Catalogue no. 98-509-X2016001",
+    "Characteristic": "Rate of unaffordable housing, renter-households",
+    "City of Toronto": "46.8",
+    "Annex": null,
+    "Regent Park": null,
+    "Mimico (includes Humber Bay Shores)": null,
+    "Bedford Park-Nortown": null
+   }
+  ]
+ },
+ "profile_2011": {
+  "resource_id": "9a9e9cf1-6c73-426c-aa7d-d1261cb459ca",
+  "fields": [
+   {
+    "id": "_id",
+    "type": "int"
+   },
+   {
+    "id": "Category",
+    "type": "text"
+   },
+   {
+    "id": "Topic",
+    "type": "text"
+   },
+   {
+    "id": "Attribute",
+    "type": "text"
+   },
+   {
+    "id": "City of Toronto",
+    "type": "float8"
+   },
+   {
+    "id": "Annex",
+    "type": "float8"
+   },
+   {
+    "id": "Regent Park",
+    "type": "float8"
+   }
+  ],
+  "records": [
+   {
+    "_id": 1,
+    "Category": "Population",
+    "Topic": "Population",
+    "Attribute": "Population, 2011",
+    "City of Toronto": 2615060,
+    "Annex": 29177,
+    "Regent Park": 10007
+   },
+   {
+    "_id": 2,
+    "Category": "Population",
+    "Topic": "Population",
+    "Attribute": "Population, 2006",
+    "City of Toronto": 2503281,
+    "Annex": 27482,
+    "Regent Park": 10387
+   },
+   {
+    "_id": 3,
+    "Category": "Population",
+    "Topic": "Population",
+    "Attribute": "Population percentage change, 2006 to 2011",
+    "City of Toronto": 4.5,
+    "Annex": null,
+    "Regent Park": null
+   },
+   {
+    "_id": 4,
+    "Category": "Population",
+    "Topic": "Population",
+    "Attribute": "Population density per square kilometre",
+    "City of Toronto": 4149.5,
+    "Annex": null,
+    "Regent Park": null
+   }
+  ]
+ },
+ "evaluations": {
+  "resource_id": "244f7a02-da5c-425b-b55f-fbdd133dd732",
+  "fields": [
+   {
+    "id": "_id",
+    "type": "int"
+   },
+   {
+    "id": "RSN",
+    "type": "text"
+   },
+   {
+    "id": "SITE ADDRESS",
+    "type": "text"
+   },
+   {
+    "id": "WARD",
+    "type": "text"
+   },
+   {
+    "id": "WARDNAME",
+    "type": "text"
+   },
+   {
+    "id": "PROPERTY TYPE",
+    "type": "text"
+   },
+   {
+    "id": "YEAR BUILT",
+    "type": "int4"
+   },
+   {
+    "id": "YEAR REGISTERED",
+    "type": "text"
+   },
+   {
+    "id": "CONFIRMED STOREYS",
+    "type": "text"
+   },
+   {
+    "id": "CONFIRMED UNITS",
+    "type": "text"
+   },
+   {
+    "id": "EVALUATION COMPLETED ON",
+    "type": "date"
+   },
+   {
+    "id": "CURRENT BUILDING EVAL SCORE",
+    "type": "text"
+   },
+   {
+    "id": "PROACTIVE BUILDING SCORE",
+    "type": "text"
+   },
+   {
+    "id": "CURRENT REACTIVE SCORE",
+    "type": "text"
+   },
+   {
+    "id": "NO OF AREAS EVALUATED",
+    "type": "int4"
+   },
+   {
+    "id": "LATITUDE",
+    "type": "text"
+   },
+   {
+    "id": "LONGITUDE",
+    "type": "text"
+   }
+  ],
+  "records": [
+   {
+    "_id": 1,
+    "RSN": "4152599",
+    "SITE ADDRESS": "263 PHARMACY AVE",
+    "WARD": "20",
+    "WARDNAME": "Scarborough Southwest",
+    "PROPERTY TYPE": "PRIVATE",
+    "YEAR BUILT": 1972,
+    "YEAR REGISTERED": "2017",
+    "CONFIRMED STOREYS": "21",
+    "CONFIRMED UNITS": "329",
+    "EVALUATION COMPLETED ON": "2023-08-02",
+    "CURRENT BUILDING EVAL SCORE": "98",
+    "PROACTIVE BUILDING SCORE": "98",
+    "CURRENT REACTIVE SCORE": "0",
+    "NO OF AREAS EVALUATED": 46,
+    "LATITUDE": "43.699845492",
+    "LONGITUDE": "-79.284936726"
+   },
+   {
+    "_id": 19,
+    "RSN": "4154343",
+    "SITE ADDRESS": "2 PIMLICO RD",
+    "WARD": "05",
+    "WARDNAME": "York South-Weston",
+    "PROPERTY TYPE": "PRIVATE",
+    "YEAR BUILT": 1959,
+    "YEAR REGISTERED": "2017",
+    "CONFIRMED STOREYS": "3",
+    "CONFIRMED UNITS": "12",
+    "EVALUATION COMPLETED ON": "2025-11-28",
+    "CURRENT BUILDING EVAL SCORE": "92",
+    "PROACTIVE BUILDING SCORE": "92",
+    "CURRENT REACTIVE SCORE": "0",
+    "NO OF AREAS EVALUATED": 38,
+    "LATITUDE": "43.7078158856",
+    "LONGITUDE": "-79.4828804419"
+   },
+   {
+    "_id": 20,
+    "RSN": "4154343",
+    "SITE ADDRESS": "2 PIMLICO RD",
+    "WARD": "05",
+    "WARDNAME": "York South-Weston",
+    "PROPERTY TYPE": "PRIVATE",
+    "YEAR BUILT": 1959,
+    "YEAR REGISTERED": "2017",
+    "CONFIRMED STOREYS": "3",
+    "CONFIRMED UNITS": "12",
+    "EVALUATION COMPLETED ON": "2023-07-27",
+    "CURRENT BUILDING EVAL SCORE": "94",
+    "PROACTIVE BUILDING SCORE": "94",
+    "CURRENT REACTIVE SCORE": "0",
+    "NO OF AREAS EVALUATED": 38,
+    "LATITUDE": "43.7078158856",
+    "LONGITUDE": "-79.4828804419"
+   },
+   {
+    "_id": 23,
+    "RSN": "4155130",
+    "SITE ADDRESS": "24 PINEHILL CRES",
+    "WARD": "05",
+    "WARDNAME": "York South-Weston",
+    "PROPERTY TYPE": "PRIVATE",
+    "YEAR BUILT": 1969,
+    "YEAR REGISTERED": "2017",
+    "CONFIRMED STOREYS": "4",
+    "CONFIRMED UNITS": "29",
+    "EVALUATION COMPLETED ON": "2024-09-06",
+    "CURRENT BUILDING EVAL SCORE": "63",
+    "PROACTIVE BUILDING SCORE": "63",
+    "CURRENT REACTIVE SCORE": "0",
+    "NO OF AREAS EVALUATED": 41,
+    "LATITUDE": "43.688323353",
+    "LONGITUDE": "-79.50178938"
+   },
+   {
+    "_id": 364,
+    "RSN": "4152599",
+    "SITE ADDRESS": "263 PHARMACY AVE",
+    "WARD": "20",
+    "WARDNAME": "Scarborough Southwest",
+    "PROPERTY TYPE": "PRIVATE",
+    "YEAR BUILT": 1972,
+    "YEAR REGISTERED": "2017",
+    "CONFIRMED STOREYS": "21",
+    "CONFIRMED UNITS": "329",
+    "EVALUATION COMPLETED ON": "2025-08-11",
+    "CURRENT BUILDING EVAL SCORE": "97",
+    "PROACTIVE BUILDING SCORE": "97",
+    "CURRENT REACTIVE SCORE": "0",
+    "NO OF AREAS EVALUATED": 45,
+    "LATITUDE": "43.699845492",
+    "LONGITUDE": "-79.284936726"
+   },
+   {
+    "_id": 3564,
+    "RSN": "5157423",
+    "SITE ADDRESS": "8 TREE SPARROWAY",
+    "WARD": "17",
+    "WARDNAME": "Don Valley North",
+    "PROPERTY TYPE": "TCHC",
+    "YEAR BUILT": 1973,
+    "YEAR REGISTERED": null,
+    "CONFIRMED STOREYS": "4",
+    "CONFIRMED UNITS": "16",
+    "EVALUATION COMPLETED ON": "2023-07-26",
+    "CURRENT BUILDING EVAL SCORE": "81.1",
+    "PROACTIVE BUILDING SCORE": "81.1",
+    "CURRENT REACTIVE SCORE": "0",
+    "NO OF AREAS EVALUATED": 41,
+    "LATITUDE": "43.791324573",
+    "LONGITUDE": "-79.369928562"
+   },
+   {
+    "_id": 4699,
+    "RSN": "4155602",
+    "SITE ADDRESS": "220 OAK ST",
+    "WARD": "13",
+    "WARDNAME": "Toronto Centre",
+    "PROPERTY TYPE": "TCHC",
+    "YEAR BUILT": 1972,
+    "YEAR REGISTERED": "2017",
+    "CONFIRMED STOREYS": "27",
+    "CONFIRMED UNITS": "469",
+    "EVALUATION COMPLETED ON": "2025-10-22",
+    "CURRENT BUILDING EVAL SCORE": "85",
+    "PROACTIVE BUILDING SCORE": "64",
+    "CURRENT REACTIVE SCORE": "0",
+    "NO OF AREAS EVALUATED": 46,
+    "LATITUDE": "43.663061381",
+    "LONGITUDE": "-79.357756445"
+   }
+  ]
+ },
+ "rentals": {
+  "resource_id": "f4659cc1-8985-4e4a-a702-ae24352271e0",
+  "fields": [
+   {
+    "id": "_id",
+    "type": "int"
+   },
+   {
+    "id": "ward_number",
+    "type": "text"
+   },
+   {
+    "id": "ward_name",
+    "type": "text"
+   },
+   {
+    "id": "property_type",
+    "type": "text"
+   },
+   {
+    "id": "postal_code",
+    "type": "text"
+   }
+  ],
+  "records": [
+   {
+    "_id": 8735234,
+    "ward_number": "13",
+    "ward_name": "Toronto Centre",
+    "property_type": "Townhouse/ Row House",
+    "postal_code": "M5A"
+   },
+   {
+    "_id": 8735235,
+    "ward_number": "9",
+    "ward_name": "Davenport",
+    "property_type": "Duplex/Triplex/Fourplex",
+    "postal_code": "M6H"
+   },
+   {
+    "_id": 8735236,
+    "ward_number": "10",
+    "ward_name": "Spadina-Fort York",
+    "property_type": "Condominium",
+    "postal_code": "M5J"
+   },
+   {
+    "_id": 8735237,
+    "ward_number": "5",
+    "ward_name": "York South-Weston",
+    "property_type": "Single/Semi-detached House",
+    "postal_code": "M6M"
+   },
+   {
+    "_id": 8735238,
+    "ward_number": "9",
+    "ward_name": "Davenport",
+    "property_type": "Single/Semi-detached House",
+    "postal_code": "M6H"
+   },
+   {
+    "_id": 8735239,
+    "ward_number": "18",
+    "ward_name": "Willowdale",
+    "property_type": "Condominium",
+    "postal_code": "M2N"
+   },
+   {
+    "_id": 8735240,
+    "ward_number": "8",
+    "ward_name": "Eglinton-Lawrence",
+    "property_type": "Single/Semi-detached House",
+    "postal_code": "M6A"
+   }
+  ]
+ },
+ "dinesafe": {
+  "resource_id": "75dbb3ff-8281-4f03-9de2-bd1214761302",
+  "fields": [
+   {
+    "id": "_id",
+    "type": "int"
+   },
+   {
+    "id": "estId",
+    "type": "text"
+   },
+   {
+    "id": "estName",
+    "type": "text"
+   },
+   {
+    "id": "address",
+    "type": "text"
+   },
+   {
+    "id": "inspectionDate",
+    "type": "date"
+   },
+   {
+    "id": "inspectionStatus",
+    "type": "text"
+   },
+   {
+    "id": "severity",
+    "type": "text"
+   },
+   {
+    "id": "typeDesc",
+    "type": "text"
+   },
+   {
+    "id": "deficiencyDesc",
+    "type": "text"
+   },
+   {
+    "id": "OutcomeDesc",
+    "type": "text"
+   },
+   {
+    "id": "OutcomeDate",
+    "type": "date"
+   },
+   {
+    "id": "amountFined",
+    "type": "float8"
+   },
+   {
+    "id": "latitude",
+    "type": "text"
+   },
+   {
+    "id": "longitude",
+    "type": "text"
+   }
+  ],
+  "records": [
+   {
+    "_id": 1,
+    "estId": "001Vo000013QjdPIAS",
+    "estName": "# HASHTAG INDIA RESTAURANT",
+    "address": "1871 O'Connor Dr None M4A 1X1",
+    "inspectionDate": "2026-04-21",
+    "inspectionStatus": "Pass",
+    "severity": "M - Minor",
+    "typeDesc": "FAIL TO ENSURE EQUIPMENT SURFACE SANITIZED AS NECESSARY - SEC. 22",
+    "deficiencyDesc": "05. MAINTENANCE / SANITATION OF NON-FOOD CONTACT SURFACES / EQUIPMENT",
+    "OutcomeDesc": "None",
+    "OutcomeDate": null,
+    "amountFined": null,
+    "latitude": "43.72198563",
+    "longitude": "-79.30349182"
+   },
+   {
+    "_id": 2,
+    "estId": "001Vo000013QjdPIAS",
+    "estName": "# HASHTAG INDIA RESTAURANT",
+    "address": "1871 O'Connor Dr None M4A 1X1",
+    "inspectionDate": "2026-04-21",
+    "inspectionStatus": "Pass",
+    "severity": "M - Minor",
+    "typeDesc": "FOOD PREMISE NOT MAINTAINED TO KEEP FOOD-HANDLING ROOM FREE FROM EQUIPMENT NOT REGULARLY USED - SEC. 7(1)(F)",
+    "deficiencyDesc": "05. MAINTENANCE / SANITATION OF NON-FOOD CONTACT SURFACES / EQUIPMENT",
+    "OutcomeDesc": "None",
+    "OutcomeDate": null,
+    "amountFined": null,
+    "latitude": "43.72198563",
+    "longitude": "-79.30349182"
+   },
+   {
+    "_id": 125589,
+    "estId": "001Vo000013Qh1VIAS",
+    "estName": "IMPERFECT  EATS",
+    "address": "312 Adelaide St W None M5V 1R2",
+    "inspectionDate": "2026-11-04",
+    "inspectionStatus": "Closed",
+    "severity": "C - Crucial",
+    "typeDesc": "Food premise maintained in manner permitting health hazard - Sec. 7(1)(a)(i)",
+    "deficiencyDesc": "09. CONDITION(S) FOR CLOSURE",
+    "OutcomeDesc": "None",
+    "OutcomeDate": null,
+    "amountFined": null,
+    "latitude": "43.64772613",
+    "longitude": "-79.39186304"
+   },
+   {
+    "_id": 125586,
+    "estId": "001Vo000013Qh1VIAS",
+    "estName": "IMPERFECT  EATS",
+    "address": "312 Adelaide St W None M5V 1R2",
+    "inspectionDate": "2026-11-04",
+    "inspectionStatus": "Closed",
+    "severity": "C - Crucial",
+    "typeDesc": "Fail to protect food from contamination or adulteration - Sec. 26(1)",
+    "deficiencyDesc": "02. FOOD PROTECTED FROM CONTAMINATION",
+    "OutcomeDesc": "None",
+    "OutcomeDate": null,
+    "amountFined": null,
+    "latitude": "43.64772613",
+    "longitude": "-79.39186304"
+   }
+  ]
+ }
+}
