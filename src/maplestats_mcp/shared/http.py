@@ -50,6 +50,7 @@ from tenacity import (
 )
 
 from maplestats_mcp import __version__
+from maplestats_mcp.shared import upstream_wait
 from maplestats_mcp.shared.breaker import BREAKER, is_failure_status, one_call
 from maplestats_mcp.shared.errors import CloudflareChallenge
 from maplestats_mcp.shared.fr_typography import call_error
@@ -132,19 +133,7 @@ def is_recording() -> bool:
     return _recorded.get() is not None
 
 
-# Requests to publishers in flight for the current tool call (ToolTimeoutMiddleware
-# sets a fresh one per call; child tasks share the same list). A deadline reached
-# while one is in flight is the source's slowness; with none, it is the server's own
-# work (a large tabulation or join), which a retry would not fix.
-upstream_in_flight: ContextVar[list[int] | None] = ContextVar(
-    "maplestats_upstream_in_flight", default=None
-)
-
-
-def _track(delta: int) -> None:
-    counter = upstream_in_flight.get()
-    if counter is not None:
-        counter[0] += delta
+_track = upstream_wait.track
 
 
 class BreakerClient(httpx.AsyncClient):

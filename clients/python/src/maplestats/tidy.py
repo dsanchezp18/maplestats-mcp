@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from collections import deque
 from typing import Any
 
 Record = dict[str, Any]
@@ -147,17 +148,21 @@ def provenance(payload: Any) -> Record:
 
 def citations(payload: Any) -> list[str]:
     """Each distinct `citation` string in the result, else one built from provenance."""
+    # A deque, breadth first: list.pop(0) made this quadratic (87 s for 200 series
+    # of 500 observations); a set keeps the duplicate check constant time.
     found: list[str] = []
-    stack: list[Any] = [payload]
-    while stack:
-        node = stack.pop(0)
+    seen: set[str] = set()
+    queue: deque[Any] = deque([payload])
+    while queue:
+        node = queue.popleft()
         if isinstance(node, dict):
             value = node.get("citation")
-            if isinstance(value, str) and value not in found:
+            if isinstance(value, str) and value not in seen:
+                seen.add(value)
                 found.append(value)
-            stack += list(node.values())
+            queue.extend(node.values())
         elif isinstance(node, list):
-            stack += node
+            queue.extend(node)
     if found:
         return found
     source = provenance(payload)

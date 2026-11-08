@@ -1198,6 +1198,10 @@ async def compare_countries(
     fetched, cached, csv_url = await _fetch(fid, info, key, params, dimensions, lang)
 
     by_area: dict[str, CountrySeries] = {}
+    # One series per country, the first kept: a preset that asks for a national
+    # measure and a harmonised fallback (CPI_YTYPCT+CPIH_YTYPCT) must keep the
+    # national one where a country has both; CPIH sorts first by key otherwise.
+    fetched = sorted(fetched, key=lambda item: "CPIH" in item[0].key)
     for series_info, rows in fetched:
         area = series_info.dimensions[area_index]
         if area.code in by_area:

@@ -49,8 +49,8 @@ async def test_a_timed_out_call_is_counted_as_an_error() -> None:
 
 
 def _timeout_server() -> FastMCP:
+    from maplestats_mcp.shared import upstream_wait
     from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
-    from maplestats_mcp.shared.http import upstream_in_flight
 
     server = FastMCP("t")
     server.add_middleware(ErrorHintMiddleware())  # same order as server.py
@@ -60,9 +60,7 @@ def _timeout_server() -> FastMCP:
     @server.tool
     async def waiting() -> str:
         # As BreakerClient.send does while a request to a publisher is pending.
-        counter = upstream_in_flight.get()
-        assert counter is not None
-        counter[0] += 1
+        upstream_wait.track(1)
         await asyncio.sleep(5)
         return "x"
 
@@ -70,6 +68,14 @@ def _timeout_server() -> FastMCP:
     async def computing() -> str:
         await asyncio.sleep(5)  # stands for a long DuckDB query: no request pending
         return "x"
+
+    @server.tool
+    async def proxy(name: str) -> str:
+        # As server.py's call_tool does: the target runs through the middleware again.
+        from fastmcp.server.dependencies import get_context
+
+        result = await get_context().fastmcp.call_tool(name, {})
+        return str(result)
 
     return server
 
@@ -83,6 +89,15 @@ async def test_a_timeout_while_a_source_is_pending_is_upstream_unavailable() -> 
     assert str(caught.value).startswith("[upstream_unavailable] waiting did not finish within")
 
 
+async def test_a_pending_source_is_seen_through_the_call_tool_proxy() -> None:
+    # The proxy's own (outer) deadline fires first; the nested middleware used to
+    # count the inner requests on a separate counter the outer one never saw.
+    async with Client(_timeout_server()) as client:
+        with pytest.raises(ToolError) as caught:
+            await client.call_tool("proxy", {"name": "waiting"})
+    assert str(caught.value).startswith("[upstream_unavailable]")
+
+
 async def test_a_timeout_in_the_servers_own_work_asks_to_narrow_the_request() -> None:
     # A CSWC tabulation can run past the limit on the 1 vCPU host with the source
     # healthy: telling the caller to retry would only time out again.
@@ -94,23 +109,35 @@ async def test_a_timeout_in_the_servers_own_work_asks_to_narrow_the_request() ->
     assert "narrow the request" in text
 
 
+def test_a_deadline_soon_after_a_request_counts_as_waiting_on_the_source() -> None:
+    # A retry's backoff or a Retry-After wait sits between attempts, with no request
+    # pending: a deadline then is still the source's slowness.
+    from maplestats_mcp.shared.upstream_wait import RECENT_SECONDS, UpstreamWait
+
+    state = UpstreamWait(in_flight=0, last_end=100.0)
+    assert state.waiting(now=100.0 + RECENT_SECONDS - 1)
+    assert not state.waiting(now=100.0 + RECENT_SECONDS + 1)
+    assert not UpstreamWait().waiting(now=5.0)
+
+
 async def test_the_shared_client_counts_a_streamed_body_until_it_is_closed(httpx_mock) -> None:
-    from maplestats_mcp.shared.http import BreakerClient, upstream_in_flight
+    from maplestats_mcp.shared import upstream_wait
+    from maplestats_mcp.shared.http import BreakerClient
 
     httpx_mock.add_response(url="https://example.org/big.zip", content=b"x" * 10)
     httpx_mock.add_response(url="https://example.org/big.zip", content=b"x" * 10)
-    counter = [0]
-    token = upstream_in_flight.set(counter)
+    state = upstream_wait.UpstreamWait()
+    token = upstream_wait.current.set(state)
     try:
         async with BreakerClient() as client:
             async with client.stream("GET", "https://example.org/big.zip") as response:
-                assert counter[0] == 1
+                assert state.in_flight == 1
                 await response.aread()
-            assert counter[0] == 0
+            assert state.in_flight == 0
             await client.get("https://example.org/big.zip")
-            assert counter[0] == 0
+            assert state.in_flight == 0
     finally:
-        upstream_in_flight.reset(token)
+        upstream_wait.current.reset(token)
 
 
 async def test_a_timeout_error_raised_by_the_tool_is_not_reported_as_the_deadline() -> None:

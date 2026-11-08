@@ -10,6 +10,8 @@ import asyncio
 import time
 from dataclasses import dataclass, field
 
+from maplestats_mcp.shared import upstream_wait
+
 
 @dataclass
 class TokenBucket:
@@ -42,7 +44,12 @@ class TokenBucket:
 
                 wait_seconds = (1 - self._tokens) / self.rate
 
-            await asyncio.sleep(wait_seconds)
+            # Waiting for the publisher's allowance counts as waiting on it.
+            upstream_wait.track(1)
+            try:
+                await asyncio.sleep(wait_seconds)
+            finally:
+                upstream_wait.track(-1)
 
 
 _limiters: dict[str, TokenBucket] = {}

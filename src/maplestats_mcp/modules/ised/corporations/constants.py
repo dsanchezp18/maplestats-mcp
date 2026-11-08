@@ -8,4 +8,5 @@ RATE_LIMIT_CAPACITY = 5.0
 
 CACHE_TTL_SECONDS = 60 * 60
 
-LANDING_PAGE_URL = "https://ised-isde.canada.ca/cc/lgcy/cr_ecfrm.html"
+# cr_ecfrm.html answers 404 since 2026-11; this is the federal corporation search page.
+LANDING_PAGE_URL = "https://ised-isde.canada.ca/cc/lgcy/fdrlCrpSrch.html"
