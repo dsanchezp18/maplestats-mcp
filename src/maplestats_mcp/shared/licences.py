@@ -269,6 +269,10 @@ SOURCE_LICENCES: dict[str, str] = {
         "candidate countries and data from non-Eurostat sources "
         "(https://ec.europa.eu/eurostat/help/copyright-notice)."
     ),
+    "ons": (
+        "Source: Office for National Statistics licensed under the Open Government Licence "
+        "v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)."
+    ),
     # Quebec
     "isq": ISQ_LICENCE,
     # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
@@ -456,6 +460,10 @@ LICENCES_FR: dict[str, str] = {
         "Source : Explorateur de données de l'OCDE. Toute utilisation, y compris commerciale, "
         "en citant l'OCDE (https://www.oecd.org/en/about/terms-conditions.html, section 3) ; "
         "données de tiers exclues."
+    ),
+    SOURCE_LICENCES["ons"]: (
+        "Source : Office for National Statistics, sous licence Open Government Licence v3.0 "
+        "(https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)."
     ),
     SOURCE_LICENCES["eurostat"]: (
         "Source : Eurostat. Creative Commons Attribution 4.0 ; réutilisation commerciale "
@@ -766,6 +774,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     # CC BY 4.0, but not for non-EU/EFTA/candidate countries' data or
     # non-Eurostat sources (copyright notice, read 2026-11-07).
     "eurostat": "varies",
+    # OGL v3: commercial and non-commercial reuse with the source acknowledged.
+    "ons": "allowed",
     "cbsa-tariff": "not_allowed",
     "electricity": "varies",
     "dfo-iwls": "unknown",

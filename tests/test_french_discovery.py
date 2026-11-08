@@ -201,6 +201,7 @@ CASES = [
     ),
     ("jeux de données de la Banque des règlements internationaux", "bis_list_datasets"),
     ("productivité du travail Canada comparée aux pays de l'OCDE", "oecd_compare_countries"),
+    ("inflation au Royaume-Uni, chiffre britannique de l'ONS", "ons_get_indicator"),
     # Eurostat, 2026-11-07.
     ("taux de chômage de la zone euro et de l'Union européenne", "eurostat_compare"),
     ("trouver un jeu de données Eurostat", "eurostat_search_datasets"),

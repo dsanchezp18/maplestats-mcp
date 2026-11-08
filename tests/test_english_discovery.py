@@ -231,6 +231,9 @@ CASES = [
     ("euro area HICP inflation compared with Germany and France", "eurostat_compare"),
     ("find a Eurostat dataset code for EU statistics", "eurostat_search_datasets"),
     ("Eurostat dataset dimensions codes and status flags", "eurostat_describe_dataset"),
+    # UK Office for National Statistics, 2026-11-08.
+    ("UK CPIH inflation Office for National Statistics", "ons_get_indicator"),
+    ("find the ONS series id CDID for a UK statistic", "ons_search_series"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

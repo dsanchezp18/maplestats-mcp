@@ -578,6 +578,48 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "united_kingdom",
+        "United Kingdom comparators (ONS)",
+        (
+            "united kingdom",
+            "britain",
+            "england",
+            "ons",
+            "office for national statistics",
+            "cpih",
+            "royaume-uni",
+            "angleterre",
+        ),
+        (
+            PlanStep(
+                "ons_get_indicator",
+                "the UK figure by indicator (cpi_inflation, cpih_inflation, "
+                "gdp_quarterly_growth, unemployment_rate, regular_pay_growth, ...), with the "
+                "Canadian table to pair with",
+            ),
+            PlanStep("ons_search_series", "find an ONS series id (CDID) for any other UK measure"),
+            PlanStep("ons_get_series", "pull an ONS series by id for the same periods"),
+        ),
+        (
+            (
+                "UK and Canadian definitions differ: the UK unemployment rate is a three-month "
+                "average for ages 16 and over, Canada's Labour Force Survey a single month for "
+                "15 and over; the UK CPI leaves out owner occupiers' housing costs, which "
+                "Canada's CPI and the UK's CPIH include; Canada's quarterly GDP growth is "
+                "annualized, the UK's is not."
+            ),
+        ),
+        # Trade with the United Kingdom is CIMT's, not a UK statistic.
+        shadows=(
+            "to the united kingdom",
+            "from the united kingdom",
+            "with the united kingdom",
+            "vers le royaume-uni",
+            "en provenance du royaume-uni",
+            "avec le royaume-uni",
+        ),
+    ),
+    Topic(
         "economy",
         "GDP, trade and industry output",
         (
@@ -3330,6 +3372,40 @@ FOREIGN_PLACES: tuple[str, ...] = (
 )
 # Matched on the question as typed, so "US" counts and the pronoun "us" does not.
 FOREIGN_CODES: tuple[str, ...] = ("US", "USA", "UK", "EU")
+# The United Kingdom is in scope for what the ONS module covers: a UK question
+# about prices, output, jobs, pay or public debt gets the united_kingdom plan.
+UK_PLACES: frozenset[str] = frozenset(
+    {"united kingdom", "britain", "england", "royaume-uni", "angleterre", "UK"}
+)
+UK_COVERED_TERMS: tuple[str, ...] = (
+    "inflation",
+    "cpi",
+    "cpih",
+    "rpi",
+    "consumer price*",
+    "gdp",
+    "economic growth",
+    "recession",
+    "unemployment",
+    "employment",
+    "jobs",
+    "inactivity",
+    "wage*",
+    "earnings",
+    "pay growth",
+    "vacanc*",
+    "public sector debt",
+    "net debt",
+    "retail sales",
+    "chomage",
+    "emploi*",
+    "salaire*",
+    "ipc",
+    "pib",
+    "prix a la consommation",
+    "dette publique",
+    "ventes au detail",
+)
 CROSS_BORDER_TERMS: tuple[str, ...] = (
     *_TRADE_TERMS,
     "exchange rate",

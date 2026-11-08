@@ -171,6 +171,33 @@ FR: dict[str, str] = {
         "main-d'œuvre, PPA, recettes fiscales en % du PIB, prix des logements, indicateur "
         "avancé)"
     ),
+    # United Kingdom
+    "United Kingdom comparators (ONS)": "Points de comparaison du Royaume-Uni (ONS)",
+    "the UK figure by indicator (cpi_inflation, cpih_inflation, "
+    "gdp_quarterly_growth, unemployment_rate, regular_pay_growth, ...), with the "
+    "Canadian table to pair with": (
+        "le chiffre britannique par indicateur (cpi_inflation, cpih_inflation, "
+        "gdp_quarterly_growth, unemployment_rate, regular_pay_growth, ...), avec le tableau "
+        "canadien à mettre en regard"
+    ),
+    "find an ONS series id (CDID) for any other UK measure": (
+        "trouver l'identifiant d'une série de l'ONS (CDID) pour toute autre mesure britannique"
+    ),
+    "pull an ONS series by id for the same periods": (
+        "obtenir une série de l'ONS par identifiant pour les mêmes périodes"
+    ),
+    "UK and Canadian definitions differ: the UK unemployment rate is a three-month "
+    "average for ages 16 and over, Canada's Labour Force Survey a single month for "
+    "15 and over; the UK CPI leaves out owner occupiers' housing costs, which "
+    "Canada's CPI and the UK's CPIH include; Canada's quarterly GDP growth is "
+    "annualized, the UK's is not.": (
+        "Les définitions britanniques et canadiennes diffèrent : le taux de chômage "
+        "britannique est une moyenne sur trois mois des 16 ans et plus, celui de l'Enquête sur "
+        "la population active du Canada un mois isolé des 15 ans et plus ; l'IPC britannique "
+        "exclut les coûts du logement des propriétaires occupants, que l'IPC canadien et le "
+        "CPIH britannique incluent ; la croissance trimestrielle du PIB canadien est "
+        "annualisée, celle du Royaume-Uni non."
+    ),
     # Economy
     "Canada's duty rates: tariff_item is the same HS code (MFN, General and "
     "CUSMA, CETA, CPTPP ... rates); cbsa_tariff_search finds it by words": (

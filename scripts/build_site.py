@@ -673,6 +673,14 @@ SOURCES: dict[str, Source] = {
         "Banque mondiale (WDI)",
         domain="statistics",
     ),
+    "ons": Source(
+        "UK Office for National Statistics (UK comparators)",
+        "Office for National Statistics du Royaume-Uni (points de comparaison britanniques)",
+        "international",
+        "ONS (United Kingdom)",
+        "ONS (Royaume-Uni)",
+        domain="statistics",
+    ),
     "eurostat": Source(
         "Eurostat (EU, euro area and member states, as comparators)",
         "Eurostat (UE, zone euro et États membres, comme points de comparaison)",
