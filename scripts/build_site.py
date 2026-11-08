@@ -685,7 +685,7 @@ SOURCES: dict[str, Source] = {
         "US Federal Reserve Board statistical releases (US comparators)",
         "Publications statistiques de la Réserve fédérale des États-Unis (comparaisons avec les "
         "États-Unis)",
-        "national",
+        "international",
         "Federal Reserve",
         "Réserve fédérale",
         domain="statistics",
