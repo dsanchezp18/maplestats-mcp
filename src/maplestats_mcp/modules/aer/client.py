@@ -8,17 +8,25 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, date, datetime, time, timedelta
-from typing import NoReturn
+from typing import Any, NoReturn
+from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
 import httpx
 
-from maplestats_mcp.modules.aer import constants
+from maplestats_mcp.modules.aer import constants, st98
 from maplestats_mcp.modules.aer.schemas import (
     ProductionVolumesLink,
+    St98Edition,
+    St98Observation,
+    St98Series,
+    St98Table,
+    St98TableInfo,
+    St98TableList,
     WellLicenceArchiveLink,
     WellLicenceDailyReport,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_typed
 from maplestats_mcp.shared.errors import (
@@ -27,6 +35,7 @@ from maplestats_mcp.shared.errors import (
     UpstreamError,
     UpstreamUnavailable,
 )
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import new_client, send_with_retry
 from maplestats_mcp.shared.i18n import french_spacing
 from maplestats_mcp.shared.rate_limiter import get_limiter
@@ -360,4 +369,306 @@ async def get_production_volumes_link(product: str, *, lang: str = "en") -> Prod
             limits=_ENGLISH_ONLY_FR if lang == "fr" else None,
             lang=lang,
         ),
+    )
+
+
+# --- ST98 Alberta Energy Outlook ---------------------------------------------
+
+_ST98_LINK = re.compile(r'href="([^"]*executive[-_]summary[-_]data\.xlsx)"', re.IGNORECASE)
+_ST98_LINK_YEAR = re.compile(r"st98[-_]?(20\d\d)", re.IGNORECASE)
+_ST98_PATH_YEAR = re.compile(r"/(20\d\d)/")
+_ST98_TABLE_ID = re.compile(r"^(fig(?:ure)?|tab(?:le)?)[\s_.-]*(\d+)$", re.IGNORECASE)
+_ST98_MAX_PAGE_BYTES = 2 * 1024 * 1024
+
+
+def _aer_host(host: str) -> bool:
+    return host in (constants.WWW_DOMAIN, constants.STATIC_DOMAIN)
+
+
+async def _st98_download(url: str, max_bytes: int) -> file_download.Downloaded:
+    """GET an aer.ca file under a size cap; www.aer.ca answers 301 to static.aer.ca."""
+    return await file_download.download(
+        url,
+        allow_host=_aer_host,
+        limiter_for=lambda _host: _LIMITER,
+        max_bytes=max_bytes,
+        context="aer",
+        timeout=60.0,
+    )
+
+
+def st98_editions_from_page(html: str) -> dict[int, str]:
+    """Edition year -> workbook URL for every executive-summary workbook the page links."""
+    found: dict[int, str] = {}
+    for href in _ST98_LINK.findall(html):
+        url = urljoin(constants.ST98_PAGE_URL, href)
+        name = url.rsplit("/", 1)[-1]
+        match = _ST98_LINK_YEAR.search(name) or _ST98_PATH_YEAR.search(url)
+        if match:
+            found.setdefault(int(match.group(1)), url)
+    return found
+
+
+async def _st98_editions() -> tuple[list[St98Edition], bool]:
+    """(editions newest first, read from the live page).
+
+    The page is read so a new edition shows up without a release of this
+    server; the editions recorded in constants (all checked live) fill in
+    when the page does not answer or drops an older link.
+    """
+
+    async def load() -> dict[int, str]:
+        page = await _st98_download(constants.ST98_PAGE_URL, _ST98_MAX_PAGE_BYTES)
+        return st98_editions_from_page(page.body.decode("utf-8", errors="replace"))
+
+    try:
+        linked, _ = await cached_fetch("aer:st98:page", constants.CACHE_TTL_ST98_SECONDS, load)
+    except (NotFound, UpstreamError, UpstreamUnavailable):
+        linked = {}
+    years = sorted(set(constants.ST98_WORKBOOKS) | set(linked), reverse=True)
+    editions = [
+        St98Edition(
+            edition=year,
+            workbook_url=linked.get(year) or constants.ST98_WORKBOOKS[year],
+            report_url=constants.ST98_REPORTS.get(year),
+        )
+        for year in years
+    ]
+    return editions, bool(linked)
+
+
+def _pick_edition(editions: list[St98Edition], edition: int | None, lang: str) -> St98Edition:
+    if edition is None:
+        return editions[0]
+    for item in editions:
+        if item.edition == edition:
+            return item
+    known = sorted(e.edition for e in editions)
+    _raise(
+        NotFound,
+        f"aer: no ST98 executive-summary workbook for {edition}; editions are {known} "
+        "(earlier editions publish their data as ZIP archives only).",
+        f"aer : aucun classeur de sommaire ST98 pour {edition} ; les éditions sont {known} "
+        "(les éditions antérieures ne publient leurs données qu'en archives ZIP).",
+        lang,
+    )
+
+
+async def _st98_blocks(chosen: St98Edition, lang: str) -> tuple[list[st98.ParsedBlock], bool]:
+    async def load() -> list[st98.ParsedBlock]:
+        response = await _st98_download(chosen.workbook_url, constants.ST98_MAX_WORKBOOK_BYTES)
+        if not response.body.startswith(b"PK"):
+            _raise(
+                UpstreamError,
+                f"aer: {chosen.workbook_url} is not an Excel workbook.",
+                f"aer : {chosen.workbook_url} n'est pas un classeur Excel.",
+                lang,
+            )
+        blocks = await run_parse(st98.parse_workbook, response.body)
+        if not any(b.kind == "figure" for b in blocks):
+            _raise(
+                UpstreamError,
+                f"aer: no figure data read from the ST98 {chosen.edition} workbook; its layout "
+                "changed.",
+                f"aer : aucune donnée de figure lue dans le classeur ST98 {chosen.edition} ; sa "
+                "structure a changé.",
+                lang,
+            )
+        return blocks
+
+    key = f"aer:st98:{chosen.edition}:{chosen.workbook_url}"
+    return await cached_fetch(key, constants.CACHE_TTL_ST98_SECONDS, load)
+
+
+def _st98_title(block: st98.ParsedBlock, edition: int, lang: str) -> str:
+    titles = constants.ST98_TITLES.get(edition, {})
+    if block.table_id in titles:
+        en, fr = titles[block.table_id]
+        return french_spacing(fr) if lang == "fr" else en
+    # Tables carry their title in the heading: "Table 1 Resources, reserves, ..."
+    title = re.sub(r"^\s*(Figure|Table)\s+\d+\s*", "", block.heading).strip()
+    return title or block.heading
+
+
+def _st98_provenance(
+    url: str, cached: bool, schema: str, lang: str, coverage: str | None = None
+) -> Any:
+    return make_provenance(
+        source=constants.RATE_LIMIT_SOURCE,
+        url=url,
+        cached=cached,
+        schema_name=f"aer.{schema}",
+        freshness=(
+            "one edition a year (around June): history to the year before, forecast for the "
+            "next ten years"
+            if lang != "fr"
+            else french_spacing(
+                "une édition par année (vers juin) : historique jusqu'à l'année précédente, "
+                "prévisions pour les dix années suivantes"
+            )
+        ),
+        coverage=coverage,
+        limits=_ENGLISH_ONLY_FR if lang == "fr" else None,
+        lang=lang,
+    )
+
+
+def _st98_info(block: st98.ParsedBlock, edition: int, lang: str) -> St98TableInfo:
+    years = [r.year for r in block.rows if r.year is not None]
+    return St98TableInfo(
+        table=block.table_id,
+        title=_st98_title(block, edition, lang),
+        heading=block.heading,
+        sheet=block.sheet,
+        series=[St98Series(series=s.label, unit=s.unit) for s in block.series],
+        rows=len(block.rows),
+        first_year=min(years) if years else None,
+        last_year=max(years) if years else None,
+        has_forecast=any(y >= edition for y in years),
+    )
+
+
+async def list_st98_tables(
+    edition: int | None = None, *, query: str = "", lang: str = "en"
+) -> St98TableList:
+    """The ST98 editions, and the figures and tables of one edition matching `query`."""
+    editions, live = await _st98_editions()
+    chosen = _pick_edition(editions, edition, lang)
+    blocks, cached = await _st98_blocks(chosen, lang)
+    words = query.casefold().split()
+    infos = [_st98_info(b, chosen.edition, lang) for b in blocks]
+    found = [
+        info
+        for info in infos
+        if all(
+            w
+            in " ".join(
+                [info.table, info.title, info.heading, *(s.series for s in info.series)]
+            ).casefold()
+            for w in words
+        )
+    ]
+    coverage = None
+    if not live:
+        coverage = (
+            "The ST98 page did not answer; editions are the ones MapleStats recorded."
+            if lang != "fr"
+            else french_spacing(
+                "La page ST98 n'a pas répondu ; les éditions sont celles que MapleStats a relevées."
+            )
+        )
+    return St98TableList(
+        editions=editions,
+        edition=chosen.edition,
+        forecast_from=chosen.edition,
+        tables=found,
+        total_matched=len(found),
+        provenance=_st98_provenance(chosen.workbook_url, cached, "St98TableList", lang, coverage),
+    )
+
+
+def _st98_table_id(table: str, lang: str) -> str:
+    match = _ST98_TABLE_ID.match(table.strip())
+    if match is None:
+        _raise(
+            InvalidInput,
+            f"aer: table must look like 'figure_8' or 'table_1', got {table!r}.",
+            f"aer : table doit ressembler à 'figure_8' ou 'table_1', reçu {table!r}.",
+            lang,
+        )
+    kind = "figure" if match.group(1).lower().startswith("fig") else "table"
+    return f"{kind}_{int(match.group(2))}"
+
+
+async def get_st98_table(
+    table: str,
+    *,
+    edition: int | None = None,
+    series: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None,
+    forecast: bool | None = None,
+    lang: str = "en",
+) -> St98Table:
+    """One ST98 figure or table as tidy observations, history and forecast flagged."""
+    table_id = _st98_table_id(table, lang)
+    if start_year is not None and end_year is not None and start_year > end_year:
+        _raise(
+            InvalidInput,
+            f"aer: start_year {start_year} is after end_year {end_year}.",
+            f"aer : start_year {start_year} est postérieur à end_year {end_year}.",
+            lang,
+        )
+    editions, _ = await _st98_editions()
+    chosen = _pick_edition(editions, edition, lang)
+    blocks, cached = await _st98_blocks(chosen, lang)
+    block = next((b for b in blocks if b.table_id == table_id), None)
+    if block is None:
+        ids = ", ".join(b.table_id for b in blocks)
+        _raise(
+            NotFound,
+            f"aer: no {table_id} in the ST98 {chosen.edition} workbook; it has {ids} (see "
+            "aer_st98_list_tables).",
+            f"aer : aucun {table_id} dans le classeur ST98 {chosen.edition} ; il contient {ids} "
+            "(voir aer_st98_list_tables).",
+            lang,
+        )
+    wanted = [
+        i
+        for i, s in enumerate(block.series)
+        if not series or series.casefold() in s.label.casefold()
+    ]
+    if not wanted:
+        labels = "; ".join(s.label for s in block.series)
+        _raise(
+            NotFound,
+            f"aer: no series matching {series!r} in {table_id}; its series are: {labels}.",
+            f"aer : aucune série correspondant à {series!r} dans {table_id} ; ses séries sont : "
+            f"{labels}.",
+            lang,
+        )
+    estimated = block.estimated_years()
+    observations: list[St98Observation] = []
+    for row in block.rows:
+        if row.year is None and (start_year is not None or end_year is not None):
+            continue
+        if row.year is not None:
+            if start_year is not None and row.year < start_year:
+                continue
+            if end_year is not None and row.year > end_year:
+                continue
+        is_forecast = None if row.year is None else row.year >= chosen.edition
+        if forecast is not None and is_forecast is not forecast:
+            continue
+        for i in wanted:
+            if row.values[i] is None and row.markers[i] is None:
+                continue
+            observations.append(
+                St98Observation(
+                    series=block.series[i].label,
+                    category=row.label if row.is_item else None,
+                    year=row.year,
+                    period=row.period,
+                    row_label=row.label,
+                    value=row.values[i],
+                    unit=block.series[i].unit,
+                    marker=row.markers[i],
+                    forecast=is_forecast,
+                    estimated=row.year in estimated,
+                    edition=chosen.edition,
+                )
+            )
+    return St98Table(
+        edition=chosen,
+        table=table_id,
+        title=_st98_title(block, chosen.edition, lang),
+        heading=block.heading,
+        forecast_from=chosen.edition,
+        series=[
+            St98Series(series=block.series[i].label, unit=block.series[i].unit) for i in wanted
+        ],
+        observations=observations,
+        total_observations=len(observations),
+        notes=block.notes,
+        provenance=_st98_provenance(chosen.workbook_url, cached, "St98Table", lang),
     )

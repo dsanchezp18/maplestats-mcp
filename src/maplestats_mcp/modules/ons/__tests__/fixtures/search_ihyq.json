@@ -1,0 +1,98 @@
+{
+ "count": 4,
+ "took": 104,
+ "distinct_items_count": 4,
+ "topics": [
+  {
+   "type": "1245",
+   "label": "",
+   "count": 4
+  },
+  {
+   "type": "9691",
+   "label": "",
+   "count": 4
+  }
+ ],
+ "content_types": [
+  {
+   "type": "timeseries",
+   "label": "",
+   "count": 4
+  }
+ ],
+ "items": [
+  {
+   "type": "timeseries",
+   "cdid": "IHYQ",
+   "dataset_id": "QNA",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-09-29T23:00:00.000Z",
+   "summary": "",
+   "title": "Gross Domestic Product: Quarter on Quarter growth: CVM SA %",
+   "topics": [
+    "1245",
+    "9691"
+   ],
+   "uri": "/economy/grossdomesticproductgdp/timeseries/ihyq/qna",
+   "highlight": {},
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "IHYQ",
+   "dataset_id": "PN2",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-08-12T23:00:00.000Z",
+   "summary": "",
+   "title": "Gross Domestic Product: Quarter on Quarter growth: CVM SA %",
+   "topics": [
+    "1245",
+    "9691"
+   ],
+   "uri": "/economy/grossdomesticproductgdp/timeseries/ihyq/pn2",
+   "highlight": {},
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "IHYQ",
+   "dataset_id": "UKEA",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-09-29T23:00:00.000Z",
+   "summary": "",
+   "title": "Gross Domestic Product: Quarter on Quarter growth: CVM SA %",
+   "topics": [
+    "1245",
+    "9691"
+   ],
+   "uri": "/economy/grossdomesticproductgdp/timeseries/ihyq/ukea",
+   "highlight": {},
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "IHYQ",
+   "dataset_id": "PGDP",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2018-04-26T23:00:00.000Z",
+   "summary": "",
+   "title": "Gross Domestic Product: Quarter on Quarter growth: CVM SA %",
+   "topics": [
+    "1245",
+    "9691"
+   ],
+   "uri": "/economy/grossdomesticproductgdp/timeseries/ihyq/pgdp",
+   "highlight": {},
+   "canonical_topic": ""
+  }
+ ]
+}

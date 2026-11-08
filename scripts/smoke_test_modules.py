@@ -78,14 +78,9 @@ _TODAY = datetime.now(UTC).date()
 DOWN_MODULES: dict[str, str] = {}
 
 # Single tools whose upstream is down while the rest of their module works.
-# oee.nrcan.gc.ca times out at TCP connect on port 443 (2026-10-03; it failed
-# the TLS handshake on 2026-09-29). nrcan_energy_use_list_products still
-# answers from its fixed survey list, so it keeps its step.
-_OEE_DOWN = "oee.nrcan.gc.ca does not accept a TCP connection"
-DOWN_TOOLS: dict[str, str] = {
-    "nrcan_energy_use_list_tables": _OEE_DOWN,
-    "nrcan_energy_use_get_table": _OEE_DOWN,
-}
+# oee.nrcan.gc.ca was unreachable from 2026-09-29 to at least 2026-10-03 and
+# answered again on 2026-11-07, so its tools run again.
+DOWN_TOOLS: dict[str, str] = {}
 
 
 async def _ourcommons_blocked_on_ci() -> bool:
@@ -140,6 +135,42 @@ STEPS: list[Step] = [
         {"product": "oil"},
         lambda data: data["exists"] and (data["size_bytes"] or 0) > 0,
     ),
+    # ST98: the latest edition lists its figures, and at least one runs into
+    # AER's forecast years.
+    Step(
+        "aer",
+        "aer_st98_list_tables",
+        {},
+        lambda data: (
+            data["edition"] >= 2026
+            and len(data["editions"]) >= 5
+            and any(t["has_forecast"] for t in data["tables"])
+        ),
+    ),
+    # The 2026 report: Alberta produces 18 503 PJ of primary energy in 2035
+    # (sum of the petajoule columns of the workbook's Figure 8), a forecast.
+    Step(
+        "aer",
+        "aer_st98_get_table",
+        {
+            "table": "figure_8",
+            "edition": 2026,
+            "series": "petajoules",
+            "start_year": 2035,
+            "end_year": 2035,
+        },
+        lambda data: (
+            abs(sum(o["value"] or 0 for o in data["observations"]) - 18503) < 1
+            and all(o["forecast"] for o in data["observations"])
+        ),
+    ),
+    Step(
+        "aer",
+        "aer_st98_get_table",
+        {"table": "table_1", "edition": 2025},
+        lambda data: any("Montney" in (o["category"] or "") for o in data["observations"]),
+    ),
+    Step("aer", "aer_st98_get_table", {"table": "figure_99"}, expect_error="figure_1"),
     # Alberta Open Government Portal: describe counted 14 declared columns for
     # 5 named ones (2026-10-03); the count must match the names.
     Step(
@@ -1039,6 +1070,25 @@ STEPS: list[Step] = [
         "nrcan_energy_use",
         "nrcan_energy_use_get_table",
         lambda ctx: {"table_key": _first_table_key(ctx["nrcan_energy_use_list_tables"])},
+    ),
+    # The Comprehensive Energy Use Database runs to 2023 (2026-11-07): the
+    # Alberta residential menu links year=2023 tables, and table 1's first page
+    # ends with a 2023 column.
+    Step(
+        "nrcan_energy_use",
+        "nrcan_energy_use_list_tables",
+        {"product": "comprehensive", "sector": "res", "jurisdiction": "ab"},
+        lambda data: (
+            all("year=" in t["table_key"] for t in data["tables"])
+            and max(int(t["table_key"].split("year=")[1].split("&")[0]) for t in data["tables"])
+            >= 2023
+        ),
+    ),
+    Step(
+        "nrcan_energy_use",
+        "nrcan_energy_use_get_table",
+        {"table_key": "type=CP&sector=res&juris=ab&year=2023&rn=1&page=0"},
+        lambda data: "2023" in data["header_rows"][0] and bool(data["rows"]),
     ),
     # NRCan geocoding and place names
     Step("nrcan_geo", "nrcan_geo_locate", {"query": "Ottawa"}, _non_empty("locations")),

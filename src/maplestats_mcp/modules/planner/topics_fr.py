@@ -150,12 +150,58 @@ FR: dict[str, str] = {
     "Canada's series for the indicator, compared with G7 or OECD countries": (
         "la série du Canada pour l'indicateur, comparée aux pays du G7 ou de l'OCDE"
     ),
+    "United States comparators (Federal Reserve)": (
+        "comparaisons avec les États-Unis (Réserve fédérale)"
+    ),
+    "the US series by indicator (fed_funds_rate, treasury_2y, treasury_10y, "
+    "cad_per_usd, industrial_production, capacity_utilization, m2_money_stock), "
+    "with the Canadian series to set beside it": (
+        "la série américaine par indicateur (indicator : fed_funds_rate, treasury_2y, "
+        "treasury_10y, cad_per_usd, industrial_production, capacity_utilization, "
+        "m2_money_stock), avec la série canadienne à mettre à côté"
+    ),
+    "find a Federal Reserve series id for any other measure": (
+        "trouver l'identifiant d'une série de la Réserve fédérale pour toute autre mesure"
+    ),
+    "pull Federal Reserve series by id for the same dates": (
+        "récupérer les séries de la Réserve fédérale par identifiant pour les mêmes dates"
+    ),
+    "The Fed's H.10 rate is the noon buying rate in New York, the Bank of Canada's "
+    "FXUSDCAD a daily average, so the two differ slightly on the same day. The US has "
+    "an industrial production index; Canada's closest measure is monthly GDP by "
+    "industry.": (
+        "Le taux H.10 de la Fed est le taux acheteur de midi à New York, le FXUSDCAD de la "
+        "Banque du Canada une moyenne quotidienne : les deux diffèrent légèrement le même "
+        "jour. Les États-Unis ont un indice de la production industrielle ; la mesure "
+        "canadienne la plus proche est le PIB mensuel par industrie."
+    ),
+    "the euro area series by indicator (deposit_facility_rate, estr, eur_cad, "
+    "hicp_inflation, m3_growth): ECB key rates, the euro in Canadian dollars, HICP, "
+    "money and credit, with the Canadian series to pair with": (
+        "la série de la zone euro par indicateur (indicator : deposit_facility_rate, estr, "
+        "eur_cad, hicp_inflation, m3_growth) : taux directeurs de la BCE, euro en dollars "
+        "canadiens, IPCH, monnaie et crédit, avec la série canadienne à mettre à côté"
+    ),
     "the EU, the euro area or European countries on a headline indicator (GDP "
     "growth, HICP inflation, unemployment, debt, house prices), with the Canadian "
     "series to pair with": (
         "l'UE, la zone euro ou des pays européens pour un indicateur phare (croissance du "
         "PIB, inflation IPCH, chômage, dette, prix des logements), avec la série canadienne "
         "à mettre en regard"
+    ),
+    "Canada beside G7 or other countries on an ILOSTAT labour indicator "
+    "(unemployment, youth unemployment, participation, employment rate, hours "
+    "worked, earnings and minimum wage in PPP dollars, labour income share)": (
+        "le Canada à côté du G7 ou d'autres pays pour un indicateur du travail d'ILOSTAT "
+        "(chômage, chômage des jeunes, taux d'activité, taux d'emploi, heures travaillées, "
+        "gains et salaire minimum en dollars PPA, part du revenu du travail)"
+    ),
+    "Australia's figure from the ABS by indicator (cpi_inflation, "
+    "trimmed_mean_inflation, unemployment_rate, gdp_quarterly_growth, ...), with "
+    "the Canadian table to pair with": (
+        "le chiffre australien de l'ABS par indicateur (cpi_inflation, "
+        "trimmed_mean_inflation, unemployment_rate, gdp_quarterly_growth, ...), avec le "
+        "tableau canadien à mettre en regard"
     ),
     "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
     "service ratio, credit, house prices, inflation, exchange rate)": (
@@ -170,6 +216,33 @@ FR: dict[str, str] = {
         "(projections des Perspectives économiques, productivité, coûts unitaires de "
         "main-d'œuvre, PPA, recettes fiscales en % du PIB, prix des logements, indicateur "
         "avancé)"
+    ),
+    # United Kingdom
+    "United Kingdom comparators (ONS)": "Points de comparaison du Royaume-Uni (ONS)",
+    "the UK figure by indicator (cpi_inflation, cpih_inflation, "
+    "gdp_quarterly_growth, unemployment_rate, regular_pay_growth, ...), with the "
+    "Canadian table to pair with": (
+        "le chiffre britannique par indicateur (cpi_inflation, cpih_inflation, "
+        "gdp_quarterly_growth, unemployment_rate, regular_pay_growth, ...), avec le tableau "
+        "canadien à mettre en regard"
+    ),
+    "find an ONS series id (CDID) for any other UK measure": (
+        "trouver l'identifiant d'une série de l'ONS (CDID) pour toute autre mesure britannique"
+    ),
+    "pull an ONS series by id for the same periods": (
+        "obtenir une série de l'ONS par identifiant pour les mêmes périodes"
+    ),
+    "UK and Canadian definitions differ: the UK unemployment rate is a three-month "
+    "average for ages 16 and over, Canada's Labour Force Survey a single month for "
+    "15 and over; the UK CPI leaves out owner occupiers' housing costs, which "
+    "Canada's CPI and the UK's CPIH include; Canada's quarterly GDP growth is "
+    "annualized, the UK's is not.": (
+        "Les définitions britanniques et canadiennes diffèrent : le taux de chômage "
+        "britannique est une moyenne sur trois mois des 16 ans et plus, celui de l'Enquête sur "
+        "la population active du Canada un mois isolé des 15 ans et plus ; l'IPC britannique "
+        "exclut les coûts du logement des propriétaires occupants, que l'IPC canadien et le "
+        "CPIH britannique incluent ; la croissance trimestrielle du PIB canadien est "
+        "annualisée, celle du Royaume-Uni non."
     ),
     # Economy
     "Canada's duty rates: tariff_item is the same HS code (MFN, General and "
@@ -350,6 +423,10 @@ FR: dict[str, str] = {
     "Alberta production volumes: product='oil', 'gas'...": (
         "volumes de production de l'Alberta : product='oil', 'gas'..."
     ),
+    "AER's Alberta Energy Outlook (ST98): reserves, oil sands and gas forecasts": (
+        "perspectives énergétiques de l'Alberta de l'AER (ST98) : réserves, prévisions pour "
+        "les sables bitumineux et le gaz"
+    ),
     "CCEI energy information flows (efficiency, supply): query=<topic>": (
         "flux d'information sur l'énergie du CCIE (efficacité, approvisionnement) : query=<sujet>"
     ),
@@ -357,10 +434,17 @@ FR: dict[str, str] = {
     "StatCan energy supply and disposition tables": (
         "tableaux de l'offre et de l'utilisation de l'énergie de Statistique Canada"
     ),
-    "Electricity demand and prices cover Ontario (IESO) and Quebec (Hydro-Quebec) only; "
-    "Alberta's AESO data are not covered.": (
-        "La demande et les prix de l'électricité ne couvrent que l'Ontario (SIERE) et le "
-        "Québec (Hydro-Québec); les données de l'AESO de l'Alberta ne sont pas couvertes."
+    "Electricity demand and prices cover Ontario (IESO), Quebec (Hydro-Quebec) and "
+    "Alberta (AESO) only; AESO and Hydro-Quebec data are for non-commercial use.": (
+        "La demande et les prix de l'électricité ne couvrent que l'Ontario (SIERE), le "
+        "Québec (Hydro-Québec) et l'Alberta (AESO); les données de l'AESO et d'Hydro-Québec "
+        "sont réservées à un usage non commercial."
+    ),
+    "Alberta hourly pool price and internal load (AESO; non-commercial use only)": (
+        "prix horaire du pool et charge interne de l'Alberta (AESO; usage non commercial seulement)"
+    ),
+    "Alberta generation by fuel, interchange and load right now (AESO)": (
+        "production par combustible, échanges et charge de l'Alberta en ce moment (AESO)"
     ),
     # Weather
     "Weather, climate and natural hazards": "Météo, climat et risques naturels",

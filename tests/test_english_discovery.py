@@ -81,6 +81,9 @@ CASES = [
     ("Hydro-Quebec electricity demand right now", "electricity_quebec_get_demand"),
     ("Quebec electricity exports to New York", "electricity_quebec_get_trade"),
     ("Ontario generation mix nuclear wind gas", "electricity_ontario_get_supply_by_fuel"),
+    ("Alberta pool price yesterday by hour", "electricity_alberta_get_pool_price"),
+    ("how much wind is Alberta generating now", "electricity_alberta_get_supply_demand"),
+    ("Alberta monthly average electricity price", "electricity_alberta_get_monthly_summary"),
     ("wildfire burned area by year", "nrcan_nbac_query_fires"),
     ("Alberta wildfires out of control by cause", "ab_wildfire_get_fires"),
     ("Alberta fire danger rating extreme near Hinton", "ab_wildfire_get_fire_danger"),
@@ -231,6 +234,26 @@ CASES = [
     ("euro area HICP inflation compared with Germany and France", "eurostat_compare"),
     ("find a Eurostat dataset code for EU statistics", "eurostat_search_datasets"),
     ("Eurostat dataset dimensions codes and status flags", "eurostat_describe_dataset"),
+    # ILOSTAT, 2026-11-08.
+    ("ILO unemployment rate Canada compared with G7 countries", "ilo_compare_countries"),
+    ("search ILOSTAT labour statistics datasets", "ilo_search_datasets"),
+    ("dimensions and codes of an ILOSTAT dataset series key", "ilo_describe_dataset"),
+    # Australian Bureau of Statistics, 2026-11-08.
+    ("Australian trimmed mean inflation ABS", "abs_get_indicator"),
+    ("search Australian Bureau of Statistics datasets", "abs_search_datasets"),
+    # UK Office for National Statistics, 2026-11-08.
+    ("UK CPIH inflation Office for National Statistics", "ons_get_indicator"),
+    ("find the ONS series id CDID for a UK statistic", "ons_search_series"),
+    # US Federal Reserve Board releases, 2026-11-07.
+    ("US federal funds rate compared with the Bank of Canada", "fed_get_indicator"),
+    ("US 10-year Treasury yield", "fed_get_indicator"),
+    ("Federal Reserve H.15 H.10 G.17 statistical releases", "fed_list_releases"),
+    ("find a Federal Reserve series id", "fed_search_series"),
+    # European Central Bank Data Portal, 2026-11-07.
+    ("ECB deposit facility rate compared with the Bank of Canada", "ecb_get_indicator"),
+    ("euro to Canadian dollar ECB reference exchange rate", "ecb_get_indicator"),
+    ("list of European Central Bank datasets", "ecb_list_datasets"),
+    ("find the series key of an ECB series", "ecb_search_series"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

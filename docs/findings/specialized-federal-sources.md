@@ -1422,6 +1422,19 @@ Quirks: HTML parsers decode `&sect` in `&sector=` to `§`; survey tables
 follow each value with an A/M/U quality letter, captured with the legend in
 `notes`.
 
+Rechecked 2026-11-07: the host answers again (it refused or timed out every
+connection on 2026-09-29 and 2026-10-03, and still resets a TLS handshake now
+and then). The Comprehensive Energy Use Database now runs to 2023: menu links
+carry `year=2023`, page 0 of a table shows 2000 and 2018-2023 and page 1 the
+years between. No year is fixed in the client, so nothing changed there; the
+smoke test now reads an Alberta residential 2023 table. Comprehensive tables
+leave the `h1` empty and write the title in the caption with `<br />` lines
+and a footnote `<sup>`, which used to read "Residential SectorAlberta1Table
+1: ..."; titles now read "Residential Sector - Alberta - Table 1: ...". An
+unreachable host still fails in seconds as `[upstream_unavailable]`. The
+aliases oee.rncan-nrcan.gc.ca and oee.rncan.gc.ca resolve to the same address,
+so they are not used as fallbacks.
+
 Shipped 2026-09-23: `modules/nrcan_energy_use/` (3 tools) over
 oee.nrcan.gc.ca, which has no JSON API: product list (11 survey editions:
 SHEU 2019/2015 and by CMA, multi-unit residential 2018, SCIEU
@@ -2820,10 +2833,35 @@ have 24 rows. Fuel rows carry a negative count of unavailable points, 9
 fuel-hours lack a value, and a `CONTROL ACTIONS` pseudo-fuel is excluded
 from shares. The undated adequacy file is the furthest-out day (34 days
 ahead), not today. Other provinces, checked 2026-09-29: AESO's API needs a
-key and its site terms are non-commercial only; Hydro-Québec is keyless
+key and its site terms are non-commercial only (added 2026-11-08 from the
+keyless ETS reports, see below); Hydro-Québec is keyless
 but CC BY-NC 4.0; BC Hydro answers 403 to automated clients; NB Power
 gives no reuse permission; SaskPower and Nova Scotia Power expose no
 machine-readable feed.
+
+### AESO Alberta (added 2026-11-08)
+
+Four `electricity_alberta_*` tools over the AESO's public Energy Trading
+System reports on ets.aeso.ca (plain HTTP; HTTPS fails the handshake), not
+the keyed api.aeso.ca. Terms (www.aeso.ca/legal/, which the ETS legal notice
+links to): material "may be used and copied for non-commercial, personal or
+educational purposes, provided that the material is not modified and that
+copyright notices are not deleted"; any other use needs written permission.
+Nothing in the terms on automated retrieval, and neither host has a
+robots.txt (HTTP 404). Added because MapleStats is non-commercial; values
+are passed through unmodified and every result carries the terms,
+`commercial_use: not_allowed` and a notice. Quirks found live: the hourly
+pool price servlet's `endDate` is exclusive (the daily one's is inclusive);
+range errors come back as HTTP 200 HTML "Validation Error" pages (721 days
+for hourly CSV, 31 days for daily); unsettled hours are `"-"` rows; the
+autumn repeated hour is `"02*"`; hourly data start 1999-01-01. The Pool
+Monthly Summary is one HTML page per month (`PMS_MM01YYYY.html`, 404 until
+prepared) in two layouts: a "Monthly Statistics" table from about 2009 and
+a daily table with a "Monthly Value" row before that (with a weighted
+average column from about 2008). The Current Supply Demand page nests
+tables inside rows; its CSV variant drops the names of the non-gas asset
+sections, so the HTML is read. AIL equalled total net generation minus net
+actual interchange on every read, so a positive interchange is an export.
 
 ### Hydro-Québec (added 2026-09-29)
 

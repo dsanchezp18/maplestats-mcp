@@ -188,7 +188,7 @@ async def boc_get_observations(
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, time series, history, recent, date range,
     year-over-year, percent change, monthly average, annual average,
-    moving average, rolling average.
+    moving average, rolling average, several series in one call.
     Mots-clés : Banque du Canada, valet, observations, données, taux de
     change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
     inflation, prix des matières premières, série chronologique,

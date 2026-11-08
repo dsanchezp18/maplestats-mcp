@@ -1,0 +1,2236 @@
+{
+ "count": 4545,
+ "took": 39,
+ "distinct_items_count": 6818,
+ "topics": [
+  {
+   "type": "1245",
+   "label": "",
+   "count": 3879
+  },
+  {
+   "type": "4972",
+   "label": "",
+   "count": 2325
+  },
+  {
+   "type": "9691",
+   "label": "",
+   "count": 1320
+  },
+  {
+   "type": "5687",
+   "label": "",
+   "count": 626
+  },
+  {
+   "type": "2114",
+   "label": "",
+   "count": 320
+  },
+  {
+   "type": "9243",
+   "label": "",
+   "count": 317
+  },
+  {
+   "type": "4361",
+   "label": "",
+   "count": 306
+  },
+  {
+   "type": "2621",
+   "label": "",
+   "count": 176
+  },
+  {
+   "type": "6625",
+   "label": "",
+   "count": 176
+  },
+  {
+   "type": "2268",
+   "label": "",
+   "count": 169
+  },
+  {
+   "type": "8895",
+   "label": "",
+   "count": 87
+  },
+  {
+   "type": "3692",
+   "label": "",
+   "count": 47
+  },
+  {
+   "type": "5163",
+   "label": "",
+   "count": 40
+  },
+  {
+   "type": "5383",
+   "label": "",
+   "count": 40
+  },
+  {
+   "type": "9658",
+   "label": "",
+   "count": 40
+  },
+  {
+   "type": "2735",
+   "label": "",
+   "count": 36
+  },
+  {
+   "type": "1583",
+   "label": "",
+   "count": 26
+  },
+  {
+   "type": "9828",
+   "label": "",
+   "count": 22
+  },
+  {
+   "type": "8233",
+   "label": "",
+   "count": 19
+  },
+  {
+   "type": "7859",
+   "label": "",
+   "count": 10
+  },
+  {
+   "type": "3863",
+   "label": "",
+   "count": 3
+  },
+  {
+   "type": "7583",
+   "label": "",
+   "count": 3
+  },
+  {
+   "type": "8817",
+   "label": "",
+   "count": 3
+  }
+ ],
+ "content_types": [
+  {
+   "type": "timeseries",
+   "label": "",
+   "count": 4545
+  },
+  {
+   "type": "static_adhoc",
+   "label": "",
+   "count": 1014
+  },
+  {
+   "type": "dataset",
+   "label": "",
+   "count": 385
+  },
+  {
+   "type": "static_foi",
+   "label": "",
+   "count": 377
+  },
+  {
+   "type": "dataset_landing_page",
+   "label": "",
+   "count": 269
+  },
+  {
+   "type": "release",
+   "label": "",
+   "count": 249
+  },
+  {
+   "type": "article",
+   "label": "",
+   "count": 82
+  },
+  {
+   "type": "bulletin",
+   "label": "",
+   "count": 66
+  },
+  {
+   "type": "static_page",
+   "label": "",
+   "count": 37
+  },
+  {
+   "type": "static_methodology",
+   "label": "",
+   "count": 28
+  },
+  {
+   "type": "visualisation",
+   "label": "",
+   "count": 14
+  },
+  {
+   "type": "api_dataset_landing_page",
+   "label": "",
+   "count": 5
+  },
+  {
+   "type": "compendium_chapter",
+   "label": "",
+   "count": 5
+  },
+  {
+   "type": "static_article",
+   "label": "",
+   "count": 5
+  },
+  {
+   "type": "static_landing_page",
+   "label": "",
+   "count": 3
+  },
+  {
+   "type": "product_page",
+   "label": "",
+   "count": 2
+  },
+  {
+   "type": "static_methodology_download",
+   "label": "",
+   "count": 2
+  },
+  {
+   "type": "static_qmi",
+   "label": "",
+   "count": 2
+  },
+  {
+   "type": "article_download",
+   "label": "",
+   "count": 1
+  },
+  {
+   "type": "compendium_data",
+   "label": "",
+   "count": 1
+  },
+  {
+   "type": "compendium_landing_page",
+   "label": "",
+   "count": 1
+  }
+ ],
+ "items": [
+  {
+   "type": "timeseries",
+   "cdid": "L568",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.3 : FISH 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l568/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.3 : FISH 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56O",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 03.1.2 : GARMENTS 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56o/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 03.1.2 : GARMENTS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56B",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.6 : FRUIT 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56b/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.6 : FRUIT 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3GF",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 12.3.1.1 Jewellery 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3gf/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 12.3.1.1 Jewellery 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J39Y",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.1.3.0 Bicycles 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j39y/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.1.3.0 Bicycles 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J374",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 02.2.0.2 Cigars 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j374/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 02.2.0.2 Cigars 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J373",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 02.2.0.1 Cigarettes 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j373/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 02.2.0.1 Cigarettes 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J332",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.4.7 Eggs 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j332/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.4.7 Eggs 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L55U",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 06 : HEALTH 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l55u/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 06 : HEALTH 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L564",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE: Services 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l564/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em>: Services 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L563",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE: Goods 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l563/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em>: Goods 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J38L",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 04.3.2.2 Services of electricians 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j38l/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 04.3.2.2 Services of electricians 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L55O",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 00: ALL ITEMS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l55o/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 00: ALL ITEMS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L57W",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.2.3 : MAINTENANCE & REPAIRS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l57w/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.2.3 : MAINTENANCE & REPAIRS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L585",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 08.1 : POSTAL SERVICES 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l585/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 08.1 : POSTAL SERVICES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58V",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 11.2 : ACCOMMODATION SERVICES 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58v/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 11.2 : ACCOMMODATION SERVICES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FS",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.5.2.2 Magazines and periodicals 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fs/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.5.2.2 Magazines and periodicals 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56X",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 04.4.1 : WATER SUPPLY 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56x/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 04.4.1 : WATER SUPPLY 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58S",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 11.1 : Catering services 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58s/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 11.1 : Catering services 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J38K",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 04.3.2.1 Services of plumbers 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j38k/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 04.3.2.1 Services of plumbers 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L598",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 12.5.4 : Transport insurance 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l598/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 12.5.4 : Transport insurance 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L57P",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.1 : PURCHASE OF VEHICLES 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l57p/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.1 : PURCHASE OF VEHICLES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L57O",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 06.3 : HOSPITAL SERVICES 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l57o/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 06.3 : HOSPITAL SERVICES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J39X",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.1.2.0 Motor cycles 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j39x/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.1.2.0 Motor cycles 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3F3",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.2.1.1 Camper vans 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3f3/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.2.1.1 Camper vans 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33X",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 02.1.3.1 Lager beer 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33x/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 02.1.3.1 Lager beer 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J376",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 03.1.2.1 Garments for men 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j376/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 03.1.2.1 Garments for men 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3EW",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.1.3.3 Software 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3ew/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.1.3.3 Software 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33F",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.8.1 Sugar 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33f/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.8.1 Sugar 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32C",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.1.1 Rice 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32c/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.1.1 Rice 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33D",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.7.5 Crisps 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33d/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.7.5 Crisps 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33O",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.2.1.2 Tea 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33o/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.2.1.2 Tea 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58U",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 11.1.2 : CANTEENS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58u/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 11.1.2 : CANTEENS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33N",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.2.1.1 Coffee 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33n/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.2.1.1 Coffee 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56J",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 02.1.1 : SPIRITS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56j/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 02.1.1 : SPIRITS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32E",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.1.3 Bread 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32e/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.1.3 Bread 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L55V",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07 : TRANSPORT 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l55v/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07 : TRANSPORT 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L567",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.2 : MEAT 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l567/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.2 : MEAT 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56L",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 02.1.3 : BEER 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56l/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 02.1.3 : BEER 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32X",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.4.4 Yoghurt 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32x/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.4.4 Yoghurt 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56N",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 03.1 : CLOTHING 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56n/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 03.1 : CLOTHING 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3A5",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.2.2.4 Lubricants 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3a5/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.2.2.4 Lubricants 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J39Z",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.2.1.1 Tyres 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j39z/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.2.1.1 Tyres 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33H",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.8.3 Chocolate 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33h/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.8.3 Chocolate 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58O",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.5.1 : BOOKS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58o/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.5.1 : BOOKS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FR",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.5.2.1 Newspapers 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fr/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.5.2.1 Newspapers 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3A3",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.2.2.1 Diesel 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3a3/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.2.2.1 Diesel 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3A4",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.2.2.2 Petrol 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3a4/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.2.2.2 Petrol 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L55W",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 08 : COMMUNICATION 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l55w/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 08 : COMMUNICATION 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L55Y",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 10 : EDUCATION 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l55y/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 10 : EDUCATION 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J399",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 05.3.1.3 Cookers 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j399/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 05.3.1.3 Cookers 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32F",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.1.4 Other bakery products 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32f/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.1.4 Other bakery products 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3F9",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.3.1.2 Toys and celebration articles 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3f9/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.3.1.2 Toys and celebration articles 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L57U",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.2.1 : SPARE PARTS & ACCESSORIES 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l57u/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.2.1 : SPARE PARTS & ACCESSORIES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32V",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.4.2 Milk, low fat 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32v/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.4.2 Milk, low fat 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33S",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.2.2.3 Fruit and vegetable juices 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33s/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.2.2.3 Fruit and vegetable juices 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L57Z",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.3.1 : PASSENGER TRANSPORT BY RAILWAY 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l57z/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.3.1 : PASSENGER TRANSPORT BY RAILWAY 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3EZ",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.1.4.9 Other recording media 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3ez/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.1.4.9 Other recording media 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56U",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 04.3.1 : Materials for maintenance and repair 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56u/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 04.3.1 : Materials for maintenance and repair 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L57R",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.1.1B : SECOND-HAND CARS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l57r/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.1.1B : SECOND-HAND CARS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J379",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 03.1.3.1 Other articles of clothing 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j379/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 03.1.3.1 Other articles of clothing 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J393",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 05.1.2.2 Other floor coverings 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j393/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 05.1.2.2 Other floor coverings 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FL",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.4.2.3 Television and radio licence fees, subscriptions",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fl/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.4.2.3 Television and radio licence fees, subscriptions"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32L",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.2.2 Pork 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32l/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.2.2 Pork 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L573",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 04.5.2 : GAS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l573/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 04.5.2 : GAS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L565",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1 : FOOD 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l565/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1 : FOOD 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32N",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.2.4 Poultry 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32n/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.2.4 Poultry 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J39D",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 05.3.2.3 Irons 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j39d/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 05.3.2.3 Irons 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56K",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 02.1.2 : WINE 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56k/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 02.1.2 : WINE 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33C",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.7.4 Potatoes 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33c/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.7.4 Potatoes 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L572",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 04.5.1 : ELECTRICITY 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l572/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 04.5.1 : ELECTRICITY 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L56M",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 02.2 : TOBACCO 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l56m/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 02.2 : TOBACCO 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L595",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 12.5 : INSURANCE 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l595/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 12.5 : INSURANCE 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J333",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.5.1 Butter 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j333/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.5.1 Butter 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J37B",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 03.1.4.1 Cleaning of clothing 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j37b/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 03.1.4.1 Cleaning of clothing 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J377",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 03.1.2.2 Garments for women 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j377/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 03.1.2.2 Garments for women 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J392",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 05.1.2.1 Carpets and rugs 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j392/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 05.1.2.1 Carpets and rugs 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3JY",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 12.7.0.3 Funeral services 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3jy/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 12.7.0.3 Funeral services 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FE",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.3.4.1 Purchase of pets 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fe/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.3.4.1 Purchase of pets 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J37D",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 03.2.1.1 Footwear for men 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j37d/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 03.2.1.1 Footwear for men 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FN",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.4.2.5 Photographic services 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fn/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.4.2.5 Photographic services 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J39B",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 05.3.1.5 Cleaning equipment 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j39b/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 05.3.1.5 Cleaning equipment 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58P",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.5.2 : NEWSPAPERS AND PERIODICALS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58p/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.5.2 : NEWSPAPERS AND PERIODICALS 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FA",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.3.2.1 Equipment for sport 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fa/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.3.2.1 Equipment for sport 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32M",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.2.3 Lamb and goat 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32m/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.2.3 Lamb and goat 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33R",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.2.2.2 Soft drinks 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33r/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.2.2.2 Soft drinks 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3GG",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 12.3.1.2 Clocks and watches 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3gg/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 12.3.1.2 Clocks and watches 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32S",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.3.4 Frozen seafood 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32s/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.3.4 Frozen seafood 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FO",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.5.1.1 Fiction books 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fo/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.5.1.1 Fiction books 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L579",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 05.2 : HOUSEHOLD TEXTILES 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l579/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 05.2 : HOUSEHOLD TEXTILES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58T",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 11.1.1 : RESTAURANTS & CAFES 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58t/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 11.1.1 : RESTAURANTS & CAFES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J33I",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.8.4 Confectionery products 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j33i/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.8.4 Confectionery products 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3FD",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.3.3.2 Plants and flowers 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3fd/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.3.3.2 Plants and flowers 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J38X",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 05.1.1.2 Garden furniture 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j38x/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 05.1.1.2 Garden furniture 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32O",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.2.6 Edible offal 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32o/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.2.6 Edible offal 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L57Y",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 07.3 : TRANSPORT SERVICES 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l57y/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 07.3 : TRANSPORT SERVICES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58M",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.4.2 : CULTURAL SERVICES 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58m/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.4.2 : CULTURAL SERVICES 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J32Y",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 01.1.4.5 Cheese and curd 2015=100",
+   "topics": [
+    "4972",
+    "1245"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j32y/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 01.1.4.5 Cheese and curd 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "J3GI",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 12.3.2.1 Travel goods 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/j3gi/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 12.3.2.1 Travel goods 2015=100"
+   },
+   "canonical_topic": ""
+  },
+  {
+   "type": "timeseries",
+   "cdid": "L58R",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPIH ANNUAL RATE 09.6 : PACKAGE HOLIDAY 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/l58r/mm23",
+   "highlight": {
+    "title": "<em class=\"ons-highlight\">CPIH</em> <em class=\"ons-highlight\">ANNUAL</em> <em class=\"ons-highlight\">RATE</em> 09.6 : PACKAGE HOLIDAY 2015=100"
+   },
+   "canonical_topic": ""
+  }
+ ],
+ "additional_suggestions": [
+  "cpih",
+  "annual",
+  "rate"
+ ]
+}

@@ -621,7 +621,13 @@ Sources, by tool-name prefix:
   statistics), Canada and peers: bis_. OECD Data Explorer (Economic Outlook
   projections, productivity, unit labour costs, PPPs, tax revenue, house
   prices, leading indicators), Canada and peers: oecd_.
-  Eurostat (EU, euro area, member states): eurostat_.
+  Eurostat (EU, euro area, member states): eurostat_. ILOSTAT (ILO labour
+  statistics: unemployment, participation, hours, earnings), Canada and
+  peers: ilo_. Australian Bureau of Statistics (inflation, labour force, GDP,
+  wages): abs_. UK Office for National Statistics (inflation, GDP, labour
+  market): ons_. US Federal Reserve Board releases (fed funds, Treasury
+  yields, USD/CAD, industrial production): fed_. European Central Bank (key
+  rates, euro exchange rates incl. EUR/CAD, HICP, money and credit): ecb_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and
@@ -665,7 +671,8 @@ Sources, by tool-name prefix:
   (Edmonton real-time transit), bc_transit_ (BC Transit real-time:
   Victoria, Kelowna and ten more systems), epcor_ (Edmonton water quality),
   electricity_ontario_ (IESO), electricity_quebec_ (Hydro-Quebec, including
-  water flows at its dams), oeb_ (Ontario Energy Board: utility RRR
+  water flows at its dams), electricity_alberta_ (AESO pool price, load,
+  generation by fuel; non-commercial use only), oeb_ (Ontario Energy Board: utility RRR
   filings, reliability, rates), on_fir_ (Ontario municipal Financial
   Information Return: revenue, expenses, taxes, reserves, debt by
   municipality, 2000 on).

@@ -91,6 +91,8 @@ _ELECTRICITY_PRICE_TERMS = (
     "electricity price",
     "power price",
     "hoep",
+    "pool price",
+    "prix du pool",
     "prix de l'electricite",
     "price of electricity",
 )
@@ -535,11 +537,22 @@ TOPICS: tuple[Topic, ...] = (
             "perspectives economiques",
             "productivite",
             "eurostat",
+            "ecb",
+            "european central bank",
+            "deposit facility rate",
+            "bce",
+            "banque centrale europeenne",
             "european union",
             "euro area",
             "eurozone",
             "union europeenne",
             "zone euro",
+            "ilo",
+            "ilostat",
+            "international labour organization",
+            "organisation internationale du travail",
+            "oit",
+            "australian bureau of statistics",
         ),
         (
             PlanStep("worldbank_search_indicators", "find the indicator code (query by words)"),
@@ -575,6 +588,141 @@ TOPICS: tuple[Topic, ...] = (
                     "ipch",
                 ),
             ),
+            PlanStep(
+                "ecb_get_indicator",
+                "the euro area series by indicator (deposit_facility_rate, estr, eur_cad, "
+                "hicp_inflation, m3_growth): ECB key rates, the euro in Canadian dollars, HICP, "
+                "money and credit, with the Canadian series to pair with",
+                terms=(
+                    "ecb",
+                    "european central bank",
+                    "deposit facility",
+                    "estr",
+                    "bce",
+                    "banque centrale europeenne",
+                ),
+            ),
+            PlanStep(
+                "ilo_compare_countries",
+                "Canada beside G7 or other countries on an ILOSTAT labour indicator "
+                "(unemployment, youth unemployment, participation, employment rate, hours "
+                "worked, earnings and minimum wage in PPP dollars, labour income share)",
+                terms=(
+                    "ilo",
+                    "ilostat",
+                    "unemployment",
+                    "labour force",
+                    "labor force",
+                    "participation",
+                    "employment rate",
+                    "hours worked",
+                    "minimum wage",
+                    "earnings",
+                    "wages",
+                    "neet",
+                    "chomage",
+                    "taux d'activite",
+                    "taux d'emploi",
+                    "heures travaillees",
+                    "salaire minimum",
+                    "oit",
+                ),
+            ),
+            PlanStep(
+                "abs_get_indicator",
+                "Australia's figure from the ABS by indicator (cpi_inflation, "
+                "trimmed_mean_inflation, unemployment_rate, gdp_quarterly_growth, ...), with "
+                "the Canadian table to pair with",
+                terms=("australia", "australian", "australie", "australien", "abs"),
+            ),
+        ),
+    ),
+    Topic(
+        "united_kingdom",
+        "United Kingdom comparators (ONS)",
+        (
+            "united kingdom",
+            "britain",
+            "england",
+            "ons",
+            "office for national statistics",
+            "cpih",
+            "royaume-uni",
+            "angleterre",
+        ),
+        (
+            PlanStep(
+                "ons_get_indicator",
+                "the UK figure by indicator (cpi_inflation, cpih_inflation, "
+                "gdp_quarterly_growth, unemployment_rate, regular_pay_growth, ...), with the "
+                "Canadian table to pair with",
+            ),
+            PlanStep("ons_search_series", "find an ONS series id (CDID) for any other UK measure"),
+            PlanStep("ons_get_series", "pull an ONS series by id for the same periods"),
+        ),
+        (
+            (
+                "UK and Canadian definitions differ: the UK unemployment rate is a three-month "
+                "average for ages 16 and over, Canada's Labour Force Survey a single month for "
+                "15 and over; the UK CPI leaves out owner occupiers' housing costs, which "
+                "Canada's CPI and the UK's CPIH include; Canada's quarterly GDP growth is "
+                "annualized, the UK's is not."
+            ),
+        ),
+        # Trade with the United Kingdom is CIMT's, not a UK statistic.
+        shadows=(
+            "to the united kingdom",
+            "from the united kingdom",
+            "with the united kingdom",
+            "vers le royaume-uni",
+            "en provenance du royaume-uni",
+            "avec le royaume-uni",
+        ),
+    ),
+    Topic(
+        "united_states",
+        "United States comparators (Federal Reserve)",
+        (
+            "united states",
+            "american",
+            "federal reserve",
+            "federal funds",
+            "fed funds",
+            "fomc",
+            "treasury yield*",
+            "us treasury",
+            "etats-unis",
+            "americain",
+            "americaine",
+            "reserve federale",
+            "fonds federaux",
+        ),
+        (
+            PlanStep(
+                "fed_get_indicator",
+                "the US series by indicator (fed_funds_rate, treasury_2y, treasury_10y, "
+                "cad_per_usd, industrial_production, capacity_utilization, m2_money_stock), "
+                "with the Canadian series to set beside it",
+            ),
+            PlanStep("fed_search_series", "find a Federal Reserve series id for any other measure"),
+            PlanStep("fed_get_series", "pull Federal Reserve series by id for the same dates"),
+        ),
+        (
+            (
+                "The Fed's H.10 rate is the noon buying rate in New York, the Bank of Canada's "
+                "FXUSDCAD a daily average, so the two differ slightly on the same day. The US has "
+                "an industrial production index; Canada's closest measure is monthly GDP by "
+                "industry."
+            ),
+        ),
+        # Trade with the United States is CIMT's, not a US statistic.
+        shadows=(
+            "to the united states",
+            "from the united states",
+            "with the united states",
+            "vers les etats-unis",
+            "en provenance des etats-unis",
+            "avec les etats-unis",
         ),
     ),
     Topic(
@@ -972,9 +1120,38 @@ TOPICS: tuple[Topic, ...] = (
                 ("dam", "water flow", "spillway", "debit", "barrage", "reservoir"),
             ),
             PlanStep(
+                "electricity_alberta_get_pool_price",
+                "Alberta hourly pool price and internal load (AESO; non-commercial use only)",
+                ("aeso", "pool price", "prix du pool"),
+                (
+                    r"\balberta\b.*\b(electric\w*|power|pool)\b",
+                    r"\b(electric\w*|power)\b.*\balberta\b",
+                ),
+            ),
+            PlanStep(
+                "electricity_alberta_get_supply_demand",
+                "Alberta generation by fuel, interchange and load right now (AESO)",
+                ("aeso",),
+                (r"\balberta\b.*\b(wind|solar|generation|intertie|interchange)\b",),
+            ),
+            PlanStep(
                 "aer_get_production_volumes_link",
                 "Alberta production volumes: product='oil', 'gas'...",
                 ("oil", "natural gas", "gas production", "wells", "puits", "petrole"),
+            ),
+            PlanStep(
+                "aer_st98_list_tables",
+                "AER's Alberta Energy Outlook (ST98): reserves, oil sands and gas forecasts",
+                (
+                    "forecast",
+                    "outlook",
+                    "reserves",
+                    "oil sands",
+                    "bitumen",
+                    "prevision",
+                    "perspectives",
+                    "sables bitumineux",
+                ),
             ),
             PlanStep(
                 "sdmx_space_search",
@@ -985,8 +1162,8 @@ TOPICS: tuple[Topic, ...] = (
         ),
         (
             (
-                "Electricity demand and prices cover Ontario (IESO) and Quebec (Hydro-Quebec) "
-                "only; Alberta's AESO data are not covered."
+                "Electricity demand and prices cover Ontario (IESO), Quebec (Hydro-Quebec) and "
+                "Alberta (AESO) only; AESO and Hydro-Quebec data are for non-commercial use."
             ),
         ),
     ),
@@ -3330,6 +3507,76 @@ FOREIGN_PLACES: tuple[str, ...] = (
 )
 # Matched on the question as typed, so "US" counts and the pronoun "us" does not.
 FOREIGN_CODES: tuple[str, ...] = ("US", "USA", "UK", "EU")
+# The United Kingdom is in scope for what the ONS module covers: a UK question
+# about prices, output, jobs, pay or public debt gets the united_kingdom plan.
+UK_PLACES: frozenset[str] = frozenset(
+    {"united kingdom", "britain", "england", "royaume-uni", "angleterre", "UK"}
+)
+UK_COVERED_TERMS: tuple[str, ...] = (
+    "inflation",
+    "cpi",
+    "cpih",
+    "rpi",
+    "consumer price*",
+    "gdp",
+    "economic growth",
+    "recession",
+    "unemployment",
+    "employment",
+    "jobs",
+    "inactivity",
+    "wage*",
+    "earnings",
+    "pay growth",
+    "vacanc*",
+    "public sector debt",
+    "net debt",
+    "retail sales",
+    "chomage",
+    "emploi*",
+    "salaire*",
+    "ipc",
+    "pib",
+    "prix a la consommation",
+    "dette publique",
+    "ventes au detail",
+)
+# The United States is in scope for what the Fed module covers: a US question
+# about interest rates, yields, the dollar, industrial production or money gets
+# the united_states plan.
+US_PLACES: frozenset[str] = frozenset(
+    {"united states", "usa", "america", "american", "etats-unis", "americain", "US", "USA"}
+)
+US_COVERED_TERMS: tuple[str, ...] = (
+    "federal reserve",
+    "fed",
+    "federal funds",
+    "fed funds",
+    "interest rate*",
+    "policy rate",
+    "treasury",
+    "bond yield*",
+    "yield*",
+    "prime rate",
+    "dollar",
+    "exchange rate",
+    "industrial production",
+    "capacity utilization",
+    "money supply",
+    "money stock",
+    "m2",
+    "consumer credit",
+    "reserve federale",
+    "fonds federaux",
+    "taux d'interet",
+    "taux directeur",
+    "rendement*",
+    "taux preferentiel",
+    "production industrielle",
+    "utilisation des capacites",
+    "masse monetaire",
+    "credit a la consommation",
+)
 CROSS_BORDER_TERMS: tuple[str, ...] = (
     *_TRADE_TERMS,
     "exchange rate",

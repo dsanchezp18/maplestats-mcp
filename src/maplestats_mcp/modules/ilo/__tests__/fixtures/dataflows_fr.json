@@ -1,0 +1,338 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "DF_EAP_DWAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Taux de participation de la main-d'oeuvre par sexe et âge",
+    "names": {
+     "fr": "Taux de participation de la main-d'oeuvre par sexe et âge"
+    },
+    "description": "<strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en >uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Le taux de participation dans la main-d'oeuvre exprimée en pourcentage de la population en âge de travailler. La main-d'oeuvre est la somme de toutes les personnes en âge de travailler qui sont employées et celles qui sont au chômage. Pour plus d'informations, reportez-vous à la <a href = \"https://ilostat.ilo.org/fr/databases/lfs/description/\">description de la base de données Statistiques sur la main-d'oeuvre (LFS et STLFS)</a>.",
+    "descriptions": {
+     "fr": "<strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en >uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Le taux de participation dans la main-d'oeuvre exprimée en pourcentage de la population en âge de travailler. La main-d'oeuvre est la somme de toutes les personnes en âge de travailler qui sont employées et celles qui sont au chômage. Pour plus d'informations, reportez-vous à la <a href = \"https://ilostat.ilo.org/fr/databases/lfs/description/\">description de la base de données Statistiques sur la main-d'oeuvre (LFS et STLFS)</a>."
+    },
+    "annotations": [
+     {
+      "title": "01/11/2026 07:13:16",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "135500",
+      "type": "ORDER"
+     },
+     {
+      "title": "864500",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:EAP_DWAP_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_EAR_INEE_CUR_NB",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Salaire minimum mensuel par devise",
+    "names": {
+     "fr": "Salaire minimum mensuel par devise"
+    },
+    "description": "Les données présentées correspondent au salaire minimum mensuel des salariés au 31 décembre de chaque année. Les pays où les salaires minimums font l'object de négociations collectives ne sont pas inclus. Dans les cas où il n>y a pas de salaire minimum national, le salaire minimum présenté est celui de la capitale ou ville principale. Dans certains cas, nous présentons une moyenne de plusieurs salaires minimums régionaux. En général, dans les pays où le salaire minimum est établi par secteur ou par profession, nous utilisons le salaire minimum dans la manufacture ou des travailleurs non qualifiés. Les données sont toutes exprimées en dollars américains en tant que monnaie commune, en utilisant le taux de change avec le dollar US ou les taux de parité de pouvoir d'achat (PPA) pour les dépenses de consommation privée. Cette dernière série permet de réaliser des comparaisons internationales en tenant compte des différences relatives de prix entre pays. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/cond/description/\">description de la base de données Statistiques sur les salaires et le temps de travail (COND)</a>.",
+    "descriptions": {
+     "fr": "Les données présentées correspondent au salaire minimum mensuel des salariés au 31 décembre de chaque année. Les pays où les salaires minimums font l'object de négociations collectives ne sont pas inclus. Dans les cas où il n>y a pas de salaire minimum national, le salaire minimum présenté est celui de la capitale ou ville principale. Dans certains cas, nous présentons une moyenne de plusieurs salaires minimums régionaux. En général, dans les pays où le salaire minimum est établi par secteur ou par profession, nous utilisons le salaire minimum dans la manufacture ou des travailleurs non qualifiés. Les données sont toutes exprimées en dollars américains en tant que monnaie commune, en utilisant le taux de change avec le dollar US ou les taux de parité de pouvoir d'achat (PPA) pour les dépenses de consommation privée. Cette dernière série permet de réaliser des comparaisons internationales en tenant compte des différences relatives de prix entre pays. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/cond/description/\">description de la base de données Statistiques sur les salaires et le temps de travail (COND)</a>."
+    },
+    "annotations": [
+     {
+      "title": "01/11/2026 07:09:04",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "CUR",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2026-12-31,CUR=CUR_TYPE_LCU+CUR_TYPE_PPP+CUR_TYPE_USD,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "557000",
+      "type": "ORDER"
+     },
+     {
+      "title": "443000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:EAR_INEE_CUR_NB(1.0)"
+   },
+   {
+    "id": "DF_HOW_TEMP_SEX_NB",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Nombre moyen d'heures réellement effectuées par semaine par personne en emploi par sexe",
+    "names": {
+     "fr": "Nombre moyen d'heures réellement effectuées par semaine par personne en emploi par sexe"
+    },
+    "description": "<p><strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Les données sur les heures de travail sont présentées, dans la mesure du possible, sur la base du nombre moyen d'heures de travail par semaine, et en référence aux heures travaillées dans l'emploi principal (rémunéré), indépendamment de l'aménagement du temps de travail (par exemple, temps plein et temps partiel). -temps). Les données ventilées par activité économique sont présentées conformément à la version plus récente de la Classification internationale type des industries (CITI) disponible. Les données peuvent avoir été reclassées à partir de classifications nationales, qui peuvent ne pas être strictement comparables à la CITI. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/cond/description/\">description de la base de données Statistiques sur les salaires et le temps de travail (COND)</a>.</p>",
+    "descriptions": {
+     "fr": "<p><strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Les données sur les heures de travail sont présentées, dans la mesure du possible, sur la base du nombre moyen d'heures de travail par semaine, et en référence aux heures travaillées dans l'emploi principal (rémunéré), indépendamment de l'aménagement du temps de travail (par exemple, temps plein et temps partiel). -temps). Les données ventilées par activité économique sont présentées conformément à la version plus récente de la Classification internationale type des industries (CITI) disponible. Les données peuvent avoir été reclassées à partir de classifications nationales, qui peuvent ne pas être strictement comparables à la CITI. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/cond/description/\">description de la base de données Statistiques sur les salaires et le temps de travail (COND)</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "25/10/2026 20:34:24",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "SEX",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,SEX=SEX_T+SEX_M+SEX_F+SEX_O,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "468980",
+      "type": "ORDER"
+     },
+     {
+      "title": "531020",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:HOW_TEMP_SEX_NB(1.0)"
+   },
+   {
+    "id": "DF_LAP_2GDP_NOC_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Part du revenu du travail dans le PIB -- Estimations modélisées du BIT, Nov. 2025",
+    "names": {
+     "fr": "Part du revenu du travail dans le PIB -- Estimations modélisées du BIT, Nov. 2025"
+    },
+    "description": "<p><strong>Les observations imputées ne sont pas basées sur des données nationales, sont soumises à une grande incertitude et ne doivent pas être utilisées pour des comparaisons ou des classements de pays. </strong>La part du revenu du travail dans le PIB est le rapport, en pourcentage, entre le revenu total du travail et le produit intérieur brut (une mesure de la production totale), tous deux fournis en termes nominaux. Le revenu du travail comprend la rémunération des employés et une partie du revenu des travailleurs indépendants. Les travailleurs indépendants tirent à la fois de leur travail et de la propriété de leur capital. La rémunération totale des employés s'entend de la rémunération, en espèces ou en nature, payable par une entreprise à un employé en contrepartie du travail effectué par ce dernier au cours de la période comptable. Le revenu du travail des travailleurs indépendants est imputé sur la base d'une analyse statistique des salariés présentant des caractéristiques similaires. La part du revenu du travail après comptabilisation du revenu du travail des travailleurs indépendants est souvent appelée la part du revenu du travail dans le PIB ajustée. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/iloest/description/\">description de la base de données Estimations modélisées de l'OIT (ILOEST)</a>.</p>",
+    "descriptions": {
+     "fr": "<p><strong>Les observations imputées ne sont pas basées sur des données nationales, sont soumises à une grande incertitude et ne doivent pas être utilisées pour des comparaisons ou des classements de pays. </strong>La part du revenu du travail dans le PIB est le rapport, en pourcentage, entre le revenu total du travail et le produit intérieur brut (une mesure de la production totale), tous deux fournis en termes nominaux. Le revenu du travail comprend la rémunération des employés et une partie du revenu des travailleurs indépendants. Les travailleurs indépendants tirent à la fois de leur travail et de la propriété de leur capital. La rémunération totale des employés s'entend de la rémunération, en espèces ou en nature, payable par une entreprise à un employé en contrepartie du travail effectué par ce dernier au cours de la période comptable. Le revenu du travail des travailleurs indépendants est imputé sur la base d'une analyse statistique des salariés présentant des caractéristiques similaires. La part du revenu du travail après comptabilisation du revenu du travail des travailleurs indépendants est souvent appelée la part du revenu du travail dans le PIB ajustée. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/iloest/description/\">description de la base de données Estimations modélisées de l'OIT (ILOEST)</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "20/03/2026 13:54:04",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "REF_AREA,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2026-12-31,NOC=NOC_VALUE,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "659000",
+      "type": "ORDER"
+     },
+     {
+      "title": "341000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:LAP_2GDP_NOC_RT(1.0)"
+   },
+   {
+    "id": "DF_SDG_0852_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Indicateur ODD 8.5.2: Taux de chômage par sexe et âge",
+    "names": {
+     "fr": "Indicateur ODD 8.5.2: Taux de chômage par sexe et âge"
+    },
+    "description": "<p><strong>Les données peuvent différer des chiffres communiqués au niveau national et de la base de données des indicateurs mondiaux des ODD en raison de différences dans les sources et/ou les années de référence.</strong> Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'oeuvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/ilosdg/description/\">description de la base de données Indicateurs des ODD liés au marché du travail (ILOSDG)</a>.</p>",
+    "descriptions": {
+     "fr": "<p><strong>Les données peuvent différer des chiffres communiqués au niveau national et de la base de données des indicateurs mondiaux des ODD en raison de différences dans les sources et/ou les années de référence.</strong> Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'oeuvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/ilosdg/description/\">description de la base de données Indicateurs des ODD liés au marché du travail (ILOSDG)</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "25/10/2026 21:06:20",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "105500",
+      "type": "ORDER"
+     },
+     {
+      "title": "894500",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:SDG_0852_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_UNE_2EAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Taux de chômage par sexe et âge -- Estimations modélisées du BIT, Nov. 2025",
+    "names": {
+     "fr": "Taux de chômage par sexe et âge -- Estimations modélisées du BIT, Nov. 2025"
+    },
+    "description": "<p><strong>Les observations imputées ne sont pas basées sur des données nationales, sont soumises à une grande incertitude et ne doivent pas être utilisées pour des comparaisons ou des classements de pays. </strong>Cette série est basée sur les définitions de la 13e CIST. Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'>uvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/iloest/description/\">description de la base de données Estimations modélisées de l'OIT (ILOEST)</a>.</p>",
+    "descriptions": {
+     "fr": "<p><strong>Les observations imputées ne sont pas basées sur des données nationales, sont soumises à une grande incertitude et ne doivent pas être utilisées pour des comparaisons ou des classements de pays. </strong>Cette série est basée sur les définitions de la 13e CIST. Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'>uvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Pour plus d'informations, reportez-vous à la <a href=\"https://ilostat.ilo.org/fr/databases/iloest/description/\">description de la base de données Estimations modélisées de l'OIT (ILOEST)</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "02/12/2025 13:33:47",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "647000",
+      "type": "ORDER"
+     },
+     {
+      "title": "353000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:UNE_2EAP_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_UNE_DEAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Taux de chômage par sexe et âge",
+    "names": {
+     "fr": "Taux de chômage par sexe et âge"
+    },
+    "description": "<strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en >uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'>uvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Pour plus d'informations, reportez-vous à la <a href = \"https://ilostat.ilo.org/fr/databases/lfs/description/\">description de la base de données Statistiques sur la main-d'oeuvre (LFS et STLFS)</a>.",
+    "descriptions": {
+     "fr": "<strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en >uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'>uvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Pour plus d'informations, reportez-vous à la <a href = \"https://ilostat.ilo.org/fr/databases/lfs/description/\">description de la base de données Statistiques sur la main-d'oeuvre (LFS et STLFS)</a>."
+    },
+    "annotations": [
+     {
+      "title": "01/11/2026 07:13:16",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "366500",
+      "type": "ORDER"
+     },
+     {
+      "title": "633500",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:UNE_DEAP_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_UNE_DEAP_SEX_EDU_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Taux de chômage par sexe et éducation",
+    "names": {
+     "fr": "Taux de chômage par sexe et éducation"
+    },
+    "description": "<strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en >uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'>uvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Les données ventilées par niveau d'éducation sont présentées avec référence au plus haut niveau de scolarité complété, selon la Classification internationale type de l'éducation (CITE). Les données peuvent avoir été reclassées à partir de classifications nationales, qui peuvent ne pas être strictement comparables à la CITE. Pour plus d'informations, reportez-vous à la <a href = \"https://ilostat.ilo.org/fr/databases/emi/description/\">description de la base de données Indicateurs sur l'éducation et l'inadéquation (EMI)</a>.",
+    "descriptions": {
+     "fr": "<strong>Dans le but de promouvoir la comparabilité internationale, les statistiques présentées sur ILOSTAT sont basées sur des définitions internationales standard dans la mesure du possible et peuvent différer des chiffres nationaux officiels. </strong>Cette série est basée sur les définitions de la 13e CIST. Pour la comparabilité des séries chronologiques, elle inclut les pays qui ont mis en >uvre les normes de la 19e CIST, pour lesquels des données sont également disponibles dans la base de données Statistiques du travail -- 19e CIST (WORK). Le taux de chômage représente le nombre de personnes au chômage exprimé en pourcentage de la main-d'>uvre (c'est-à-dire, les personnes en emploi et les personnes au chômage). Les chômeurs comprennent toutes les personnes qui se trouvent: a) sans travail pendant la période de référence, c'est-à-dire pas en emploi ni salarié ni non salarié; b) disponibles pour travailler dans un emploi salarié ou non salarié durant la période de référence; et c) à la recherche d'un travail, c'est-à-dire ayant pris des dispositions spécifiques au cours d'une période récente spécifiée pour chercher un emploi salarié ou non salarié. Les données ventilées par niveau d'éducation sont présentées avec référence au plus haut niveau de scolarité complété, selon la Classification internationale type de l'éducation (CITE). Les données peuvent avoir été reclassées à partir de classifications nationales, qui peuvent ne pas être strictement comparables à la CITE. Pour plus d'informations, reportez-vous à la <a href = \"https://ilostat.ilo.org/fr/databases/emi/description/\">description de la base de données Indicateurs sur l'éducation et l'inadéquation (EMI)</a>."
+    },
+    "annotations": [
+     {
+      "title": "25/10/2026 20:57:32",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "EDU",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2025-12-31,EDU=EDU_AGGREGATE_TOTAL+EDU_AGGREGATE_LTB+EDU_AGGREGATE_BAS+EDU_AGGREGATE_INT+EDU_AGGREGATE_ADV+EDU_AGGREGATE_X,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "370000",
+      "type": "ORDER"
+     },
+     {
+      "title": "630000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:UNE_DEAP_SEX_EDU_RT(1.0)"
+   }
+  ]
+ }
+}

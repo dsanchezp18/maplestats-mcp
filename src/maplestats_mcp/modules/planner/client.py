@@ -27,6 +27,10 @@ from maplestats_mcp.modules.planner.topics import (
     FOREIGN_CODES,
     FOREIGN_PLACES,
     TOPICS,
+    UK_COVERED_TERMS,
+    UK_PLACES,
+    US_COVERED_TERMS,
+    US_PLACES,
     PlanStep,
     Topic,
 )
@@ -281,7 +285,10 @@ def plan(question: str, lang: str = "en") -> QueryPlan:
     labels = [place.place for place in places]
 
     out_of_scope = None
-    crosses = any(_matches(term, text) for term in CROSS_BORDER_TERMS)
+    border = any(_matches(term, text) for term in CROSS_BORDER_TERMS)
+    uk_covered = foreign in UK_PLACES and any(_matches(term, text) for term in UK_COVERED_TERMS)
+    us_covered = foreign in US_PLACES and any(_matches(term, text) for term in US_COVERED_TERMS)
+    crosses = border or uk_covered or us_covered
     if foreign and not places and not crosses:
         out_of_scope = (
             out_of_scope_fr(foreign)
@@ -293,15 +300,33 @@ def plan(question: str, lang: str = "en") -> QueryPlan:
             )
         )
 
+    # A question about the United Kingdom alone ("UK inflation") puts the ONS
+    # plan first; "UK" is matched as typed, so it is no topic term.
+    uk_question = uk_covered and not border and not places
+    # Likewise the United States alone ("US 10-year Treasury yield") puts the
+    # Fed plan first.
+    us_question = us_covered and not border and not places
     scored = []
     if out_of_scope is None:
         for topic in TOPICS:
             topic_text = _blank(text, topic.shadows)
             hits = [term.rstrip("*") for term in topic.terms if _matches(term, topic_text)]
             hits += _pattern_hits(topic, topic_text)
+            own_country = (uk_question and topic.key == "united_kingdom") or (
+                us_question and topic.key == "united_states"
+            )
+            if own_country and foreign not in hits:
+                hits.insert(0, str(foreign))
             if hits:
                 scored.append((len(hits), topic, hits, topic_text))
-    scored.sort(key=lambda item: item[0], reverse=True)
+    scored.sort(
+        key=lambda item: (
+            (uk_question and item[1].key == "united_kingdom")
+            or (us_question and item[1].key == "united_states"),
+            item[0],
+        ),
+        reverse=True,
+    )
     topics = [
         TopicMatch(
             topic=topic.key,

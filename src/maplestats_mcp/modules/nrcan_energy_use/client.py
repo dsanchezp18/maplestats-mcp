@@ -342,7 +342,19 @@ def _parse_table(
         )
     headings = [_clean(h.get_text()) for h in soup.find_all("h1")]
     caption = table.find("caption")
-    title = next((h for h in headings if h), "") or (_clean(caption.get_text()) if caption else "")
+    caption_text = ""
+    if isinstance(caption, Tag):
+        # Comprehensive tables (live 2026-11-07) leave the h1 empty and write the
+        # title as "Residential Sector<br />Alberta<sup>1</sup><br />Table 1: ...";
+        # a bare get_text() read "Residential SectorAlberta1Table 1: ...".
+        for sup in caption.find_all("sup"):
+            sup.decompose()
+        for br in caption.find_all("br"):
+            br.replace_with("\n")
+        caption_text = " - ".join(
+            _clean(part) for part in caption.get_text().split("\n") if _clean(part)
+        )
+    title = next((h for h in headings if h), "") or caption_text
     header_rows: list[list[str]] = []
     rows: list[list[str]] = []
     for tr in table.find_all("tr"):

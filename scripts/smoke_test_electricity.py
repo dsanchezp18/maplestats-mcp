@@ -1,5 +1,5 @@
 """Live smoke test for the electricity module: calls every client function
-against the real IESO public reports (not mocks), per AGENTS.md's lesson
+against the real IESO, Hydro-Quebec and AESO public reports (not mocks), per AGENTS.md's lesson
 that a mocked pytest run only proves the code matches shared assumptions.
 
 Usage:
@@ -14,7 +14,7 @@ from datetime import timedelta
 
 import httpx
 
-from maplestats_mcp.modules.electricity import client, constants, quebec_flows
+from maplestats_mcp.modules.electricity import alberta_client, client, constants, quebec_flows
 from maplestats_mcp.modules.electricity import quebec_client as client_qc
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 
@@ -218,6 +218,81 @@ async def main() -> int:
         len(by_name.series) == 1 and bool(by_name.series[0].values),
         by_name.series[0].info.measure if by_name.series else "none",
     )
+
+    # Alberta (AESO ETS reports). Values checked against AESO's own pages on
+    # 2026-11-08: 2025-11-02 has the repeated hour '02*'; October 2026's Pool
+    # Monthly Summary average was $51.33/MWh; 2026-10-05's daily average $18.45.
+    pool = await alberta_client.get_pool_price(limit=24)
+    ok &= _report(
+        "alberta pool price latest 24",
+        len(pool.rows) == 24 and all(r.pool_price is not None for r in pool.rows),
+        f"latest {pool.latest_published_date} HE{pool.latest_published_hour_ending}, "
+        f"{pool.rows[-1].pool_price} $/MWh, AIL {pool.rows[-1].ail_demand_mw} MW",
+    )
+    autumn = await alberta_client.get_pool_price("2025-11-02", "2025-11-02", limit=30)
+    ok &= _report(
+        "alberta pool price repeated hour",
+        autumn.rows_matched == 25 and sum(r.repeated_hour for r in autumn.rows) == 1,
+        f"{autumn.rows_matched} hours on 2025-11-02",
+    )
+    daily = await alberta_client.get_daily_prices("2026-08-01", "2026-10-05")
+    last_day = daily.days[-1] if daily.days else None
+    ok &= _report(
+        "alberta daily prices across 31-day requests",
+        daily.requests_made == 3
+        and len(daily.days) == 66
+        and last_day is not None
+        and last_day.average == 18.45,
+        f"{len(daily.days)} days in {daily.requests_made} requests, last {last_day}",
+    )
+    months = await alberta_client.get_monthly_summary("2026-09", "2026-10")
+    october = next((m for m in months.months if m.month == "2026-10"), None)
+    ok &= _report(
+        "alberta monthly summary",
+        october is not None and october.pool_price_average == 51.33,
+        f"{[(m.month, m.pool_price_average, m.total_energy_gwh) for m in months.months]}",
+    )
+    legacy = await alberta_client.get_monthly_summary("2003-01", "2003-01")
+    ok &= _report(
+        "alberta monthly summary legacy layout",
+        bool(legacy.months)
+        and legacy.months[0].layout == "legacy_daily_table"
+        and legacy.months[0].pool_price_average == 80.52,
+        f"{legacy.months[0] if legacy.months else 'none'}",
+    )
+    latest_month = await alberta_client.get_monthly_summary()
+    ok &= _report(
+        "alberta monthly summary latest",
+        len(latest_month.months) == 1,
+        latest_month.months[0].month if latest_month.months else "none",
+    )
+    supply = await alberta_client.get_supply_demand(include_assets=True, group="wind")
+    balance = (
+        supply.total_net_generation_mw is not None
+        and supply.net_actual_interchange_mw is not None
+        and supply.alberta_internal_load_mw is not None
+        and abs(
+            supply.total_net_generation_mw
+            - supply.net_actual_interchange_mw
+            - supply.alberta_internal_load_mw
+        )
+        <= 2
+    )
+    ok &= _report(
+        "alberta supply demand",
+        balance
+        and len(supply.generation_by_fuel) >= 8
+        and len(supply.interchange) == 3
+        and bool(supply.assets)
+        and all(a.group == "Wind" for a in supply.assets),
+        f"{supply.last_update}: AIL {supply.alberta_internal_load_mw} MW, "
+        f"{len(supply.assets)} wind assets",
+    )
+    try:
+        await alberta_client.get_pool_price("1998-12-30", "1999-01-02")
+        ok &= _report("alberta range before 1999", False, "expected InvalidInput")
+    except InvalidInput as exc:
+        ok &= _report("alberta range before 1999", True, f"InvalidInput: {exc}")
 
     for label, coro in (
         ("missing dated file", client.get_zonal_prices("day_ahead", "2020-01-01")),

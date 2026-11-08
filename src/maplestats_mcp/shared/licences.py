@@ -115,6 +115,18 @@ IESO_TERMS = (
     "of Use set out in the IESO's website (www.ieso.ca).'"
 )
 
+# AESO Terms and Conditions (www.aeso.ca/legal/, read 2026-11-08; the ETS
+# report site's legal notice links to the same page). No robots.txt on
+# ets.aeso.ca or www.aeso.ca (both 404) and nothing in the terms on automated
+# retrieval; the copyright clause limits reuse to non-commercial purposes.
+AESO_TERMS = (
+    "AESO Terms and Conditions (https://www.aeso.ca/legal/): the material 'may be used and "
+    "copied for non-commercial, personal or educational purposes, provided that the material "
+    "is not modified and that copyright notices are not deleted'; any other use, commercial "
+    "use included, needs the AESO's written permission. Copyright The Independent System "
+    "Operator (AESO), all rights reserved."
+)
+
 # statistique.quebec.ca links its reuse terms to the Québec government's
 # copyright page, which requires prior authorization (no open licence).
 ISQ_LICENCE = (
@@ -188,7 +200,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "open-alberta": OGL_ALBERTA,
     "ab_wildfire": OGL_ALBERTA + " Credit: Alberta Wildfire, Government of Alberta.",
     "aer": (
-        "Alberta Energy Regulator copyright terms (https://www.aer.ca/copyright-disclaimer): "
+        "Alberta Energy Regulator copyright terms (https://www.aer.ca/copyright-and-disclaimer): "
         "non-commercial reproduction is allowed without permission, identifying the AER as "
         "the source and not presenting it as official; commercial redistribution needs the "
         "AER's written permission."
@@ -263,11 +275,32 @@ SOURCE_LICENCES: dict[str, str] = {
         "(https://www.oecd.org/en/about/terms-conditions.html, section 3); third-party data "
         "excluded."
     ),
+    "fed": (
+        "Source: Board of Governors of the Federal Reserve System. Public domain; cite the "
+        "Board as the source (https://www.federalreserve.gov/disclaimer.htm)."
+    ),
+    "ecb": (
+        "Source: ECB statistics. Free reuse, commercial included, with the source quoted and "
+        "the statistics unmodified; third-party data excluded (https://www.ecb.europa.eu/stats/"
+        "ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html)."
+    ),
     "eurostat": (
         "Source: Eurostat. Creative Commons Attribution 4.0; commercial reuse allowed with "
         "the source acknowledged, except data for countries outside the EU, EFTA and "
         "candidate countries and data from non-Eurostat sources "
         "(https://ec.europa.eu/eurostat/help/copyright-notice)."
+    ),
+    "ilo": (
+        "Source: ILOSTAT, International Labour Organization. Creative Commons Attribution 4.0 "
+        "(https://www.ilo.org/rights-and-permissions)."
+    ),
+    "abs": (
+        "Source: Australian Bureau of Statistics. Creative Commons Attribution 4.0 "
+        "(https://www.abs.gov.au/website-privacy-copyright-and-disclaimer)."
+    ),
+    "ons": (
+        "Source: Office for National Statistics licensed under the Open Government Licence "
+        "v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)."
     ),
     # Quebec
     "isq": ISQ_LICENCE,
@@ -428,6 +461,13 @@ LICENCES_FR: dict[str, str] = {
         "all rights reserved. This information is subject to the Terms of Use set out in the "
         "IESO's website (www.ieso.ca).'"
     ),
+    AESO_TERMS: (
+        "Conditions d'utilisation de l'Alberta Electric System Operator (AESO) "
+        "(https://www.aeso.ca/legal/) : le contenu peut être utilisé et copié à des fins non "
+        "commerciales, personnelles ou éducatives, sans modification et sans retirer les avis "
+        "de droit d'auteur ; tout autre usage, y compris commercial, exige l'autorisation écrite "
+        "de l'AESO. Droit d'auteur The Independent System Operator (AESO), tous droits réservés."
+    ),
     PER_RECORD_LICENCE: (
         "Les licences diffèrent d'un jeu de données à l'autre sur cette plateforme : la licence "
         "de chaque jeu de données figure dans ses champs de licence. Vérifiez-la avant toute "
@@ -435,7 +475,7 @@ LICENCES_FR: dict[str, str] = {
     ),
     SOURCE_LICENCES["aer"]: (
         "Conditions de droit d'auteur de l'Alberta Energy Regulator "
-        "(https://www.aer.ca/copyright-disclaimer) : la reproduction non commerciale est "
+        "(https://www.aer.ca/copyright-and-disclaimer) : la reproduction non commerciale est "
         "permise sans autorisation, en indiquant l'AER comme source et sans la présenter comme "
         "officielle ; la redistribution commerciale exige l'autorisation écrite de l'AER."
     ),
@@ -456,6 +496,28 @@ LICENCES_FR: dict[str, str] = {
         "Source : Explorateur de données de l'OCDE. Toute utilisation, y compris commerciale, "
         "en citant l'OCDE (https://www.oecd.org/en/about/terms-conditions.html, section 3) ; "
         "données de tiers exclues."
+    ),
+    SOURCE_LICENCES["ilo"]: (
+        "Source : ILOSTAT, Organisation internationale du Travail. Creative Commons "
+        "Attribution 4.0 (https://www.ilo.org/rights-and-permissions)."
+    ),
+    SOURCE_LICENCES["abs"]: (
+        "Source : Australian Bureau of Statistics. Creative Commons Attribution 4.0 "
+        "(https://www.abs.gov.au/website-privacy-copyright-and-disclaimer)."
+    ),
+    SOURCE_LICENCES["ons"]: (
+        "Source : Office for National Statistics, sous licence Open Government Licence v3.0 "
+        "(https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)."
+    ),
+    SOURCE_LICENCES["fed"]: (
+        "Source : Conseil des gouverneurs de la Réserve fédérale. Domaine public ; citez le "
+        "Conseil comme source (https://www.federalreserve.gov/disclaimer.htm)."
+    ),
+    SOURCE_LICENCES["ecb"]: (
+        "Source : statistiques de la BCE. Réutilisation libre, y compris commerciale, en citant "
+        "la source et sans modifier les statistiques ; données de tiers exclues "
+        "(https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/"
+        "usage_policy.en.html)."
     ),
     SOURCE_LICENCES["eurostat"]: (
         "Source : Eurostat. Creative Commons Attribution 4.0 ; réutilisation commerciale "
@@ -729,6 +791,9 @@ COMMERCIAL_USE: dict[str, CommercialUse] = {
     # notice and says nothing on commercial use; anything not expressly
     # permitted needs its written permission.
     IESO_TERMS: "unknown",
+    # "non-commercial, personal or educational purposes"; any other use needs
+    # the AESO's written permission.
+    AESO_TERMS: "not_allowed",
     # gov.nl.ca/disclaimer lets "the public" use the information and is silent
     # on commercial use.
     NL_STATS_TERMS: "unknown",
@@ -763,9 +828,19 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     "worldbank-wdi": "allowed",
     # Any use with credit; third-party data excepted (flagged per dataset).
     "oecd": "allowed",
+    # Board information is public domain (disclaimer.htm, read 2026-11-07).
+    "fed": "allowed",
+    # ESCB reuse policy: free reuse, commercial included (read 2026-11-07).
+    "ecb": "allowed",
     # CC BY 4.0, but not for non-EU/EFTA/candidate countries' data or
     # non-Eurostat sources (copyright notice, read 2026-11-07).
     "eurostat": "varies",
+    # CC BY 4.0 (ABS copyright page), third-party content excepted.
+    "abs": "allowed",
+    # CC BY 4.0 (ILO rights and permissions, datasets as of 3 May 2023).
+    "ilo": "allowed",
+    # OGL v3: commercial and non-commercial reuse with the source acknowledged.
+    "ons": "allowed",
     "cbsa-tariff": "not_allowed",
     "electricity": "varies",
     "dfo-iwls": "unknown",

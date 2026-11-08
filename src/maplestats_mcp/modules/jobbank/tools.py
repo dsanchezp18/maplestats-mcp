@@ -54,8 +54,8 @@ async def jobbank_get_wages(
 ) -> OccupationWages:
     """Get Job Bank's low, median and high wages for one occupation, by economic region.
 
-    Use for: "what does an electrician (NOC 72200) earn in Toronto",
-    prevailing wages for an occupation across Canada, a province or one
+    Use for: "what does an electrician (NOC 72200) earn in Toronto", the
+    average hourly wage of registered nurses in Ontario, prevailing wages for an occupation across Canada, a province or one
     economic region, and LMIA or job-offer wage benchmarks. `noc` is a
     five-digit NOC 2021 code (find it with jobbank_search_occupations).
     `region` takes an economic region name or code ("Toronto", "ER3530",

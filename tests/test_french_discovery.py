@@ -45,6 +45,7 @@ CASES = [
     ),
     ("demande d'électricité Ontario par heure", "electricity_ontario_get_hourly_demand"),
     ("production hydroélectrique Hydro-Québec par source", "electricity_quebec_get_generation"),
+    ("prix du pool de l'électricité en Alberta", "electricity_alberta_get_pool_price"),
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
     ("données économiques Alberta taux de chômage", "ab_economic_get_data"),
     ("avis de la Gazette du Canada projets de règlement", "gazette_get_issue"),
@@ -201,9 +202,14 @@ CASES = [
     ),
     ("jeux de données de la Banque des règlements internationaux", "bis_list_datasets"),
     ("productivité du travail Canada comparée aux pays de l'OCDE", "oecd_compare_countries"),
+    ("taux d'activité du Canada comparé aux pays du G7 selon l'OIT", "ilo_compare_countries"),
+    ("inflation australienne moyenne tronquée de l'ABS", "abs_get_indicator"),
+    ("inflation au Royaume-Uni, chiffre britannique de l'ONS", "ons_get_indicator"),
     # Eurostat, 2026-11-07.
     ("taux de chômage de la zone euro et de l'Union européenne", "eurostat_compare"),
     ("trouver un jeu de données Eurostat", "eurostat_search_datasets"),
+    ("taux des fonds fédéraux de la Réserve fédérale américaine", "fed_get_indicator"),
+    ("taux directeurs de la Banque centrale européenne", "ecb_get_indicator"),
     # French stop words in shared/search.py (2026-10-03): "de" and "par" no
     # longer decide the ranking.
     ("taux de chômage par province", "statcan_indicators_get_indicators"),

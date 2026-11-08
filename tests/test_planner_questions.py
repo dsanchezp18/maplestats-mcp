@@ -23,6 +23,10 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("What is the vacancy rate for apartments in Calgary?", "housing", "cmhc_list_categories"),
     ("How many housing starts were there in Toronto last year?", "housing", "cmhc_list_categories"),
     ("Average rent for a two-bedroom in Vancouver", "housing", "cmhc_list_categories"),
+    # United Kingdom comparators (ONS), 2026-11-08.
+    ("UK inflation rate", "united_kingdom", "ons_get_indicator"),
+    ("Unemployment rate in the United Kingdom", "united_kingdom", "ons_get_indicator"),
+    ("Taux de chômage au Royaume-Uni", "united_kingdom", "ons_get_indicator"),
     ("How have new house prices changed since 2020?", "housing", "wds_search_cubes"),
     # Since 2026-10-27 building permits are their own topic; Halifax's permit layer comes
     # first because the question names the city.
@@ -36,6 +40,9 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("Employment by occupation in Canada", "labour", "rdaas_search_classifications"),
     ("Bank of Canada policy rate history", "rates", "boc_search_series"),
     ("USD to CAD exchange rate in 2024", "rates", "boc_search_series"),
+    ("US 10-year Treasury yield", "united_states", "fed_get_indicator"),
+    ("US federal funds rate", "united_states", "fed_get_indicator"),
+    ("ECB deposit facility rate compared with Canada", "international", "ecb_get_indicator"),
     ("Canada's GDP growth in the last quarter", "economy", "statcan_daily_get_releases"),
     ("Exports of lobster to the United States by province", "economy", "cimt_search_commodities"),
     ("How much wheat did Canada export to China in 2023?", "agriculture", "cgc_exports_query"),
@@ -65,6 +72,7 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("Air quality in Montreal today", "environment", "eccc_search_collections"),
     ("Daily streamflow of the Bow River", "environment", "eccc_search_collections"),
     ("Ontario electricity prices yesterday", "energy", "electricity_ontario_get_prices"),
+    ("Alberta electricity prices yesterday", "energy", "electricity_alberta_get_pool_price"),
     ("Oil production in Alberta in 2023", "energy", "aer_get_production_volumes_link"),
     ("Pipeline throughput on Trans Mountain", "energy", "cer_list_datasets"),
     (
@@ -278,6 +286,21 @@ def test_sixty_questions_cover_both_languages():
 def test_foreign_questions_are_out_of_scope(question: str):
     result = client.plan(question)
     assert result.out_of_scope and not result.topics and not result.fallback_steps
+
+
+def test_uk_questions_outside_the_ons_presets_stay_out_of_scope():
+    for question in ("Rents in Manchester, England", "Weather in England next week"):
+        assert client.plan(question).out_of_scope, question
+
+
+def test_british_columbia_is_not_the_united_kingdom():
+    for question in (
+        "Unemployment rate in British Columbia",
+        "Séismes récents en Colombie-Britannique",
+    ):
+        result = client.plan(question)
+        assert result.out_of_scope is None
+        assert "united_kingdom" not in {t.topic for t in result.topics}, question
 
 
 def test_cross_border_questions_stay_in_scope():

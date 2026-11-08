@@ -1,0 +1,2519 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "CPI",
+    "version": "2.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Consumer Price Index (CPI)",
+    "names": {
+     "en": "Consumer Price Index (CPI)"
+    },
+    "description": "Dataset: CPI. The Consumer Price Index (CPI) measures changes in the price of a 'basket' of goods and services which account for a high proportion of expenditure by the CPI population group (i.e. metropolitan households). Unit of measure: Index. Geographic coverage: Australia/State. Catalogue number: 6401.0",
+    "descriptions": {
+     "en": "Dataset: CPI. The Consumer Price Index (CPI) measures changes in the price of a 'basket' of goods and services which account for a high proportion of expenditure by the CPI population group (i.e. metropolitan households). Unit of measure: Index. Geographic coverage: Australia/State. Catalogue number: 6401.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "INDEX",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "MEASURE,TSEST,REGION",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "MEASURE=3,REGION=50,FREQ=M,LASTNPERIODS=4",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:CPI(2.0.0)"
+   }
+  ],
+  "conceptSchemes": [
+   {
+    "id": "CS_ATTRIBUTE",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Attribute Concepts",
+    "names": {
+     "en": "Attribute Concepts"
+    },
+    "isPartial": true,
+    "concepts": [
+     {
+      "id": "UNIT_MEASURE",
+      "name": "Unit of Measure",
+      "names": {
+       "en": "Unit of Measure"
+      },
+      "description": "Base unit in which the observation value is expressed.",
+      "descriptions": {
+       "en": "Base unit in which the observation value is expressed."
+      },
+      "annotations": [
+       {
+        "type": "CONTEXT",
+        "text": "If a unit multiplier exists the data is recorded according to the combination of the unit multiplier and the unit of measure.",
+        "texts": {
+         "en": "If a unit multiplier exists the data is recorded according to the combination of the unit multiplier and the unit of measure."
+        }
+       }
+      ]
+     },
+     {
+      "id": "OBS_STATUS",
+      "name": "Observation Status",
+      "names": {
+       "en": "Observation Status"
+      }
+     },
+     {
+      "id": "OBS_COMMENT",
+      "name": "Observation Comment",
+      "names": {
+       "en": "Observation Comment"
+      }
+     },
+     {
+      "id": "BASE_PERIOD",
+      "name": "Reference Base Period",
+      "names": {
+       "en": "Reference Base Period"
+      },
+      "description": "Reference Period that the value has been based against.",
+      "descriptions": {
+       "en": "Reference Period that the value has been based against."
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_COMMON",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Common Concepts",
+    "names": {
+     "en": "Common Concepts"
+    },
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "OBS_VALUE",
+      "name": "Observation Value",
+      "names": {
+       "en": "Observation Value"
+      },
+      "description": "The observed value of the variable identified by the series dimension values.",
+      "descriptions": {
+       "en": "The observed value of the variable identified by the series dimension values."
+      }
+     },
+     {
+      "id": "TIME_PERIOD",
+      "name": "Time Period",
+      "names": {
+       "en": "Time Period"
+      },
+      "description": "Timespan or point in time for which the observation refers.",
+      "descriptions": {
+       "en": "Timespan or point in time for which the observation refers."
+      },
+      "annotations": [
+       {
+        "type": "CONTEXT",
+        "text": "The measurement represented by each observation corresponds to either a specific point in time (e.g. a single day) or a period (e.g. a month, quarter, financial or calendar year).",
+        "texts": {
+         "en": "The measurement represented by each observation corresponds to either a specific point in time (e.g. a single day) or a period (e.g. a month, quarter, financial or calendar year)."
+        }
+       },
+       {
+        "type": "QUARTER",
+        "text": "Quarterly data is reported against the calander year. e.g. \"YYYY-Q1\" represents the quarter ending March.",
+        "texts": {
+         "en": "Quarterly data is reported against the calander year. e.g. \"YYYY-Q1\" represents the quarter ending March."
+        }
+       },
+       {
+        "type": "FINANCIAL_YEAR",
+        "text": "Time periods matching the \"YYYY-MM-DD/P1Y\" format represent financial years as the start date of the period followed by the duration of 1 year.",
+        "texts": {
+         "en": "Time periods matching the \"YYYY-MM-DD/P1Y\" format represent financial years as the start date of the period followed by the duration of 1 year."
+        }
+       }
+      ]
+     },
+     {
+      "id": "FREQ",
+      "name": "Frequency",
+      "names": {
+       "en": "Frequency"
+      },
+      "description": "Rate at which data is collated.",
+      "descriptions": {
+       "en": "Rate at which data is collated."
+      }
+     },
+     {
+      "id": "MEASURE",
+      "name": "Measure",
+      "names": {
+       "en": "Measure"
+      }
+     },
+     {
+      "id": "TSEST",
+      "name": "Adjustment Type",
+      "names": {
+       "en": "Adjustment Type"
+      },
+      "description": "An original time series can be decomposed into three components: the trend (the general direction of the series), the seasonal component (systematic, calendar related movements) and the irregular component (unsystematic, short term fluctuations). Seasonally adjusted series are produced by estimating the seasonal component and removing this from the original series. In most economic data the seasonal component is a combination of seasonal influences (e.g. the effect of the weather or social traditions) plus other kinds of calendar related variations such as Chinese New Year and Christmas. The seasonal adjustment methodology takes into account both seasonal and other calendar related factors that evolve over time to reflect changes in activity patterns.",
+      "descriptions": {
+       "en": "An original time series can be decomposed into three components: the trend (the general direction of the series), the seasonal component (systematic, calendar related movements) and the irregular component (unsystematic, short term fluctuations). Seasonally adjusted series are produced by estimating the seasonal component and removing this from the original series. In most economic data the seasonal component is a combination of seasonal influences (e.g. the effect of the weather or social traditions) plus other kinds of calendar related variations such as Chinese New Year and Christmas. The seasonal adjustment methodology takes into account both seasonal and other calendar related factors that evolve over time to reflect changes in activity patterns."
+      },
+      "annotations": [
+       {
+        "type": "OTHER_LINKS",
+        "text": "https://www.abs.gov.au/websitedbs/D3310114.nsf/home/Time+Series+Analysis:+The+Basics",
+        "texts": {
+         "en": "https://www.abs.gov.au/websitedbs/D3310114.nsf/home/Time+Series+Analysis:+The+Basics"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CS_DECIMALS",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Decimals Concepts",
+    "names": {
+     "en": "Decimals Concepts"
+    },
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "DECIMALS",
+      "name": "Decimals",
+      "names": {
+       "en": "Decimals"
+      },
+      "description": "Number of digits of an observation to the right of a decimal point",
+      "descriptions": {
+       "en": "Number of digits of an observation to the right of a decimal point"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_GEOGRAPHY",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Geography Concepts",
+    "names": {
+     "en": "Geography Concepts"
+    },
+    "isPartial": true,
+    "concepts": [
+     {
+      "id": "REGION",
+      "name": "Region",
+      "names": {
+       "en": "Region"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_INDEX",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Index Concepts",
+    "names": {
+     "en": "Index Concepts"
+    },
+    "isPartial": true,
+    "concepts": [
+     {
+      "id": "INDEX",
+      "name": "Index",
+      "names": {
+       "en": "Index"
+      }
+     }
+    ]
+   }
+  ],
+  "codelists": [
+   {
+    "id": "CL_BASE_PERIOD",
+    "version": "1.1.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Reference Base Period",
+    "names": {
+     "en": "Reference Base Period"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "1",
+      "name": "2001 = 100.0",
+      "names": {
+       "en": "2001 = 100.0"
+      }
+     },
+     {
+      "id": "2",
+      "name": "2002 = 100.0",
+      "names": {
+       "en": "2002 = 100.0"
+      }
+     },
+     {
+      "id": "3",
+      "name": "2003 = 100.0",
+      "names": {
+       "en": "2003 = 100.0"
+      }
+     },
+     {
+      "id": "4",
+      "name": "2004 = 100.0",
+      "names": {
+       "en": "2004 = 100.0"
+      }
+     },
+     {
+      "id": "5",
+      "name": "2005 = 100.0",
+      "names": {
+       "en": "2005 = 100.0"
+      }
+     },
+     {
+      "id": "6",
+      "name": "2006 = 100.0",
+      "names": {
+       "en": "2006 = 100.0"
+      }
+     },
+     {
+      "id": "7",
+      "name": "2007 = 100.0",
+      "names": {
+       "en": "2007 = 100.0"
+      }
+     },
+     {
+      "id": "8",
+      "name": "2008 = 100.0",
+      "names": {
+       "en": "2008 = 100.0"
+      }
+     },
+     {
+      "id": "9",
+      "name": "2009 = 100.0",
+      "names": {
+       "en": "2009 = 100.0"
+      }
+     },
+     {
+      "id": "10",
+      "name": "2010 = 100.0",
+      "names": {
+       "en": "2010 = 100.0"
+      }
+     },
+     {
+      "id": "11",
+      "name": "2011 = 100.0",
+      "names": {
+       "en": "2011 = 100.0"
+      }
+     },
+     {
+      "id": "12",
+      "name": "2012 = 100.0",
+      "names": {
+       "en": "2012 = 100.0"
+      }
+     },
+     {
+      "id": "13",
+      "name": "2013 = 100.0",
+      "names": {
+       "en": "2013 = 100.0"
+      }
+     },
+     {
+      "id": "14",
+      "name": "2014 = 100.0",
+      "names": {
+       "en": "2014 = 100.0"
+      }
+     },
+     {
+      "id": "15",
+      "name": "2015 = 100.0",
+      "names": {
+       "en": "2015 = 100.0"
+      }
+     },
+     {
+      "id": "16",
+      "name": "2016 = 100.0",
+      "names": {
+       "en": "2016 = 100.0"
+      }
+     },
+     {
+      "id": "17",
+      "name": "Sep 2017 = 100.0",
+      "names": {
+       "en": "Sep 2017 = 100.0"
+      },
+      "description": "Data based on Index equal to 100.0 at September 2017",
+      "descriptions": {
+       "en": "Data based on Index equal to 100.0 at September 2017"
+      }
+     },
+     {
+      "id": "18",
+      "name": "2018 = 100.0",
+      "names": {
+       "en": "2018 = 100.0"
+      }
+     },
+     {
+      "id": "19",
+      "name": "2019 = 100.0",
+      "names": {
+       "en": "2019 = 100.0"
+      }
+     },
+     {
+      "id": "20",
+      "name": "2020 = 100.0",
+      "names": {
+       "en": "2020 = 100.0"
+      }
+     },
+     {
+      "id": "21",
+      "name": "2021 = 100.0",
+      "names": {
+       "en": "2021 = 100.0"
+      }
+     },
+     {
+      "id": "22",
+      "name": "2022 = 100.0",
+      "names": {
+       "en": "2022 = 100.0"
+      }
+     },
+     {
+      "id": "23",
+      "name": "2023 = 100.0",
+      "names": {
+       "en": "2023 = 100.0"
+      }
+     },
+     {
+      "id": "24",
+      "name": "2024 = 100.0",
+      "names": {
+       "en": "2024 = 100.0"
+      }
+     },
+     {
+      "id": "25",
+      "name": "Sep 2025 = 100.0",
+      "names": {
+       "en": "Sep 2025 = 100.0"
+      },
+      "description": "Data based on Index equal to 100.0 at September 2025",
+      "descriptions": {
+       "en": "Data based on Index equal to 100.0 at September 2025"
+      }
+     },
+     {
+      "id": "26",
+      "name": "2026 = 100.0",
+      "names": {
+       "en": "2026 = 100.0"
+      }
+     },
+     {
+      "id": "27",
+      "name": "2027 = 100.0",
+      "names": {
+       "en": "2027 = 100.0"
+      }
+     },
+     {
+      "id": "28",
+      "name": "2028 = 100.0",
+      "names": {
+       "en": "2028 = 100.0"
+      }
+     },
+     {
+      "id": "29",
+      "name": "2029 = 100.0",
+      "names": {
+       "en": "2029 = 100.0"
+      }
+     },
+     {
+      "id": "30",
+      "name": "2030 = 100.0",
+      "names": {
+       "en": "2030 = 100.0"
+      }
+     },
+     {
+      "id": "31",
+      "name": "2031 = 100.0",
+      "names": {
+       "en": "2031 = 100.0"
+      }
+     },
+     {
+      "id": "32",
+      "name": "2032 = 100.0",
+      "names": {
+       "en": "2032 = 100.0"
+      }
+     },
+     {
+      "id": "33",
+      "name": "2033 = 100.0",
+      "names": {
+       "en": "2033 = 100.0"
+      }
+     },
+     {
+      "id": "34",
+      "name": "2034 = 100.0",
+      "names": {
+       "en": "2034 = 100.0"
+      }
+     },
+     {
+      "id": "35",
+      "name": "2035 = 100.0",
+      "names": {
+       "en": "2035 = 100.0"
+      }
+     },
+     {
+      "id": "36",
+      "name": "2036 = 100.0",
+      "names": {
+       "en": "2036 = 100.0"
+      }
+     },
+     {
+      "id": "37",
+      "name": "2037 = 100.0",
+      "names": {
+       "en": "2037 = 100.0"
+      }
+     },
+     {
+      "id": "38",
+      "name": "2038 = 100.0",
+      "names": {
+       "en": "2038 = 100.0"
+      }
+     },
+     {
+      "id": "39",
+      "name": "2039 = 100.0",
+      "names": {
+       "en": "2039 = 100.0"
+      }
+     },
+     {
+      "id": "40",
+      "name": "2040 = 100.0",
+      "names": {
+       "en": "2040 = 100.0"
+      }
+     },
+     {
+      "id": "41",
+      "name": "2041 = 100.0",
+      "names": {
+       "en": "2041 = 100.0"
+      }
+     },
+     {
+      "id": "42",
+      "name": "2042 = 100.0",
+      "names": {
+       "en": "2042 = 100.0"
+      }
+     },
+     {
+      "id": "43",
+      "name": "2043 = 100.0",
+      "names": {
+       "en": "2043 = 100.0"
+      }
+     },
+     {
+      "id": "44",
+      "name": "2044 = 100.0",
+      "names": {
+       "en": "2044 = 100.0"
+      }
+     },
+     {
+      "id": "45",
+      "name": "2045 = 100.0",
+      "names": {
+       "en": "2045 = 100.0"
+      }
+     },
+     {
+      "id": "46",
+      "name": "2046 = 100.0",
+      "names": {
+       "en": "2046 = 100.0"
+      }
+     },
+     {
+      "id": "47",
+      "name": "2047 = 100.0",
+      "names": {
+       "en": "2047 = 100.0"
+      }
+     },
+     {
+      "id": "48",
+      "name": "2048 = 100.0",
+      "names": {
+       "en": "2048 = 100.0"
+      }
+     },
+     {
+      "id": "49",
+      "name": "2049 = 100.0",
+      "names": {
+       "en": "2049 = 100.0"
+      }
+     },
+     {
+      "id": "50",
+      "name": "2050 = 100.0",
+      "names": {
+       "en": "2050 = 100.0"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_CPI_INDEX",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Consumer Price Index",
+    "names": {
+     "en": "Consumer Price Index"
+    },
+    "description": "List of goods and services included in a Consumer Price Index (CPI) - called item coverage, or the CPI basket. In concept, all consumer goods and services are within scope of the index.",
+    "descriptions": {
+     "en": "List of goods and services included in a Consumer Price Index (CPI) - called item coverage, or the CPI basket. In concept, all consumer goods and services are within scope of the index."
+    },
+    "annotations": [
+     {
+      "type": "SOURCE",
+      "text": "https://www.abs.gov.au/statistics/detailed-methodology-information/concepts-sources-methods/consumer-price-index-concepts-sources-and-methods",
+      "texts": {
+       "en": "https://www.abs.gov.au/statistics/detailed-methodology-information/concepts-sources-methods/consumer-price-index-concepts-sources-and-methods"
+      }
+     }
+    ],
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "10001",
+      "name": "All groups CPI",
+      "names": {
+       "en": "All groups CPI"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "104101",
+      "name": "All groups, goods component",
+      "names": {
+       "en": "All groups, goods component"
+      },
+      "description": "Comprises the Food and non-alcoholic beverages group (except restaurant meals), Alcohol and tobacco group, Clothing and footwear group (except cleaning, repair and hire of clothing and footwear), Furnishings, household equipment and services group (except Domestic and household services sub-group), Utilities, audio, visual and computing equipment and services, and Newspapers, books and stationery sub-groups, and New dwelling purchase by owner-occupiers, Pharmaceutical products, Motor vehicles, Automotive fuel, Spare parts and accessories for motor vehicles, Equipment for sports, camping and open-air recreation, Games, toys and hobbies and Pets and related products expenditure classes.",
+      "descriptions": {
+       "en": "Comprises the Food and non-alcoholic beverages group (except restaurant meals), Alcohol and tobacco group, Clothing and footwear group (except cleaning, repair and hire of clothing and footwear), Furnishings, household equipment and services group (except Domestic and household services sub-group), Utilities, audio, visual and computing equipment and services, and Newspapers, books and stationery sub-groups, and New dwelling purchase by owner-occupiers, Pharmaceutical products, Motor vehicles, Automotive fuel, Spare parts and accessories for motor vehicles, Equipment for sports, camping and open-air recreation, Games, toys and hobbies and Pets and related products expenditure classes."
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "1500",
+        "texts": {
+         "en": "1500"
+        }
+       }
+      ],
+      "parent": "104100"
+     },
+     {
+      "id": "999902",
+      "name": "Trimmed Mean",
+      "names": {
+       "en": "Trimmed Mean"
+      },
+      "description": "Underlying trend/inflation series, is calculated using a weighted average of percentage change from the previous quarter (seasonally adjusted) from the middle 70 per cent of the distribution.",
+      "descriptions": {
+       "en": "Underlying trend/inflation series, is calculated using a weighted average of percentage change from the previous quarter (seasonally adjusted) from the middle 70 per cent of the distribution."
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "1610",
+        "texts": {
+         "en": "1610"
+        }
+       }
+      ],
+      "parent": "999900"
+     }
+    ]
+   },
+   {
+    "id": "CL_CPI_MEASURES",
+    "version": "1.1.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "CPI Measures",
+    "names": {
+     "en": "CPI Measures"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "1",
+      "name": "Index numbers",
+      "names": {
+       "en": "Index numbers"
+      },
+      "description": "Consumer Price Index numbers",
+      "descriptions": {
+       "en": "Consumer Price Index numbers"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "1",
+        "texts": {
+         "en": "1"
+        }
+       }
+      ]
+     },
+     {
+      "id": "2",
+      "name": "Percentage change from previous period",
+      "names": {
+       "en": "Percentage change from previous period"
+      },
+      "description": "Percentage change from previous period",
+      "descriptions": {
+       "en": "Percentage change from previous period"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "2",
+        "texts": {
+         "en": "2"
+        }
+       }
+      ]
+     },
+     {
+      "id": "3",
+      "name": "Percentage change from previous year",
+      "names": {
+       "en": "Percentage change from previous year"
+      },
+      "description": "Percentage change from corresponding period of the previous year",
+      "descriptions": {
+       "en": "Percentage change from corresponding period of the previous year"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "3",
+        "texts": {
+         "en": "3"
+        }
+       }
+      ]
+     },
+     {
+      "id": "4",
+      "name": "Contribution to CPI index number",
+      "names": {
+       "en": "Contribution to CPI index number"
+      },
+      "description": "Contribution to All groups CPI index number",
+      "descriptions": {
+       "en": "Contribution to All groups CPI index number"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "4",
+        "texts": {
+         "en": "4"
+        }
+       }
+      ]
+     },
+     {
+      "id": "5",
+      "name": "Change in contribution to CPI index number",
+      "names": {
+       "en": "Change in contribution to CPI index number"
+      },
+      "description": "Change in Contribution to All groups CPI index number",
+      "descriptions": {
+       "en": "Change in Contribution to All groups CPI index number"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "5",
+        "texts": {
+         "en": "5"
+        }
+       }
+      ]
+     },
+     {
+      "id": "6",
+      "name": "Contribution to percentage points change from previous period",
+      "names": {
+       "en": "Contribution to percentage points change from previous period"
+      },
+      "description": "Contribution to All groups CPI percentage points change from previous period",
+      "descriptions": {
+       "en": "Contribution to All groups CPI percentage points change from previous period"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "6",
+        "texts": {
+         "en": "6"
+        }
+       }
+      ]
+     },
+     {
+      "id": "7",
+      "name": "Contribution to Annual percentage points change",
+      "names": {
+       "en": "Contribution to Annual percentage points change"
+      },
+      "description": "Contribution to All groups CPI Annual percentage points change",
+      "descriptions": {
+       "en": "Contribution to All groups CPI Annual percentage points change"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "7",
+        "texts": {
+         "en": "7"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_CPI_REGION",
+    "version": "1.1.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "CPI Regions",
+    "names": {
+     "en": "CPI Regions"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "50",
+      "name": "Australia",
+      "names": {
+       "en": "Australia"
+      },
+      "description": "Weighted average of eight capital cities",
+      "descriptions": {
+       "en": "Weighted average of eight capital cities"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "1",
+      "name": "Sydney",
+      "names": {
+       "en": "Sydney"
+      },
+      "description": "Sydney",
+      "descriptions": {
+       "en": "Sydney"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "1",
+        "texts": {
+         "en": "1"
+        }
+       }
+      ],
+      "parent": "50"
+     },
+     {
+      "id": "2",
+      "name": "Melbourne",
+      "names": {
+       "en": "Melbourne"
+      },
+      "description": "Melbourne",
+      "descriptions": {
+       "en": "Melbourne"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "2",
+        "texts": {
+         "en": "2"
+        }
+       }
+      ],
+      "parent": "50"
+     },
+     {
+      "id": "3",
+      "name": "Brisbane",
+      "names": {
+       "en": "Brisbane"
+      },
+      "description": "Brisbane",
+      "descriptions": {
+       "en": "Brisbane"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "3",
+        "texts": {
+         "en": "3"
+        }
+       }
+      ],
+      "parent": "50"
+     },
+     {
+      "id": "4",
+      "name": "Adelaide",
+      "names": {
+       "en": "Adelaide"
+      },
+      "description": "Adelaide",
+      "descriptions": {
+       "en": "Adelaide"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "4",
+        "texts": {
+         "en": "4"
+        }
+       }
+      ],
+      "parent": "50"
+     },
+     {
+      "id": "5",
+      "name": "Perth",
+      "names": {
+       "en": "Perth"
+      },
+      "description": "Perth",
+      "descriptions": {
+       "en": "Perth"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "5",
+        "texts": {
+         "en": "5"
+        }
+       }
+      ],
+      "parent": "50"
+     },
+     {
+      "id": "6",
+      "name": "Hobart",
+      "names": {
+       "en": "Hobart"
+      },
+      "description": "Hobart",
+      "descriptions": {
+       "en": "Hobart"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "6",
+        "texts": {
+         "en": "6"
+        }
+       }
+      ],
+      "parent": "50"
+     },
+     {
+      "id": "7",
+      "name": "Darwin",
+      "names": {
+       "en": "Darwin"
+      },
+      "description": "Darwin",
+      "descriptions": {
+       "en": "Darwin"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "7",
+        "texts": {
+         "en": "7"
+        }
+       }
+      ],
+      "parent": "50"
+     },
+     {
+      "id": "8",
+      "name": "Canberra",
+      "names": {
+       "en": "Canberra"
+      },
+      "description": "Canberra",
+      "descriptions": {
+       "en": "Canberra"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "8",
+        "texts": {
+         "en": "8"
+        }
+       }
+      ],
+      "parent": "50"
+     }
+    ]
+   },
+   {
+    "id": "CL_DECIMALS",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Decimals",
+    "names": {
+     "en": "Decimals"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Zero",
+      "names": {
+       "en": "Zero"
+      }
+     },
+     {
+      "id": "1",
+      "name": "One",
+      "names": {
+       "en": "One"
+      }
+     },
+     {
+      "id": "2",
+      "name": "Two",
+      "names": {
+       "en": "Two"
+      }
+     },
+     {
+      "id": "3",
+      "name": "Three",
+      "names": {
+       "en": "Three"
+      }
+     },
+     {
+      "id": "4",
+      "name": "Four",
+      "names": {
+       "en": "Four"
+      }
+     },
+     {
+      "id": "5",
+      "name": "Five",
+      "names": {
+       "en": "Five"
+      }
+     },
+     {
+      "id": "6",
+      "name": "Six",
+      "names": {
+       "en": "Six"
+      }
+     },
+     {
+      "id": "7",
+      "name": "Seven",
+      "names": {
+       "en": "Seven"
+      }
+     },
+     {
+      "id": "8",
+      "name": "Eight",
+      "names": {
+       "en": "Eight"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_FREQ",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Frequency",
+    "names": {
+     "en": "Frequency"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "H",
+      "name": "Hourly",
+      "names": {
+       "en": "Hourly"
+      },
+      "description": "To be used for data collected or disseminated every hour.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every hour."
+      }
+     },
+     {
+      "id": "D",
+      "name": "Daily",
+      "names": {
+       "en": "Daily"
+      },
+      "description": "To be used for data collected or disseminated every day.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every day."
+      }
+     },
+     {
+      "id": "N",
+      "name": "Minutely",
+      "names": {
+       "en": "Minutely"
+      },
+      "description": "While N denotes \"minutely\", usually, there may be no observations every minute (for several series the frequency is usually \"irregular\" within a day/days). And though observations may be sparse (not collected or disseminated every minute), missing values do not need to be given for the minutes when no observations exist: in any case the time stamp determines when an observation is observed.",
+      "descriptions": {
+       "en": "While N denotes \"minutely\", usually, there may be no observations every minute (for several series the frequency is usually \"irregular\" within a day/days). And though observations may be sparse (not collected or disseminated every minute), missing values do not need to be given for the minutes when no observations exist: in any case the time stamp determines when an observation is observed."
+      }
+     },
+     {
+      "id": "B",
+      "name": "Daily or businessweek",
+      "names": {
+       "en": "Daily or businessweek"
+      },
+      "description": "Similar to \"daily\", however there are no observations for Saturdays and Sundays (so, neither \"missing values\" nor \"numeric values\" should be provided for Saturday and Sunday). This treatment (\"business\") is one way to deal with such cases, but it is not the only option. Such a time series could alternatively be considered daily (\"D\"), thus, with missing values in the weekend.",
+      "descriptions": {
+       "en": "Similar to \"daily\", however there are no observations for Saturdays and Sundays (so, neither \"missing values\" nor \"numeric values\" should be provided for Saturday and Sunday). This treatment (\"business\") is one way to deal with such cases, but it is not the only option. Such a time series could alternatively be considered daily (\"D\"), thus, with missing values in the weekend."
+      }
+     },
+     {
+      "id": "W",
+      "name": "Weekly",
+      "names": {
+       "en": "Weekly"
+      },
+      "description": "To be used for data collected or disseminated every week.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every week."
+      }
+     },
+     {
+      "id": "S",
+      "name": "Half-yearly, semester",
+      "names": {
+       "en": "Half-yearly, semester"
+      },
+      "description": "To be used for data collected or disseminated every semester.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every semester."
+      }
+     },
+     {
+      "id": "A",
+      "name": "Annual",
+      "names": {
+       "en": "Annual"
+      },
+      "description": "To be used for data collected or disseminated every year.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every year."
+      }
+     },
+     {
+      "id": "M",
+      "name": "Monthly",
+      "names": {
+       "en": "Monthly"
+      },
+      "description": "To be used for data collected or disseminated every month.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every month."
+      }
+     },
+     {
+      "id": "Q",
+      "name": "Quarterly",
+      "names": {
+       "en": "Quarterly"
+      },
+      "description": "To be used for data collected or disseminated every quarter.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every quarter."
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_OBS_STATUS",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Observation Status",
+    "names": {
+     "en": "Observation Status"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "k",
+      "name": "estimate",
+      "names": {
+       "en": "estimate"
+      }
+     },
+     {
+      "id": "l",
+      "name": "not elsewhere included",
+      "names": {
+       "en": "not elsewhere included"
+      }
+     },
+     {
+      "id": "m",
+      "name": "not recorded",
+      "names": {
+       "en": "not recorded"
+      }
+     },
+     {
+      "id": "n",
+      "name": "not available for publication but included in totals where applicable, unless otherwise indicated",
+      "names": {
+       "en": "not available for publication but included in totals where applicable, unless otherwise indicated"
+      }
+     },
+     {
+      "id": "o",
+      "name": "nil or rounded to zero, including null cells",
+      "names": {
+       "en": "nil or rounded to zero, including null cells"
+      }
+     },
+     {
+      "id": "p",
+      "name": "preliminary figure or series subject to revision",
+      "names": {
+       "en": "preliminary figure or series subject to revision"
+      }
+     },
+     {
+      "id": "q",
+      "name": "not available",
+      "names": {
+       "en": "not available"
+      }
+     },
+     {
+      "id": "r",
+      "name": "revised",
+      "names": {
+       "en": "revised"
+      }
+     },
+     {
+      "id": "s",
+      "name": "not currently available due to break in time series",
+      "names": {
+       "en": "not currently available due to break in time series"
+      }
+     },
+     {
+      "id": "t",
+      "name": "not yet available",
+      "names": {
+       "en": "not yet available"
+      }
+     },
+     {
+      "id": "u",
+      "name": "not applicable",
+      "names": {
+       "en": "not applicable"
+      }
+     },
+     {
+      "id": "v",
+      "name": "not available for publication but included in totals where applicable, unless otherwise indicated",
+      "names": {
+       "en": "not available for publication but included in totals where applicable, unless otherwise indicated"
+      }
+     },
+     {
+      "id": "w",
+      "name": "estimate is subject to sampling variability too high for most practical purposes",
+      "names": {
+       "en": "estimate is subject to sampling variability too high for most practical purposes"
+      }
+     },
+     {
+      "id": "x",
+      "name": "estimate has a relative standard error of 10% to less than 25% and should be used with caution",
+      "names": {
+       "en": "estimate has a relative standard error of 10% to less than 25% and should be used with caution"
+      }
+     },
+     {
+      "id": "y",
+      "name": "estimate has a relative standard error between 25% and 50% and should be used with caution",
+      "names": {
+       "en": "estimate has a relative standard error between 25% and 50% and should be used with caution"
+      }
+     },
+     {
+      "id": "z",
+      "name": "estimate has a relative standard error greater than 50% and is considered too unreliable for general use",
+      "names": {
+       "en": "estimate has a relative standard error greater than 50% and is considered too unreliable for general use"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_TSEST",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Time Series Estimates",
+    "names": {
+     "en": "Time Series Estimates"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "10",
+      "name": "Original",
+      "names": {
+       "en": "Original"
+      },
+      "description": "Original",
+      "descriptions": {
+       "en": "Original"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "1",
+        "texts": {
+         "en": "1"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Original",
+        "texts": {
+         "en": "Original"
+        }
+       }
+      ]
+     },
+     {
+      "id": "20",
+      "name": "Seasonally Adjusted",
+      "names": {
+       "en": "Seasonally Adjusted"
+      },
+      "description": "Seasonally Adjusted",
+      "descriptions": {
+       "en": "Seasonally Adjusted"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "2",
+        "texts": {
+         "en": "2"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Seasonally Adjusted",
+        "texts": {
+         "en": "Seasonally Adjusted"
+        }
+       }
+      ]
+     },
+     {
+      "id": "30",
+      "name": "Trend",
+      "names": {
+       "en": "Trend"
+      },
+      "description": "Trend",
+      "descriptions": {
+       "en": "Trend"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "3",
+        "texts": {
+         "en": "3"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Trend",
+        "texts": {
+         "en": "Trend"
+        }
+       }
+      ]
+     },
+     {
+      "id": "40",
+      "name": "Sensitivity Upper",
+      "names": {
+       "en": "Sensitivity Upper"
+      },
+      "description": "Sensitivity Upper",
+      "descriptions": {
+       "en": "Sensitivity Upper"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "4",
+        "texts": {
+         "en": "4"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Sensitivity Upper",
+        "texts": {
+         "en": "Sensitivity Upper"
+        }
+       }
+      ]
+     },
+     {
+      "id": "50",
+      "name": "Sensitivity Lower",
+      "names": {
+       "en": "Sensitivity Lower"
+      },
+      "description": "Sensitivity Lower",
+      "descriptions": {
+       "en": "Sensitivity Lower"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "5",
+        "texts": {
+         "en": "5"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Sensitivity Lower",
+        "texts": {
+         "en": "Sensitivity Lower"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MEASURE",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Unit of Measure",
+    "names": {
+     "en": "Unit of Measure"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AUD",
+      "name": "Australian Dollars",
+      "names": {
+       "en": "Australian Dollars"
+      }
+     },
+     {
+      "id": "NUM",
+      "name": "Number",
+      "names": {
+       "en": "Number"
+      }
+     },
+     {
+      "id": "PCT",
+      "name": "Percent",
+      "names": {
+       "en": "Percent"
+      }
+     },
+     {
+      "id": "PCT_PTS",
+      "name": "Percentage Points",
+      "names": {
+       "en": "Percentage Points"
+      }
+     },
+     {
+      "id": "PROP",
+      "name": "Proportion",
+      "names": {
+       "en": "Proportion"
+      }
+     },
+     {
+      "id": "IN",
+      "name": "Index Numbers",
+      "names": {
+       "en": "Index Numbers"
+      }
+     },
+     {
+      "id": "IP",
+      "name": "Index Points",
+      "names": {
+       "en": "Index Points"
+      }
+     },
+     {
+      "id": "VAR",
+      "name": "Variance",
+      "names": {
+       "en": "Variance"
+      }
+     },
+     {
+      "id": "NA",
+      "name": "Not Applicable",
+      "names": {
+       "en": "Not Applicable"
+      }
+     },
+     {
+      "id": "PSNS",
+      "name": "Persons",
+      "names": {
+       "en": "Persons"
+      }
+     },
+     {
+      "id": "PSN_YR",
+      "name": "Person Years",
+      "names": {
+       "en": "Person Years"
+      }
+     },
+     {
+      "id": "JOB",
+      "name": "Jobs",
+      "names": {
+       "en": "Jobs"
+      }
+     },
+     {
+      "id": "M_G",
+      "name": "Milligrams",
+      "names": {
+       "en": "Milligrams"
+      }
+     },
+     {
+      "id": "G",
+      "name": "Grams",
+      "names": {
+       "en": "Grams"
+      }
+     },
+     {
+      "id": "KG",
+      "name": "Kilograms",
+      "names": {
+       "en": "Kilograms"
+      }
+     },
+     {
+      "id": "CT",
+      "name": "Carat (metric)",
+      "names": {
+       "en": "Carat (metric)"
+      }
+     },
+     {
+      "id": "MCT",
+      "name": "Megacarat (metric)",
+      "names": {
+       "en": "Megacarat (metric)"
+      }
+     },
+     {
+      "id": "T",
+      "name": "Tonnes",
+      "names": {
+       "en": "Tonnes"
+      }
+     },
+     {
+      "id": "MT",
+      "name": "Megatonnes",
+      "names": {
+       "en": "Megatonnes"
+      }
+     },
+     {
+      "id": "GT",
+      "name": "Gigatonnes",
+      "names": {
+       "en": "Gigatonnes"
+      }
+     },
+     {
+      "id": "TKM",
+      "name": "Tonnes-kilometres",
+      "names": {
+       "en": "Tonnes-kilometres"
+      }
+     },
+     {
+      "id": "M_M",
+      "name": "Millimetres",
+      "names": {
+       "en": "Millimetres"
+      }
+     },
+     {
+      "id": "M",
+      "name": "Metres",
+      "names": {
+       "en": "Metres"
+      }
+     },
+     {
+      "id": "KM",
+      "name": "Kilometres",
+      "names": {
+       "en": "Kilometres"
+      }
+     },
+     {
+      "id": "SQM",
+      "name": "Square Metres",
+      "names": {
+       "en": "Square Metres"
+      }
+     },
+     {
+      "id": "SQKM",
+      "name": "Square Kilometres",
+      "names": {
+       "en": "Square Kilometres"
+      }
+     },
+     {
+      "id": "HA",
+      "name": "Hectares",
+      "names": {
+       "en": "Hectares"
+      }
+     },
+     {
+      "id": "CBM",
+      "name": "Cubic Metres",
+      "names": {
+       "en": "Cubic Metres"
+      }
+     },
+     {
+      "id": "L",
+      "name": "Litres",
+      "names": {
+       "en": "Litres"
+      }
+     },
+     {
+      "id": "KL",
+      "name": "Kilolitres",
+      "names": {
+       "en": "Kilolitres"
+      }
+     },
+     {
+      "id": "ML",
+      "name": "Megalitres",
+      "names": {
+       "en": "Megalitres"
+      }
+     },
+     {
+      "id": "GL",
+      "name": "Gigalitres",
+      "names": {
+       "en": "Gigalitres"
+      }
+     },
+     {
+      "id": "A",
+      "name": "Ampere",
+      "names": {
+       "en": "Ampere"
+      }
+     },
+     {
+      "id": "KVA",
+      "name": "Kilovolt Amperes",
+      "names": {
+       "en": "Kilovolt Amperes"
+      }
+     },
+     {
+      "id": "W",
+      "name": "Watts",
+      "names": {
+       "en": "Watts"
+      }
+     },
+     {
+      "id": "KW",
+      "name": "Kilowatts",
+      "names": {
+       "en": "Kilowatts"
+      }
+     },
+     {
+      "id": "KWH",
+      "name": "Kilowatt Hours",
+      "names": {
+       "en": "Kilowatt Hours"
+      }
+     },
+     {
+      "id": "GWH",
+      "name": "Gigawatt Hours",
+      "names": {
+       "en": "Gigawatt Hours"
+      }
+     },
+     {
+      "id": "J",
+      "name": "Joules",
+      "names": {
+       "en": "Joules"
+      }
+     },
+     {
+      "id": "KJ",
+      "name": "Kilojoules",
+      "names": {
+       "en": "Kilojoules"
+      }
+     },
+     {
+      "id": "MJ",
+      "name": "Megajoules",
+      "names": {
+       "en": "Megajoules"
+      }
+     },
+     {
+      "id": "GJ",
+      "name": "Gigajoules",
+      "names": {
+       "en": "Gigajoules"
+      }
+     },
+     {
+      "id": "TJ",
+      "name": "Terajoules",
+      "names": {
+       "en": "Terajoules"
+      }
+     },
+     {
+      "id": "PJ",
+      "name": "Petajoules",
+      "names": {
+       "en": "Petajoules"
+      }
+     },
+     {
+      "id": "C",
+      "name": "Coulumb",
+      "names": {
+       "en": "Coulumb"
+      }
+     },
+     {
+      "id": "CD",
+      "name": "Candela",
+      "names": {
+       "en": "Candela"
+      }
+     },
+     {
+      "id": "K",
+      "name": "Kelvin",
+      "names": {
+       "en": "Kelvin"
+      }
+     },
+     {
+      "id": "DEG_CEL",
+      "name": "Degrees Celsius",
+      "names": {
+       "en": "Degrees Celsius"
+      }
+     },
+     {
+      "id": "S",
+      "name": "Seconds",
+      "names": {
+       "en": "Seconds"
+      }
+     },
+     {
+      "id": "MIN",
+      "name": "Minutes",
+      "names": {
+       "en": "Minutes"
+      }
+     },
+     {
+      "id": "HR",
+      "name": "Hours",
+      "names": {
+       "en": "Hours"
+      }
+     },
+     {
+      "id": "DAY",
+      "name": "Days",
+      "names": {
+       "en": "Days"
+      }
+     },
+     {
+      "id": "WK",
+      "name": "Weeks",
+      "names": {
+       "en": "Weeks"
+      }
+     },
+     {
+      "id": "MTH",
+      "name": "Months",
+      "names": {
+       "en": "Months"
+      }
+     },
+     {
+      "id": "YR",
+      "name": "Years",
+      "names": {
+       "en": "Years"
+      }
+     },
+     {
+      "id": "B",
+      "name": "Bytes",
+      "names": {
+       "en": "Bytes"
+      }
+     },
+     {
+      "id": "KB",
+      "name": "Kilobytes",
+      "names": {
+       "en": "Kilobytes"
+      }
+     },
+     {
+      "id": "MB",
+      "name": "Megabytes",
+      "names": {
+       "en": "Megabytes"
+      }
+     },
+     {
+      "id": "GB",
+      "name": "Gigabytes",
+      "names": {
+       "en": "Gigabytes"
+      }
+     },
+     {
+      "id": "TB",
+      "name": "Terabytes",
+      "names": {
+       "en": "Terabytes"
+      }
+     },
+     {
+      "id": "DEG",
+      "name": "Degrees",
+      "names": {
+       "en": "Degrees"
+      }
+     },
+     {
+      "id": "RAD",
+      "name": "Radians",
+      "names": {
+       "en": "Radians"
+      }
+     },
+     {
+      "id": "DOZ",
+      "name": "Dozen",
+      "names": {
+       "en": "Dozen"
+      }
+     },
+     {
+      "id": "PR",
+      "name": "Pairs",
+      "names": {
+       "en": "Pairs"
+      }
+     },
+     {
+      "id": "ROOM",
+      "name": "Rooms",
+      "names": {
+       "en": "Rooms"
+      }
+     },
+     {
+      "id": "SITE",
+      "name": "Sites",
+      "names": {
+       "en": "Sites"
+      }
+     },
+     {
+      "id": "BUNDLE",
+      "name": "Bundles",
+      "names": {
+       "en": "Bundles"
+      }
+     },
+     {
+      "id": "CARTON",
+      "name": "Cartons",
+      "names": {
+       "en": "Cartons"
+      }
+     },
+     {
+      "id": "UNK",
+      "name": "Unknown",
+      "names": {
+       "en": "Unknown"
+      }
+     },
+     {
+      "id": "GBP",
+      "name": "Pound Sterling",
+      "names": {
+       "en": "Pound Sterling"
+      }
+     },
+     {
+      "id": "CENT",
+      "name": "Cents",
+      "names": {
+       "en": "Cents"
+      }
+     },
+     {
+      "id": "FAM",
+      "name": "Families",
+      "names": {
+       "en": "Families"
+      }
+     },
+     {
+      "id": "HH",
+      "name": "Households",
+      "names": {
+       "en": "Households"
+      }
+     },
+     {
+      "id": "RATE",
+      "name": "Rate",
+      "names": {
+       "en": "Rate"
+      }
+     },
+     {
+      "id": "AUD_PER_EMP",
+      "name": "Australian Dollars per Employee",
+      "names": {
+       "en": "Australian Dollars per Employee"
+      }
+     },
+     {
+      "id": "AUD_PER_PSN",
+      "name": "Australian Dollars per Person",
+      "names": {
+       "en": "Australian Dollars per Person"
+      }
+     },
+     {
+      "id": "AUD_PER_KL",
+      "name": "Australian Dollars per Kilolitre",
+      "names": {
+       "en": "Australian Dollars per Kilolitre"
+      }
+     },
+     {
+      "id": "AUD_PER_KG",
+      "name": "Australian Dollars per Kilogram",
+      "names": {
+       "en": "Australian Dollars per Kilogram"
+      }
+     },
+     {
+      "id": "AUD_PER_T",
+      "name": "Australian Dollars per Tonne",
+      "names": {
+       "en": "Australian Dollars per Tonne"
+      }
+     },
+     {
+      "id": "AUD_PER_CT",
+      "name": "Australian Dollars per Carat",
+      "names": {
+       "en": "Australian Dollars per Carat"
+      }
+     },
+     {
+      "id": "AUD_PER_SQM",
+      "name": "Australian Dollars per Square Metre",
+      "names": {
+       "en": "Australian Dollars per Square Metre"
+      }
+     },
+     {
+      "id": "AUD_PER_1000CBM",
+      "name": "Australian Dollars per thousand cubic metres",
+      "names": {
+       "en": "Australian Dollars per thousand cubic metres"
+      }
+     },
+     {
+      "id": "L_PER_100KM",
+      "name": "Litres per 100 Kilometres",
+      "names": {
+       "en": "Litres per 100 Kilometres"
+      }
+     },
+     {
+      "id": "L_PER_KM",
+      "name": "Litres per Kilometre",
+      "names": {
+       "en": "Litres per Kilometre"
+      }
+     },
+     {
+      "id": "ML_PER_HA",
+      "name": "Megalitres per Hectare",
+      "names": {
+       "en": "Megalitres per Hectare"
+      }
+     },
+     {
+      "id": "T_PER_HA",
+      "name": "Tonnes per Hectare",
+      "names": {
+       "en": "Tonnes per Hectare"
+      }
+     },
+     {
+      "id": "PSNS_PER_SQKM",
+      "name": "Persons per Square Kilometre",
+      "names": {
+       "en": "Persons per Square Kilometre"
+      }
+     },
+     {
+      "id": "KG_PER_TREE",
+      "name": "Kilograms per Tree",
+      "names": {
+       "en": "Kilograms per Tree"
+      }
+     }
+    ]
+   }
+  ],
+  "dataStructures": [
+   {
+    "id": "CPI",
+    "version": "2.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Consumer Price Index",
+    "names": {
+     "en": "Consumer Price Index"
+    },
+    "dataStructureComponents": {
+     "attributeList": {
+      "id": "AttributeDescriptor",
+      "attributes": [
+       {
+        "id": "UNIT_MEASURE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).UNIT_MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_UNIT_MEASURE(1.0.0)"
+        },
+        "assignmentStatus": "Mandatory",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "OBS_STATUS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).OBS_STATUS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_OBS_STATUS(1.0.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "DECIMALS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_DECIMALS(1.0.0).DECIMALS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_DECIMALS(1.0.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "OBS_COMMENT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).OBS_COMMENT",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "BASE_PERIOD",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).BASE_PERIOD",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_BASE_PERIOD(1.1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {}
+       }
+      ]
+     },
+     "dimensionList": {
+      "id": "DimensionDescriptor",
+      "dimensions": [
+       {
+        "id": "MEASURE",
+        "position": 0,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_CPI_MEASURES(1.1.0)"
+        }
+       },
+       {
+        "id": "INDEX",
+        "position": 1,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_INDEX(1.0.0).INDEX",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_CPI_INDEX(1.0.0)"
+        }
+       },
+       {
+        "id": "TSEST",
+        "position": 2,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).TSEST",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_TSEST(1.0.0)"
+        }
+       },
+       {
+        "id": "REGION",
+        "position": 3,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_GEOGRAPHY(1.0.0).REGION",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_CPI_REGION(1.1.0)"
+        }
+       },
+       {
+        "id": "FREQ",
+        "position": 4,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).FREQ",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_FREQ(1.0.0)"
+        }
+       }
+      ],
+      "timeDimensions": [
+       {
+        "id": "TIME_PERIOD",
+        "position": 5,
+        "type": "TimeDimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).TIME_PERIOD",
+        "localRepresentation": {
+         "textFormat": {
+          "textType": "ObservationalTimePeriod",
+          "isSequence": false,
+          "isMultiLingual": false
+         }
+        }
+       }
+      ]
+     },
+     "measureList": {
+      "id": "MeasureDescriptor",
+      "primaryMeasure": {
+       "id": "OBS_VALUE",
+       "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).OBS_VALUE",
+       "localRepresentation": {
+        "textFormat": {
+         "textType": "Double",
+         "isSequence": false,
+         "isMultiLingual": false
+        }
+       }
+      }
+     }
+    }
+   }
+  ],
+  "contentConstraints": [
+   {
+    "id": "CR_A_CPI",
+    "version": "2.0.0",
+    "agencyID": "ABS",
+    "isFinal": false,
+    "validFrom": "2026-10-28T01:00:00Z",
+    "name": "Availability (A) for CPI",
+    "names": {
+     "en": "Availability (A) for CPI"
+    },
+    "annotations": [
+     {
+      "title": "A",
+      "type": "ReleaseVersion"
+     },
+     {
+      "id": "obs_count",
+      "title": "361043",
+      "type": "sdmx_metrics"
+     }
+    ],
+    "type": "Actual",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=ABS:CPI(2.0.0)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "keyValues": [
+       {
+        "id": "MEASURE",
+        "values": [
+         "1",
+         "2",
+         "3",
+         "4",
+         "5",
+         "6",
+         "7"
+        ]
+       },
+       {
+        "id": "INDEX",
+        "values": [
+         "10001",
+         "104101",
+         "999902"
+        ]
+       },
+       {
+        "id": "TSEST",
+        "values": [
+         "10",
+         "20"
+        ]
+       },
+       {
+        "id": "REGION",
+        "values": [
+         "1",
+         "2",
+         "3",
+         "4",
+         "5",
+         "50",
+         "6",
+         "7",
+         "8"
+        ]
+       },
+       {
+        "id": "FREQ",
+        "values": [
+         "M",
+         "Q"
+        ]
+       },
+       {
+        "id": "TIME_PERIOD",
+        "timeRange": {
+         "startPeriod": {
+          "period": "1948-07-01T00:00:00",
+          "isInclusive": true
+         },
+         "endPeriod": {
+          "period": "2026-09-30T00:00:00",
+          "isInclusive": true
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CR_B_CPI",
+    "version": "2.0.0",
+    "agencyID": "ABS",
+    "isFinal": false,
+    "validFrom": "2026-09-30T02:00:00Z",
+    "validTo": "2026-10-28T00:59:59Z",
+    "name": "Availability (B) for CPI",
+    "names": {
+     "en": "Availability (B) for CPI"
+    },
+    "annotations": [
+     {
+      "title": "B",
+      "type": "ReleaseVersion"
+     },
+     {
+      "id": "obs_count",
+      "title": "352576",
+      "type": "sdmx_metrics"
+     }
+    ],
+    "type": "Actual",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=ABS:CPI(2.0.0)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "keyValues": [
+       {
+        "id": "MEASURE",
+        "values": [
+         "1",
+         "2",
+         "3",
+         "4",
+         "5",
+         "6",
+         "7"
+        ]
+       },
+       {
+        "id": "INDEX",
+        "values": [
+         "10001",
+         "104101",
+         "999902"
+        ]
+       },
+       {
+        "id": "TSEST",
+        "values": [
+         "10",
+         "20"
+        ]
+       },
+       {
+        "id": "REGION",
+        "values": [
+         "1",
+         "2",
+         "3",
+         "4",
+         "5",
+         "50",
+         "6",
+         "7",
+         "8"
+        ]
+       },
+       {
+        "id": "FREQ",
+        "values": [
+         "M",
+         "Q"
+        ]
+       },
+       {
+        "id": "TIME_PERIOD",
+        "timeRange": {
+         "startPeriod": {
+          "period": "1948-07-01T00:00:00",
+          "isInclusive": true
+         },
+         "endPeriod": {
+          "period": "2026-08-31T00:00:00",
+          "isInclusive": true
+         }
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}
