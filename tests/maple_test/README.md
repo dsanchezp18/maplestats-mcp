@@ -208,12 +208,12 @@ citation precision and per-question outcomes: [`results_v2.md`](results_v2.md).
 What it shows:
 
 - **On Statistics Canada's regular tables the servers are close.** Every tool-using arm but
-  statcan2 answers 80.4% to 94.6% of the core questions correctly; v1's finding holds.
-- **Beyond StatCan and the Bank of Canada, coverage decides.** MapleStats answers 94.6% of
-  the beyond questions correctly, Pipeworx 72.1%, OpenMCP 45.8%, the others 7.1% to 37.5%. Most of that gap is that the other
+  statcan2 answers 80.6% to 94.4% of the core questions correctly; v1's finding holds.
+- **Beyond StatCan and the Bank of Canada, coverage decides.** MapleStats answers 94.4% of
+  the beyond questions correctly, Pipeworx 72.2%, OpenMCP 45.8%, the others 6.9% to 37.5%. Most of that gap is that the other
   servers do not cover those publishers.
 - **The analyst traps split the field,** but five questions is a small base: 20.0% to 80.0%
-  across the tool-using arms, MapleStats 66.0%.
+  across the tool-using arms, MapleStats 66.7%.
 - **Cost per question rewards declining.** An answer that declines in one tool call is cheap;
   the cheapest arms are the ones that answered least. MapleStats cost the most (USD 0.116),
   because its results carried more text.
@@ -371,7 +371,7 @@ uv run python -m tests.maple_test run --version v2 --repeat 3 --arm maplestats \
 
 MapleStats as on `main` before the release-history change (6d1ff7a, served from a frozen
 checkout), three passes, run late on 2026-11-04 Toronto time (the prompt's date, in UTC,
-was 2026-11-05): **91.3% correct per run**, 95.8% of the 24 answers right on substance.
+was 2026-11-05): **91.7% correct**, 95.8% of the 24 answers right on substance.
 
 - R-01 to R-05, R-07 and R-08: correct in every pass. The calendar tools found the PTEA,
   the SUT (two-week page) and the monthly indicators; R-03 named 36-10-0711 every time.
@@ -420,7 +420,7 @@ and beyond questions (`maplestats-cost`), against the earlier runs of the same q
 
 Cost per question fell 18% and failed direct calls 78% against the merged version; one pass
 of 48 is a small sample, so read it as a direction. Accuracy held: 95.8% of the 48 correct (100.0% of
-the core), against 98.5% for the merged version. The two not correct are a run error (X-22, the MCP server
+the core), against 98.6% for the merged version. The two not correct are a run error (X-22, the MCP server
 did not start) and X-04 flagged without the replacement station's figure (partial, as in one
 earlier pass). C-14 gave August's exports as StatCan revised them on 2026-11-04, after the key
 was built; it is re-graded correct with that reason. These questions shaped earlier fixes, so
@@ -449,15 +449,17 @@ run, the other arms only (MapleStats' row is below the table):
 **MapleStats is in-sample here, not comparable.** It ran a frozen checkout of be91871 (as
 merged in #146), which contains the changes made after the Nov. 3 runs with these questions in
 view (5d15f59, 605dfcd, 5a31394; see "MapleStats after these runs"). Its 1105 score, 98.1% of the 53
-correct (core 98.8%, beyond 97.1%, analyst 100.0%; release 78.8%; 95.6% of all 61; no false
+correct (core 98.6%, beyond 97.2%, analyst 100.0%; 79.2% of the 8 release questions; 95.6% of all 61; no false
 claims or referrals; USD 0.060 per question), belongs beside `maplestats_after` (98.7%), not in
-the table above. MapleStats' comparable score stays 91.9%, from Nov. 3, before those changes.
+the table above. MapleStats' comparable score stays 91.8%, from Nov. 3, before those changes.
 
 As shares of the 53 questions answered correctly, the re-run arms score: arose26 58.5%,
-mcp-canada 58.5%, mcp-statcan 57.9%, CanData-MCP 48.5%, OpenCanadaPublicDataMCP 47.2%,
-canada-data-agent 45.3%, statcan2 22.1% and no data tool 7.5%, beside Pipeworx 80.6% and OpenMCP
-67.9% (Nov. 3) and MapleStats 91.9% (Nov. 3, comparable). On the core questions they range from
-80.4% to 94.6% (statcan2 17.9%), on the release questions from 3.8% to 37.5%.
+mcp-canada 58.5%, mcp-statcan 57.9%, CanData-MCP 48.4%, OpenCanadaPublicDataMCP 47.2%,
+canada-data-agent 45.3%, statcan2 22.0% and no data tool 7.5%, beside Pipeworx 80.5% and OpenMCP
+67.9% (Nov. 3) and MapleStats 91.8% (Nov. 3, comparable). On the core questions they range from
+80.6% to 94.4% (statcan2 18.1%), on the 8 release questions from 4.2% to 37.5%. Each share is the
+correct answers over the three runs divided by three times the number of questions
+(`results_v2.json`).
 
 False claims and referrals count all 61 questions over three runs, so the 1105 arms are not
 comparable with the Nov. 3 counts, which cover 53. Per-arm details are in
