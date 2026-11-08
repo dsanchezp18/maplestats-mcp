@@ -1422,6 +1422,19 @@ Quirks: HTML parsers decode `&sect` in `&sector=` to `§`; survey tables
 follow each value with an A/M/U quality letter, captured with the legend in
 `notes`.
 
+Rechecked 2026-11-07: the host answers again (it refused or timed out every
+connection on 2026-09-29 and 2026-10-03, and still resets a TLS handshake now
+and then). The Comprehensive Energy Use Database now runs to 2023: menu links
+carry `year=2023`, page 0 of a table shows 2000 and 2018-2023 and page 1 the
+years between. No year is fixed in the client, so nothing changed there; the
+smoke test now reads an Alberta residential 2023 table. Comprehensive tables
+leave the `h1` empty and write the title in the caption with `<br />` lines
+and a footnote `<sup>`, which used to read "Residential SectorAlberta1Table
+1: ..."; titles now read "Residential Sector - Alberta - Table 1: ...". An
+unreachable host still fails in seconds as `[upstream_unavailable]`. The
+aliases oee.rncan-nrcan.gc.ca and oee.rncan.gc.ca resolve to the same address,
+so they are not used as fallbacks.
+
 Shipped 2026-09-23: `modules/nrcan_energy_use/` (3 tools) over
 oee.nrcan.gc.ca, which has no JSON API: product list (11 survey editions:
 SHEU 2019/2015 and by CMA, multi-unit residential 2018, SCIEU

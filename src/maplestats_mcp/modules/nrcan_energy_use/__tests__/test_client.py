@@ -220,3 +220,97 @@ async def test_list_products_keeps_the_static_surveys_when_the_site_is_down(monk
     assert len(result.surveys) == len(constants.SURVEYS)
     assert result.comprehensive == []
     assert result.note is not None and "comprehensive" in result.note
+
+
+# Comprehensive Energy Use Database, recorded live 2026-11-07 (trimmed): the
+# tables now run to 2023, and the menu links carry year=2023. Page 0 shows
+# 2000 and 2018-2023; page=1 holds 2000-2017. The h1 is empty, so the title
+# comes from the caption, written with <br /> lines and a footnote <sup>.
+_COMPREHENSIVE_MENU = """<div class="table">
+       	<div class="row mrgn-bttm-md">
+           	<div class="col-xs-4 col-sm-2 col-md-2"><a title="Table 1" href="/corporate/statistics/neud/dpa/showTable.cfm?type=CP&sector=res&juris=ab&year=2023&rn=1&page=0">Table 1:</a></div>
+			<div class="col-xs-8 col-sm-9 col-md-10">Secondary Energy Use and <abbr title="Greenhouse Gas">GHG</abbr> Emissions by Energy Source</div>
+		</div>
+		<div class="row mrgn-bttm-md">
+			<div class="col-xs-4 col-sm-2 col-md-2"><a title="Table 2" href="/corporate/statistics/neud/dpa/showTable.cfm?type=CP&sector=res&juris=ab&year=2023&rn=2&page=0">Table 2:</a></div>
+			<div class="col-xs-8 col-sm-9 col-md-10">Households, Floor Space and Energy Use</div>
+		</div></div>"""
+
+_COMPREHENSIVE_KEY = "type=CP&sector=res&juris=ab&year=2023&rn=1&page=0"
+
+_COMPREHENSIVE_TABLE = """<html><body><h1 id="wb-cont" property="name">
+	
+</h1>
+<table id="statdata" class="table table-hover table-bordered table-striped"><caption class="text-left">Residential Sector<br />Alberta<sup><a title="Footnote 1" href="#footnotes">1</a></sup><br />Table 1: Secondary Energy Use and <abbr title="Greenhouse Gas">GHG</abbr> Emissions by Energy Source</caption>
+<tr><th class="un_normalize_header">&nbsp;</th>
+<th class="toprow_header align-middle text-center" scope="col">2000</th>
+<th id="topspacer" scope="col">&nbsp;</th>
+<th scope="col">2018</th>
+<th scope="col">2019</th>
+<th scope="col">2020</th>
+<th scope="col">2021</th>
+<th scope="col">2022</th>
+<th scope="col">2023</th>
+</tr>
+<tr><th class="singlerow" scope="row">Total Energy Use (<abbr title="Petajoule">PJ</abbr>)</th>
+<td class="highlightdata data"><strong>191.3</strong></td>
+<td class="spacer">&nbsp;</td>
+<td class="highlightdata text-right data"><strong>217.5</strong></td>
+<td class="shadowhighlight text-right data"><strong>217.7</strong></td>
+<td class="highlightdata text-right data"><strong>215.3</strong></td>
+<td class="shadowhighlight text-right data"><strong>205.9</strong></td>
+<td class="highlightdata text-right data"><strong>215.9</strong></td>
+<td class="shadowhighlight text-right data"><strong>203.5</strong></td>
+</tr>
+<tr><th class="rowgroup" scope="rowgroup" colspan="9"><br /><em>Energy Use by Energy Source (<abbr title="Petajoule">PJ</abbr>)</em></th></tr>
+<tr><th class="row" scope="row">Electricity</th>
+<td class="data">25.6</td>
+<td class="spacer">&nbsp;</td>
+<td class="data">36.8</td>
+<td class="shadow data">39.5</td>
+<td class="data">41.5</td>
+<td class="shadow data">42.0</td>
+<td class="data">41.0</td>
+<td class="shadow data">40.6</td>
+</tr>
+</table>
+<p><small><a id="footnotes"></a><strong>Footnotes:</strong><br />
+<div class="mrgn&minus;bttm&minus;md">1) Data on <abbr title="Greenhouse Gas">GHG</abbr> emissions are presented <span class="underline">excluding</span> <abbr title="Greenhouse Gas">GHG</abbr> emissions related to electricity production only.</div></small></p>
+</body></html>"""
+
+
+async def test_comprehensive_menu_lists_2023_tables(httpx_mock):
+    httpx_mock.add_response(
+        url=constants.EN_ROOT + "menus/trends/comprehensive/trends_res_ab.cfm",
+        text=_COMPREHENSIVE_MENU,
+    )
+    result = await client.list_tables("comprehensive", "res", "ab")
+    assert [t.table_key for t in result.tables] == [
+        _COMPREHENSIVE_KEY,
+        "type=CP&sector=res&juris=ab&year=2023&rn=2&page=0",
+    ]
+    assert result.tables[0].title == "Secondary Energy Use and GHG Emissions by Energy Source"
+
+
+async def test_comprehensive_table_returns_2023_with_a_readable_title(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.EN_ROOT}showTable.cfm?{_COMPREHENSIVE_KEY}", text=_COMPREHENSIVE_TABLE
+    )
+    table = await client.get_table(_COMPREHENSIVE_KEY)
+    assert table.title == (
+        "Residential Sector - Alberta - Table 1: Secondary Energy Use and GHG Emissions by "
+        "Energy Source"
+    )
+    assert table.header_rows[0][-1] == "2023"
+    assert table.rows[0][0] == "Total Energy Use (PJ)"
+    assert table.rows[0][-1] == "203.5"
+    assert table.rows[-1][-1] == "40.6"
+
+
+async def test_a_reset_connection_fails_fast_as_upstream_unavailable(httpx_mock):
+    # Live 2026-11-07: the TCP connect succeeds but the server resets the TLS
+    # handshake now and then ("Recv failure: Connection was reset").
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ConnectError("connection reset"), url=_MENU_URL)
+    with pytest.raises(UpstreamUnavailable, match="could not be reached"):
+        await client.list_tables("sheu_2019")
