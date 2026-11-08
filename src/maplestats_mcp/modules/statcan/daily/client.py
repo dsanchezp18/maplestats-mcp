@@ -29,6 +29,7 @@ not a real timestamp, so this client keeps only the date component.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import unicodedata
 from collections.abc import Awaitable, Callable
@@ -41,6 +42,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from bs4 import BeautifulSoup, Tag
+from bs4.element import NavigableString
 from defusedxml import DefusedXmlException
 from defusedxml import ElementTree as DefusedET
 
@@ -51,6 +53,7 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     DailyArticle,
     DailyRelease,
     DailyReleaseList,
+    DailyReleaseTableLink,
     ReleaseCalendarEntry,
     ReleaseCalendarResult,
     ReleaseFiles,
@@ -59,6 +62,9 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     ReleaseProduct,
     ReleaseSurvey,
     ReleaseTable,
+    ReleaseTableData,
+    ReleaseTableRow,
+    ReleaseTablesResult,
     UpcomingRelease,
     UpcomingReleasesResult,
 )
@@ -750,6 +756,56 @@ def _clean(text: str) -> str:
     return " ".join(text.split())
 
 
+# Elements that separate words even when the HTML has no whitespace between them.
+_BLOCK_TAGS = frozenset(
+    {
+        "br", "p", "div", "li", "ul", "ol", "tr", "td", "th", "table", "caption",
+        "h1", "h2", "h3", "h4", "h5", "h6", "section", "header", "footer", "dt", "dd",
+    }
+)  # fmt: skip
+
+
+_SCREEN_READER = frozenset({"wb-inv", "wb-invisible", "navaid"})
+_INNER_PAREN_SPACE = re.compile(r"(?<=\() | (?=\))")
+
+
+def _breaks(tag: Tag) -> bool:
+    # Screen-reader text ("Catalogue number" before "71-001-X", in span.wb-inv,
+    # span.wb-invisible or span.navaid depending on the year) is a separate phrase
+    # with no space in the HTML around it.
+    return tag.name in _BLOCK_TAGS or not _SCREEN_READER.isdisjoint(tag.get("class") or [])
+
+
+def _text(element: Tag) -> str:
+    """An element's text with inline markup joined as written, on one line.
+
+    `get_text(" ")` puts a space at every tag boundary, and Daily articles wrap the
+    sign and first digit of a negative number in <span class="nowrap">: the January
+    2018 LFS release (dq180209a) has `(<span class="nowrap">-1</span>37,000)`, which
+    came out as "( -1 37,000)". Checked on releases from 2013 to 2026, English and
+    French: inline tags (span, sup, strong, a, abbr) never stand for a word break,
+    and superscripts are typographic ("1<sup>er</sup>", "n<sup>o</sup>"), so they
+    are joined as written; only block elements and <br> separate words. The Unicode
+    minus (U+2212) is written as an ASCII hyphen-minus so a number reads the same
+    whatever the page used. No-break spaces (French thousands, "5,9 %") become
+    plain spaces, as before.
+    """
+    parts: list[str] = []
+    for node in element.descendants:
+        if isinstance(node, Tag):
+            if _breaks(node):
+                parts.append(" ")
+        elif type(node) is NavigableString:
+            # Text right after a closing block element ("</p>tail") is a new word too.
+            before = node.previous_sibling
+            if isinstance(before, Tag) and _breaks(before):
+                parts.append(" ")
+            parts.append(str(node))
+    text = _clean("".join(parts).replace("\u2212", "-"))
+    # A break at the edge of a parenthesis ("(<span class=wb-inv>...") is not a space.
+    return _INNER_PAREN_SPACE.sub("", text)
+
+
 def _table_id(digits: str) -> str:
     return f"{digits[:2]}-{digits[2:4]}-{digits[4:8]}-01"
 
@@ -824,10 +880,10 @@ def _parse_article(html: str, url: str) -> dict[str, Any]:
 
     def add_text(element: Tag) -> None:
         if element.name in ("ul", "ol"):
-            items = [_clean(item.get_text(" ")) for item in element.find_all("li")]
+            items = [_text(item) for item in element.find_all("li")]
             text = "\n".join(f"- {item}" for item in items if item)
         else:
-            text = _clean(element.get_text(" "))
+            text = _text(element)
         if text:
             sections[-1]["parts"].append(text)
 
@@ -836,26 +892,26 @@ def _parse_article(html: str, url: str) -> dict[str, Any]:
             continue
         classes = child.get("class") or []
         if child.name == "h2" and "chartt" not in classes:
-            sections.append({"heading": _clean(child.get_text(" ")), "parts": []})
+            sections.append({"heading": _text(child), "parts": []})
         elif child.name in ("p", "ul", "ol") and "sd-release-date" not in classes:
             add_text(child)
         elif child.name == "div" and "sd-noteuser" in classes:
             title = child.find(["h2", "h3"])
-            note = _clean(title.get_text(" ")) if isinstance(title, Tag) else "Note to readers"
+            note = _text(title) if isinstance(title, Tag) else "Note to readers"
             sections.append({"heading": note, "parts": []})
             panel = child.find("div", class_="panel-body")
             for element in (panel if isinstance(panel, Tag) else child).find_all(
                 ["p", "h3", "h4", "ul", "ol"], recursive=False
             ):
                 if element.name in ("h3", "h4"):
-                    sub = _clean(element.get_text(" "))
+                    sub = _text(element)
                     sections.append({"heading": f"{note}: {sub}", "parts": []})
                 else:
                     add_text(element)
         elif child.name == "div":
             chart = child.find("h2", class_="chartt")
             if isinstance(chart, Tag):
-                charts.append(_clean(chart.get_text(" ")))
+                charts.append(_text(chart))
 
     tables: dict[int, str] = {}
     links: dict[str, str] = {}
@@ -869,7 +925,7 @@ def _parse_article(html: str, url: str) -> dict[str, Any]:
         if pid:
             tables.setdefault(int(pid.group(1)), _table_id(pid.group(1)))
             continue
-        text = _clean(link.get_text(" "))
+        text = _text(link)
         # Chart thumbnails (cg-a001-eng.htm) carry no text; their titles are in `charts`.
         if not text or absolute in nav_urls or absolute.split("?")[0] == url:
             continue
@@ -886,7 +942,7 @@ def _parse_article(html: str, url: str) -> dict[str, Any]:
         if section["parts"]
     ]
     return {
-        "title": _clean(heading.get_text(" ")),
+        "title": _text(heading),
         "release_date": release_date,
         "archived": main.find("section", id="archived") is not None,
         "summary": meta("dcterms.description") or meta("description"),
@@ -896,6 +952,7 @@ def _parse_article(html: str, url: str) -> dict[str, Any]:
             {"table_id": table_id, "product_id": product_id}
             for product_id, table_id in tables.items()
         ],
+        "release_tables": _release_table_links(body, url),
         "pdf_url": nav.get("pdf"),
         "tables_page_url": nav.get("tables"),
         "related_info_url": nav.get("info"),
@@ -905,10 +962,8 @@ def _parse_article(html: str, url: str) -> dict[str, Any]:
     }
 
 
-async def get_article(article: str, *, lang: str = "en") -> DailyArticle:
-    """Read one Daily article in full: its sections, tables, charts and PDF link."""
-    use_lang(lang)
-    article_id, url = _article_url(article, lang)
+async def _article_html(article_id: str, url: str, tool: str) -> tuple[str, bool]:
+    """The article page's HTML, cached; a 404 is NotFound naming the article."""
 
     async def fetch() -> str:
         await _LIMITER.acquire()
@@ -919,34 +974,42 @@ async def get_article(article: str, *, lang: str = "en") -> DailyArticle:
             if status == 404:
                 raise NotFound(
                     say(
-                        f"statcan_daily:get_article: StatCan has no Daily article {article_id} "
+                        f"statcan_daily:{tool}: StatCan has no Daily article {article_id} "
                         f"({url}). Take the id from statcan_daily_get_releases or "
                         "statcan_daily_search_archive.",
-                        "statcan_daily:get_article : Statistique Canada n'a pas d'article "
+                        f"statcan_daily:{tool} : Statistique Canada n'a pas d'article "
                         f"{article_id} dans Le Quotidien ({url}). Prenez l'identifiant dans "
                         "statcan_daily_get_releases ou statcan_daily_search_archive.",
                     )
                 ) from exc
             raise UpstreamError(
                 say(
-                    f"statcan_daily:get_article returned HTTP {status} for {url}.",
-                    f"statcan_daily:get_article a renvoyé HTTP {status} pour {url}.",
+                    f"statcan_daily:{tool} returned HTTP {status} for {url}.",
+                    f"statcan_daily:{tool} a renvoyé HTTP {status} pour {url}.",
                 )
             ) from exc
         except httpx.HTTPError as exc:
             raise UpstreamUnavailable(
                 say(
-                    "statcan_daily:get_article did not respond in time "
+                    f"statcan_daily:{tool} did not respond in time "
                     "(already retried by shared/http.py). Try again shortly.",
-                    "statcan_daily:get_article n'a pas répondu à temps (nouvelles tentatives "
+                    f"statcan_daily:{tool} n'a pas répondu à temps (nouvelles tentatives "
                     "déjà faites). Réessayez sous peu.",
                 )
             ) from exc
         return response.text
 
-    html, was_cached = await cached_fetch(
+    lang = "fr" if url.endswith("-fra.htm") else "en"
+    return await cached_fetch(
         f"statcan-daily:article:{article_id}:{lang}", constants.CACHE_TTL_ARTICLE_SECONDS, fetch
     )
+
+
+async def get_article(article: str, *, lang: str = "en") -> DailyArticle:
+    """Read one Daily article in full: its sections, tables, charts and PDF link."""
+    use_lang(lang)
+    article_id, url = _article_url(article, lang)
+    html, was_cached = await _article_html(article_id, url, "get_article")
     parsed = _parse_article(html, url)
     return DailyArticle(
         url=url,
@@ -958,11 +1021,388 @@ async def get_article(article: str, *, lang: str = "en") -> DailyArticle:
             cached=was_cached,
             schema_name="statcan_daily.DailyArticle",
             limits=say(
-                "Text only: charts and the release's own tables are listed by title and "
-                "link, not reproduced. Read figures from the tables (wds_ tools) and cite them.",
-                "Texte seulement : les graphiques et les tableaux du communiqué sont donnés par "
-                "titre et lien, sans leur contenu. Lisez les chiffres dans les tableaux (outils "
-                "wds_) et citez-les.",
+                "Text only: charts are listed by title. The release's own tables "
+                "(release_tables) hold the values as first published: read their rows with "
+                "statcan_daily_get_release_tables. For today's revised figures use the wds_ "
+                "tools on the tables listed in `tables`.",
+                "Texte seulement : les graphiques sont donnés par titre. Les tableaux du "
+                "communiqué (release_tables) contiennent les valeurs telles que publiées ce "
+                "jour-là : lisez leurs lignes avec statcan_daily_get_release_tables. Pour les "
+                "chiffres révisés d'aujourd'hui, utilisez les outils wds_ sur les tableaux de "
+                "`tables`.",
+            ),
+            lang=lang,
+        ),
+    )
+
+
+# The release's own tables. Checked live 2026-11-07 on LFS, CPI and GDP releases from
+# 2012, 2013, 2015, 2016, 2018, 2019, 2021, 2024 and 2026, English and French: the
+# article links each one as a button (div.tablebtn, the label in span.sd-tablet,
+# "Table 3<br>Title"); the file is t001a-eng.htm from about 2014 and
+# t131206a001-eng.htm (day, article letter, number) before. Each table page has one
+# <h1> ("Table 3<br>Title") and one <table>: a header row of <th id="hd...">, then in
+# <tbody> a units row of <th id="uom..."> (colspan in 2012), then one row per line with
+# a stub <th class="stubN"> (N = indent level) and data cells whose `headers` attribute
+# names the stub, column and unit ids. A line with no values is a heading for the
+# lines below ("Alberta" in LFS Table 3). In 2012 the first data cells of a row are
+# <th class="data">, and the page has no <main>. Negative values are written with an
+# ASCII hyphen; French uses no-break spaces for thousands and a decimal comma. Under
+# the table, div.tableft-end lists the symbol legend ("..." not applicable), Note(s)
+# and Source(s); numbered notes sit there too (2012) or in <section id="fn01"> pop-ups
+# (2013 on). Pages from about 2014 on also link a CSV of the same table.
+_RELEASE_TABLE_FILE = re.compile(r"(?:^|/)t(?:\d{3}[a-z]+|\d{6}[a-z]+\d{3})-(?:eng|fra)\.htm$")
+_TABLE_NUMBER = re.compile(r"^((?:Table|Tableau)\s*\d+[A-Za-z]?)\b\s*(.*)$", re.DOTALL)
+_STUB_LEVEL = re.compile(r"^stub(\d+)$")
+_NUMBER_EN = re.compile(r"([+-]?)(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*%?\s*[A-Za-z]{0,2}")
+_NUMBER_FR = re.compile(r"([+-]?)(\d{1,3}(?: \d{3})+|\d+)(,\d+)?\s*%?\s*[A-Za-z]{0,2}")
+
+
+def _release_table_links(container: Tag, url: str) -> list[dict[str, Any]]:
+    """The release's own table pages an article links, in page order."""
+    found: dict[str, dict[str, Any]] = {}
+    for link in container.find_all("a", href=True):
+        href = str(link["href"]).split("?")[0].split("#")[0]
+        if not _RELEASE_TABLE_FILE.search(href):
+            continue
+        absolute = _absolute(url, href)
+        if absolute in found:
+            continue
+        label = link.find("span", class_="sd-tablet")
+        source = label if isinstance(label, Tag) else link
+        # Footnote markers in the label ("NAICS<sup>1</sup>") are not part of the title.
+        text = _text(_without_sups(source))
+        match = _TABLE_NUMBER.match(text)
+        number, title = (match.group(1), match.group(2).strip()) if match else (None, text)
+        found[absolute] = {"number": number, "title": title or text, "url": absolute}
+    return list(found.values())
+
+
+def _without_sups(element: Tag) -> Tag:
+    copy = BeautifulSoup(str(element), "html.parser")
+    for sup in copy.find_all("sup"):
+        sup.extract()
+    return copy
+
+
+def _number(text: str, lang: str) -> float | None:
+    pattern = _NUMBER_FR if lang == "fr" else _NUMBER_EN
+    match = pattern.fullmatch(text)
+    if match is None:
+        return None
+    sign, whole, fraction = match.groups()
+    whole = whole.replace(",", "").replace(" ", "")
+    fraction = (fraction or "").replace(",", ".")
+    return float(f"{sign}{whole}{fraction}")
+
+
+def _note_refs(element: Tag) -> list[str]:
+    """Take footnote markers out of a cell or heading and return their numbers."""
+    refs: list[str] = []
+    for marker in element.find_all(["sup", "a"]):
+        if not isinstance(marker, Tag) or marker.decomposed or marker.parent is None:
+            continue
+        classes = marker.get("class") or []
+        href = str(marker.get("href") or "")
+        if marker.name == "sup" or "sd-tablefnref" in classes or href.startswith("#"):
+            ref = _text(marker).strip(".")
+            if ref:
+                refs.append(ref)
+            marker.extract()
+    return refs
+
+
+def _table_notes(root: Tag) -> list[str]:
+    colon = say(":", " :")
+    notes: list[str] = []
+    footer = root.find("div", class_="tableft-end")
+    if isinstance(footer, Tag):
+        for item in footer.find_all("div", class_="tableft-item"):
+            parts = [
+                text for part in item.find_all("div", recursive=False) if (text := _text(part))
+            ]
+            if not parts:
+                continue
+            head, rest = parts[0], " ".join(parts[1:])
+            if rest and not head.endswith((":", ".")):
+                head = f"{head}{colon}"
+            notes.append(f"{head} {rest}".strip())
+    for section in root.find_all("section", id=re.compile(r"^fn\d+")):
+        title_tag = section.find(["h2", "h3"])
+        name = _text(title_tag) if isinstance(title_tag, Tag) else str(section["id"])
+        if isinstance(title_tag, Tag):
+            title_tag.extract()
+        text = _text(section)
+        if text:
+            notes.append(f"{name}{colon} {text}")
+    return notes
+
+
+def _parse_release_table(html: str, url: str, lang: str) -> dict[str, Any]:
+    """One release table page as metadata and tidy rows (layout described above)."""
+    soup = BeautifulSoup(html, "html.parser")
+    for script in soup.find_all(["script", "style"]):
+        script.extract()
+    root = soup.find("main") or soup.body or soup
+    table = root.find("table") if isinstance(root, Tag) else None
+    if not isinstance(root, Tag) or not isinstance(table, Tag):
+        raise UpstreamError(
+            say(
+                f"statcan_daily:get_release_tables: {url} has no table; StatCan may have "
+                "changed the page layout.",
+                f"statcan_daily:get_release_tables : {url} ne contient pas de tableau ; "
+                "Statistique Canada a peut-être changé la page.",
+            )
+        )
+
+    heading = root.find("h1")
+    number, title = None, ""
+    if isinstance(heading, Tag):
+        _note_refs(heading)
+        match = _TABLE_NUMBER.match(_text(heading))
+        number = match.group(1) if match else None
+        title = match.group(2).strip() if match else _text(heading)
+    caption = table.find(class_="CaptionTitle") or table.find("caption")
+    if isinstance(caption, Tag):
+        _note_refs(caption)
+        title = _text(caption) or title
+    csv_url = next(
+        (
+            _absolute(url, str(link["href"]))
+            for link in root.find_all("a", href=True)
+            if str(link["href"]).split("?")[0].endswith(".csv")
+        ),
+        None,
+    )
+
+    # Every heading cell by id: columns (hd...), units (uom...) and row stubs.
+    labels: dict[str, tuple[str, list[str]]] = {}
+    for cell in table.find_all(["th", "td"], id=True):
+        if not cell.get("headers"):
+            refs = _note_refs(cell)
+            labels[str(cell["id"])] = (_text(cell), refs)
+    head_rows = table.thead.find_all("tr") if isinstance(table.thead, Tag) else []
+    positional = [_text(cell) for cell in (head_rows[-1].find_all("th")[1:] if head_rows else [])]
+    columns = list(dict.fromkeys(text for key, (text, _) in labels.items() if key.startswith("hd")))
+    units = list(
+        dict.fromkeys(text for key, (text, _) in labels.items() if key.startswith("uom") and text)
+    )
+
+    rows: list[dict[str, Any]] = []
+    group: str | None = None
+    stack: list[tuple[int, str]] = []
+    body = table.find("tbody")
+    for tr in (body if isinstance(body, Tag) else table).find_all("tr"):
+        if tr.find_parent("thead") is not None:
+            continue
+        cells = [
+            cell
+            for cell in tr.find_all(["td", "th"], recursive=False)
+            if cell.get("headers") or cell.name == "td" or "data" in (cell.get("class") or [])
+        ]
+        stub = next(
+            (cell for cell in tr.find_all("th", recursive=False) if cell not in cells), None
+        )
+        if not cells or not isinstance(stub, Tag):
+            continue  # the units row
+        stub_refs = _note_refs(stub)
+        label = _text(stub)
+        values = [(cell, _note_refs(cell)) for cell in cells]
+        texts = [_text(cell) for cell, _ in values]
+        if not label:
+            continue
+        if not any(texts):
+            group, stack = label, []
+            continue
+        level = next(
+            (
+                int(found.group(1))
+                for cls in stub.get("class") or []
+                if (found := _STUB_LEVEL.match(str(cls)))
+            ),
+            1,
+        )
+        while stack and stack[-1][0] >= level:
+            stack.pop()
+        parents = [text for _, text in stack]
+        stack.append((level, label))
+        for index, ((cell, refs), text) in enumerate(zip(values, texts, strict=True)):
+            if not text:
+                continue
+            ids = cell.get_attribute_list("headers")
+            column_parts = [labels[i] for i in ids if i.startswith("hd") and i in labels]
+            unit_parts = [labels[i][0] for i in ids if i.startswith("uom") and i in labels]
+            column = " - ".join(part for part, _ in column_parts) or (
+                positional[index] if index < len(positional) else ""
+            )
+            column_refs = [ref for _, part_refs in column_parts for ref in part_refs]
+            rows.append(
+                {
+                    "group": group,
+                    "parents": parents,
+                    "row": label,
+                    "column": column,
+                    "unit": " - ".join(part for part in unit_parts if part) or None,
+                    "value_text": text,
+                    "value": _number(text, lang),
+                    "note_refs": list(dict.fromkeys(stub_refs + column_refs + refs)),
+                }
+            )
+
+    return {
+        "number": number,
+        "title": title,
+        "url": url,
+        "csv_url": csv_url,
+        "units": units,
+        "columns": columns or positional,
+        "notes": _table_notes(root),
+        "rows": rows,
+    }
+
+
+def _row_matches(row: dict[str, Any], words: list[str]) -> bool:
+    """Every query word starts a word of the labels ('employment' is not 'unemployment')."""
+    fields = [row["group"] or "", *row["parents"], row["row"], row["column"], row["unit"] or ""]
+    labels = re.findall(r"\w+", _fold(" ".join(fields)))
+    return all(any(label.startswith(word) for label in labels) for word in words)
+
+
+def _table_position(link: dict[str, Any], position: int) -> int:
+    found = re.search(r"\d+", link["number"] or "")
+    return int(found.group(0)) if found else position
+
+
+async def get_release_tables(
+    article: str,
+    *,
+    lang: str = "en",
+    tables: list[int] | None = None,
+    search: str = "",
+    limit: int = constants.RELEASE_TABLE_ROWS_DEFAULT,
+) -> ReleaseTablesResult:
+    """Read a Daily release's own tables (values as first published) as tidy rows."""
+    use_lang(lang)
+    if limit < 1 or limit > constants.RELEASE_TABLE_ROWS_MAX:
+        raise InvalidInput(
+            say(
+                "statcan_daily:get_release_tables: limit must be 1 to "
+                f"{constants.RELEASE_TABLE_ROWS_MAX}, got {limit}.",
+                "statcan_daily:get_release_tables : limit doit être entre 1 et "
+                f"{constants.RELEASE_TABLE_ROWS_MAX}, reçu {limit}.",
+            )
+        )
+    article_id, url = _article_url(article, lang)
+    html, article_cached = await _article_html(article_id, url, "get_release_tables")
+    soup = BeautifulSoup(html, "html.parser")
+    root = soup.find("main") or soup.body or soup
+    links = _release_table_links(root, url) if isinstance(root, Tag) else []
+    heading = root.find("h1") if isinstance(root, Tag) else None
+    issued = soup.find("meta", attrs={"name": "dcterms.issued"})
+    try:
+        release_date = (
+            date.fromisoformat(str(issued.get("content")).strip())
+            if isinstance(issued, Tag)
+            else None
+        )
+    except ValueError:
+        release_date = None
+
+    chosen = links
+    if tables:
+        wanted = set(tables)
+        chosen = [
+            link
+            for position, link in enumerate(links, start=1)
+            if _table_position(link, position) in wanted
+        ]
+        if not chosen:
+            available = ", ".join(link["number"] or link["title"] for link in links) or "-"
+            raise NotFound(
+                say(
+                    f"statcan_daily:get_release_tables: {article_id} has no table "
+                    f"{sorted(wanted)}; its tables are: {available}.",
+                    f"statcan_daily:get_release_tables : {article_id} n'a pas de tableau "
+                    f"{sorted(wanted)} ; ses tableaux sont : {available}.",
+                )
+            )
+
+    async def read(link: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+        day, name = link["url"].rsplit("/", 2)[-2:]
+        page, cached = await _fetch_html(
+            link["url"],
+            f"statcan-daily:release-table:{day}:{name}",
+            constants.CACHE_TTL_ARTICLE_SECONDS,
+            "get_release_tables",
+            missing_ok=False,
+        )
+        parsed = _parse_release_table(page or "", link["url"], lang)
+        parsed["number"] = parsed["number"] or link["number"]
+        parsed["title"] = parsed["title"] or link["title"]
+        return parsed, cached
+
+    read_tables = await asyncio.gather(*(read(link) for link in chosen))
+    words = re.findall(r"\w+", _fold(search))
+    budget = limit
+    total = 0
+    built: list[ReleaseTableData] = []
+    for parsed, _ in read_tables:
+        matched = [row for row in parsed.pop("rows") if _row_matches(row, words)]
+        kept = matched[:budget]
+        budget -= len(kept)
+        total += len(matched)
+        built.append(
+            ReleaseTableData(
+                **parsed,
+                total_rows=len(matched),
+                returned_count=len(kept),
+                rows=[ReleaseTableRow(**row) for row in kept],
+            )
+        )
+    returned = sum(table.returned_count for table in built)
+    truncated = returned < total
+    note = None
+    if not links:
+        note = say(
+            "This release links no tables of its own; for its data use "
+            "statcan_daily_get_release_files and the wds_ tools.",
+            "Ce communiqué ne renvoie à aucun tableau qui lui soit propre ; pour ses données, "
+            "utilisez statcan_daily_get_release_files et les outils wds_.",
+        )
+    elif truncated:
+        note = say(
+            f"Showing {returned} of {total} values (limit={limit}). Narrow with tables=[n] "
+            "or search (e.g. 'Alberta employment'), or raise limit.",
+            f"{returned} valeurs sur {total} (limit={limit}). Précisez avec tables=[n] ou "
+            "search (p. ex. « Alberta emploi »), ou augmentez limit.",
+        )
+    elif total == 0 and words:
+        note = say(
+            f"No row, column or heading matches {search!r}.",
+            f"Aucune ligne, colonne ni rubrique ne correspond à {search!r}.",
+        )
+    return ReleaseTablesResult(
+        article_id=article_id,
+        article_url=url,
+        title=_text(heading) if isinstance(heading, Tag) else None,
+        release_date=release_date,
+        available_tables=[DailyReleaseTableLink(**link) for link in links],
+        tables=built,
+        total_rows=total,
+        returned_count=returned,
+        truncated=truncated,
+        note=note,
+        provenance=make_provenance(
+            source=constants.RATE_LIMIT_SOURCE,
+            url=chosen[0]["url"] if len(chosen) == 1 else url,
+            cached=article_cached and all(cached for _, cached in read_tables),
+            schema_name="statcan_daily.ReleaseTablesResult",
+            limits=say(
+                "Values as StatCan first published them in this release, before later "
+                "revisions, rounded as on the page; for current figures use the wds_ tools.",
+                "Valeurs telles que Statistique Canada les a publiées dans ce communiqué, avant "
+                "les révisions ultérieures, arrondies comme dans la page ; pour les chiffres "
+                "actuels, utilisez les outils wds_.",
             ),
             lang=lang,
         ),

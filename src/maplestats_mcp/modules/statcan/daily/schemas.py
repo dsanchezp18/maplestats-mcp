@@ -89,6 +89,12 @@ class DailyArticleTable(BaseModel):
     product_id: int = Field(description="8-digit product id for the wds_ tools, e.g. 12100011.")
 
 
+class DailyReleaseTableLink(BaseModel):
+    number: str | None = Field(default=None, description="The table's label, e.g. 'Table 3'.")
+    title: str
+    url: str = Field(description="The release's own table page (t003a-eng.htm).")
+
+
 class DailyArticle(BaseModel):
     url: str = Field(description="The article page that was read (www150.statcan.gc.ca).")
     article_id: str = Field(description="Article id such as 'dq261104a'.")
@@ -104,6 +110,11 @@ class DailyArticle(BaseModel):
     charts: list[str] = Field(default_factory=list, description="Chart titles, in page order.")
     tables: list[DailyArticleTable] = Field(
         default_factory=list, description="StatCan tables the article text links to."
+    )
+    release_tables: list[DailyReleaseTableLink] = Field(
+        default_factory=list,
+        description="The release's own tables, with the values as first published; read "
+        "their rows with statcan_daily_get_release_tables.",
     )
     pdf_url: str | None = Field(default=None, description="The article as a PDF, when linked.")
     tables_page_url: str | None = Field(
@@ -260,4 +271,66 @@ class ReleaseCalendarResult(BaseModel):
         description="Set when the query matched no scheduled release: the same release's "
         "past dates and an estimate of the next, which is not an announced date.",
     )
+    provenance: Provenance
+
+
+class ReleaseTableRow(BaseModel):
+    group: str | None = Field(
+        default=None,
+        description="The heading row above, with no values of its own (e.g. 'Alberta' in a "
+        "table by province).",
+    )
+    parents: list[str] = Field(
+        default_factory=list,
+        description="The indented rows this one sits under, outermost first (e.g. "
+        "['Population', 'Labour force'] for 'Employment').",
+    )
+    row: str = Field(description="The row label as published.")
+    column: str = Field(description="The column heading, e.g. 'January 2018'.")
+    unit: str | None = Field(
+        default=None, description="Unit of the column, e.g. 'thousands (except rates)'."
+    )
+    value_text: str = Field(
+        description="The cell as published ('-5.9', '3,447.3', '7,0', '...', 'x'); a minus "
+        "is written '-'."
+    )
+    value: float | None = Field(
+        default=None, description="The cell as a number; null for a symbol such as '...'."
+    )
+    note_refs: list[str] = Field(
+        default_factory=list,
+        description="Footnote numbers attached to the cell, row or column (see the table's notes).",
+    )
+
+
+class ReleaseTableData(BaseModel):
+    number: str | None = Field(default=None, description="The table's label, e.g. 'Table 3'.")
+    title: str
+    url: str
+    csv_url: str | None = Field(default=None, description="The same table as CSV, when linked.")
+    units: list[str] = Field(default_factory=list, description="Units used, in column order.")
+    columns: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(
+        default_factory=list, description="Symbol legend, footnotes, notes and sources."
+    )
+    total_rows: int = Field(description="Cells with a value that match the search.")
+    returned_count: int
+    rows: list[ReleaseTableRow] = Field(default_factory=list)
+
+
+class ReleaseTablesResult(BaseModel):
+    article_id: str
+    article_url: str
+    title: str | None = None
+    release_date: date | None = None
+    available_tables: list[DailyReleaseTableLink] = Field(
+        default_factory=list, description="Every table of the release, read or not."
+    )
+    tables: list[ReleaseTableData] = Field(
+        default_factory=list, description="The tables read, in page order, with their rows."
+    )
+    total_rows: int
+    returned_count: int
+    truncated: bool = Field(default=False, description="True when rows past `limit` were left out.")
+    note: str | None = None
     provenance: Provenance

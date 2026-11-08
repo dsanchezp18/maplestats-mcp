@@ -142,3 +142,8 @@ RELEASE_FILES_PREVIOUS_MAX = 12
 CALENDAR_TIMEZONE = "America/Toronto"
 CALENDAR_LIMIT_DEFAULT = 20
 CALENDAR_LIMIT_MAX = 200
+
+# Release tables (statcan_daily_get_release_tables): an LFS release has 12 tables and its
+# Table 3 alone about 700 values, so rows are capped across the tables read.
+RELEASE_TABLE_ROWS_DEFAULT = 500
+RELEASE_TABLE_ROWS_MAX = 5000
