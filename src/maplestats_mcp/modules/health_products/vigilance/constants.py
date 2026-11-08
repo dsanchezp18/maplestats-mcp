@@ -39,10 +39,6 @@ EXTRACT_URL = (
     "https://www.canada.ca/content/dam/hc-sc/migration/hc-sc/dhp-mps/alt_formats/zip/"
     "medeff/databasdon/extract_extrait.zip"
 )
-EXTRACT_PAGE = (
-    "https://www.canada.ca/en/health-canada/services/drugs-health-products/medeffect-canada/"
-    "adverse-reaction-database/canada-vigilance-online-database-data-extract.html"
-)
 REACTIONS_MEMBER = "reactions.txt"
 SEARCH_PAGE = "https://www.canada.ca/en/health-canada/services/drugs-health-products/medeffect-canada/adverse-reaction-database.html"
 

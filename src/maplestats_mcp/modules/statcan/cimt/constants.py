@@ -78,9 +78,6 @@ ROWS_MAX = 5000
 SEARCH_LIMIT_DEFAULT = 20
 SEARCH_LIMIT_MAX = 100
 
-# The five-year window the chart endpoints return ends at the reference period.
-CHART_YEARS = 5
-
 # Province and territory codes are StatCan's two-digit SGC codes; the
 # abbreviations are Canada Post's. provinces.js carries only the names.
 PROVINCE_ABBREVIATIONS = {

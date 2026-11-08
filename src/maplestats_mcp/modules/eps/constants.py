@@ -1,6 +1,5 @@
 SOURCE = "eps"
 SERVICES_ROOT = "https://services9.arcgis.com/pkzvt2xlZJnPgk1Z/arcgis/rest/services"
-PORTAL_URL = "https://communitysafetydataportal.edmontonpolice.ca/"
 
 # Dataset key -> hosted feature service; see the module docstring for
 # the coverage confirmed live for each.

@@ -32,7 +32,6 @@ LISTING_URL = f"{SITE}/api/path_contents"
 FILE_URL = f"{SITE}/api/file"
 BROWSE_URL = SITE + "/data{path}?lang={lang}"
 CATALOGUE_URL = "https://open.canada.ca/data/{lang}/dataset/{id}"
-LICENCE_FILE = "/license-en.txt"
 
 RATE_LIMIT_SOURCE = "eccc-datamart"
 RATE_LIMIT_PER_SECOND = 4.0

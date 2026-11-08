@@ -16,7 +16,6 @@ DATASET_PAGE = "https://open.canada.ca/data/en/dataset/{id}"
 RESOURCE_IDENTIFICATION = "Identification"
 RESOURCE_GENERAL = "General information"
 RESOURCE_DIRECTORS = "Charities Businesses Directors/Officers"
-RESOURCE_CODES_PREFIX = "Codes Lists"
 
 # Fallback when discovery finds no matching package: the 2024 list, read live.
 FALLBACK_YEAR = 2024

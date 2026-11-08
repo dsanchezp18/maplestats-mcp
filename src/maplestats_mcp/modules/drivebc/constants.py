@@ -5,7 +5,6 @@ SOURCE = "drivebc"
 BASE_URL = "https://api.open511.gov.bc.ca"
 EVENTS_URL = f"{BASE_URL}/events"
 AREAS_URL = f"{BASE_URL}/areas"
-HELP_URL = f"{BASE_URL}/help"
 CATALOGUE_URL = "https://catalogue.data.gov.bc.ca/dataset/open511-drivebc-api"
 LICENCE = (
     "Contains information licensed under the Open Government Licence - British Columbia "

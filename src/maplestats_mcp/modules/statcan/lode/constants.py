@@ -39,7 +39,6 @@ RATE_LIMIT_CAPACITY = 2.0
 CACHE_TTL_SECONDS = 24 * 60 * 60
 RECORDS_DEFAULT = 25
 RECORDS_MAX = 500
-FIELD_EXAMPLES = 1
 
 # Per-call download cap. ODSRF (269 MB zip, 466 MB GeoPackage) is the
 # largest queryable archive; the National Address Register (1.67 GB) and

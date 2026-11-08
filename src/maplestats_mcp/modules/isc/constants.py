@@ -22,7 +22,6 @@ OPEN_HOST = "open.canada.ca"
 BLOB_HOST = "opencanada.blob.core.windows.net"
 REGPOP_DATASET = "b1b8433a-47c8-4427-94d9-0b051b17d108"
 REGPOP_PACKAGE = f"https://open.canada.ca/data/api/3/action/package_show?id={REGPOP_DATASET}"
-REGPOP_PAGE = f"https://open.canada.ca/data/en/dataset/{REGPOP_DATASET}"
 
 RATE_LIMIT_SOURCE = "isc"
 RATE_LIMIT_PER_SECOND = 2.0

@@ -81,7 +81,6 @@ BC_FILE_BY_PLACE = (
     "provincial_voting_results_by_voting_place.csv"
 )
 BC_ATTRIBUTION = "Contains information licenced under the Elections BC Open Data Licence"
-BC_LICENCE_URL = "https://www.elections.bc.ca/docs/EBC-Open-Data-Licence.pdf"
 BC_MAX_BYTES = 45 * 1024 * 1024
 
 SK_PAGE = "https://www.elections.sk.ca/reports-data/election-results/"

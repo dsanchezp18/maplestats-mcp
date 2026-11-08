@@ -11,10 +11,6 @@ from dataclasses import dataclass
 CKAN_PACKAGE_SHOW = "https://open.canada.ca/data/api/3/action/package_show"
 DATASET_PAGE = "https://open.canada.ca/data/{lang}/dataset/{dataset_id}"
 FILE_HOST = "applications.crtc.gc.ca"
-REPORT_PAGE = {
-    "en": "https://crtc.gc.ca/eng/publications/reports/policymonitoring/",
-    "fr": "https://crtc.gc.ca/fra/publications/reports/policymonitoring/",
-}
 
 SOURCE = "crtc-cmr"
 

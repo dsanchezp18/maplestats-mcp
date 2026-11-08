@@ -3,9 +3,6 @@ SITE_URL = "https://efis.fma.csc.gov.on.ca/fir/"
 # update date, posting date and a relative link to fir_data_<year>.zip.
 INDEX_URL = "https://efis.fma.csc.gov.on.ca/fir/MultiYearReport/MYCIndex.html"
 ZIP_URL = "https://efis.fma.csc.gov.on.ca/fir/MultiYearReport/fir_data_{year}.zip"
-DOCUMENTATION_URL = (
-    "https://efis.fma.csc.gov.on.ca/fir/MultiYearReport/Documentation%20for%20CSV%20files.pdf"
-)
 SOURCE = "on-fir"
 
 RATE_LIMIT_SOURCE = "on_fir"

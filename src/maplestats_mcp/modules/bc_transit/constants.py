@@ -5,7 +5,6 @@ FEED_FILES = {
     "trip_updates": "tripupdates.pb",
     "alerts": "alerts.pb",
 }
-SOURCE_PAGE = "https://www.bctransit.com/open-data"
 TERMS_URL = "https://www.bctransit.com/open-data/terms-of-use/"
 
 # Keys match the static agencies in transit/constants.py (a unit test keeps
