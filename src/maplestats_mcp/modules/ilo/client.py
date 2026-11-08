@@ -141,6 +141,11 @@ async def _get(
         raise_localized(NotFound, not_found[0], not_found[1], lang)
     if status == 429 or status >= 502:
         _raise_unavailable(url, f"HTTP {status}", lang)
+    # The server answers its IIS "403 - Forbidden: Access is denied" page now and
+    # then to requests that pass a moment later (2026-11-08, from three networks):
+    # throttling, so retry later rather than treat it as a changed answer.
+    if status == 403 and "Access is denied" in response.text[:2000]:
+        _raise_unavailable(url, "HTTP 403 (access denied for now)", lang)
     raise_localized(
         UpstreamError,
         f"ILOSTAT's SDMX API answered HTTP {status} for {url}: {body}",
@@ -183,6 +188,63 @@ def _is_modelled(name: str) -> bool:
     return "modelled estimates" in lowered or "estimations modelisees" in lowered
 
 
+def _flows(payload: Any) -> dict[str, dict[str, Any]]:
+    """Dataflow id -> name, description, last update, search weight, modelled flag."""
+    flows: dict[str, dict[str, Any]] = {}
+    for flow in list_or_empty((payload or {}).get("data") or {}, "dataflows"):
+        if not isinstance(flow, dict) or not flow.get("id"):
+            continue
+        notes = {
+            str(a.get("type")): str(a.get("title") or "")
+            for a in list_or_empty(flow, "annotations")
+            if isinstance(a, dict)
+        }
+        name = str(flow.get("name") or flow["id"])
+        try:
+            weight = int(notes.get("SEARCH_WEIGHT") or 0)
+        except ValueError:
+            weight = 0
+        flows[str(flow["id"])] = {
+            "name": name,
+            "description": _plain(str(flow.get("description") or ""))[
+                : constants.MAX_DESCRIPTION_CHARS * 3
+            ],
+            "updated": notes.get("LAST_UPDATE") or None,
+            "weight": weight,
+            "modelled": _is_modelled(name),
+        }
+    return flows
+
+
+async def _flow_info(fid: str, lang: str) -> dict[str, Any] | None:
+    """One dataflow's catalogue entry. The 7.7 MB full list is refused now and then
+    (403) while one dataflow's own definition still answers, so a lookup by id
+    falls back to that instead of failing the whole call."""
+    try:
+        catalogue, _ = await _catalogue(lang)
+    except UpstreamUnavailable:
+        url = f"{constants.BASE_URL}dataflow/{constants.AGENCY}/{fid}/latest"
+
+        async def fetch() -> dict[str, dict[str, Any]]:
+            response = await _get(
+                url,
+                None,
+                accept=constants.STRUCTURE_ACCEPT,
+                timeout=constants.CATALOGUE_TIMEOUT_SECONDS,
+                not_found=(
+                    f"{fid} is not an ILOSTAT dataset. Search with ilo_search_datasets.",
+                    f"{fid} n'est pas un jeu de données d'ILOSTAT. Cherchez avec ilo_search_datasets.",
+                ),
+                lang=lang,
+            )
+            return _flows(decode_json(response, url) or {})
+
+        catalogue, _ = await cached_fetch(
+            f"ilo:flow:{fid}:{lang}", constants.CACHE_TTL_CATALOGUE_SECONDS, fetch
+        )
+    return catalogue.get(fid)
+
+
 async def _catalogue(lang: str) -> tuple[dict[str, dict[str, Any]], bool]:
     url = _catalogue_url()
 
@@ -199,29 +261,7 @@ async def _catalogue(lang: str) -> tuple[dict[str, dict[str, Any]], bool]:
             lang=lang,
         )
         payload = decode_json(response, url) or {}
-        catalogue: dict[str, dict[str, Any]] = {}
-        for flow in list_or_empty(payload.get("data") or {}, "dataflows"):
-            if not isinstance(flow, dict) or not flow.get("id"):
-                continue
-            notes = {
-                str(a.get("type")): str(a.get("title") or "")
-                for a in list_or_empty(flow, "annotations")
-                if isinstance(a, dict)
-            }
-            name = str(flow.get("name") or flow["id"])
-            try:
-                weight = int(notes.get("SEARCH_WEIGHT") or 0)
-            except ValueError:
-                weight = 0
-            catalogue[str(flow["id"])] = {
-                "name": name,
-                "description": _plain(str(flow.get("description") or ""))[
-                    : constants.MAX_DESCRIPTION_CHARS * 3
-                ],
-                "updated": notes.get("LAST_UPDATE") or None,
-                "weight": weight,
-                "modelled": _is_modelled(name),
-            }
+        catalogue = _flows(payload)
         if not catalogue:
             raise_localized(
                 UpstreamError,
@@ -364,8 +404,7 @@ async def _dataflow(dataset: str, lang: str) -> tuple[str, dict[str, Any]]:
             lang,
         )
     fid = match.group(1).upper()
-    catalogue, _ = await _catalogue(lang)
-    info = catalogue.get(fid)
+    info = await _flow_info(fid, lang)
     if info is None:
         raise_localized(
             NotFound,

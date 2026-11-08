@@ -26,7 +26,7 @@
           "reference_period": "2026-09",
           "coordinate": "1.7.1.1.1.1",
           "value": 6.5,
-          "release_or_revision_date": "2026-10-09T08:30",
+          "release_or_revision_date": "2026-11-06T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
         },
         {
@@ -69,7 +69,7 @@
           "reference_period": "2026-09",
           "coordinate": "2.7.1.1.1.1",
           "value": 9.1,
-          "release_or_revision_date": "2026-10-09T08:30",
+          "release_or_revision_date": "2026-11-06T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
         },
         {
@@ -79,7 +79,7 @@
           "reference_period": "2026-09",
           "coordinate": "5.7.1.1.1.1",
           "value": 7.4,
-          "release_or_revision_date": "2026-10-09T08:30",
+          "release_or_revision_date": "2026-11-06T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
         }
       ],
@@ -561,7 +561,7 @@
           "reference_period": "2026-09",
           "coordinate": "1.6.1.1.1.1",
           "value": 1474.9,
-          "release_or_revision_date": "2026-10-09T08:30",
+          "release_or_revision_date": "2026-11-06T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
         }
       ],

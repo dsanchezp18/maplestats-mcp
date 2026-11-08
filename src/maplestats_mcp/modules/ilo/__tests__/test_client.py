@@ -223,3 +223,26 @@ async def test_compare_checks_frequency_and_sex():
         await client.compare_countries("gdp")
     with pytest.raises(InvalidInput, match="not an ILOSTAT area code"):
         await client.compare_countries("unemployment_rate", compare_with=["United-States-of-A"])
+
+
+ACCESS_DENIED = (
+    "<!DOCTYPE html><html><head><title>403 - Forbidden: Access is denied.</title></head>"
+    "<body><h2>403 - Forbidden: Access is denied.</h2></body></html>"
+)
+
+
+async def test_access_denied_page_is_unavailable_and_describe_falls_back(httpx_mock):
+    # 2026-11-08: the full dataflow list answered this 403 page now and then, from
+    # three networks, while one dataflow's own definition still answered.
+    from maplestats_mcp.shared.errors import UpstreamUnavailable
+
+    httpx_mock.add_response(url=CATALOGUE, status_code=403, text=ACCESS_DENIED, is_reusable=True)
+    httpx_mock.add_response(
+        url="https://sdmx.ilo.org/rest/dataflow/ILO/DF_UNE_DEAP_SEX_AGE_RT/latest",
+        json=_json("structure_une.json"),
+    )
+    httpx_mock.add_response(url=STRUCTURE, json=_json("structure_une.json"), is_reusable=True)
+    with pytest.raises(UpstreamUnavailable):
+        await client.search_datasets("unemployment")
+    result = await client.describe_dataset("DF_UNE_DEAP_SEX_AGE_RT")
+    assert result.key_template == "REF_AREA.FREQ.MEASURE.SEX.AGE"

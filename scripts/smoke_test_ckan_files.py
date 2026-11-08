@@ -16,7 +16,7 @@ portals run side by side. Resources and expectations were checked by hand on
   65,536 x 16,217 sheet once took 250 s to read;
 - yt (53 MB CSV refused), regina, montreal (85-sheet budget), qc (a
   Montreal library workbook, really .xls), toronto (file reading refused: the
-  portal does not permit automated file downloads) and ab.
+  portal's robots.txt disallows automated file downloads) and ab.
 """
 
 from __future__ import annotations
@@ -209,7 +209,7 @@ async def toronto() -> None:
     try:
         await files.read_resource("toronto", "53caa383-5515-4b01-81aa-cfdced622548", limit=1)
     except InvalidInput as exc:
-        check("automated file downloads" in str(exc), "toronto file reading refused")
+        check("robots.txt" in str(exc), "toronto file reading refused")
     else:
         check(False, "toronto file reading refused")
 
