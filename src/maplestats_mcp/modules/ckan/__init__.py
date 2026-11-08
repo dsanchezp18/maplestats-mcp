@@ -10,7 +10,7 @@ MODULE_NAME = "ckan"
 MODULE_DESCRIPTION = (
     "CKAN open-data catalogues: Government of Canada (open.canada.ca), "
     "Ontario, British Columbia, Alberta, Québec, Northwest Territories, "
-    "Yukon, Montréal, Toronto, and Regina. Dataset search and detail, "
+    "Yukon, Montréal, Toronto, Regina, and Niagara (regional). Dataset search and detail, "
     "organizations, resources, licenses, tags, groups, row-level "
     "DataStore queries, and a reader for the Excel (.xlsx, .xls) and CSV "
     "files of file-only resources (about half the tabular datasets on the "
@@ -22,7 +22,7 @@ MODULE_DESCRIPTION = (
 MODULE_DESCRIPTION_FR = (
     "Catalogues de données ouvertes CKAN : gouvernement du Canada "
     "(ouvert.canada.ca), Ontario, Colombie-Britannique, Alberta, Québec, "
-    "Territoires du Nord-Ouest, Yukon, Montréal, Toronto et Regina. "
+    "Territoires du Nord-Ouest, Yukon, Montréal, Toronto, Regina et Niagara (régional). "
     "Recherche et détail des jeux de données, organisations, ressources, "
     "licences, mots-clés, groupes, requêtes DataStore au niveau des "
     "lignes et lecture des fichiers Excel (.xlsx, .xls) et CSV des "

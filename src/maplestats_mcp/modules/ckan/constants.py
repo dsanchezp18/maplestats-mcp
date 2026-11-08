@@ -24,6 +24,11 @@ recorded here as data rather than as ten copies of the client:
 - ab: English-only; its DataStore answers HTTP 500 for every resource,
   so row queries are disabled.
 - nt, regina: English-only, standard CKAN.
+- niagara: English-only, CKAN 2.9 behind Cloudflare. Answered 20 of 20
+  API calls with JSON on 2026-11-08 after a Cloudflare challenge on
+  2026-11-03. Package id and name differ; its one group ("key-thing")
+  holds no datasets, so groups are off. Most files sit on the member
+  municipalities' ArcGIS Hub sites, read through `arcgis_hub_*`.
 
 Each portal keeps its own rate-limit bucket (`ckan-<key>`) so a burst
 against one catalogue never throttles another.
@@ -298,6 +303,38 @@ PORTALS: dict[str, Portal] = {
         organization_url="https://openregina.ca/organization/{id}",
         group_url="https://openregina.ca/group/{id}",
         file_hosts=("openregina.ca", "0pendatafiles.blob.core.windows.net"),
+    ),
+    "niagara": Portal(
+        base_url="https://niagaraopendata.ca/api/3/action/",
+        name_en="Niagara Open Data (niagaraopendata.ca)",
+        name_fr="Données ouvertes de Niagara (niagaraopendata.ca)",
+        dataset_url="https://niagaraopendata.ca/dataset/{id}",
+        organization_url="https://niagaraopendata.ca/organization/{id}",
+        landing_uses_name=True,
+        # Fronted by Cloudflare, which challenged every request on 2026-11-03.
+        rate_per_second=1.0,
+        rate_capacity=3.0,
+        groups="none",
+        extra_fields=("geographic_coverage", "geographic_granularity", "update_frequency"),
+        note=(
+            "Regional catalogue of Niagara Region, its municipalities (Niagara Falls, "
+            "Welland, St. Catharines, Fort Erie, Lincoln, Niagara-on-the-Lake) and Brock "
+            "University: 546 datasets on 2026-11-08. Each publisher has its own Open "
+            "Government Licence 2.0 (commercial use allowed with attribution); a few "
+            "datasets are CC BY 4.0 or have no licence. Many resources link to the "
+            "municipalities' ArcGIS Hub sites (arcgis_hub_* portals niagara_region, "
+            "niagara_falls, st_catharines)."
+        ),
+        note_fr=(
+            "Catalogue régional de la Région de Niagara, de ses municipalités (Niagara "
+            "Falls, Welland, St. Catharines, Fort Erie, Lincoln, Niagara-on-the-Lake) et "
+            "de l'Université Brock : 546 jeux de données le 2026-11-08, en anglais. Chaque "
+            "éditeur a sa propre Open Government Licence 2.0 (usage commercial permis avec "
+            "attribution) ; quelques jeux sont sous CC BY 4.0 ou sans licence. Beaucoup de "
+            "ressources renvoient aux sites ArcGIS Hub des municipalités (portails "
+            "arcgis_hub_* niagara_region, niagara_falls, st_catharines)."
+        ),
+        file_hosts=("niagaraopendata.ca",),
     ),
 }
 

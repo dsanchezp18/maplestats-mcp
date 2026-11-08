@@ -1065,6 +1065,7 @@ PORTAL_PLACES: dict[str, dict[str, tuple[str, PortalLevel]]] = {
         "montreal": ("QC", _M),
         "toronto": ("ON", _M),
         "regina": ("SK", _M),
+        "niagara": ("ON", _M),
     },
     "arcgis_hub": {
         "mb": ("MB", _P),

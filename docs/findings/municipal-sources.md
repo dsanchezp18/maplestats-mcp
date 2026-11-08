@@ -754,6 +754,22 @@ project; each was checked here against the portal itself.
   read. It would sit beside, not replace, the covered ArcGIS Hub portal
   `niagara_region` (`open.niagararegion.ca`).
 
+  Rechecked 2026-11-08 and added as `ckan_*` `portal="niagara"`. The API
+  answered JSON to `status_show`, `package_search`, `package_list` and
+  `organization_list` 20 times out of 20 over about two and a half minutes,
+  then to `package_show`, `license_list`, `tag_list` and `datastore_search`
+  (2,500 rows of Niagara Weather Information Systems data). CKAN 2.9.9 with
+  `ontario_theme`, `scheming_datasets`, `fluent` and `datastore`. 546
+  datasets from 11 organizations; package id and name differ; the one
+  group, "key-thing", holds no datasets, so groups are off. The licence page
+  is OGL-Canada 2.0 with Niagara Region named (commercial use allowed,
+  attribution "Contains information licensed under the Open Government
+  Licence - Niagara Region"); each municipality has its own OGL 2.0 page.
+  The terms of use cover privacy and user content and set no limit on
+  automated access; robots.txt is CKAN's default (`Disallow: /api/` for
+  crawlers, as on every other covered CKAN portal) plus a list of named
+  bots. Smoke test passed.
+
 ## Permits, licences, inspections and planning applications
 
 Checked live 2026-10-27, for the backlog items "permits and licensing data" and

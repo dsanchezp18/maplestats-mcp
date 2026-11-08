@@ -1648,6 +1648,7 @@ _SEARCH_NOTES = {
     ),
     "no Nunavut portal is covered": "aucun portail du Nunavut n'est couvert",
     "the city publishes on Donnees Quebec": "la ville publie sur Données Québec",
+    "regional catalogue": "catalogue régional",
 }
 # A city's English name is its French name unless FR says otherwise.
 _SAME_IN_FRENCH = re.compile(r"^[A-Z][A-Za-z.\- ]*(?: \((?:Ontario|Alberta)\))?$")
