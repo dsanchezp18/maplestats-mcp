@@ -213,7 +213,7 @@ def _bootstrap_setup(monkeypatch, tmp_path, *, main_has_id: bool, layout_has_id:
     main_path = tmp_path / "main.txt"
     main_path.write_text("0000148  100\n")
 
-    async def load_codebook(url, lang="en"):
+    async def load_codebook(url, lang="en", *, data_member=None):
         return list(main_columns.values()), [], False
 
     async def members(url):

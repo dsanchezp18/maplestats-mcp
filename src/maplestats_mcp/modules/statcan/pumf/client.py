@@ -8,7 +8,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 
 from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
-from maplestats_mcp.modules.statcan.pumf import codebooks, constants
+from maplestats_mcp.modules.statcan.pumf import codebooks, constants, statfiles
 from maplestats_mcp.modules.statcan.pumf.schemas import (
     Codebook,
     PumfFile,
@@ -24,6 +24,7 @@ from maplestats_mcp.shared import remote_zip
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
+from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
@@ -244,8 +245,31 @@ async def list_zip(url: str) -> ZipContents:
     )
 
 
-async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable], list[str], bool]:
-    """Every variable in a PUMF ZIP's codebook, the files read, and whether cached."""
+def _stat_member(
+    members: list[remote_zip.ZipMember], wanted: str | None
+) -> remote_zip.ZipMember | None:
+    """The SAS, SPSS or Stata data file to take variables from: `wanted`, else the largest."""
+    stats = [
+        m
+        for m in members
+        if statfiles.is_stat_file(m.name)
+        and "bsw" not in m.name.lower()
+        and (wanted is None or m.name == wanted)
+    ]
+    return max(stats, key=lambda m: m.size) if stats else None
+
+
+async def load_codebook(
+    url: str, lang: str = "en", *, data_member: str | None = None
+) -> tuple[list[PumfVariable], list[str], bool]:
+    """Every variable in a PUMF ZIP's codebook, the files read, and whether cached.
+
+    When the ZIP has no codebook the parsers read but has a SAS, SPSS or
+    Stata data file (`data_member`, else the largest), that file is
+    downloaded and its own names, labels and value labels are the codebook
+    (the CCPI 2020 and 2022 PUMFs, 34-25-0001, ship only a .sas7bdat and an
+    Excel data dictionary).
+    """
     use_lang(lang)
     members, _, cached = await _members(_check_url(url))
     by_name = {m.name: m for m in members}
@@ -270,6 +294,13 @@ async def load_codebook(url: str, lang: str = "en") -> tuple[list[PumfVariable],
                     sas_roles[name] = role
         chosen = list(sas_roles)
     if not chosen:
+        stat = _stat_member(members, data_member)
+        if stat is not None:
+            # Imported here: tabulate imports this module.
+            from maplestats_mcp.modules.statcan.pumf import tabulate
+
+            path = await tabulate.local_data_file(url, stat)
+            return await run_in_pool(statfiles.read_variables, path), [stat.name], cached
         raise NotFound(
             say(
                 "No codebook this tool can read in the ZIP.",
@@ -391,11 +422,20 @@ async def get_codebook(
             url=url,
             cached=cached,
             schema_name="statcan_pumf.Codebook",
-            limits=say(
-                "codebook files read from inside the ZIP by range request; microdata not "
-                "downloaded",
-                "fichiers du dictionnaire de données lus dans le ZIP par requête de plage ; "
-                "microdonnées non téléchargées",
+            limits=(
+                say(
+                    f"no codebook file in the ZIP: variables read from the data file {chosen[0]} "
+                    "(downloaded once and cached)",
+                    f"aucun dictionnaire de données dans le ZIP : variables lues dans le fichier "
+                    f"de données {chosen[0]} (téléchargé une fois et mis en cache)",
+                )
+                if chosen and statfiles.is_stat_file(chosen[0])
+                else say(
+                    "codebook files read from inside the ZIP by range request; microdata not "
+                    "downloaded",
+                    "fichiers du dictionnaire de données lus dans le ZIP par requête de plage ; "
+                    "microdonnées non téléchargées",
+                )
             ),
             lang=lang,
         ),
