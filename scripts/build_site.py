@@ -656,6 +656,14 @@ SOURCES: dict[str, Source] = {
         "Statistiques de la BRI",
         domain="statistics",
     ),
+    "bls": Source(
+        "US Bureau of Labor Statistics (US comparators)",
+        "Bureau of Labor Statistics des États-Unis (comparaisons avec les États-Unis)",
+        "national",
+        "US BLS",
+        "BLS (États-Unis)",
+        domain="statistics",
+    ),
     "worldbank": Source(
         "World Bank World Development Indicators (Canada and peers)",
         "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",

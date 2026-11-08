@@ -223,6 +223,12 @@ CASES = [
     ("household debt service ratio Canada compared with other countries", "bis_compare_countries"),
     ("Bank for International Settlements datasets", "bis_list_datasets"),
     ("dimensions and codes of a BIS dataset series key", "bis_describe_dataset"),
+    # US Bureau of Labor Statistics, 2026-11-07.
+    ("US nonfarm payrolls jobs report", "bls_get_indicator"),
+    ("United States CPI inflation compared with Canada", "bls_get_indicator"),
+    ("BLS series id time series", "bls_get_series"),
+    ("find the BLS series id for US shelter inflation", "bls_search_series"),
+    ("list of Bureau of Labor Statistics surveys", "bls_list_surveys"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

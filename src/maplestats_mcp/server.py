@@ -617,7 +617,8 @@ Sources, by tool-name prefix:
   facility lookups): eccc_datamart_.
 - World Bank WDI, Canada and G7/OECD peers: worldbank_. BIS (policy rates,
   debt service ratios, credit, house prices, banking and payment
-  statistics), Canada and peers: bis_.
+  statistics), Canada and peers: bis_. US comparators: bls_ (payrolls,
+  unemployment, CPI).
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and
