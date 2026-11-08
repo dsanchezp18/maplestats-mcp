@@ -62,3 +62,29 @@ async def test_replayed_call_gives_the_recorded_result(case: Case, httpx_mock: H
     assert normalize(json.loads(text)) == normalize(structured)
     assert problems(case, structured) == [], RERECORD
     assert normalize(structured) == fixture["result"], RERECORD
+
+
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+@pytest.mark.parametrize("case", CASES, ids=[c.question_id for c in CASES])
+async def test_brief_result_keeps_what_the_answer_needs(case: Case, httpx_mock: HTTPXMock):
+    """The default (brief) result holds the key's figures, every citation, caveat and limit.
+
+    Brief is what a model reads unless it asks for detail='full'; the Maple Test grades
+    the figures and the table and vector ids it cites, so those must all survive.
+    """
+    fixture = json.loads(fixture_path(case).read_text(encoding="utf-8"))
+    for rid in fixture["requests"]:
+        httpx_mock.add_response(**response_kwargs(HTTP[rid]))
+    with frozen_today(date.fromisoformat(fixture["recorded_on"])):
+        structured, text = await call(case, detail="brief")
+    assert json.loads(text) == structured
+    assert problems(case, structured) == []
+    full = fixture["result"]
+    provenance = full["provenance"]
+    series = full.get("series")
+    citations = [s["context"]["citation"] for s in series] if isinstance(series, list) else []
+    kept = [*citations, *provenance["caveats"], provenance["url"]]
+    kept += [provenance[k] for k in ("limits", "coverage") if provenance.get(k)]
+    for needed in kept:
+        assert json.dumps(needed, ensure_ascii=False)[1:-1] in text, needed
+    assert len(text) < len(json.dumps(full, ensure_ascii=False, separators=(",", ":")))

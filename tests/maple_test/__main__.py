@@ -40,7 +40,22 @@ def main() -> int:
     g.add_argument(
         "--verify", action="store_true", help="look up cited IDs the citation cache lacks"
     )
+    c = sub.add_parser(
+        "costs", help="print mean cost and input tokens per question and arm (no grading)"
+    )
+    c.add_argument("runs", nargs="*", type=Path)
+    c.add_argument("--version", choices=sorted(grade.SUITES), default="v1")
     args = parser.parse_args()
+    if args.command == "costs":
+        paths = args.runs or sorted(grade.SUITES[args.version].runs.glob("*.jsonl"))
+        answers = [
+            json.loads(line)
+            for path in paths
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        print("\n".join(grade.cost_per_question(answers, args.version)))
+        return 0
     if args.command == "run":
         print(
             run.run(

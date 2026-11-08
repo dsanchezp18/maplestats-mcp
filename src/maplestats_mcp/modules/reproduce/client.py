@@ -118,7 +118,9 @@ async def _run_tool(
     with recording() as requests:
         async with Client(mcp) as client:
             result = await client.call_tool(
-                "call_tool", {"name": tool, "arguments": args}, raise_on_error=False
+                "call_tool",
+                {"name": tool, "arguments": args, "detail": "full"},
+                raise_on_error=False,
             )
     text = next((block.text for block in result.content if isinstance(block, TextContent)), "")
     if result.is_error:
@@ -252,6 +254,9 @@ async def reproduce(
     lang: str = "en",
     summary: bool = False,
 ) -> ReproductionCode:
+    # `detail` shapes what a call returns to the model (shared/brief.py), not what
+    # it fetches: a model copying its call's arguments may include it.
+    arguments = {k: v for k, v in arguments.items() if k != "detail"}
     requested: list[Language] = (
         list(ALL_LANGUAGES) if language == "all" else [language]  # type: ignore[list-item]
     )

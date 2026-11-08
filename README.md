@@ -46,7 +46,10 @@ chiffre revient avec sa citation, ses indicateurs de qualité et sa licence.*
   its table and vector, reference period, release date, unit and scale,
   geography and a link to the table's page; a Bank of Canada value, its series
   id and the Valet URL. Every result's `provenance` block names the source,
-  the exact URL and the time of the query.
+  the exact URL and the time of the query. Results are brief by default (the
+  values, citation, flags, caveats and limits, long row lists as CSV text);
+  `detail="full"` on `call_tool` returns the complete `provenance` block and
+  every field.
 - **Quality flags are kept.** StatCan's "use with caution" and "too
   unreliable to be published", preliminary and revised stay on each value;
   public microdata tabulations give a CV and a quality grade per cell where
@@ -240,6 +243,13 @@ some sources only publish English content (for example Yukon's CKAN portal,
 the World Bank's indicator definitions and the PMPRB), so there `lang`
 changes the labels MapleStats adds, not the source's own text. Every response
 has a `provenance` block: source, URL, query time, freshness and limits.
+Through `call_tool` results are brief by default: values, periods, unit and
+scale, the citation, status flags, caveats, limits, licence and URL, with a
+list of six or more rows sent as one CSV text block (`{"format": "csv",
+"csv": ...}`) and the boilerplate (query time, cache flag, schema name,
+freshness, the reproduce hint) left out. Pass `detail="full"` for every field
+and the whole `provenance` block, rows as JSON objects. `reproduce_code` and
+`reproduce_workbook` always read the full result.
 `docs://catalogue` describes every module in both languages. The guided
 prompts take `lang` too, and each `docs://<module>/...` resource has a French
 twin at `docs://<module>/fr/...` (for example `docs://statcan/fr/pieges`).

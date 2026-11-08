@@ -19,7 +19,9 @@ RATE_LIMIT_CAPACITY = 4.0
 
 CACHE_TTL_SECONDS = 24 * 60 * 60
 MAX_PUB_PAGES = 6
-VARIABLES_DEFAULT = 50
+# 25 since 2026-11-08 (was 50): each variable carries its value labels; pass
+# `query` to find variables, or a larger `limit`.
+VARIABLES_DEFAULT = 25
 VARIABLES_MAX = 500
 VALUES_PER_VARIABLE = 60
 TABLE_ROWS_MAX = 500

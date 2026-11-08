@@ -1,9 +1,11 @@
 """Aggregate usage counts for the hosted server: which tools run, not what was asked.
 
-The counters hold a tool's name, the UTC day, whether the call succeeded and
+The counters hold a tool's name, the UTC day, whether the call succeeded,
 how long it took (the last LATENCY_SAMPLES durations per tool, for its p50
-and p95). They never hold arguments, query text, client addresses or
-anything else a caller typed. `/stats` reports the period they cover, with
+and p95) and how large its result was (characters of text, and tokens
+estimated from them: what a call costs a model to read). They never hold
+arguments, query text, result content, client addresses or anything else a
+caller typed. `/stats` reports the period they cover, with
 the upstream hosts' error counts and breaker states from shared/breaker.py.
 
 By default they live in memory, so a restart (a deploy, a free host's idle
@@ -38,6 +40,7 @@ from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 
 from maplestats_mcp import config
 from maplestats_mcp.shared.breaker import BREAKER
+from maplestats_mcp.shared.brief import estimated_tokens
 from maplestats_mcp.shared.goatcounter import FORWARDER, GoatCounterForwarder
 
 logger = logging.getLogger("maplestats_mcp.usage")
@@ -85,6 +88,9 @@ class UsageStats:
         self.tools: Counter[tuple[str, bool]] = Counter()
         self.days: dict[str, Counter[bool]] = {}
         self.durations: dict[str, deque[float]] = {}
+        # Per tool: [results sized, characters in all of them, the largest]. The
+        # size of what the client read, never its content.
+        self.sizes: dict[str, list[int]] = {}
         # Counted since the last save, added to the file by the next one.
         self._new_tools: Counter[tuple[str, bool]] = Counter()
         self._new_days: dict[str, Counter[bool]] = {}
@@ -104,10 +110,19 @@ class UsageStats:
         """Accept names from the server registry, never from a request."""
         self.tool_names.update(names)
 
-    def record(self, tool: str, ok: bool, seconds: float | None = None) -> None:
+    def _name(self, tool: str) -> str:
         name = tool if tool in self.tool_names else normalized_tool_name(tool)
-        if name not in self.tool_names:
-            name = "other"
+        return name if name in self.tool_names else "other"
+
+    def record_size(self, tool: str, chars: int) -> None:
+        """Count one result of `chars` characters (the text the client read) for `tool`."""
+        entry = self.sizes.setdefault(self._name(tool), [0, 0, 0])
+        entry[0] += 1
+        entry[1] += chars
+        entry[2] = max(entry[2], chars)
+
+    def record(self, tool: str, ok: bool, seconds: float | None = None) -> None:
+        name = self._name(tool)
         self.tools[(name, ok)] += 1
         self._new_tools[(name, ok)] += 1
         if self.forwarder is not None:
@@ -224,9 +239,21 @@ class UsageStats:
                     "p95_ms": round(_percentile(samples, 0.95) * 1000),
                     "samples": len(samples),
                 }
+        sizes = {
+            name: {
+                "results": count,
+                "mean_chars": round(total / count),
+                "max_chars": largest,
+                "mean_tokens_est": estimated_tokens(round(total / count)),
+            }
+            for name, (count, total, largest) in sorted(
+                self.sizes.items(), key=lambda item: -item[1][1]
+            )
+            if count
+        }
         kept = (
-            "the call counts are also saved to disk and survive a restart; latencies cover "
-            "calls since this process started"
+            "the call counts are also saved to disk and survive a restart; latencies and "
+            "result sizes cover calls since this process started"
             if self.path is not None
             else "a restart starts the count again"
         )
@@ -234,7 +261,8 @@ class UsageStats:
             "counting_since": self.since.isoformat(),
             "persisted": self.path is not None,
             "note": (
-                "Tool names, outcomes and durations, and upstream host names with their error "
+                "Tool names, outcomes, durations and result sizes (characters, and tokens "
+                "estimated at four characters each), and upstream host names with their error "
                 f"counts, only, in memory; {kept}. Where GoatCounter is configured, each "
                 "call's tool name and outcome are also counted there."
             ),
@@ -243,6 +271,7 @@ class UsageStats:
             "by_day": _by_day(self.days),
             "by_tool": dict(ordered),
             "latency_ms": latency,
+            "result_size": sizes,
         }
 
 
@@ -366,7 +395,16 @@ class UsageMiddleware(Middleware):
         # fastmcp 4.1 re-raises a failing tool as ToolError, which the except
         # branch above counts; an error result only gets here when a tool returned
         # ToolResult(is_error=True) itself.
-        self.stats.record(
-            str(name), not getattr(result, "is_error", False), time.perf_counter() - started
-        )
+        ok = not getattr(result, "is_error", False)
+        self.stats.record(str(name), ok, time.perf_counter() - started)
+        if ok:
+            self.stats.record_size(str(name), result_chars(result))
         return result
+
+
+def result_chars(result: Any) -> int:
+    """Characters of text the client reads in a tool result (its text blocks)."""
+    content = getattr(result, "content", None) or []
+    return sum(
+        len(text) for block in content if isinstance(text := getattr(block, "text", None), str)
+    )

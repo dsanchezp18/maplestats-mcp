@@ -11,9 +11,13 @@ provenance.limits what it cut and how to get the rest. A result within
 the budget is returned untouched.
 
 The same pass fills provenance.caveats from shared/fitness.py's rules
-for the tool and arguments, so every module gets them without a change.
-The text content is rebuilt from the structured content whenever either
-changes, so the two never disagree.
+for the tool and arguments, so every module gets them without a change,
+and then shapes the result for the call's `detail` argument (shared/brief.py:
+brief by default, "full" for every field). The text content is rebuilt from
+the structured content whenever either changes, so the two never disagree.
+Calls a tool makes back into the server while it runs (reproduce_code,
+reproduce_workbook) are neither trimmed nor shaped: they need every row
+and field.
 """
 
 from __future__ import annotations
@@ -29,6 +33,8 @@ from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from fastmcp.tools.base import ToolResult
 from mcp.types import TextContent
 
+from maplestats_mcp.shared.brief import DEFAULT_DETAIL, Detail, normalize_detail, shape
+from maplestats_mcp.shared.brief import exempt as brief_exempt
 from maplestats_mcp.shared.i18n import normalize_lang, pick
 from maplestats_mcp.shared.limits import Trimmed, join_limits, response_max_bytes, trim_payload
 from maplestats_mcp.shared.validation import call_arguments
@@ -39,6 +45,10 @@ logger = logging.getLogger("maplestats_mcp.response_budget")
 # server again in-process (the context reaches that inner call); they need every
 # row, and the outer call's own result is budgeted on the way out.
 _inside_call: ContextVar[bool] = ContextVar("maplestats_budget_inside_call", default=False)
+
+# The argument that picks a brief or full result. No tool takes it: this middleware
+# removes it before the tool's arguments are validated.
+DETAIL_ARGUMENT = "detail"
 
 # Room left under the budget for the note and caveats added after trimming.
 _RESERVE = 2_000
@@ -192,16 +202,77 @@ def apply_budget(
     )
 
 
+def with_detail(arguments: Mapping[str, Any] | None, detail: str | None) -> dict[str, Any]:
+    """The arguments call_tool passes on, with the `detail` the result is shaped for.
+
+    call_tool's own `detail` wins, then one the caller put inside `arguments`, then
+    the brief default.
+    """
+    passed = dict(arguments or {})
+    if detail is not None:
+        passed[DETAIL_ARGUMENT] = detail
+    else:
+        passed.setdefault(DETAIL_ARGUMENT, DEFAULT_DETAIL)
+    return passed
+
+
+def _take_detail(context: MiddlewareContext) -> tuple[MiddlewareContext, Detail]:
+    """The call without its `detail` argument (no tool takes one), and that detail.
+
+    Brief is the default through call_tool, which every model call goes through
+    (server.py adds it). A tool called directly by name answers in full unless asked:
+    a client that lists the tool checks the result against its output schema, which
+    a brief result (CSV text in place of a list) does not match.
+    """
+    message = context.message
+    arguments = getattr(message, "arguments", None)
+    if not isinstance(arguments, dict) or DETAIL_ARGUMENT not in arguments:
+        return context, "full"
+    rest = {k: v for k, v in arguments.items() if k != DETAIL_ARGUMENT}
+    detail = normalize_detail(arguments[DETAIL_ARGUMENT])
+    return context.copy(message=message.model_copy(update={"arguments": rest})), detail
+
+
+def apply_detail(result: ToolResult, tool: str, detail: Detail, lang: str) -> ToolResult:
+    """`result` shaped for `detail` (shared/brief.py); itself when nothing changes.
+
+    Like apply_budget, only a result whose content is the one text block FastMCP
+    writes from the structured content is shaped, and the text is rebuilt from the
+    shaped content so the two agree.
+    """
+    payload = result.structured_content
+    if result.is_error or not isinstance(payload, dict) or brief_exempt(tool):
+        return result
+    if len(result.content) != 1 or not isinstance(result.content[0], TextContent):
+        return result
+    wrapped = bool(((result.meta or {}).get("fastmcp") or {}).get("wrap_result"))
+    shaped = shape(payload, detail, lang, wrapped=wrapped)
+    if shaped is None:
+        return result
+    body = shaped.get("result") if wrapped else shaped
+    text = pydantic_core.to_json(body, fallback=str).decode()
+    return ToolResult(
+        content=[TextContent(type="text", text=text)],
+        structured_content=shaped,
+        meta=result.meta,
+    )
+
+
 class ResponseBudgetMiddleware(Middleware):
-    """Trim every tool result to the response budget and add its fitness caveats."""
+    """Trim every tool result to the response budget, add its fitness caveats, and
+    shape it for the call's `detail` (brief by default)."""
 
     def __init__(self, max_bytes: int | None = None) -> None:
         self.max_bytes = max_bytes if max_bytes is not None else response_max_bytes()
 
     async def on_call_tool(self, context: MiddlewareContext, call_next: CallNext) -> Any:
         # The call_tool meta-tool runs its target through this middleware again;
-        # the target's own pass does the work, once.
-        if getattr(context.message, "name", None) == "call_tool" or _inside_call.get():
+        # the target's own pass does the work, once. call_tool takes `detail` itself
+        # and passes it on in the target's arguments (server.py).
+        if getattr(context.message, "name", None) == "call_tool":
+            return await call_next(context)
+        context, detail = _take_detail(context)
+        if _inside_call.get():
             return await call_next(context)
         token = _inside_call.set(True)
         try:
@@ -211,4 +282,6 @@ class ResponseBudgetMiddleware(Middleware):
         if not isinstance(result, ToolResult):
             return result
         tool, arguments = call_arguments(context)
-        return apply_budget(result, tool, arguments, self.max_bytes)
+        budgeted = apply_budget(result, tool, arguments, self.max_bytes)
+        lang = normalize_lang(str(arguments.get("lang", "en")))
+        return apply_detail(budgeted, tool, detail, lang)

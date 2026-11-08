@@ -191,8 +191,14 @@ def lookup(
 
 
 def problems(case: Case, result: dict[str, Any]) -> list[str]:
-    """What the result lacks for the key's answer to be readable from it; empty if fine."""
+    """What the result lacks for the key's answer to be readable from it; empty if fine.
+
+    A brief result's CSV rows are read back as rows first.
+    """
+    from maplestats_mcp.shared.brief import expand_tables
+
     q = question(case)
+    result = expand_tables(result)
     found = observations(result)
     out: list[str] = []
     if case.cite:
@@ -291,8 +297,12 @@ def frozen_today(day: date) -> Iterator[None]:
             m.today = real  # type: ignore[attr-defined]
 
 
-async def call(case: Case) -> tuple[dict[str, Any], str]:
-    """Run the case's tool through `call_tool`, as a model does; (structured, text)."""
+async def call(case: Case, detail: str = "full") -> tuple[dict[str, Any], str]:
+    """Run the case's tool through `call_tool`, as a model does; (structured, text).
+
+    `detail` is call_tool's: fixtures hold the full result, which a brief one is
+    checked against (tests/test_maple_test_replay.py).
+    """
     from fastmcp import Client
     from mcp.types import TextContent
 
@@ -300,7 +310,7 @@ async def call(case: Case) -> tuple[dict[str, Any], str]:
 
     async with Client(mcp) as client:
         result = await client.call_tool(
-            "call_tool", {"name": case.tool, "arguments": case.arguments}
+            "call_tool", {"name": case.tool, "arguments": case.arguments, "detail": detail}
         )
     first = result.content[0]
     assert isinstance(first, TextContent)

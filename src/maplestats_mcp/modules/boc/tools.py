@@ -171,8 +171,8 @@ async def boc_get_observations(
     publication frequency; mixing frequencies (e.g. a daily FX rate
     with monthly CPI) returns separate rows, each carrying only its own
     series - check each row's `values` keys rather than assuming every
-    requested series appears in every row. With no window, the full
-    history comes back trimmed to the most recent dates (about 200 KB);
+    requested series appears in every row. With no window, only the 30
+    most recent dates come back (pass start_date or recent_* for more);
     provenance.limits says how many dates were left out. A value Valet
     sends as text that is not a number is null in `values`, with the
     text in the row's `non_numeric`.
@@ -227,8 +227,8 @@ async def boc_get_group_observations(
     series name individually.
     `start_date`/`end_date` and `recent`/`recent_weeks`/`recent_months`/
     `recent_years` are mutually exclusive, same as boc_get_observations.
-    With no window, the most recent dates are kept within about 200 KB
-    (FX_RATES_DAILY's full history is over 1 MB); provenance.limits says
+    With no window, only the 30 most recent dates come back (pass
+    start_date or recent_* for more); provenance.limits says
     how many dates were left out.
     Keywords: bank of canada, boc, valet, group, observations, data,
     exchange rates, cpi, inflation, commodity prices, time series,

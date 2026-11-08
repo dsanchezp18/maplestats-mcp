@@ -201,6 +201,10 @@ class Answer:
     cost_usd: float | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
+    # Prompt caching: input_tokens counts only what was neither read from nor written to
+    # the cache (14 on a typical answer), so the input a model read is all three summed.
+    cache_read_tokens: int | None = None
+    cache_creation_tokens: int | None = None
 
 
 def ask(
@@ -293,6 +297,8 @@ def ask(
         cost_usd=result.get("total_cost_usd"),
         input_tokens=(result.get("usage") or {}).get("input_tokens"),
         output_tokens=(result.get("usage") or {}).get("output_tokens"),
+        cache_read_tokens=(result.get("usage") or {}).get("cache_read_input_tokens"),
+        cache_creation_tokens=(result.get("usage") or {}).get("cache_creation_input_tokens"),
     )
 
 

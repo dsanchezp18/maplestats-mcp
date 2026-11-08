@@ -428,3 +428,21 @@ def test_review_direction_counts_correct_answers_gained_and_lost():
     }
     rows = [line for line in review_direction(report) if line.startswith(("| a ", "| b "))]
     assert rows == ["| a | 2 | 1 | 0 | 1 | 0 | +0.5 |", "| b | 2 | 1 | 1 | 0 | 1 | -0.5 |"]
+
+
+def test_cost_per_question_reads_cached_input_tokens():
+    from tests.maple_test.grade import cost_per_question, tokens_read
+
+    old = {"arm": "a", "question_id": "M-01", "cost_usd": 0.1, "input_tokens": 14}
+    new = {
+        **old,
+        "arm": "b",
+        "cost_usd": 0.05,
+        "cache_read_tokens": 20_000,
+        "cache_creation_tokens": 986,
+    }
+    assert tokens_read(old) is None
+    assert tokens_read(new) == 21_000
+    lines = cost_per_question([old, {"run": new}])
+    assert lines[0] == "| Question | a | b |"
+    assert "| M-01 | 0.100 | 0.050 (21.0k) |" in lines

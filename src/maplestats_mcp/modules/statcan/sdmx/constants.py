@@ -22,7 +22,9 @@ MAX_ROWS = 500
 # Observations per series when the caller gives no period filter at all. Before
 # this default, an unfiltered key returned the OLDEST 500 observations (1914-01
 # to 1955-08 for CPI), the opposite of what a caller wants.
-DEFAULT_LAST_N = 100
+# 24 since 2026-11-08 (was 100): two years of a monthly series is enough for a
+# latest value and a year-over-year change; pass last_n_observations for more.
+DEFAULT_LAST_N = 24
 # Cap on series per response (a wildcarded key can match thousands).
 MAX_SERIES = 200
 

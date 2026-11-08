@@ -12,7 +12,10 @@
 # Outputs: {"data": [series...], "sources": [source...]}
 # ============================================================
 
+import csv
+import io
 import json
+import re
 from typing import Any
 
 # A page that draws more than this is not a chat answer any more.
@@ -20,16 +23,83 @@ MAX_SERIES = 8
 MAX_POINTS = 500
 
 
+_JSON_NUMBER = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")
+
+
+def _cell(text: str) -> Any:
+    if text == "":
+        return None
+    if _JSON_NUMBER.fullmatch(text):
+        return json.loads(text)
+    return text
+
+
+def _csv_rows(block: dict[str, Any]) -> list[dict[str, Any]]:
+    """Rows of a brief result's CSV block.
+
+    A nested value's keys are in the block's `columns` (["values", "FXUSDCAD"]);
+    without `columns` every header name is a plain key.
+    """
+    reader = csv.reader(io.StringIO(block["csv"]))
+    header = next(reader, [])
+    listed = block.get("columns")
+    paths = (
+        [[str(k) for k in c] for c in listed]
+        if isinstance(listed, list) and len(listed) == len(header)
+        else [[name] for name in header]
+    )
+    rows = []
+    for record in reader:
+        row: dict[str, Any] = {}
+        for path, text in zip(paths, record, strict=False):
+            value = _cell(text)
+            node = row
+            for key in path[:-1]:
+                node = node.setdefault(key, {})
+            if value is not None or path[-1] == "value":
+                node[path[-1]] = value
+        rows.append(row)
+    return rows
+
+
+def expand_tables(node: Any) -> Any:
+    """Brief results (the server's default) send six or more rows as one CSV text
+    block, {"format": "csv", "rows": n, "csv": "..."}; this turns each back into
+    the list of row objects a full result has."""
+    if (
+        isinstance(node, dict)
+        and node.get("format") == "csv"
+        and isinstance(node.get("csv"), str)
+    ):
+        return _csv_rows(node)
+    if isinstance(node, dict):
+        return {k: expand_tables(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [expand_tables(v) for v in node]
+    return node
+
+
+_RELEASED = re.compile(r"Released (\d{4}-\d{2}-\d{2})|Diffusé le (\d{4}-\d{2}-\d{2})")
+
+
+def _released(citation: Any) -> str:
+    """The release date a citation states; a brief result keeps only the citation."""
+    found = _RELEASED.search(citation) if isinstance(citation, str) else None
+    return next((g for g in found.groups() if g), "") if found else ""
+
+
 def parse_result(raw: Any) -> dict[str, Any] | None:
-    """A tool result as a dict: structured content, or the JSON text FastMCP writes."""
-    if isinstance(raw, dict):
-        return raw
+    """A tool result as a dict: structured content, or the JSON text FastMCP writes.
+
+    Brief or full: CSV row blocks come back as lists of rows either way.
+    """
     if isinstance(raw, str):
         try:
-            parsed = json.loads(raw)
+            raw = json.loads(raw)
         except (ValueError, RecursionError):
             return None
-        return parsed if isinstance(parsed, dict) else None
+    if isinstance(raw, dict):
+        return expand_tables(raw)
     return None
 
 
@@ -184,7 +254,9 @@ def _series_entry(item: dict[str, Any], caveats: list[str]) -> dict[str, Any] | 
         "frequency": context.get("frequency"),
         # The date only: WDS release times are 8:30 a.m. Eastern, sent as UTC.
         "release": (
-            max(releases) if releases else context.get("table_release_time") or ""
+            max(releases)
+            if releases
+            else context.get("table_release_time") or _released(context.get("citation"))
         )[:10]
         or None,
         "notes": [n for n in context.get("notes") or [] if isinstance(n, str)],

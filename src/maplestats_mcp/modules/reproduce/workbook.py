@@ -369,7 +369,9 @@ async def _call(tool: str, arguments: dict[str, Any], lang: str = "en") -> Any:
 
     async with Client(mcp) as client:
         result = await client.call_tool(
-            "call_tool", {"name": tool, "arguments": arguments}, raise_on_error=False
+            "call_tool",
+            {"name": tool, "arguments": arguments, "detail": "full"},
+            raise_on_error=False,
         )
     text = next((block.text for block in result.content if isinstance(block, TextContent)), "")
     if result.is_error:
@@ -1083,6 +1085,9 @@ async def export(
 
     if not 1 <= max_rows <= MAX_ROWS:
         raise InvalidInput(_say(lang, "max_rows", limit=MAX_ROWS, got=str(max_rows)))
+    # `detail` shapes what a call returns to the model, not what it fetches.
+    if arguments is not None:
+        arguments = {k: v for k, v in arguments.items() if k != "detail"}
     if rows is None and not tool_name:
         raise InvalidInput(_say(lang, "no_call"))
     if tool_name in _NOT_DATA:

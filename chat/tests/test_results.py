@@ -432,3 +432,55 @@ def test_bank_of_canada_transformed_series_are_charted():
     yoy, level = results.collect([("boc_get_observations", valet)])["data"]
     assert yoy["unit"] == "percent" and yoy["points"][0]["value"] == 3.09
     assert level["unit"] == "Index"
+
+
+def test_brief_results_with_csv_rows_are_charted():
+    """The server's default (brief) result: rows as CSV, release only in the citation."""
+    brief = {
+        "series": [
+            {
+                "vector_id": 2062815,
+                "context": {
+                    "citation": "Statistics Canada. Table 14-10-0287-01, Labour force "
+                    "characteristics. Vector v2062815. Released 2026-11-06.",
+                    "table_id": "14-10-0287-01",
+                    "series_title": "Canada;Unemployment rate",
+                    "unit": "Percent",
+                },
+                "observations": {
+                    "format": "csv",
+                    "rows": 6,
+                    "csv": "ref_period,value,status\n"
+                    + "".join(f"2026-0{m}-01,6.{m},\n" for m in range(1, 6))
+                    + "2026-06-01,,use with caution\n",
+                },
+            }
+        ],
+        "provenance": {
+            "source": "statcan-wds",
+            "url": "https://www150.statcan.gc.ca/x",
+        },
+    }
+    raw = json.dumps(brief)
+    (series,) = results.collect([("wds_get_data_from_vectors", raw)])["data"]
+    assert [p["value"] for p in series["points"]] == [6.1, 6.2, 6.3, 6.4, 6.5, None]
+    assert series["points"][-1]["status"] == "use with caution"
+    assert series["release"] == "2026-11-06"
+
+
+def test_brief_valet_rows_nest_their_values_again():
+    rows = "ref_date,values.FXUSDCAD\n" + "".join(
+        f"2026-10-{d:02d},1.3{d}\n" for d in range(1, 8)
+    )
+    brief = {
+        "series": {"FXUSDCAD": {"label": "USD/CAD"}},
+        "observations": {
+            "format": "csv",
+            "rows": 7,
+            "columns": [["ref_date"], ["values", "FXUSDCAD"]],
+            "csv": rows,
+        },
+        "provenance": {"source": "boc", "url": "https://www.bankofcanada.ca/valet/x"},
+    }
+    (series,) = results.collect([("boc_get_observations", brief)])["data"]
+    assert len(series["points"]) == 7 and series["points"][0]["value"] == 1.31
