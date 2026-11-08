@@ -57,7 +57,7 @@ Hello [name], I hope you are well.
 
 Edmonton's own data (the City's open-data portal, Edmonton Police Service, ETS and EPCOR water quality) can now be queried from an AI assistant, alongside Statistics Canada, the Bank of Canada and CMHC. I am an Edmonton-based economist, and I built the open-source server that does it, MapleStats MCP. I would like to offer the society a talk on it.
 
-The talk would show the problem it addresses (Canadian data spread across many institutions and interfaces), a few live workflows on Edmonton questions, and how I tested it against other servers on a 53-question benchmark, including where it did not win. The write-up is here: [blog post link].
+The talk would show the problem it addresses (Canadian data spread across many institutions and interfaces), a few live workflows on Edmonton questions, and how I tested it against other servers on a 61-question benchmark, including where it did not win. The write-up is here: [blog post link].
 
 Would the society have room for it at an upcoming event?
 
@@ -115,7 +115,7 @@ Hello [name], I hope you are well.
 
 [One sentence on your connection to the department, e.g. degree and year.] Students in the department regularly need a Canadian figure they can cite, and often the same figure for the United States or Europe to compare against. I built an open-source tool for that: MapleStats MCP, a server that lets AI assistants read data directly from Statistics Canada, the Bank of Canada, CMHC and many federal and provincial sources, with OECD and Eurostat series as comparators. Every figure comes with its citation and the R, Python, Stata or Julia code that reproduces the pull. It is free to use and needs no installation. The write-up is here: [blog post link].
 
-I built it with MA students and researchers in mind, and tested it against other Canadian data servers on a 53-question benchmark; the results are published with their limitations.
+I built it with MA students and researchers in mind, and tested it against other Canadian data servers on a 61-question benchmark; the results are published with their limitations.
 
 Would the department consider featuring it, for example in a profile or newsletter item? I can provide a short description or a demo.
 

@@ -71,7 +71,7 @@ spaces.
 
 MapleStats MCP is a Model Context Protocol server: one connection gives
 Claude, ChatGPT, Cursor and other MCP clients typed access to Canadian open
-data from 88 modules (Statistics Canada, the Bank of Canada, CMHC and
+data from 89 modules (Statistics Canada, the Bank of Canada, CMHC and
 federal, provincial and city portals). For Toronto it offers two layers:
 
 1. The whole open.toronto.ca catalogue through the CKAN API (`ckan_*` tools
@@ -96,7 +96,7 @@ counts, never operators' addresses.
 
 The code is MIT-licensed on GitHub, with typed response models, tests
 against recorded City responses, a live smoke test of every Toronto tool and
-a public changelog. The website documents all 455 tools in English and
+a public changelog. The website documents all 457 tools in English and
 French. `docs/findings/municipal-sources.md` records what was checked on the
 City's portal (terms, robots.txt, table quirks) and why the 311 requests,
 TTC GTFS and 2021 neighbourhood profiles are not read.
