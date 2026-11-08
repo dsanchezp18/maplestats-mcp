@@ -357,6 +357,9 @@ SOURCE_LICENCES: dict[str, str] = {
     "finance_canada": CANADA_CA_TERMS,
     "nrcan_minerals": CANADA_CA_TERMS,
     "isc": CANADA_CA_TERMS,
+    # Both DFO landings records on open.canada.ca: license_id ca-ogl-lgo
+    # (package_show, 2026-11-08).
+    "dfo-landings": OGL_CANADA,
     "dfo-iwls": terms_not_stated(
         "Fisheries and Oceans Canada, Canadian Hydrographic Service",
         "https://api-iwls.dfo-mpo.gc.ca",

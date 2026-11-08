@@ -502,6 +502,22 @@ FR: dict[str, str] = {
     ),
     # Minerals
     "Mineral production and mining": "Production minérale et exploitation minière",
+    "Commercial fisheries landings": "Débarquements des pêches commerciales",
+    "DFO landings by year, province and species (tonnes and dollars)": (
+        "débarquements du MPO par année, province et espèce (tonnes et dollars)"
+    ),
+    "years and files of DFO's landings tables": (
+        "années et fichiers des tableaux de débarquements du MPO"
+    ),
+    "fish and seafood exports by HS commodity and partner": (
+        "exportations de poisson et de fruits de mer par produit du SH et partenaire"
+    ),
+    "DFO's sea fisheries table covers the Atlantic provinces and BC to 2024; the freshwater "
+    "table ends in 2019. Suppressed cells are confidential, not zero.": (
+        "Le tableau des pêches maritimes du MPO couvre les provinces de l'Atlantique et la "
+        "C.-B. jusqu'en 2024; celui des pêches en eau douce s'arrête en 2019. Les cellules "
+        "supprimées sont confidentielles, pas nulles."
+    ),
     "mineral production by commodity and province": (
         "production minérale par substance et par province"
     ),

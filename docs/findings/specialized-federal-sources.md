@@ -1477,6 +1477,42 @@ the FDSN event web service
 (earthquakescanada.nrcan.gc.ca/fdsnws/event/1/query, `format=text`): date
 range (default last 30 days, up to ~5 years), magnitude …
 
+## DFO commercial fisheries landings
+
+Shipped 2026-11-08 as `modules/dfo_landings/`. The gap review of 2026-11-08
+pointed at the dfo-mpo.gc.ca/stats HTML tables (Canada.ca terms,
+non-commercial reproduction only); the same data are on open.canada.ca
+under the Open Government Licence - Canada (license_id `ca-ogl-lgo`), so
+the module reads those and commercial use is allowed with attribution:
+
+- `6e16f703-9c57-46c9-9194-6573398c17e6`, sea fisheries landings: one CSV
+  per language (627 kB, cp1252), 1990-2024, long format: year, province
+  (Atlantic total, NL, PE, NS, NB, QC, BC, Canada), species group
+  (Groundfish, Pelagics, Shellfish, Other, Grand total), species, quantity
+  in kg (live weight), value in dollars. The English file has thousands
+  commas and mostly rounded values; the French one unrounded decimals.
+  "x" is suppressed. DFO's notes sit in the last rows. A data dictionary
+  CSV is the third resource.
+- `e426b11c-1dbf-4832-af6f-aa1e52bba574`, freshwater landings: one wide CSV
+  per year and language, 1990-2019: a title, a units line (tonnes; thousands
+  of dollars), a " Species" header with each region over a (Q, V) pair,
+  then species and a Total row and footnotes. Region headers change
+  (full names to 2010, "N.S."/"N.B."/"N.W.T." from 2011; French "N.-E.",
+  "N._B.", "T.-N.-O."). The 2011 and 2012 files label the first two pairs
+  "V, Q", but N.S. + N.B. in the first column equal the Canada quantity, so
+  every pair is read as (Q, V). Thousands separators are commas or spaces;
+  "-" and blank mean nothing reported; "-0" occurs. The 1991 English file
+  has a bilingual title.
+
+The files are served by DFO's data hub (`api-proxy.edh-cde.dfo-mpo.gc.ca`,
+no robots.txt, HTTP 404), which kept answering while www.dfo-mpo.gc.ca was in
+planned maintenance (6-8 November 2026, every /stats page redirected to the
+home page). Checked: Nova Scotia lobster 2024 = 44,521,929 kg and
+$961,890,880 in both the tool and an independent read of the file; the
+provinces' 2024 shellfish values add up to Canada's; freshwater provinces
+add up to the Canada quantity in 2011-2019 (2010 differs by 120 t in DFO's
+own file).
+
 ## DFO (Fisheries and Oceans Canada) tides and water levels
 
 **Status:** Shipped.

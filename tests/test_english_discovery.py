@@ -86,6 +86,8 @@ CASES = [
     ("Edmonton drinking water quality", "epcor_get_daily_water_quality"),
     ("MLS home price index CREA download", "crea_get_hpi_links"),
     ("Ontario electricity demand by hour", "electricity_ontario_get_hourly_demand"),
+    ("lobster landings value Nova Scotia", "dfo_landings_get_landings"),
+    ("commercial fish catch by species in Canada", "dfo_landings_get_landings"),
     ("Hydro-Quebec electricity demand right now", "electricity_quebec_get_demand"),
     ("Quebec electricity exports to New York", "electricity_quebec_get_trade"),
     ("Ontario generation mix nuclear wind gas", "electricity_ontario_get_supply_by_fuel"),

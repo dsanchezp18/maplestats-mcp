@@ -45,6 +45,7 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("ECB deposit facility rate compared with Canada", "international", "ecb_get_indicator"),
     ("Canada's GDP growth in the last quarter", "economy", "statcan_daily_get_releases"),
     ("Exports of lobster to the United States by province", "economy", "cimt_search_commodities"),
+    ("Lobster landings in Nova Scotia in 2024", "fisheries", "dfo_landings_get_landings"),
     ("How much wheat did Canada export to China in 2023?", "agriculture", "cgc_exports_query"),
     ("interprovincial trade flows between provinces", "economy", "sdmx_space_search"),
     ("Population estimates for Nova Scotia", "population", "wds_search_cubes"),

@@ -1377,6 +1377,39 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "fisheries",
+        "Commercial fisheries landings",
+        (
+            "fisheries",
+            "landings",
+            "landed value",
+            "fish catch",
+            "commercial fishing",
+            "fish landed",
+            "peches",
+            "debarquements",
+            "peche commerciale",
+        ),
+        (
+            PlanStep(
+                "dfo_landings_get_landings",
+                "DFO landings by year, province and species (tonnes and dollars)",
+            ),
+            PlanStep("dfo_landings_list_tables", "years and files of DFO's landings tables"),
+            PlanStep(
+                "cimt_search_commodities",
+                "fish and seafood exports by HS commodity and partner",
+                ("export", "exports", "exportations"),
+            ),
+        ),
+        (
+            (
+                "DFO's sea fisheries table covers the Atlantic provinces and BC to 2024; the "
+                "freshwater table ends in 2019. Suppressed cells are confidential, not zero."
+            ),
+        ),
+    ),
+    Topic(
         "pesticides",
         "Pesticides and residue limits",
         (
