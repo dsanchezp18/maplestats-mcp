@@ -196,3 +196,13 @@ async def test_ministry_in_precedence_order(httpx_mock):
     assert first.honorific == "Right Hon."
     orders = [m.order_of_precedence for m in ministry.ministers]
     assert orders == sorted(orders)
+
+
+def test_a_blank_expense_cell_stays_missing_not_zero():
+    # A blank category is unreported: ranking it as zero spending misleads.
+    from maplestats_mcp.modules.ourcommons import expenditures
+
+    assert expenditures._amount("") is None
+    assert expenditures._amount(" 12.50 ") == 12.5
+    assert expenditures._present_sum([10.0, None, 2.5]) == 12.5
+    assert expenditures._present_sum([None, None]) is None

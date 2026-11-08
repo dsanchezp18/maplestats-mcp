@@ -578,46 +578,6 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
-        "united_states",
-        "United States comparators (BLS)",
-        (
-            "united states",
-            "american",
-            "bls",
-            "bureau of labor statistics",
-            "nonfarm payrolls",
-            "jobs report",
-            "etats-unis",
-            "americain",
-            "americaine",
-        ),
-        (
-            PlanStep(
-                "bls_get_indicator",
-                "the US figure by indicator (nonfarm_payrolls, unemployment_rate, "
-                "cpi_all_items, cpi_core, average_hourly_earnings, job_openings)",
-            ),
-            PlanStep("bls_search_series", "find a BLS series id for any other US measure"),
-            PlanStep("bls_get_series", "pull BLS series by id for the same period"),
-        ),
-        (
-            (
-                "US and Canadian definitions differ: the US unemployment rate covers ages 16 "
-                "and over, Canada's Labour Force Survey 15 and over; the US CPI-U and Canada's "
-                "CPI use different baskets and treat owned housing differently."
-            ),
-        ),
-        # Trade with the United States is CIMT's, not a US statistic.
-        shadows=(
-            "to the united states",
-            "from the united states",
-            "with the united states",
-            "vers les etats-unis",
-            "en provenance des etats-unis",
-            "avec les etats-unis",
-        ),
-    ),
-    Topic(
         "economy",
         "GDP, trade and industry output",
         (
@@ -3370,33 +3330,6 @@ FOREIGN_PLACES: tuple[str, ...] = (
 )
 # Matched on the question as typed, so "US" counts and the pronoun "us" does not.
 FOREIGN_CODES: tuple[str, ...] = ("US", "USA", "UK", "EU")
-# The United States is in scope for what the BLS module covers: a US question
-# about jobs, unemployment, wages or prices gets the united_states plan.
-US_PLACES: frozenset[str] = frozenset(
-    {"united states", "usa", "america", "american", "etats-unis", "americain", "US", "USA"}
-)
-US_COVERED_TERMS: tuple[str, ...] = (
-    "bls",
-    "bureau of labor statistics",
-    "payroll*",
-    "jobs report",
-    "unemployment",
-    "employment",
-    "jobs",
-    "inflation",
-    "cpi",
-    "consumer price*",
-    "wage*",
-    "hourly earnings",
-    "job openings",
-    "jolts",
-    "producer price*",
-    "chomage",
-    "emploi*",
-    "salaire*",
-    "ipc",
-    "prix a la consommation",
-)
 CROSS_BORDER_TERMS: tuple[str, ...] = (
     *_TRADE_TERMS,
     "exchange rate",

@@ -200,8 +200,6 @@ CASES = [
         "bis_compare_countries",
     ),
     ("jeux de données de la Banque des règlements internationaux", "bis_list_datasets"),
-    ("taux de chômage américain aux États-Unis", "bls_get_indicator"),
-    ("inflation aux États-Unis IPC américain", "bls_get_indicator"),
     ("productivité du travail Canada comparée aux pays de l'OCDE", "oecd_compare_countries"),
     # Eurostat, 2026-11-07.
     ("taux de chômage de la zone euro et de l'Union européenne", "eurostat_compare"),

@@ -122,9 +122,15 @@ async def _get(url: str, lang: str, what_en: str, what_fr: str) -> str:
     return text
 
 
-def _amount(value: str) -> float:
+def _amount(value: str) -> float | None:
+    # A blank cell is not reported, not zero: keep it missing.
     value = value.strip()
-    return float(value) if value else 0.0
+    return float(value) if value else None
+
+
+def _present_sum(values: list[float | None]) -> float | None:
+    present = [v for v in values if v is not None]
+    return round(sum(present), 2) if present else None
 
 
 def _date(value: str) -> date | None:
@@ -251,7 +257,7 @@ async def _summary(report_id: str, lang: Lang) -> list[MemberExpenditure]:
                 travel=travel,
                 hospitality=hospitality,
                 contracts=contracts,
-                total=round(salaries + travel + hospitality + contracts, 2),
+                total=_present_sum([salaries, travel, hospitality, contracts]),
             )
         )
     if not out:
@@ -317,7 +323,11 @@ async def get_member_expenditures(
     if sort_by == "name":
         matches.sort(key=lambda r: _fold(r.name))
     else:
-        matches.sort(key=lambda r: getattr(r, sort_by), reverse=True)
+        # Blank amounts sort last, never as zero.
+        matches.sort(
+            key=lambda r: (getattr(r, sort_by) is not None, getattr(r, sort_by) or 0.0),
+            reverse=True,
+        )
     start, end = period(fiscal_year, quarter)
     return MemberExpenditures(
         fiscal_year=fiscal_year,
@@ -327,11 +337,11 @@ async def get_member_expenditures(
         members_in_report=len(rows),
         total_matches=len(matches),
         totals=ExpenditureTotals(
-            salaries=round(sum(r.salaries for r in matches), 2),
-            travel=round(sum(r.travel for r in matches), 2),
-            hospitality=round(sum(r.hospitality for r in matches), 2),
-            contracts=round(sum(r.contracts for r in matches), 2),
-            total=round(sum(r.total for r in matches), 2),
+            salaries=_present_sum([r.salaries for r in matches]),
+            travel=_present_sum([r.travel for r in matches]),
+            hospitality=_present_sum([r.hospitality for r in matches]),
+            contracts=_present_sum([r.contracts for r in matches]),
+            total=_present_sum([r.total for r in matches]),
         ),
         members=matches[:limit],
         provenance=_provenance(

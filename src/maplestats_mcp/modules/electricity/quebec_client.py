@@ -444,8 +444,10 @@ async def get_trade(
     start, end = _range(start_date, end_date, lang)
     where = _where(start, end, None, cutoff=True)
     latest = not (start or end)
-    # Extra rows so that dropping the unpublished hours below still fills limit.
-    fetch_limit = min(limit + _TRADE_LAG_HOURS, constants.MAX_LIMIT) if latest else limit
+    # Extra rows so that dropping the unpublished hours below still fills limit. Not
+    # capped at MAX_LIMIT (the caller's cap): the exports endpoint takes more, and a
+    # capped fetch came back short for a limit near the maximum.
+    fetch_limit = limit + _TRADE_LAG_HOURS if latest else limit
     rows, total, was_cached = await _fetch_rows(
         constants.QUEBEC_TRADE_DATASET,
         where,
