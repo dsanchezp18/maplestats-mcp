@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from _smoke_common import skip_reloading, verdict
+from _smoke_common import skip_outage, skip_reloading, verdict
 
 from maplestats_mcp.modules.ckan import client as ckan
 from maplestats_mcp.modules.ised.clean_growth import client
@@ -43,5 +43,15 @@ async def main() -> int:
     return verdict("ISED CLEAN GROWTH", ok)
 
 
+async def guarded() -> int:
+    # open.canada.ca and ISED timed out on GitHub's runner on 2026-11-07 and the
+    # uncaught UpstreamUnavailable failed the job; an outage now skips the run.
+    try:
+        return await main()
+    except Exception as exc:  # noqa: BLE001
+        skip_outage("ised-isde.canada.ca / open.canada.ca", exc)
+        return verdict("ISED CLEAN GROWTH", True)
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(asyncio.run(guarded()))

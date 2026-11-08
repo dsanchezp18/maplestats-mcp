@@ -194,7 +194,7 @@ async def test_trade_drops_latest_hours_with_unpublished_exports(httpx_mock):
     assert [p.exports_total_mw for p in result.points] == [610.0, 612.1]
     assert result.rows_matched == 46
     url = unquote_plus(str(httpx_mock.get_requests()[0].url))
-    assert "limit=14" in url
+    assert "limit=38" in url
 
 
 async def test_input_validation():

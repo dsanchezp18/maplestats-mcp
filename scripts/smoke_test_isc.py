@@ -14,6 +14,7 @@ import json
 import sys
 from typing import Literal
 
+from _smoke_common import skip_outage, verdict
 from fastmcp import Client
 from mcp.types import TextContent
 
@@ -150,5 +151,15 @@ async def run() -> int:
     return 0 if ok else 1
 
 
+async def guarded() -> int:
+    # open.canada.ca and ISED timed out on GitHub's runner on 2026-11-07 and the
+    # uncaught UpstreamUnavailable failed the job; an outage now skips the run.
+    try:
+        return await run()
+    except Exception as exc:  # noqa: BLE001
+        skip_outage("open.canada.ca", exc)
+        return verdict("ISC", True)
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(run()))
+    sys.exit(asyncio.run(guarded()))

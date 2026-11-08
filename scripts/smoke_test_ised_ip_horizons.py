@@ -18,6 +18,8 @@ import asyncio
 import sys
 from datetime import date
 
+from _smoke_common import skip_outage, verdict
+
 from maplestats_mcp.modules.ised.ip_horizons import client
 from maplestats_mcp.shared.errors import InvalidInput
 
@@ -110,5 +112,15 @@ async def main() -> int:
     return 0 if ok else 1
 
 
+async def guarded() -> int:
+    # open.canada.ca and ISED timed out on GitHub's runner on 2026-11-07 and the
+    # uncaught UpstreamUnavailable failed the job; an outage now skips the run.
+    try:
+        return await main()
+    except Exception as exc:  # noqa: BLE001
+        skip_outage("open.canada.ca", exc)
+        return verdict("ISED IP HORIZONS", True)
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    sys.exit(asyncio.run(guarded()))

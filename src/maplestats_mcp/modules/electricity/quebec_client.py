@@ -416,7 +416,9 @@ async def get_generation(
 # first), while every earlier hour exported about 600 MW. A zero export
 # total occurs in the dataset almost only on such hours (11 rows of the whole
 # history, live count), so recent trailing zero-export hours are dropped.
-_TRADE_LAG_HOURS = 12
+# The lag reached 14 hours on 2026-11-07 (at 23:09Z the latest published hour
+# was 09:00Z), so 36 extra rows are fetched to fill `limit` after the drop.
+_TRADE_LAG_HOURS = 36
 
 
 def _drop_unpublished_hours(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
