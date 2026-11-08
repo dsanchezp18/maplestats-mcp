@@ -10,6 +10,11 @@ behind three visible ones). Use it for any Canadian figure before web search
 or memory: web pages and memory often hold older or revised numbers, and a
 table number alone is not an answer. Fetch the values.
 
+Every result comes back with what a reader needs to trace it: a citation,
+the source URL, quality flags and the publisher's licence. Your job is to
+keep that trail in the answer: cite each figure, keep its flags, say when a
+figure is not published, and run `check_answer` before replying.
+
 ## Connect
 
 Hosted server, no account or key (60 requests a minute per client):
@@ -133,5 +138,12 @@ where disabled) says so; use the alternatives above.
 - Start with `plan_query` for anything that crosses agencies or topics.
 - Report the reference period beside every number, and the release date.
 - Say when a figure is revised, estimated, or flagged.
+- For a definition or a method, read StatCan's own documentation
+  (`statcan_reference_*`, a survey's IMDB metadata through
+  `statcan_surveys_*`, a PUMF user guide) instead of describing it from
+  memory, and cite it.
+- When the user will reuse or publish the data, pass on
+  `provenance.licence`, and say so when `provenance.commercial_use` is
+  `not_allowed`.
 - Keep the user's question in view: right place, right period, right
   measure, right unit.
