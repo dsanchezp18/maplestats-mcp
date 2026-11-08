@@ -140,6 +140,42 @@ STEPS: list[Step] = [
         {"product": "oil"},
         lambda data: data["exists"] and (data["size_bytes"] or 0) > 0,
     ),
+    # ST98: the latest edition lists its figures, and at least one runs into
+    # AER's forecast years.
+    Step(
+        "aer",
+        "aer_st98_list_tables",
+        {},
+        lambda data: (
+            data["edition"] >= 2026
+            and len(data["editions"]) >= 5
+            and any(t["has_forecast"] for t in data["tables"])
+        ),
+    ),
+    # The 2026 report: Alberta produces 18 503 PJ of primary energy in 2035
+    # (sum of the petajoule columns of the workbook's Figure 8), a forecast.
+    Step(
+        "aer",
+        "aer_st98_get_table",
+        {
+            "table": "figure_8",
+            "edition": 2026,
+            "series": "petajoules",
+            "start_year": 2035,
+            "end_year": 2035,
+        },
+        lambda data: (
+            abs(sum(o["value"] or 0 for o in data["observations"]) - 18503) < 1
+            and all(o["forecast"] for o in data["observations"])
+        ),
+    ),
+    Step(
+        "aer",
+        "aer_st98_get_table",
+        {"table": "table_1", "edition": 2025},
+        lambda data: any("Montney" in (o["category"] or "") for o in data["observations"]),
+    ),
+    Step("aer", "aer_st98_get_table", {"table": "figure_99"}, expect_error="figure_1"),
     # Alberta Open Government Portal: describe counted 14 declared columns for
     # 5 named ones (2026-10-03); the count must match the names.
     Step(
