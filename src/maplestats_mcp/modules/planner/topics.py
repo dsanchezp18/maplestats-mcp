@@ -578,6 +578,52 @@ TOPICS: tuple[Topic, ...] = (
         ),
     ),
     Topic(
+        "united_states",
+        "United States comparators (Federal Reserve)",
+        (
+            "united states",
+            "american",
+            "federal reserve",
+            "federal funds",
+            "fed funds",
+            "fomc",
+            "treasury yield*",
+            "us treasury",
+            "etats-unis",
+            "americain",
+            "americaine",
+            "reserve federale",
+            "fonds federaux",
+        ),
+        (
+            PlanStep(
+                "fed_get_indicator",
+                "the US series by indicator (fed_funds_rate, treasury_2y, treasury_10y, "
+                "cad_per_usd, industrial_production, capacity_utilization, m2_money_stock), "
+                "with the Canadian series to set beside it",
+            ),
+            PlanStep("fed_search_series", "find a Federal Reserve series id for any other measure"),
+            PlanStep("fed_get_series", "pull Federal Reserve series by id for the same dates"),
+        ),
+        (
+            (
+                "The Fed's H.10 rate is the noon buying rate in New York, the Bank of Canada's "
+                "FXUSDCAD a daily average, so the two differ slightly on the same day. The US has "
+                "an industrial production index; Canada's closest measure is monthly GDP by "
+                "industry."
+            ),
+        ),
+        # Trade with the United States is CIMT's, not a US statistic.
+        shadows=(
+            "to the united states",
+            "from the united states",
+            "with the united states",
+            "vers les etats-unis",
+            "en provenance des etats-unis",
+            "avec les etats-unis",
+        ),
+    ),
+    Topic(
         "economy",
         "GDP, trade and industry output",
         (
@@ -3330,6 +3376,42 @@ FOREIGN_PLACES: tuple[str, ...] = (
 )
 # Matched on the question as typed, so "US" counts and the pronoun "us" does not.
 FOREIGN_CODES: tuple[str, ...] = ("US", "USA", "UK", "EU")
+# The United States is in scope for what the Fed module covers: a US question
+# about interest rates, yields, the dollar, industrial production or money gets
+# the united_states plan.
+US_PLACES: frozenset[str] = frozenset(
+    {"united states", "usa", "america", "american", "etats-unis", "americain", "US", "USA"}
+)
+US_COVERED_TERMS: tuple[str, ...] = (
+    "federal reserve",
+    "fed",
+    "federal funds",
+    "fed funds",
+    "interest rate*",
+    "policy rate",
+    "treasury",
+    "bond yield*",
+    "yield*",
+    "prime rate",
+    "dollar",
+    "exchange rate",
+    "industrial production",
+    "capacity utilization",
+    "money supply",
+    "money stock",
+    "m2",
+    "consumer credit",
+    "reserve federale",
+    "fonds federaux",
+    "taux d'interet",
+    "taux directeur",
+    "rendement*",
+    "taux preferentiel",
+    "production industrielle",
+    "utilisation des capacites",
+    "masse monetaire",
+    "credit a la consommation",
+)
 CROSS_BORDER_TERMS: tuple[str, ...] = (
     *_TRADE_TERMS,
     "exchange rate",

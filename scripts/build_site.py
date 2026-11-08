@@ -681,6 +681,15 @@ SOURCES: dict[str, Source] = {
         "Eurostat",
         domain="statistics",
     ),
+    "fed": Source(
+        "US Federal Reserve Board statistical releases (US comparators)",
+        "Publications statistiques de la Réserve fédérale des États-Unis (comparaisons avec les "
+        "États-Unis)",
+        "national",
+        "Federal Reserve",
+        "Réserve fédérale",
+        domain="statistics",
+    ),
     "yukon_stats": Source(
         "Yukon Bureau of Statistics",
         "Bureau de la statistique du Yukon",

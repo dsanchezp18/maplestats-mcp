@@ -231,6 +231,11 @@ CASES = [
     ("euro area HICP inflation compared with Germany and France", "eurostat_compare"),
     ("find a Eurostat dataset code for EU statistics", "eurostat_search_datasets"),
     ("Eurostat dataset dimensions codes and status flags", "eurostat_describe_dataset"),
+    # US Federal Reserve Board releases, 2026-11-07.
+    ("US federal funds rate compared with the Bank of Canada", "fed_get_indicator"),
+    ("US 10-year Treasury yield", "fed_get_indicator"),
+    ("Federal Reserve H.15 H.10 G.17 statistical releases", "fed_list_releases"),
+    ("find a Federal Reserve series id", "fed_search_series"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

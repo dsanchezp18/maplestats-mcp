@@ -150,6 +150,31 @@ FR: dict[str, str] = {
     "Canada's series for the indicator, compared with G7 or OECD countries": (
         "la série du Canada pour l'indicateur, comparée aux pays du G7 ou de l'OCDE"
     ),
+    "United States comparators (Federal Reserve)": (
+        "comparaisons avec les États-Unis (Réserve fédérale)"
+    ),
+    "the US series by indicator (fed_funds_rate, treasury_2y, treasury_10y, "
+    "cad_per_usd, industrial_production, capacity_utilization, m2_money_stock), "
+    "with the Canadian series to set beside it": (
+        "la série américaine par indicateur (indicator : fed_funds_rate, treasury_2y, "
+        "treasury_10y, cad_per_usd, industrial_production, capacity_utilization, "
+        "m2_money_stock), avec la série canadienne à mettre à côté"
+    ),
+    "find a Federal Reserve series id for any other measure": (
+        "trouver l'identifiant d'une série de la Réserve fédérale pour toute autre mesure"
+    ),
+    "pull Federal Reserve series by id for the same dates": (
+        "récupérer les séries de la Réserve fédérale par identifiant pour les mêmes dates"
+    ),
+    "The Fed's H.10 rate is the noon buying rate in New York, the Bank of Canada's "
+    "FXUSDCAD a daily average, so the two differ slightly on the same day. The US has "
+    "an industrial production index; Canada's closest measure is monthly GDP by "
+    "industry.": (
+        "Le taux H.10 de la Fed est le taux acheteur de midi à New York, le FXUSDCAD de la "
+        "Banque du Canada une moyenne quotidienne : les deux diffèrent légèrement le même "
+        "jour. Les États-Unis ont un indice de la production industrielle ; la mesure "
+        "canadienne la plus proche est le PIB mensuel par industrie."
+    ),
     "the EU, the euro area or European countries on a headline indicator (GDP "
     "growth, HICP inflation, unemployment, debt, house prices), with the Canadian "
     "series to pair with": (
