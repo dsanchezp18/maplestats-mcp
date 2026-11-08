@@ -1,0 +1,50 @@
+{
+ "count": 1,
+ "took": 23,
+ "distinct_items_count": 1,
+ "topics": [
+  {
+   "type": "1245",
+   "label": "",
+   "count": 1
+  },
+  {
+   "type": "4972",
+   "label": "",
+   "count": 1
+  }
+ ],
+ "content_types": [
+  {
+   "type": "timeseries",
+   "label": "",
+   "count": 1
+  }
+ ],
+ "items": [
+  {
+   "type": "timeseries",
+   "cdid": "D7G7",
+   "dataset_id": "MM23",
+   "edition": "",
+   "keywords": [],
+   "meta_description": "",
+   "release_date": "2026-10-20T23:00:00.000Z",
+   "summary": "",
+   "title": "CPI ANNUAL RATE 00: ALL ITEMS 2015=100",
+   "topics": [
+    "1245",
+    "4972"
+   ],
+   "uri": "/economy/inflationandpriceindices/timeseries/d7g7/mm23",
+   "highlight": {},
+   "canonical_topic": ""
+  }
+ ],
+ "suggestions": [
+  "d75u",
+  "d76u",
+  "digi",
+  "dogs"
+ ]
+}

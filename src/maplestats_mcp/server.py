@@ -624,7 +624,8 @@ Sources, by tool-name prefix:
   Eurostat (EU, euro area, member states): eurostat_. ILOSTAT (ILO labour
   statistics: unemployment, participation, hours, earnings), Canada and
   peers: ilo_. Australian Bureau of Statistics (inflation, labour force, GDP,
-  wages): abs_.
+  wages): abs_. UK Office for National Statistics (inflation, GDP, labour
+  market): ons_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and

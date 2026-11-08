@@ -203,6 +203,7 @@ CASES = [
     ("productivité du travail Canada comparée aux pays de l'OCDE", "oecd_compare_countries"),
     ("taux d'activité du Canada comparé aux pays du G7 selon l'OIT", "ilo_compare_countries"),
     ("inflation australienne moyenne tronquée de l'ABS", "abs_get_indicator"),
+    ("inflation au Royaume-Uni, chiffre britannique de l'ONS", "ons_get_indicator"),
     # Eurostat, 2026-11-07.
     ("taux de chômage de la zone euro et de l'Union européenne", "eurostat_compare"),
     ("trouver un jeu de données Eurostat", "eurostat_search_datasets"),

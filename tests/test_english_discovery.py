@@ -238,6 +238,9 @@ CASES = [
     # Australian Bureau of Statistics, 2026-11-08.
     ("Australian trimmed mean inflation ABS", "abs_get_indicator"),
     ("search Australian Bureau of Statistics datasets", "abs_search_datasets"),
+    # UK Office for National Statistics, 2026-11-08.
+    ("UK CPIH inflation Office for National Statistics", "ons_get_indicator"),
+    ("find the ONS series id CDID for a UK statistic", "ons_search_series"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

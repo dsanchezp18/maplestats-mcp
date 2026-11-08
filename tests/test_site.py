@@ -353,6 +353,7 @@ ENGLISH_MARKERS = re.compile(
 # Names that contain such words and stay as they are in French.
 ALLOWED_NAMES = re.compile(
     r"Bank of Canada Valet|Model Context Protocol|Beyond 20/20|Australian Bureau of Statistics"
+    r"|Office for National Statistics"
     r"|\b[a-z0-9]+(?:_[a-z0-9]+)+\b"  # tool and argument names
 )
 _LITERAL = {"script", "style", "code", "pre", "kbd", "samp"}

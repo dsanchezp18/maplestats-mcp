@@ -277,6 +277,10 @@ SOURCE_LICENCES: dict[str, str] = {
         "Source: Australian Bureau of Statistics. Creative Commons Attribution 4.0 "
         "(https://www.abs.gov.au/website-privacy-copyright-and-disclaimer)."
     ),
+    "ons": (
+        "Source: Office for National Statistics licensed under the Open Government Licence "
+        "v3.0 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)."
+    ),
     # Quebec
     "isq": ISQ_LICENCE,
     # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
@@ -472,6 +476,10 @@ LICENCES_FR: dict[str, str] = {
     SOURCE_LICENCES["abs"]: (
         "Source : Australian Bureau of Statistics. Creative Commons Attribution 4.0 "
         "(https://www.abs.gov.au/website-privacy-copyright-and-disclaimer)."
+    ),
+    SOURCE_LICENCES["ons"]: (
+        "Source : Office for National Statistics, sous licence Open Government Licence v3.0 "
+        "(https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/)."
     ),
     SOURCE_LICENCES["eurostat"]: (
         "Source : Eurostat. Creative Commons Attribution 4.0 ; réutilisation commerciale "
@@ -786,6 +794,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     "abs": "allowed",
     # CC BY 4.0 (ILO rights and permissions, datasets as of 3 May 2023).
     "ilo": "allowed",
+    # OGL v3: commercial and non-commercial reuse with the source acknowledged.
+    "ons": "allowed",
     "cbsa-tariff": "not_allowed",
     "electricity": "varies",
     "dfo-iwls": "unknown",

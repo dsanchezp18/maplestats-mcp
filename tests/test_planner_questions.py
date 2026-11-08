@@ -23,6 +23,10 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("What is the vacancy rate for apartments in Calgary?", "housing", "cmhc_list_categories"),
     ("How many housing starts were there in Toronto last year?", "housing", "cmhc_list_categories"),
     ("Average rent for a two-bedroom in Vancouver", "housing", "cmhc_list_categories"),
+    # United Kingdom comparators (ONS), 2026-11-08.
+    ("UK inflation rate", "united_kingdom", "ons_get_indicator"),
+    ("Unemployment rate in the United Kingdom", "united_kingdom", "ons_get_indicator"),
+    ("Taux de chômage au Royaume-Uni", "united_kingdom", "ons_get_indicator"),
     ("How have new house prices changed since 2020?", "housing", "wds_search_cubes"),
     # Since 2026-10-27 building permits are their own topic; Halifax's permit layer comes
     # first because the question names the city.
@@ -278,6 +282,21 @@ def test_sixty_questions_cover_both_languages():
 def test_foreign_questions_are_out_of_scope(question: str):
     result = client.plan(question)
     assert result.out_of_scope and not result.topics and not result.fallback_steps
+
+
+def test_uk_questions_outside_the_ons_presets_stay_out_of_scope():
+    for question in ("Rents in Manchester, England", "Weather in England next week"):
+        assert client.plan(question).out_of_scope, question
+
+
+def test_british_columbia_is_not_the_united_kingdom():
+    for question in (
+        "Unemployment rate in British Columbia",
+        "Séismes récents en Colombie-Britannique",
+    ):
+        result = client.plan(question)
+        assert result.out_of_scope is None
+        assert "united_kingdom" not in {t.topic for t in result.topics}, question
 
 
 def test_cross_border_questions_stay_in_scope():

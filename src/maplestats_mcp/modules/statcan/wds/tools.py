@@ -77,7 +77,7 @@ async def wds_search_cubes(
     keyword or table number, or list every table when `query` is omitted.
 
     Use for: finding a StatCan table's productId when you only know a
-    topic (GDP by industry, the consumer price index (CPI), the monthly
+    topic (monthly GDP by industry, the consumer price index (CPI), the monthly
     unemployment rate for Alberta or a CMA, average hourly wages by
     occupation, population estimates by province) or a number such as
     "18-10-0004",
