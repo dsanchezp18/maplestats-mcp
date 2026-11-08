@@ -239,7 +239,7 @@ by a person
 
 ## What it covers
 
-426 tools in 82 modules. Run `docs://catalogue` for the full, bilingual list.
+450 tools in 87 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
