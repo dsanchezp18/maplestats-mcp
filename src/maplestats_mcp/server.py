@@ -654,7 +654,8 @@ Sources, by tool-name prefix:
   diseases), tc_recalls_ (vehicle recalls), recalls_ (all recalls and
   safety alerts), cbsa_ (current border wait times), cbsa_tariff_
   (Customs Tariff duty rates by tariff item), gazette_ (Canada Gazette),
-  earthquakes_, dfo_iwls_ (tides, water levels), nfd_ (National Forestry
+  earthquakes_, dfo_iwls_ (tides, water levels), dfo_landings_ (commercial
+  fisheries landings by province and species), nfd_ (National Forestry
   Database), cwfis_ (wildfire hotspots, fire weather), isc_ (First Nation
   profiles, registered population, drinking water advisories).
 - Elections and Parliament: elections_results_ (federal results by

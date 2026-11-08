@@ -471,6 +471,14 @@ SOURCES: dict[str, Source] = {
         "Marées du MPO",
         domain="environment",
     ),
+    "dfo_landings": Source(
+        "Fisheries and Oceans Canada: commercial fisheries landings",
+        "Pêches et Océans Canada : débarquements des pêches commerciales",
+        "national",
+        "DFO landings",
+        "Débarquements du MPO",
+        domain="agriculture",
+    ),
     "earthquakes": Source("Earthquakes Canada", "Séismes Canada", "national", domain="environment"),
     "eccc": Source(
         "Environment and Climate Change Canada",

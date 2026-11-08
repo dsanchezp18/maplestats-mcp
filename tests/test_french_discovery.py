@@ -48,6 +48,7 @@ CASES = [
         "transit_list_national_agencies",
     ),
     ("demande d'électricité Ontario par heure", "electricity_ontario_get_hourly_demand"),
+    ("valeur des débarquements de homard", "dfo_landings_get_landings"),
     ("production hydroélectrique Hydro-Québec par source", "electricity_quebec_get_generation"),
     ("prix du pool de l'électricité en Alberta", "electricity_alberta_get_pool_price"),
     ("table des marées pleine mer basse mer", "dfo_iwls_get_water_levels"),
