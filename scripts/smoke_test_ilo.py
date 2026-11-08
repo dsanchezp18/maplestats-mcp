@@ -12,6 +12,7 @@ import asyncio
 import json
 import sys
 
+from _smoke_common import skip_outage, verdict
 from fastmcp import Client
 from mcp.types import TextContent
 
@@ -178,5 +179,15 @@ async def run() -> int:
     return 0 if ok else 1
 
 
+async def guarded() -> int:
+    # ILOSTAT answers an IIS 403 "Access is denied" page now and then (2026-11-08,
+    # from three networks): an outage skips the run, any other error still fails it.
+    try:
+        return await run()
+    except Exception as exc:  # noqa: BLE001
+        skip_outage("sdmx.ilo.org", exc)
+        return verdict("ILO", True)
+
+
 if __name__ == "__main__":
-    sys.exit(asyncio.run(run()))
+    sys.exit(asyncio.run(guarded()))
