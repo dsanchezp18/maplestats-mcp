@@ -170,6 +170,13 @@ FR: dict[str, str] = {
         "15 ans et plus ; le CPI-U américain et l'IPC canadien n'ont pas le même panier et ne "
         "traitent pas le logement occupé par son propriétaire de la même façon."
     ),
+    "the EU, the euro area or European countries on a headline indicator (GDP "
+    "growth, HICP inflation, unemployment, debt, house prices), with the Canadian "
+    "series to pair with": (
+        "l'UE, la zone euro ou des pays européens pour un indicateur phare (croissance du "
+        "PIB, inflation IPCH, chômage, dette, prix des logements), avec la série canadienne "
+        "à mettre en regard"
+    ),
     "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
     "service ratio, credit, house prices, inflation, exchange rate)": (
         "le Canada à côté du G7 ou d'autres économies pour un indicateur de la BRI (taux "

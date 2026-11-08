@@ -534,6 +534,12 @@ TOPICS: tuple[Topic, ...] = (
             "leading indicator",
             "perspectives economiques",
             "productivite",
+            "eurostat",
+            "european union",
+            "euro area",
+            "eurozone",
+            "union europeenne",
+            "zone euro",
         ),
         (
             PlanStep("worldbank_search_indicators", "find the indicator code (query by words)"),
@@ -551,6 +557,23 @@ TOPICS: tuple[Topic, ...] = (
                 "Canada beside G7 or OECD countries on an OECD indicator (Economic Outlook "
                 "projections, productivity, unit labour costs, PPPs, tax-to-GDP, house prices, "
                 "leading indicator)",
+            ),
+            PlanStep(
+                "eurostat_compare",
+                "the EU, the euro area or European countries on a headline indicator (GDP "
+                "growth, HICP inflation, unemployment, debt, house prices), with the Canadian "
+                "series to pair with",
+                terms=(
+                    "eurostat",
+                    "european union",
+                    "euro area",
+                    "eurozone",
+                    "europe",
+                    "union europeenne",
+                    "zone euro",
+                    "hicp",
+                    "ipch",
+                ),
             ),
         ),
     ),

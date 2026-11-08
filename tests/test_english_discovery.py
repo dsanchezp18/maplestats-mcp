@@ -233,6 +233,10 @@ CASES = [
     ("OECD economic outlook GDP growth projections Canada vs G7", "oecd_compare_countries"),
     ("search OECD Data Explorer datasets", "oecd_search_datasets"),
     ("dimensions and codes of an OECD dataset series key", "oecd_describe_dataset"),
+    # Eurostat, 2026-11-07.
+    ("euro area HICP inflation compared with Germany and France", "eurostat_compare"),
+    ("find a Eurostat dataset code for EU statistics", "eurostat_search_datasets"),
+    ("Eurostat dataset dimensions codes and status flags", "eurostat_describe_dataset"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),
