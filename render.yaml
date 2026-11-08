@@ -73,6 +73,8 @@ services:
         value: "128"
       - key: MAPLE_IP_HORIZONS_CACHE_MAX_GB
         value: "1.5"
+      # The two switches below are the Render backup's settings only; the
+      # Azure endpoint (mcp.maplestats.danielstats.io) has both on.
       # PUMF tabulation downloads whole ZIPs; the free disk does not persist.
       - key: MAPLE_PUMF_TABULATE
         value: "0"

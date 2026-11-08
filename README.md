@@ -146,7 +146,17 @@ instruction file (Agent Skills format) for Claude Code, Codex, Cursor and
 similar agents: start with `plan_query`, ask for the latest periods, read
 the caveats, cite table, vector and release date, and run `check_answer`
 before answering. Copy it into your agent's skills folder or project
-instructions.
+instructions. It works with the hosted server and with a local one.
+
+### Clients for R, Python and Julia
+
+To call the hosted server from a script, with no agent in between, use the
+small clients in [`clients/r`](clients/r/README.md),
+[`clients/python`](clients/python/README.md) and
+[`clients/julia`](clients/julia/README.md). Each returns a data frame with
+its citation. They are not on CRAN, PyPI or the Julia registry yet; each
+README gives the command to install from GitHub.
+[`docs/clients.md`](docs/clients.md) explains the design.
 
 ## Install locally (optional)
 
@@ -244,7 +254,7 @@ by a person
 | Housing (links only) | `crea_` | Links, release timing and terms for CREA's MLS® Home Price Index; no values, because CREA's terms allow private, non-commercial analysis only |
 | International | `worldbank_`, `bis_`, `oecd_`, `eurostat_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0); Bank for International Settlements statistics: policy rates, debt service ratios, credit, house prices, banking and payment statistics (free reuse with citation); OECD Data Explorer for Canada and its peers: Economic Outlook projections, productivity, unit labour costs, PPPs, tax revenue, house prices, leading indicators (any use with credit, third-party data excepted); Eurostat for the EU, the euro area and member states (CC BY 4.0, not commercially for non-EU countries' data) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
-| Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality |
+| Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_`, `bc_transit_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality, BC Transit real-time vehicle positions, arrival predictions and service alerts |
 | Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, the BC Transit systems and the Quebec networks listed on Données Québec (exo, RTC, STL, STS and others), plus further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
 
 Other federal series (CRA, OSFI, ISED insolvency) are ordinary
