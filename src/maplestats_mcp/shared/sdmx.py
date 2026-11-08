@@ -3,9 +3,9 @@
 Pure functions, no HTTP: a module fetches the structure (SDMX-JSON 1.0, with
 `references=all&detail=referencepartial`) and the data (SDMX-CSV 2.0 with
 `labels=both`) itself, under its own rate limits and cache, and hands the
-payloads here. Written for the ILOSTAT module (sdmx.ilo.org), whose answers
-have the same shape as the OECD's (sdmx.oecd.org); the OECD module predates
-this file and keeps its own copy.
+payloads here. Used by the ILOSTAT (sdmx.ilo.org) and ABS (data.api.abs.gov.au)
+modules, whose answers have the same shape as the OECD's (sdmx.oecd.org); the
+OECD module predates this file and keeps its own copy.
 
 What the parsing relies on, checked live on 2026-11-08 against sdmx.ilo.org:
 
@@ -86,31 +86,34 @@ def urn_key(urn: str) -> str:
 
 
 def _constraint_values(data: dict[str, Any], fid: str) -> dict[str, list[str]]:
+    """Codes with data per dimension, from the dataflow's "Actual" constraints.
+
+    The ABS (data.api.abs.gov.au, checked 2026-11-08) sends two, one per
+    release version (CR_A_CPI current, CR_B_CPI previous); their codes are
+    merged, in first-seen order.
+    """
     constraints = [c for c in list_or_empty(data, "contentConstraints") if isinstance(c, dict)]
-    chosen = next(
-        (
-            c
-            for c in constraints
-            if c.get("type") == "Actual"
-            and (
-                str(c.get("id") or "").endswith(fid)
-                or any(
-                    f":{fid}(" in str(u)
-                    for u in list_or_empty(c.get("constraintAttachment") or {}, "dataflows")
-                )
+    chosen = [
+        c
+        for c in constraints
+        if c.get("type") == "Actual"
+        and (
+            str(c.get("id") or "").endswith(fid)
+            or any(
+                f":{fid}(" in str(u)
+                for u in list_or_empty(c.get("constraintAttachment") or {}, "dataflows")
             )
-        ),
-        constraints[0] if len(constraints) == 1 else None,
-    )
+        )
+    ] or (constraints if len(constraints) == 1 else [])
     values: dict[str, list[str]] = {}
-    if chosen is None:
-        return values
-    for region in list_or_empty(chosen, "cubeRegions"):
-        if not isinstance(region, dict) or region.get("isIncluded") is False:
-            continue
-        for kv in list_or_empty(region, "keyValues"):
-            if isinstance(kv, dict) and kv.get("id") and kv.get("values"):
-                values[str(kv["id"])] = [str(v) for v in kv["values"]]
+    for constraint in chosen:
+        for region in list_or_empty(constraint, "cubeRegions"):
+            if not isinstance(region, dict) or region.get("isIncluded") is False:
+                continue
+            for kv in list_or_empty(region, "keyValues"):
+                if isinstance(kv, dict) and kv.get("id") and kv.get("values"):
+                    codes = values.setdefault(str(kv["id"]), [])
+                    codes.extend(str(v) for v in kv["values"] if str(v) not in codes)
     return values
 
 

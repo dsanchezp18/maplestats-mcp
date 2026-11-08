@@ -681,6 +681,14 @@ SOURCES: dict[str, Source] = {
         "ILOSTAT (Organisation internationale du Travail)",
         domain="statistics",
     ),
+    "abs": Source(
+        "Australian Bureau of Statistics (Australian comparators)",
+        "Australian Bureau of Statistics (points de comparaison australiens)",
+        "international",
+        "ABS (Australia)",
+        "ABS (Australie)",
+        domain="statistics",
+    ),
     "eurostat": Source(
         "Eurostat (EU, euro area and member states, as comparators)",
         "Eurostat (UE, zone euro et États membres, comme points de comparaison)",

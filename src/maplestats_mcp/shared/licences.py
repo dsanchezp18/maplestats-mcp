@@ -273,6 +273,10 @@ SOURCE_LICENCES: dict[str, str] = {
         "Source: ILOSTAT, International Labour Organization. Creative Commons Attribution 4.0 "
         "(https://www.ilo.org/rights-and-permissions)."
     ),
+    "abs": (
+        "Source: Australian Bureau of Statistics. Creative Commons Attribution 4.0 "
+        "(https://www.abs.gov.au/website-privacy-copyright-and-disclaimer)."
+    ),
     # Quebec
     "isq": ISQ_LICENCE,
     # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
@@ -464,6 +468,10 @@ LICENCES_FR: dict[str, str] = {
     SOURCE_LICENCES["ilo"]: (
         "Source : ILOSTAT, Organisation internationale du Travail. Creative Commons "
         "Attribution 4.0 (https://www.ilo.org/rights-and-permissions)."
+    ),
+    SOURCE_LICENCES["abs"]: (
+        "Source : Australian Bureau of Statistics. Creative Commons Attribution 4.0 "
+        "(https://www.abs.gov.au/website-privacy-copyright-and-disclaimer)."
     ),
     SOURCE_LICENCES["eurostat"]: (
         "Source : Eurostat. Creative Commons Attribution 4.0 ; réutilisation commerciale "
@@ -774,6 +782,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     # CC BY 4.0, but not for non-EU/EFTA/candidate countries' data or
     # non-Eurostat sources (copyright notice, read 2026-11-07).
     "eurostat": "varies",
+    # CC BY 4.0 (ABS copyright page), third-party content excepted.
+    "abs": "allowed",
     # CC BY 4.0 (ILO rights and permissions, datasets as of 3 May 2023).
     "ilo": "allowed",
     "cbsa-tariff": "not_allowed",

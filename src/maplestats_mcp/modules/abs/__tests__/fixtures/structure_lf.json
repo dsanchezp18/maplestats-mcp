@@ -1,0 +1,3166 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "LF",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Labour Force",
+    "names": {
+     "en": "Labour Force"
+    },
+    "description": "Dataset: LF. Headline estimates of employment, unemployment, underemployment, participation and hours worked from the monthly Labour Force Survey. Unit of measure: Persons/rate/ratio/percent. Geographic coverage: Australia/State. Catalogue number: 6202.0",
+    "descriptions": {
+     "en": "Dataset: LF. Headline estimates of employment, unemployment, underemployment, participation and hours worked from the monthly Labour Force Survey. Unit of measure: Persons/rate/ratio/percent. Geographic coverage: Australia/State. Catalogue number: 6202.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "TSEST",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "REGION=AUS,SEX=3,AGE=1599,FREQ=M,LASTNPERIODS=18",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:LF(1.0.0)"
+   }
+  ],
+  "conceptSchemes": [
+   {
+    "id": "CS_ATTRIBUTE",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Attribute Concepts",
+    "names": {
+     "en": "Attribute Concepts"
+    },
+    "isPartial": true,
+    "concepts": [
+     {
+      "id": "UNIT_MEASURE",
+      "name": "Unit of Measure",
+      "names": {
+       "en": "Unit of Measure"
+      },
+      "description": "Base unit in which the observation value is expressed.",
+      "descriptions": {
+       "en": "Base unit in which the observation value is expressed."
+      },
+      "annotations": [
+       {
+        "type": "CONTEXT",
+        "text": "If a unit multiplier exists the data is recorded according to the combination of the unit multiplier and the unit of measure.",
+        "texts": {
+         "en": "If a unit multiplier exists the data is recorded according to the combination of the unit multiplier and the unit of measure."
+        }
+       }
+      ]
+     },
+     {
+      "id": "UNIT_MULT",
+      "name": "Unit of Multiplier",
+      "names": {
+       "en": "Unit of Multiplier"
+      },
+      "description": "The multiple of the unit of measure for which the data is expressed.",
+      "descriptions": {
+       "en": "The multiple of the unit of measure for which the data is expressed."
+      },
+      "annotations": [
+       {
+        "type": "CONTEXT",
+        "text": "Codes for unit of multiplier are the exponent in base 10 so that multiplying the observation by 10^UNIT_MULT gives a value expressed in the unit of measure.",
+        "texts": {
+         "en": "Codes for unit of multiplier are the exponent in base 10 so that multiplying the observation by 10^UNIT_MULT gives a value expressed in the unit of measure."
+        }
+       }
+      ]
+     },
+     {
+      "id": "OBS_STATUS",
+      "name": "Observation Status",
+      "names": {
+       "en": "Observation Status"
+      }
+     },
+     {
+      "id": "OBS_COMMENT",
+      "name": "Observation Comment",
+      "names": {
+       "en": "Observation Comment"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_COMMON",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Common Concepts",
+    "names": {
+     "en": "Common Concepts"
+    },
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "OBS_VALUE",
+      "name": "Observation Value",
+      "names": {
+       "en": "Observation Value"
+      },
+      "description": "The observed value of the variable identified by the series dimension values.",
+      "descriptions": {
+       "en": "The observed value of the variable identified by the series dimension values."
+      }
+     },
+     {
+      "id": "TIME_PERIOD",
+      "name": "Time Period",
+      "names": {
+       "en": "Time Period"
+      },
+      "description": "Timespan or point in time for which the observation refers.",
+      "descriptions": {
+       "en": "Timespan or point in time for which the observation refers."
+      },
+      "annotations": [
+       {
+        "type": "CONTEXT",
+        "text": "The measurement represented by each observation corresponds to either a specific point in time (e.g. a single day) or a period (e.g. a month, quarter, financial or calendar year).",
+        "texts": {
+         "en": "The measurement represented by each observation corresponds to either a specific point in time (e.g. a single day) or a period (e.g. a month, quarter, financial or calendar year)."
+        }
+       },
+       {
+        "type": "QUARTER",
+        "text": "Quarterly data is reported against the calander year. e.g. \"YYYY-Q1\" represents the quarter ending March.",
+        "texts": {
+         "en": "Quarterly data is reported against the calander year. e.g. \"YYYY-Q1\" represents the quarter ending March."
+        }
+       },
+       {
+        "type": "FINANCIAL_YEAR",
+        "text": "Time periods matching the \"YYYY-MM-DD/P1Y\" format represent financial years as the start date of the period followed by the duration of 1 year.",
+        "texts": {
+         "en": "Time periods matching the \"YYYY-MM-DD/P1Y\" format represent financial years as the start date of the period followed by the duration of 1 year."
+        }
+       }
+      ]
+     },
+     {
+      "id": "FREQ",
+      "name": "Frequency",
+      "names": {
+       "en": "Frequency"
+      },
+      "description": "Rate at which data is collated.",
+      "descriptions": {
+       "en": "Rate at which data is collated."
+      }
+     },
+     {
+      "id": "MEASURE",
+      "name": "Measure",
+      "names": {
+       "en": "Measure"
+      }
+     },
+     {
+      "id": "TSEST",
+      "name": "Adjustment Type",
+      "names": {
+       "en": "Adjustment Type"
+      },
+      "description": "An original time series can be decomposed into three components: the trend (the general direction of the series), the seasonal component (systematic, calendar related movements) and the irregular component (unsystematic, short term fluctuations). Seasonally adjusted series are produced by estimating the seasonal component and removing this from the original series. In most economic data the seasonal component is a combination of seasonal influences (e.g. the effect of the weather or social traditions) plus other kinds of calendar related variations such as Chinese New Year and Christmas. The seasonal adjustment methodology takes into account both seasonal and other calendar related factors that evolve over time to reflect changes in activity patterns.",
+      "descriptions": {
+       "en": "An original time series can be decomposed into three components: the trend (the general direction of the series), the seasonal component (systematic, calendar related movements) and the irregular component (unsystematic, short term fluctuations). Seasonally adjusted series are produced by estimating the seasonal component and removing this from the original series. In most economic data the seasonal component is a combination of seasonal influences (e.g. the effect of the weather or social traditions) plus other kinds of calendar related variations such as Chinese New Year and Christmas. The seasonal adjustment methodology takes into account both seasonal and other calendar related factors that evolve over time to reflect changes in activity patterns."
+      },
+      "annotations": [
+       {
+        "type": "OTHER_LINKS",
+        "text": "https://www.abs.gov.au/websitedbs/D3310114.nsf/home/Time+Series+Analysis:+The+Basics",
+        "texts": {
+         "en": "https://www.abs.gov.au/websitedbs/D3310114.nsf/home/Time+Series+Analysis:+The+Basics"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CS_DECIMALS",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Decimals Concepts",
+    "names": {
+     "en": "Decimals Concepts"
+    },
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "DECIMALS",
+      "name": "Decimals",
+      "names": {
+       "en": "Decimals"
+      },
+      "description": "Number of digits of an observation to the right of a decimal point",
+      "descriptions": {
+       "en": "Number of digits of an observation to the right of a decimal point"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_DEMOG",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Demographic Concepts",
+    "names": {
+     "en": "Demographic Concepts"
+    },
+    "isPartial": true,
+    "concepts": [
+     {
+      "id": "AGE",
+      "name": "Age",
+      "names": {
+       "en": "Age"
+      }
+     },
+     {
+      "id": "SEX",
+      "name": "Sex",
+      "names": {
+       "en": "Sex"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CS_GEOGRAPHY",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Geography Concepts",
+    "names": {
+     "en": "Geography Concepts"
+    },
+    "isPartial": true,
+    "concepts": [
+     {
+      "id": "REGION",
+      "name": "Region",
+      "names": {
+       "en": "Region"
+      }
+     }
+    ]
+   }
+  ],
+  "codelists": [
+   {
+    "id": "CL_DECIMALS",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Decimals",
+    "names": {
+     "en": "Decimals"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Zero",
+      "names": {
+       "en": "Zero"
+      }
+     },
+     {
+      "id": "1",
+      "name": "One",
+      "names": {
+       "en": "One"
+      }
+     },
+     {
+      "id": "2",
+      "name": "Two",
+      "names": {
+       "en": "Two"
+      }
+     },
+     {
+      "id": "3",
+      "name": "Three",
+      "names": {
+       "en": "Three"
+      }
+     },
+     {
+      "id": "4",
+      "name": "Four",
+      "names": {
+       "en": "Four"
+      }
+     },
+     {
+      "id": "5",
+      "name": "Five",
+      "names": {
+       "en": "Five"
+      }
+     },
+     {
+      "id": "6",
+      "name": "Six",
+      "names": {
+       "en": "Six"
+      }
+     },
+     {
+      "id": "7",
+      "name": "Seven",
+      "names": {
+       "en": "Seven"
+      }
+     },
+     {
+      "id": "8",
+      "name": "Eight",
+      "names": {
+       "en": "Eight"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_FREQ",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Frequency",
+    "names": {
+     "en": "Frequency"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "H",
+      "name": "Hourly",
+      "names": {
+       "en": "Hourly"
+      },
+      "description": "To be used for data collected or disseminated every hour.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every hour."
+      }
+     },
+     {
+      "id": "D",
+      "name": "Daily",
+      "names": {
+       "en": "Daily"
+      },
+      "description": "To be used for data collected or disseminated every day.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every day."
+      }
+     },
+     {
+      "id": "N",
+      "name": "Minutely",
+      "names": {
+       "en": "Minutely"
+      },
+      "description": "While N denotes \"minutely\", usually, there may be no observations every minute (for several series the frequency is usually \"irregular\" within a day/days). And though observations may be sparse (not collected or disseminated every minute), missing values do not need to be given for the minutes when no observations exist: in any case the time stamp determines when an observation is observed.",
+      "descriptions": {
+       "en": "While N denotes \"minutely\", usually, there may be no observations every minute (for several series the frequency is usually \"irregular\" within a day/days). And though observations may be sparse (not collected or disseminated every minute), missing values do not need to be given for the minutes when no observations exist: in any case the time stamp determines when an observation is observed."
+      }
+     },
+     {
+      "id": "B",
+      "name": "Daily or businessweek",
+      "names": {
+       "en": "Daily or businessweek"
+      },
+      "description": "Similar to \"daily\", however there are no observations for Saturdays and Sundays (so, neither \"missing values\" nor \"numeric values\" should be provided for Saturday and Sunday). This treatment (\"business\") is one way to deal with such cases, but it is not the only option. Such a time series could alternatively be considered daily (\"D\"), thus, with missing values in the weekend.",
+      "descriptions": {
+       "en": "Similar to \"daily\", however there are no observations for Saturdays and Sundays (so, neither \"missing values\" nor \"numeric values\" should be provided for Saturday and Sunday). This treatment (\"business\") is one way to deal with such cases, but it is not the only option. Such a time series could alternatively be considered daily (\"D\"), thus, with missing values in the weekend."
+      }
+     },
+     {
+      "id": "W",
+      "name": "Weekly",
+      "names": {
+       "en": "Weekly"
+      },
+      "description": "To be used for data collected or disseminated every week.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every week."
+      }
+     },
+     {
+      "id": "S",
+      "name": "Half-yearly, semester",
+      "names": {
+       "en": "Half-yearly, semester"
+      },
+      "description": "To be used for data collected or disseminated every semester.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every semester."
+      }
+     },
+     {
+      "id": "A",
+      "name": "Annual",
+      "names": {
+       "en": "Annual"
+      },
+      "description": "To be used for data collected or disseminated every year.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every year."
+      }
+     },
+     {
+      "id": "M",
+      "name": "Monthly",
+      "names": {
+       "en": "Monthly"
+      },
+      "description": "To be used for data collected or disseminated every month.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every month."
+      }
+     },
+     {
+      "id": "Q",
+      "name": "Quarterly",
+      "names": {
+       "en": "Quarterly"
+      },
+      "description": "To be used for data collected or disseminated every quarter.",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated every quarter."
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_LF_AGE",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Labour Force Age",
+    "names": {
+     "en": "Labour Force Age"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "1599",
+      "name": "Total (age)",
+      "names": {
+       "en": "Total (age)"
+      },
+      "description": "Total (age)",
+      "descriptions": {
+       "en": "Total (age)"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "600",
+        "texts": {
+         "en": "600"
+        }
+       }
+      ]
+     },
+     {
+      "id": "1564",
+      "name": "15 - 64 years",
+      "names": {
+       "en": "15 - 64 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "500",
+        "texts": {
+         "en": "500"
+        }
+       }
+      ],
+      "parent": "1599"
+     },
+     {
+      "id": "1524",
+      "name": "15 - 24 years",
+      "names": {
+       "en": "15 - 24 years"
+      },
+      "description": "15 - 24 years",
+      "descriptions": {
+       "en": "15 - 24 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "115",
+        "texts": {
+         "en": "115"
+        }
+       }
+      ],
+      "parent": "1564"
+     },
+     {
+      "id": "1519",
+      "name": "15 - 19 years",
+      "names": {
+       "en": "15 - 19 years"
+      },
+      "description": "15 - 19 years",
+      "descriptions": {
+       "en": "15 - 19 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "100",
+        "texts": {
+         "en": "100"
+        }
+       }
+      ],
+      "parent": "1524"
+     },
+     {
+      "id": "15",
+      "name": "15",
+      "names": {
+       "en": "15"
+      },
+      "description": "15",
+      "descriptions": {
+       "en": "15"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "15",
+        "texts": {
+         "en": "15"
+        }
+       }
+      ],
+      "parent": "1519"
+     },
+     {
+      "id": "16",
+      "name": "16",
+      "names": {
+       "en": "16"
+      },
+      "description": "16",
+      "descriptions": {
+       "en": "16"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "16",
+        "texts": {
+         "en": "16"
+        }
+       }
+      ],
+      "parent": "1519"
+     },
+     {
+      "id": "17",
+      "name": "17",
+      "names": {
+       "en": "17"
+      },
+      "description": "17",
+      "descriptions": {
+       "en": "17"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "17",
+        "texts": {
+         "en": "17"
+        }
+       }
+      ],
+      "parent": "1519"
+     },
+     {
+      "id": "18",
+      "name": "18",
+      "names": {
+       "en": "18"
+      },
+      "description": "18",
+      "descriptions": {
+       "en": "18"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "18",
+        "texts": {
+         "en": "18"
+        }
+       }
+      ],
+      "parent": "1519"
+     },
+     {
+      "id": "19",
+      "name": "19",
+      "names": {
+       "en": "19"
+      },
+      "description": "19",
+      "descriptions": {
+       "en": "19"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "19",
+        "texts": {
+         "en": "19"
+        }
+       }
+      ],
+      "parent": "1519"
+     },
+     {
+      "id": "2024",
+      "name": "20 - 24 years",
+      "names": {
+       "en": "20 - 24 years"
+      },
+      "description": "20 - 24 years",
+      "descriptions": {
+       "en": "20 - 24 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "110",
+        "texts": {
+         "en": "110"
+        }
+       }
+      ],
+      "parent": "1524"
+     },
+     {
+      "id": "20",
+      "name": "20",
+      "names": {
+       "en": "20"
+      },
+      "description": "20",
+      "descriptions": {
+       "en": "20"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "20",
+        "texts": {
+         "en": "20"
+        }
+       }
+      ],
+      "parent": "2024"
+     },
+     {
+      "id": "21",
+      "name": "21",
+      "names": {
+       "en": "21"
+      },
+      "description": "21",
+      "descriptions": {
+       "en": "21"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "21",
+        "texts": {
+         "en": "21"
+        }
+       }
+      ],
+      "parent": "2024"
+     },
+     {
+      "id": "22",
+      "name": "22",
+      "names": {
+       "en": "22"
+      },
+      "description": "22",
+      "descriptions": {
+       "en": "22"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "22",
+        "texts": {
+         "en": "22"
+        }
+       }
+      ],
+      "parent": "2024"
+     },
+     {
+      "id": "23",
+      "name": "23",
+      "names": {
+       "en": "23"
+      },
+      "description": "23",
+      "descriptions": {
+       "en": "23"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "23",
+        "texts": {
+         "en": "23"
+        }
+       }
+      ],
+      "parent": "2024"
+     },
+     {
+      "id": "24",
+      "name": "24",
+      "names": {
+       "en": "24"
+      },
+      "description": "24",
+      "descriptions": {
+       "en": "24"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "24",
+        "texts": {
+         "en": "24"
+        }
+       }
+      ],
+      "parent": "2024"
+     },
+     {
+      "id": "2534",
+      "name": "25 - 34 years",
+      "names": {
+       "en": "25 - 34 years"
+      },
+      "description": "25 - 34 years",
+      "descriptions": {
+       "en": "25 - 34 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "135",
+        "texts": {
+         "en": "135"
+        }
+       }
+      ],
+      "parent": "1564"
+     },
+     {
+      "id": "2529",
+      "name": "25 - 29 years",
+      "names": {
+       "en": "25 - 29 years"
+      },
+      "description": "25 - 29 years",
+      "descriptions": {
+       "en": "25 - 29 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "120",
+        "texts": {
+         "en": "120"
+        }
+       }
+      ],
+      "parent": "2534"
+     },
+     {
+      "id": "3034",
+      "name": "30 - 34 years",
+      "names": {
+       "en": "30 - 34 years"
+      },
+      "description": "30 - 34 years",
+      "descriptions": {
+       "en": "30 - 34 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "130",
+        "texts": {
+         "en": "130"
+        }
+       }
+      ],
+      "parent": "2534"
+     },
+     {
+      "id": "3544",
+      "name": "35 - 44 years",
+      "names": {
+       "en": "35 - 44 years"
+      },
+      "description": "35 - 44 years",
+      "descriptions": {
+       "en": "35 - 44 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "155",
+        "texts": {
+         "en": "155"
+        }
+       }
+      ],
+      "parent": "1564"
+     },
+     {
+      "id": "3539",
+      "name": "35 - 39 years",
+      "names": {
+       "en": "35 - 39 years"
+      },
+      "description": "35 - 39 years",
+      "descriptions": {
+       "en": "35 - 39 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "140",
+        "texts": {
+         "en": "140"
+        }
+       }
+      ],
+      "parent": "3544"
+     },
+     {
+      "id": "4044",
+      "name": "40 - 44 years",
+      "names": {
+       "en": "40 - 44 years"
+      },
+      "description": "40 - 44 years",
+      "descriptions": {
+       "en": "40 - 44 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "150",
+        "texts": {
+         "en": "150"
+        }
+       }
+      ],
+      "parent": "3544"
+     },
+     {
+      "id": "4554",
+      "name": "45 - 54 years",
+      "names": {
+       "en": "45 - 54 years"
+      },
+      "description": "45 - 54 years",
+      "descriptions": {
+       "en": "45 - 54 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "175",
+        "texts": {
+         "en": "175"
+        }
+       }
+      ],
+      "parent": "1564"
+     },
+     {
+      "id": "4549",
+      "name": "45 - 49 years",
+      "names": {
+       "en": "45 - 49 years"
+      },
+      "description": "45 - 49 years",
+      "descriptions": {
+       "en": "45 - 49 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "160",
+        "texts": {
+         "en": "160"
+        }
+       }
+      ],
+      "parent": "4554"
+     },
+     {
+      "id": "5054",
+      "name": "50 - 54 years",
+      "names": {
+       "en": "50 - 54 years"
+      },
+      "description": "50 - 54 years",
+      "descriptions": {
+       "en": "50 - 54 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "170",
+        "texts": {
+         "en": "170"
+        }
+       }
+      ],
+      "parent": "4554"
+     },
+     {
+      "id": "5564",
+      "name": "55 - 64 years",
+      "names": {
+       "en": "55 - 64 years"
+      },
+      "description": "55 - 64 years",
+      "descriptions": {
+       "en": "55 - 64 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "195",
+        "texts": {
+         "en": "195"
+        }
+       }
+      ],
+      "parent": "1564"
+     },
+     {
+      "id": "5559",
+      "name": "55 - 59 years",
+      "names": {
+       "en": "55 - 59 years"
+      },
+      "description": "55 - 59 years",
+      "descriptions": {
+       "en": "55 - 59 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "180",
+        "texts": {
+         "en": "180"
+        }
+       }
+      ],
+      "parent": "5564"
+     },
+     {
+      "id": "6064",
+      "name": "60 - 64 years",
+      "names": {
+       "en": "60 - 64 years"
+      },
+      "description": "60 - 64 years",
+      "descriptions": {
+       "en": "60 - 64 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "190",
+        "texts": {
+         "en": "190"
+        }
+       }
+      ],
+      "parent": "5564"
+     },
+     {
+      "id": "5599",
+      "name": "55 years and over",
+      "names": {
+       "en": "55 years and over"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "230",
+        "texts": {
+         "en": "230"
+        }
+       }
+      ]
+     },
+     {
+      "id": "6599",
+      "name": "65 years and over",
+      "names": {
+       "en": "65 years and over"
+      },
+      "description": "65 years and over",
+      "descriptions": {
+       "en": "65 years and over"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "220",
+        "texts": {
+         "en": "220"
+        }
+       }
+      ],
+      "parent": "1599"
+     },
+     {
+      "id": "6569",
+      "name": "65 - 69 years",
+      "names": {
+       "en": "65 - 69 years"
+      },
+      "description": "65 - 69 years",
+      "descriptions": {
+       "en": "65 - 69 years"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "200",
+        "texts": {
+         "en": "200"
+        }
+       }
+      ],
+      "parent": "6599"
+     },
+     {
+      "id": "7099",
+      "name": "70 years and over",
+      "names": {
+       "en": "70 years and over"
+      },
+      "description": "70 years and over",
+      "descriptions": {
+       "en": "70 years and over"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "210",
+        "texts": {
+         "en": "210"
+        }
+       }
+      ],
+      "parent": "6599"
+     }
+    ]
+   },
+   {
+    "id": "CL_LF_MEASURE",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Labour Force Measures",
+    "names": {
+     "en": "Labour Force Measures"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "M1",
+      "name": "Employed - full-time",
+      "names": {
+       "en": "Employed - full-time"
+      }
+     },
+     {
+      "id": "M2",
+      "name": "Employed - part-time",
+      "names": {
+       "en": "Employed - part-time"
+      }
+     },
+     {
+      "id": "M3",
+      "name": "Employed persons",
+      "names": {
+       "en": "Employed persons"
+      }
+     },
+     {
+      "id": "M4",
+      "name": "Unemployed - looking for full-time work",
+      "names": {
+       "en": "Unemployed - looking for full-time work"
+      }
+     },
+     {
+      "id": "M5",
+      "name": "Unemployed - looking for part-time work",
+      "names": {
+       "en": "Unemployed - looking for part-time work"
+      }
+     },
+     {
+      "id": "M6",
+      "name": "Unemployed persons",
+      "names": {
+       "en": "Unemployed persons"
+      }
+     },
+     {
+      "id": "M7",
+      "name": "Labour Force - Full-time",
+      "names": {
+       "en": "Labour Force - Full-time"
+      },
+      "annotations": [
+       {
+        "type": "FURTHER_INFORMATION",
+        "text": "Number of persons in the Labour Force as either employed full-time or unemployed and seeking full-time employment",
+        "texts": {
+         "en": "Number of persons in the Labour Force as either employed full-time or unemployed and seeking full-time employment"
+        }
+       }
+      ]
+     },
+     {
+      "id": "M8",
+      "name": "Labour Force - Part-time",
+      "names": {
+       "en": "Labour Force - Part-time"
+      },
+      "annotations": [
+       {
+        "type": "FURTHER_INFORMATION",
+        "text": "Persons in the Labour Force either employed part-time or unemployed and seeking part-time employment",
+        "texts": {
+         "en": "Persons in the Labour Force either employed part-time or unemployed and seeking part-time employment"
+        }
+       }
+      ]
+     },
+     {
+      "id": "M9",
+      "name": "Labour Force",
+      "names": {
+       "en": "Labour Force"
+      }
+     },
+     {
+      "id": "M10",
+      "name": "Not in the Labour Force",
+      "names": {
+       "en": "Not in the Labour Force"
+      }
+     },
+     {
+      "id": "M11",
+      "name": "Civilian population",
+      "names": {
+       "en": "Civilian population"
+      }
+     },
+     {
+      "id": "M12",
+      "name": "Participation rate",
+      "names": {
+       "en": "Participation rate"
+      }
+     },
+     {
+      "id": "M13",
+      "name": "Unemployment rate",
+      "names": {
+       "en": "Unemployment rate"
+      }
+     },
+     {
+      "id": "M14",
+      "name": "Unemployment rate - looking for full-time work",
+      "names": {
+       "en": "Unemployment rate - looking for full-time work"
+      }
+     },
+     {
+      "id": "M15",
+      "name": "Unemployment rate - looking for part-time work",
+      "names": {
+       "en": "Unemployment rate - looking for part-time work"
+      }
+     },
+     {
+      "id": "M16",
+      "name": "Employment to population ratio",
+      "names": {
+       "en": "Employment to population ratio"
+      }
+     },
+     {
+      "id": "M17",
+      "name": "Unemployment to population ratio - looking for full time work",
+      "names": {
+       "en": "Unemployment to population ratio - looking for full time work"
+      }
+     },
+     {
+      "id": "M18",
+      "name": "Employed Persons - Monthly hours worked in all jobs",
+      "names": {
+       "en": "Employed Persons - Monthly hours worked in all jobs"
+      }
+     },
+     {
+      "id": "M19",
+      "name": "Full-time Employed - Monthly hours worked in all jobs",
+      "names": {
+       "en": "Full-time Employed - Monthly hours worked in all jobs"
+      }
+     },
+     {
+      "id": "M20",
+      "name": "Part-time Employed - Monthly hours worked in all jobs",
+      "names": {
+       "en": "Part-time Employed - Monthly hours worked in all jobs"
+      }
+     },
+     {
+      "id": "M21",
+      "name": "Underemployed total",
+      "names": {
+       "en": "Underemployed total"
+      }
+     },
+     {
+      "id": "M22",
+      "name": "Underemployment ratio (proportion of employed)",
+      "names": {
+       "en": "Underemployment ratio (proportion of employed)"
+      }
+     },
+     {
+      "id": "M23",
+      "name": "Underemployment rate (proportion of labour force)",
+      "names": {
+       "en": "Underemployment rate (proportion of labour force)"
+      }
+     },
+     {
+      "id": "M24",
+      "name": "Underutilisation rate",
+      "names": {
+       "en": "Underutilisation rate"
+      }
+     },
+     {
+      "id": "M25",
+      "name": "Underemployed full-time (worked part-time for economic reasons)",
+      "names": {
+       "en": "Underemployed full-time (worked part-time for economic reasons)"
+      }
+     },
+     {
+      "id": "M26",
+      "name": "Underemployed part-time (prefer more hours)",
+      "names": {
+       "en": "Underemployed part-time (prefer more hours)"
+      }
+     },
+     {
+      "id": "M27",
+      "name": "Underemployed full-time (expanded analytical series)",
+      "names": {
+       "en": "Underemployed full-time (expanded analytical series)"
+      }
+     },
+     {
+      "id": "M28",
+      "name": "Underemployed part-time (expanded analytical series)",
+      "names": {
+       "en": "Underemployed part-time (expanded analytical series)"
+      }
+     },
+     {
+      "id": "M29",
+      "name": "Underemployed total (expanded analytical series)",
+      "names": {
+       "en": "Underemployed total (expanded analytical series)"
+      }
+     },
+     {
+      "id": "M30",
+      "name": "Underemployed full-time (prefer more hours)",
+      "names": {
+       "en": "Underemployed full-time (prefer more hours)"
+      },
+      "annotations": [
+       {
+        "type": "FURTHER_INFORMATION",
+        "text": "Includes usually works full-time, worked more than 35 hours but less than usual for economic reasons",
+        "texts": {
+         "en": "Includes usually works full-time, worked more than 35 hours but less than usual for economic reasons"
+        }
+       }
+      ]
+     },
+     {
+      "id": "M31",
+      "name": "Underemployed part-time (worked less than usual hours for economic reasons)",
+      "names": {
+       "en": "Underemployed part-time (worked less than usual hours for economic reasons)"
+      },
+      "annotations": [
+       {
+        "type": "FURTHER_INFORMATION",
+        "text": "Did not prefer or was unavailable for more hours",
+        "texts": {
+         "en": "Did not prefer or was unavailable for more hours"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_OBS_STATUS",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Observation Status",
+    "names": {
+     "en": "Observation Status"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "k",
+      "name": "estimate",
+      "names": {
+       "en": "estimate"
+      }
+     },
+     {
+      "id": "l",
+      "name": "not elsewhere included",
+      "names": {
+       "en": "not elsewhere included"
+      }
+     },
+     {
+      "id": "m",
+      "name": "not recorded",
+      "names": {
+       "en": "not recorded"
+      }
+     },
+     {
+      "id": "n",
+      "name": "not available for publication but included in totals where applicable, unless otherwise indicated",
+      "names": {
+       "en": "not available for publication but included in totals where applicable, unless otherwise indicated"
+      }
+     },
+     {
+      "id": "o",
+      "name": "nil or rounded to zero, including null cells",
+      "names": {
+       "en": "nil or rounded to zero, including null cells"
+      }
+     },
+     {
+      "id": "p",
+      "name": "preliminary figure or series subject to revision",
+      "names": {
+       "en": "preliminary figure or series subject to revision"
+      }
+     },
+     {
+      "id": "q",
+      "name": "not available",
+      "names": {
+       "en": "not available"
+      }
+     },
+     {
+      "id": "r",
+      "name": "revised",
+      "names": {
+       "en": "revised"
+      }
+     },
+     {
+      "id": "s",
+      "name": "not currently available due to break in time series",
+      "names": {
+       "en": "not currently available due to break in time series"
+      }
+     },
+     {
+      "id": "t",
+      "name": "not yet available",
+      "names": {
+       "en": "not yet available"
+      }
+     },
+     {
+      "id": "u",
+      "name": "not applicable",
+      "names": {
+       "en": "not applicable"
+      }
+     },
+     {
+      "id": "v",
+      "name": "not available for publication but included in totals where applicable, unless otherwise indicated",
+      "names": {
+       "en": "not available for publication but included in totals where applicable, unless otherwise indicated"
+      }
+     },
+     {
+      "id": "w",
+      "name": "estimate is subject to sampling variability too high for most practical purposes",
+      "names": {
+       "en": "estimate is subject to sampling variability too high for most practical purposes"
+      }
+     },
+     {
+      "id": "x",
+      "name": "estimate has a relative standard error of 10% to less than 25% and should be used with caution",
+      "names": {
+       "en": "estimate has a relative standard error of 10% to less than 25% and should be used with caution"
+      }
+     },
+     {
+      "id": "y",
+      "name": "estimate has a relative standard error between 25% and 50% and should be used with caution",
+      "names": {
+       "en": "estimate has a relative standard error between 25% and 50% and should be used with caution"
+      }
+     },
+     {
+      "id": "z",
+      "name": "estimate has a relative standard error greater than 50% and is considered too unreliable for general use",
+      "names": {
+       "en": "estimate has a relative standard error greater than 50% and is considered too unreliable for general use"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_SEX",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Sex",
+    "names": {
+     "en": "Sex"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "3",
+      "name": "Persons",
+      "names": {
+       "en": "Persons"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "3",
+        "texts": {
+         "en": "3"
+        }
+       }
+      ]
+     },
+     {
+      "id": "1",
+      "name": "Males",
+      "names": {
+       "en": "Males"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "1",
+        "texts": {
+         "en": "1"
+        }
+       }
+      ],
+      "parent": "3"
+     },
+     {
+      "id": "2",
+      "name": "Females",
+      "names": {
+       "en": "Females"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "2",
+        "texts": {
+         "en": "2"
+        }
+       }
+      ],
+      "parent": "3"
+     }
+    ]
+   },
+   {
+    "id": "CL_STATE",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "State",
+    "names": {
+     "en": "State"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AUS",
+      "name": "Australia",
+      "names": {
+       "en": "Australia"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "1",
+      "name": "New South Wales",
+      "names": {
+       "en": "New South Wales"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "20",
+        "texts": {
+         "en": "20"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "2",
+      "name": "Victoria",
+      "names": {
+       "en": "Victoria"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "30",
+        "texts": {
+         "en": "30"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "3",
+      "name": "Queensland",
+      "names": {
+       "en": "Queensland"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "4",
+      "name": "South Australia",
+      "names": {
+       "en": "South Australia"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "50",
+        "texts": {
+         "en": "50"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "5",
+      "name": "Western Australia",
+      "names": {
+       "en": "Western Australia"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "60",
+        "texts": {
+         "en": "60"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "6",
+      "name": "Tasmania",
+      "names": {
+       "en": "Tasmania"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "70",
+        "texts": {
+         "en": "70"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "7",
+      "name": "Northern Territory",
+      "names": {
+       "en": "Northern Territory"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "80",
+        "texts": {
+         "en": "80"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "8",
+      "name": "Australian Capital Territory",
+      "names": {
+       "en": "Australian Capital Territory"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "90",
+        "texts": {
+         "en": "90"
+        }
+       }
+      ],
+      "parent": "AUS"
+     },
+     {
+      "id": "9",
+      "name": "Other Territories",
+      "names": {
+       "en": "Other Territories"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "100",
+        "texts": {
+         "en": "100"
+        }
+       }
+      ],
+      "parent": "AUS"
+     }
+    ]
+   },
+   {
+    "id": "CL_TSEST",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Time Series Estimates",
+    "names": {
+     "en": "Time Series Estimates"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "10",
+      "name": "Original",
+      "names": {
+       "en": "Original"
+      },
+      "description": "Original",
+      "descriptions": {
+       "en": "Original"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "1",
+        "texts": {
+         "en": "1"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Original",
+        "texts": {
+         "en": "Original"
+        }
+       }
+      ]
+     },
+     {
+      "id": "20",
+      "name": "Seasonally Adjusted",
+      "names": {
+       "en": "Seasonally Adjusted"
+      },
+      "description": "Seasonally Adjusted",
+      "descriptions": {
+       "en": "Seasonally Adjusted"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "2",
+        "texts": {
+         "en": "2"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Seasonally Adjusted",
+        "texts": {
+         "en": "Seasonally Adjusted"
+        }
+       }
+      ]
+     },
+     {
+      "id": "30",
+      "name": "Trend",
+      "names": {
+       "en": "Trend"
+      },
+      "description": "Trend",
+      "descriptions": {
+       "en": "Trend"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "3",
+        "texts": {
+         "en": "3"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Trend",
+        "texts": {
+         "en": "Trend"
+        }
+       }
+      ]
+     },
+     {
+      "id": "40",
+      "name": "Sensitivity Upper",
+      "names": {
+       "en": "Sensitivity Upper"
+      },
+      "description": "Sensitivity Upper",
+      "descriptions": {
+       "en": "Sensitivity Upper"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "4",
+        "texts": {
+         "en": "4"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Sensitivity Upper",
+        "texts": {
+         "en": "Sensitivity Upper"
+        }
+       }
+      ]
+     },
+     {
+      "id": "50",
+      "name": "Sensitivity Lower",
+      "names": {
+       "en": "Sensitivity Lower"
+      },
+      "description": "Sensitivity Lower",
+      "descriptions": {
+       "en": "Sensitivity Lower"
+      },
+      "annotations": [
+       {
+        "type": "ORDER",
+        "text": "5",
+        "texts": {
+         "en": "5"
+        }
+       },
+       {
+        "type": "FULL_NAME",
+        "text": "Sensitivity Lower",
+        "texts": {
+         "en": "Sensitivity Lower"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MEASURE",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Unit of Measure",
+    "names": {
+     "en": "Unit of Measure"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AUD",
+      "name": "Australian Dollars",
+      "names": {
+       "en": "Australian Dollars"
+      }
+     },
+     {
+      "id": "NUM",
+      "name": "Number",
+      "names": {
+       "en": "Number"
+      }
+     },
+     {
+      "id": "PCT",
+      "name": "Percent",
+      "names": {
+       "en": "Percent"
+      }
+     },
+     {
+      "id": "PCT_PTS",
+      "name": "Percentage Points",
+      "names": {
+       "en": "Percentage Points"
+      }
+     },
+     {
+      "id": "PROP",
+      "name": "Proportion",
+      "names": {
+       "en": "Proportion"
+      }
+     },
+     {
+      "id": "IN",
+      "name": "Index Numbers",
+      "names": {
+       "en": "Index Numbers"
+      }
+     },
+     {
+      "id": "IP",
+      "name": "Index Points",
+      "names": {
+       "en": "Index Points"
+      }
+     },
+     {
+      "id": "VAR",
+      "name": "Variance",
+      "names": {
+       "en": "Variance"
+      }
+     },
+     {
+      "id": "NA",
+      "name": "Not Applicable",
+      "names": {
+       "en": "Not Applicable"
+      }
+     },
+     {
+      "id": "PSNS",
+      "name": "Persons",
+      "names": {
+       "en": "Persons"
+      }
+     },
+     {
+      "id": "PSN_YR",
+      "name": "Person Years",
+      "names": {
+       "en": "Person Years"
+      }
+     },
+     {
+      "id": "JOB",
+      "name": "Jobs",
+      "names": {
+       "en": "Jobs"
+      }
+     },
+     {
+      "id": "M_G",
+      "name": "Milligrams",
+      "names": {
+       "en": "Milligrams"
+      }
+     },
+     {
+      "id": "G",
+      "name": "Grams",
+      "names": {
+       "en": "Grams"
+      }
+     },
+     {
+      "id": "KG",
+      "name": "Kilograms",
+      "names": {
+       "en": "Kilograms"
+      }
+     },
+     {
+      "id": "CT",
+      "name": "Carat (metric)",
+      "names": {
+       "en": "Carat (metric)"
+      }
+     },
+     {
+      "id": "MCT",
+      "name": "Megacarat (metric)",
+      "names": {
+       "en": "Megacarat (metric)"
+      }
+     },
+     {
+      "id": "T",
+      "name": "Tonnes",
+      "names": {
+       "en": "Tonnes"
+      }
+     },
+     {
+      "id": "MT",
+      "name": "Megatonnes",
+      "names": {
+       "en": "Megatonnes"
+      }
+     },
+     {
+      "id": "GT",
+      "name": "Gigatonnes",
+      "names": {
+       "en": "Gigatonnes"
+      }
+     },
+     {
+      "id": "TKM",
+      "name": "Tonnes-kilometres",
+      "names": {
+       "en": "Tonnes-kilometres"
+      }
+     },
+     {
+      "id": "M_M",
+      "name": "Millimetres",
+      "names": {
+       "en": "Millimetres"
+      }
+     },
+     {
+      "id": "M",
+      "name": "Metres",
+      "names": {
+       "en": "Metres"
+      }
+     },
+     {
+      "id": "KM",
+      "name": "Kilometres",
+      "names": {
+       "en": "Kilometres"
+      }
+     },
+     {
+      "id": "SQM",
+      "name": "Square Metres",
+      "names": {
+       "en": "Square Metres"
+      }
+     },
+     {
+      "id": "SQKM",
+      "name": "Square Kilometres",
+      "names": {
+       "en": "Square Kilometres"
+      }
+     },
+     {
+      "id": "HA",
+      "name": "Hectares",
+      "names": {
+       "en": "Hectares"
+      }
+     },
+     {
+      "id": "CBM",
+      "name": "Cubic Metres",
+      "names": {
+       "en": "Cubic Metres"
+      }
+     },
+     {
+      "id": "L",
+      "name": "Litres",
+      "names": {
+       "en": "Litres"
+      }
+     },
+     {
+      "id": "KL",
+      "name": "Kilolitres",
+      "names": {
+       "en": "Kilolitres"
+      }
+     },
+     {
+      "id": "ML",
+      "name": "Megalitres",
+      "names": {
+       "en": "Megalitres"
+      }
+     },
+     {
+      "id": "GL",
+      "name": "Gigalitres",
+      "names": {
+       "en": "Gigalitres"
+      }
+     },
+     {
+      "id": "A",
+      "name": "Ampere",
+      "names": {
+       "en": "Ampere"
+      }
+     },
+     {
+      "id": "KVA",
+      "name": "Kilovolt Amperes",
+      "names": {
+       "en": "Kilovolt Amperes"
+      }
+     },
+     {
+      "id": "W",
+      "name": "Watts",
+      "names": {
+       "en": "Watts"
+      }
+     },
+     {
+      "id": "KW",
+      "name": "Kilowatts",
+      "names": {
+       "en": "Kilowatts"
+      }
+     },
+     {
+      "id": "KWH",
+      "name": "Kilowatt Hours",
+      "names": {
+       "en": "Kilowatt Hours"
+      }
+     },
+     {
+      "id": "GWH",
+      "name": "Gigawatt Hours",
+      "names": {
+       "en": "Gigawatt Hours"
+      }
+     },
+     {
+      "id": "J",
+      "name": "Joules",
+      "names": {
+       "en": "Joules"
+      }
+     },
+     {
+      "id": "KJ",
+      "name": "Kilojoules",
+      "names": {
+       "en": "Kilojoules"
+      }
+     },
+     {
+      "id": "MJ",
+      "name": "Megajoules",
+      "names": {
+       "en": "Megajoules"
+      }
+     },
+     {
+      "id": "GJ",
+      "name": "Gigajoules",
+      "names": {
+       "en": "Gigajoules"
+      }
+     },
+     {
+      "id": "TJ",
+      "name": "Terajoules",
+      "names": {
+       "en": "Terajoules"
+      }
+     },
+     {
+      "id": "PJ",
+      "name": "Petajoules",
+      "names": {
+       "en": "Petajoules"
+      }
+     },
+     {
+      "id": "C",
+      "name": "Coulumb",
+      "names": {
+       "en": "Coulumb"
+      }
+     },
+     {
+      "id": "CD",
+      "name": "Candela",
+      "names": {
+       "en": "Candela"
+      }
+     },
+     {
+      "id": "K",
+      "name": "Kelvin",
+      "names": {
+       "en": "Kelvin"
+      }
+     },
+     {
+      "id": "DEG_CEL",
+      "name": "Degrees Celsius",
+      "names": {
+       "en": "Degrees Celsius"
+      }
+     },
+     {
+      "id": "S",
+      "name": "Seconds",
+      "names": {
+       "en": "Seconds"
+      }
+     },
+     {
+      "id": "MIN",
+      "name": "Minutes",
+      "names": {
+       "en": "Minutes"
+      }
+     },
+     {
+      "id": "HR",
+      "name": "Hours",
+      "names": {
+       "en": "Hours"
+      }
+     },
+     {
+      "id": "DAY",
+      "name": "Days",
+      "names": {
+       "en": "Days"
+      }
+     },
+     {
+      "id": "WK",
+      "name": "Weeks",
+      "names": {
+       "en": "Weeks"
+      }
+     },
+     {
+      "id": "MTH",
+      "name": "Months",
+      "names": {
+       "en": "Months"
+      }
+     },
+     {
+      "id": "YR",
+      "name": "Years",
+      "names": {
+       "en": "Years"
+      }
+     },
+     {
+      "id": "B",
+      "name": "Bytes",
+      "names": {
+       "en": "Bytes"
+      }
+     },
+     {
+      "id": "KB",
+      "name": "Kilobytes",
+      "names": {
+       "en": "Kilobytes"
+      }
+     },
+     {
+      "id": "MB",
+      "name": "Megabytes",
+      "names": {
+       "en": "Megabytes"
+      }
+     },
+     {
+      "id": "GB",
+      "name": "Gigabytes",
+      "names": {
+       "en": "Gigabytes"
+      }
+     },
+     {
+      "id": "TB",
+      "name": "Terabytes",
+      "names": {
+       "en": "Terabytes"
+      }
+     },
+     {
+      "id": "DEG",
+      "name": "Degrees",
+      "names": {
+       "en": "Degrees"
+      }
+     },
+     {
+      "id": "RAD",
+      "name": "Radians",
+      "names": {
+       "en": "Radians"
+      }
+     },
+     {
+      "id": "DOZ",
+      "name": "Dozen",
+      "names": {
+       "en": "Dozen"
+      }
+     },
+     {
+      "id": "PR",
+      "name": "Pairs",
+      "names": {
+       "en": "Pairs"
+      }
+     },
+     {
+      "id": "ROOM",
+      "name": "Rooms",
+      "names": {
+       "en": "Rooms"
+      }
+     },
+     {
+      "id": "SITE",
+      "name": "Sites",
+      "names": {
+       "en": "Sites"
+      }
+     },
+     {
+      "id": "BUNDLE",
+      "name": "Bundles",
+      "names": {
+       "en": "Bundles"
+      }
+     },
+     {
+      "id": "CARTON",
+      "name": "Cartons",
+      "names": {
+       "en": "Cartons"
+      }
+     },
+     {
+      "id": "UNK",
+      "name": "Unknown",
+      "names": {
+       "en": "Unknown"
+      }
+     },
+     {
+      "id": "GBP",
+      "name": "Pound Sterling",
+      "names": {
+       "en": "Pound Sterling"
+      }
+     },
+     {
+      "id": "CENT",
+      "name": "Cents",
+      "names": {
+       "en": "Cents"
+      }
+     },
+     {
+      "id": "FAM",
+      "name": "Families",
+      "names": {
+       "en": "Families"
+      }
+     },
+     {
+      "id": "HH",
+      "name": "Households",
+      "names": {
+       "en": "Households"
+      }
+     },
+     {
+      "id": "RATE",
+      "name": "Rate",
+      "names": {
+       "en": "Rate"
+      }
+     },
+     {
+      "id": "AUD_PER_EMP",
+      "name": "Australian Dollars per Employee",
+      "names": {
+       "en": "Australian Dollars per Employee"
+      }
+     },
+     {
+      "id": "AUD_PER_PSN",
+      "name": "Australian Dollars per Person",
+      "names": {
+       "en": "Australian Dollars per Person"
+      }
+     },
+     {
+      "id": "AUD_PER_KL",
+      "name": "Australian Dollars per Kilolitre",
+      "names": {
+       "en": "Australian Dollars per Kilolitre"
+      }
+     },
+     {
+      "id": "AUD_PER_KG",
+      "name": "Australian Dollars per Kilogram",
+      "names": {
+       "en": "Australian Dollars per Kilogram"
+      }
+     },
+     {
+      "id": "AUD_PER_T",
+      "name": "Australian Dollars per Tonne",
+      "names": {
+       "en": "Australian Dollars per Tonne"
+      }
+     },
+     {
+      "id": "AUD_PER_CT",
+      "name": "Australian Dollars per Carat",
+      "names": {
+       "en": "Australian Dollars per Carat"
+      }
+     },
+     {
+      "id": "AUD_PER_SQM",
+      "name": "Australian Dollars per Square Metre",
+      "names": {
+       "en": "Australian Dollars per Square Metre"
+      }
+     },
+     {
+      "id": "AUD_PER_1000CBM",
+      "name": "Australian Dollars per thousand cubic metres",
+      "names": {
+       "en": "Australian Dollars per thousand cubic metres"
+      }
+     },
+     {
+      "id": "L_PER_100KM",
+      "name": "Litres per 100 Kilometres",
+      "names": {
+       "en": "Litres per 100 Kilometres"
+      }
+     },
+     {
+      "id": "L_PER_KM",
+      "name": "Litres per Kilometre",
+      "names": {
+       "en": "Litres per Kilometre"
+      }
+     },
+     {
+      "id": "ML_PER_HA",
+      "name": "Megalitres per Hectare",
+      "names": {
+       "en": "Megalitres per Hectare"
+      }
+     },
+     {
+      "id": "T_PER_HA",
+      "name": "Tonnes per Hectare",
+      "names": {
+       "en": "Tonnes per Hectare"
+      }
+     },
+     {
+      "id": "PSNS_PER_SQKM",
+      "name": "Persons per Square Kilometre",
+      "names": {
+       "en": "Persons per Square Kilometre"
+      }
+     },
+     {
+      "id": "KG_PER_TREE",
+      "name": "Kilograms per Tree",
+      "names": {
+       "en": "Kilograms per Tree"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MULT",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Unit Multiplier",
+    "names": {
+     "en": "Unit Multiplier"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Units",
+      "names": {
+       "en": "Units"
+      }
+     },
+     {
+      "id": "1",
+      "name": "Tens",
+      "names": {
+       "en": "Tens"
+      }
+     },
+     {
+      "id": "2",
+      "name": "Hundreds",
+      "names": {
+       "en": "Hundreds"
+      }
+     },
+     {
+      "id": "3",
+      "name": "Thousands",
+      "names": {
+       "en": "Thousands"
+      }
+     },
+     {
+      "id": "4",
+      "name": "Tens of thousands",
+      "names": {
+       "en": "Tens of thousands"
+      }
+     },
+     {
+      "id": "5",
+      "name": "Hundreds of thousands",
+      "names": {
+       "en": "Hundreds of thousands"
+      }
+     },
+     {
+      "id": "6",
+      "name": "Millions",
+      "names": {
+       "en": "Millions"
+      }
+     },
+     {
+      "id": "7",
+      "name": "Tens of millions",
+      "names": {
+       "en": "Tens of millions"
+      }
+     },
+     {
+      "id": "8",
+      "name": "Hundreds of millions",
+      "names": {
+       "en": "Hundreds of millions"
+      }
+     },
+     {
+      "id": "9",
+      "name": "Billions",
+      "names": {
+       "en": "Billions"
+      }
+     },
+     {
+      "id": "10",
+      "name": "Tens of billions",
+      "names": {
+       "en": "Tens of billions"
+      }
+     },
+     {
+      "id": "11",
+      "name": "Hundreds of billions",
+      "names": {
+       "en": "Hundreds of billions"
+      }
+     },
+     {
+      "id": "12",
+      "name": "Trillions",
+      "names": {
+       "en": "Trillions"
+      }
+     },
+     {
+      "id": "13",
+      "name": "Tens of trillions",
+      "names": {
+       "en": "Tens of trillions"
+      }
+     },
+     {
+      "id": "14",
+      "name": "Hundred of trillions",
+      "names": {
+       "en": "Hundred of trillions"
+      }
+     },
+     {
+      "id": "15",
+      "name": "Quadrillions",
+      "names": {
+       "en": "Quadrillions"
+      }
+     },
+     {
+      "id": "-1",
+      "name": "Tenths",
+      "names": {
+       "en": "Tenths"
+      }
+     },
+     {
+      "id": "-2",
+      "name": "Hundredths",
+      "names": {
+       "en": "Hundredths"
+      }
+     },
+     {
+      "id": "-3",
+      "name": "Thousandths",
+      "names": {
+       "en": "Thousandths"
+      }
+     },
+     {
+      "id": "-4",
+      "name": "Ten-thousandths",
+      "names": {
+       "en": "Ten-thousandths"
+      }
+     },
+     {
+      "id": "-5",
+      "name": "Hundred-thousandths",
+      "names": {
+       "en": "Hundred-thousandths"
+      }
+     },
+     {
+      "id": "-6",
+      "name": "Millionths",
+      "names": {
+       "en": "Millionths"
+      }
+     },
+     {
+      "id": "-7",
+      "name": "Ten-millionths",
+      "names": {
+       "en": "Ten-millionths"
+      }
+     },
+     {
+      "id": "-8",
+      "name": "Hundred-millionths",
+      "names": {
+       "en": "Hundred-millionths"
+      }
+     },
+     {
+      "id": "-9",
+      "name": "Billionths",
+      "names": {
+       "en": "Billionths"
+      }
+     },
+     {
+      "id": "-10",
+      "name": "Ten-billionths",
+      "names": {
+       "en": "Ten-billionths"
+      }
+     },
+     {
+      "id": "-11",
+      "name": "Hundred-billionths",
+      "names": {
+       "en": "Hundred-billionths"
+      }
+     },
+     {
+      "id": "-12",
+      "name": "Trillionths",
+      "names": {
+       "en": "Trillionths"
+      }
+     },
+     {
+      "id": "-13",
+      "name": "Ten-trillionths",
+      "names": {
+       "en": "Ten-trillionths"
+      }
+     },
+     {
+      "id": "-14",
+      "name": "Hundred-trillionths",
+      "names": {
+       "en": "Hundred-trillionths"
+      }
+     },
+     {
+      "id": "-15",
+      "name": "Quadrillionths",
+      "names": {
+       "en": "Quadrillionths"
+      }
+     }
+    ]
+   }
+  ],
+  "dataStructures": [
+   {
+    "id": "LF",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Labour Force Datastructure",
+    "names": {
+     "en": "Labour Force Datastructure"
+    },
+    "annotations": [
+     {
+      "title": "200",
+      "type": "MAXTEXTATTRIBUTELENGTH"
+     }
+    ],
+    "dataStructureComponents": {
+     "attributeList": {
+      "id": "AttributeDescriptor",
+      "attributes": [
+       {
+        "id": "UNIT_MEASURE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).UNIT_MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_UNIT_MEASURE(1.0.0)"
+        },
+        "assignmentStatus": "Mandatory",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "UNIT_MULT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).UNIT_MULT",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_UNIT_MULT(1.0.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "OBS_STATUS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).OBS_STATUS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_OBS_STATUS(1.0.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "OBS_COMMENT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_ATTRIBUTE(1.0.0).OBS_COMMENT",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "DECIMALS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_DECIMALS(1.0.0).DECIMALS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_DECIMALS(1.0.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       }
+      ]
+     },
+     "dimensionList": {
+      "id": "DimensionDescriptor",
+      "dimensions": [
+       {
+        "id": "MEASURE",
+        "position": 0,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_LF_MEASURE(1.0.0)"
+        }
+       },
+       {
+        "id": "SEX",
+        "position": 1,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_DEMOG(1.0.0).SEX",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_SEX(1.0.0)"
+        }
+       },
+       {
+        "id": "AGE",
+        "position": 2,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_DEMOG(1.0.0).AGE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_LF_AGE(1.0.0)"
+        }
+       },
+       {
+        "id": "TSEST",
+        "position": 3,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).TSEST",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_TSEST(1.0.0)"
+        }
+       },
+       {
+        "id": "REGION",
+        "position": 4,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_GEOGRAPHY(1.0.0).REGION",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_STATE(1.0.0)"
+        }
+       },
+       {
+        "id": "FREQ",
+        "position": 5,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).FREQ",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=ABS:CL_FREQ(1.0.0)"
+        }
+       }
+      ],
+      "timeDimensions": [
+       {
+        "id": "TIME_PERIOD",
+        "position": 6,
+        "type": "TimeDimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).TIME_PERIOD",
+        "localRepresentation": {
+         "textFormat": {
+          "textType": "ObservationalTimePeriod",
+          "isSequence": false,
+          "isMultiLingual": false
+         }
+        }
+       }
+      ]
+     },
+     "measureList": {
+      "id": "MeasureDescriptor",
+      "primaryMeasure": {
+       "id": "OBS_VALUE",
+       "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=ABS:CS_COMMON(1.0.0).OBS_VALUE",
+       "localRepresentation": {
+        "textFormat": {
+         "textType": "Double",
+         "isSequence": false,
+         "isMultiLingual": false
+        }
+       }
+      }
+     }
+    }
+   }
+  ],
+  "contentConstraints": [
+   {
+    "id": "CR_A_LF",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": false,
+    "validFrom": "2026-10-15T01:00:00Z",
+    "name": "Availability (A) for LF",
+    "names": {
+     "en": "Availability (A) for LF"
+    },
+    "annotations": [
+     {
+      "title": "A",
+      "type": "ReleaseVersion"
+     },
+     {
+      "id": "obs_count",
+      "title": "434496",
+      "type": "sdmx_metrics"
+     }
+    ],
+    "type": "Actual",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=ABS:LF(1.0.0)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "keyValues": [
+       {
+        "id": "MEASURE",
+        "values": [
+         "M1",
+         "M10",
+         "M11",
+         "M12",
+         "M13",
+         "M14",
+         "M15",
+         "M16",
+         "M2",
+         "M3",
+         "M4",
+         "M5",
+         "M6",
+         "M9"
+        ]
+       },
+       {
+        "id": "SEX",
+        "values": [
+         "1",
+         "2",
+         "3"
+        ]
+       },
+       {
+        "id": "AGE",
+        "values": [
+         "1599"
+        ]
+       },
+       {
+        "id": "TSEST",
+        "values": [
+         "10",
+         "20",
+         "30"
+        ]
+       },
+       {
+        "id": "REGION",
+        "values": [
+         "1",
+         "2",
+         "3",
+         "4",
+         "5",
+         "6",
+         "7",
+         "8",
+         "AUS"
+        ]
+       },
+       {
+        "id": "FREQ",
+        "values": [
+         "M"
+        ]
+       },
+       {
+        "id": "TIME_PERIOD",
+        "timeRange": {
+         "startPeriod": {
+          "period": "1978-02-01T00:00:00",
+          "isInclusive": true
+         },
+         "endPeriod": {
+          "period": "2026-09-30T00:00:00",
+          "isInclusive": true
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CR_B_LF",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": false,
+    "validFrom": "2026-09-24T02:00:00Z",
+    "validTo": "2026-10-15T00:59:59Z",
+    "name": "Availability (B) for LF",
+    "names": {
+     "en": "Availability (B) for LF"
+    },
+    "annotations": [
+     {
+      "title": "B",
+      "type": "ReleaseVersion"
+     },
+     {
+      "id": "obs_count",
+      "title": "433752",
+      "type": "sdmx_metrics"
+     }
+    ],
+    "type": "Actual",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=ABS:LF(1.0.0)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "keyValues": [
+       {
+        "id": "MEASURE",
+        "values": [
+         "M1",
+         "M10",
+         "M11",
+         "M12",
+         "M13",
+         "M14",
+         "M15",
+         "M16",
+         "M2",
+         "M3",
+         "M4",
+         "M5",
+         "M6",
+         "M9"
+        ]
+       },
+       {
+        "id": "SEX",
+        "values": [
+         "1",
+         "2",
+         "3"
+        ]
+       },
+       {
+        "id": "AGE",
+        "values": [
+         "1599"
+        ]
+       },
+       {
+        "id": "TSEST",
+        "values": [
+         "10",
+         "20",
+         "30"
+        ]
+       },
+       {
+        "id": "REGION",
+        "values": [
+         "1",
+         "2",
+         "3",
+         "4",
+         "5",
+         "6",
+         "7",
+         "8",
+         "AUS"
+        ]
+       },
+       {
+        "id": "FREQ",
+        "values": [
+         "M"
+        ]
+       },
+       {
+        "id": "TIME_PERIOD",
+        "timeRange": {
+         "startPeriod": {
+          "period": "1978-02-01T00:00:00",
+          "isInclusive": true
+         },
+         "endPeriod": {
+          "period": "2026-08-31T00:00:00",
+          "isInclusive": true
+         }
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,10 @@
+DATAFLOW,MEASURE: Measure,SEX: Sex,AGE: Age,TSEST: Adjustment Type,REGION: Region,FREQ: Frequency,TIME_PERIOD: Time Period,OBS_VALUE,UNIT_MEASURE: Unit of Measure,UNIT_MULT: Unit of Multiplier,OBS_STATUS: Observation Status,OBS_COMMENT: Observation Comment,DECIMALS: Decimals
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,1: New South Wales,M: Monthly,2026-09,4.70759203,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,1: New South Wales,M: Monthly,2026-08,4.35482314,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,1: New South Wales,M: Monthly,2026-07,4.26818151,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,AUS: Australia,M: Monthly,2026-09,4.71834873,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,AUS: Australia,M: Monthly,2026-08,4.65160785,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,AUS: Australia,M: Monthly,2026-07,4.489178,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,2: Victoria,M: Monthly,2026-09,5.05201098,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,2: Victoria,M: Monthly,2026-08,5.16578301,PCT: Percent,0: Units,,,1: One
+ABS:LF(1.0.0),M13: Unemployment rate,3: Persons,1599: Total (age),20: Seasonally Adjusted,2: Victoria,M: Monthly,2026-07,5.10952064,PCT: Percent,0: Units,,,1: One
