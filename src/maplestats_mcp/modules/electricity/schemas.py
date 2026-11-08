@@ -307,3 +307,144 @@ class QuebecFacilityFlows(BaseModel):
     facility: QuebecFacility
     series: list[QuebecFlowSeries]
     provenance: Provenance
+
+
+# ------------------------------------------------------------- Alberta (AESO)
+
+_AESO_NOTICE = (
+    "AESO terms allow non-commercial use only: commercial use needs the AESO's written "
+    "permission (https://www.aeso.ca/legal/)."
+)
+
+
+class AlbertaPoolPriceHour(BaseModel):
+    date: date
+    hour_ending: int = Field(
+        description="Hour ending 1-24 on `date`, Alberta clock time (Mountain, with daylight "
+        "saving)."
+    )
+    repeated_hour: bool = Field(
+        description="True for the second hour ending 02 on the autumn daylight-saving day "
+        "(AESO's '02*' row)."
+    )
+    pool_price: float | None = Field(description="Pool price, $/MWh.")
+    rolling_30day_average: float | None = Field(
+        description="AESO's 30-day rolling average pool price, $/MWh."
+    )
+    ail_demand_mw: float | None = Field(description="Alberta Internal Load, MW.")
+
+
+class AlbertaPoolPrice(BaseModel):
+    start_date: date
+    end_date: date
+    rows: list[AlbertaPoolPriceHour]
+    rows_matched: int = Field(description="Published hours in the date range.")
+    hours_not_yet_published: int = Field(
+        description="Hours in the range that AESO lists without values (not yet settled)."
+    )
+    latest_published_date: date | None
+    latest_published_hour_ending: int | None
+    commercial_use_notice: str = _AESO_NOTICE
+    provenance: Provenance
+
+
+class AlbertaDailyPrice(BaseModel):
+    date: date
+    average: float | None = Field(description="Daily average pool price, $/MWh.")
+    on_peak_average: float | None = Field(description="On-peak (HE 8-23) average, $/MWh.")
+    off_peak_average: float | None = Field(description="Off-peak average, $/MWh.")
+    rolling_30day_average: float | None
+    rolling_30day_on_peak_average: float | None
+    rolling_30day_off_peak_average: float | None
+
+
+class AlbertaDailyPrices(BaseModel):
+    start_date: date
+    end_date: date
+    days: list[AlbertaDailyPrice]
+    requests_made: int = Field(description="31-day report requests behind this result.")
+    commercial_use_notice: str = _AESO_NOTICE
+    provenance: Provenance
+
+
+class AlbertaMonth(BaseModel):
+    month: str = Field(description="YYYY-MM.")
+    layout: Literal["monthly_statistics", "legacy_daily_table"] = Field(
+        description="monthly_statistics: AESO's summary table (about 2009 onward); "
+        "legacy_daily_table: the older report's 'Monthly Value' row."
+    )
+    pool_price_minimum: float | None = Field(description="$/MWh.")
+    pool_price_average: float | None = Field(description="$/MWh, simple mean of hours.")
+    pool_price_maximum: float | None = Field(description="$/MWh.")
+    pool_price_weighted_average: float | None = Field(
+        description="$/MWh, hourly price times demand over total demand (newer layout only)."
+    )
+    on_peak_average: float | None = Field(
+        description="$/MWh, from AESO's summary sentence (newer layout only)."
+    )
+    off_peak_average: float | None = Field(
+        description="$/MWh, from AESO's summary sentence (newer layout only)."
+    )
+    ail_minimum_mw: float | None
+    ail_average_mw: float | None
+    ail_maximum_mw: float | None
+    total_energy_gwh: float | None = Field(
+        description="GWh as published (newer layout); for the legacy layout, AESO's MWh "
+        "total divided by 1,000."
+    )
+    load_factor_percent: float | None = Field(description="Newer layout only.")
+    url: str
+
+
+class AlbertaMonthlySummary(BaseModel):
+    months: list[AlbertaMonth]
+    months_not_published: list[str] = Field(
+        description="Requested months with no AESO summary yet (the current month, or a "
+        "future one)."
+    )
+    commercial_use_notice: str = _AESO_NOTICE
+    provenance: Provenance
+
+
+class AlbertaFuelGroup(BaseModel):
+    fuel: str = Field(description="AESO group name, e.g. WIND, COGENERATION, COMBINED CYCLE.")
+    maximum_capability_mw: float | None
+    total_net_generation_mw: float | None
+    dispatched_contingency_reserve_mw: float | None
+
+
+class AlbertaInterchange(BaseModel):
+    path: str = Field(description="British Columbia, Montana or Saskatchewan.")
+    actual_flow_mw: float | None = Field(
+        description="Positive means flow out of Alberta (export), negative into Alberta "
+        "(import); AIL = total net generation minus net actual interchange."
+    )
+
+
+class AlbertaAsset(BaseModel):
+    group: str = Field(description="Section of the report, e.g. 'Wind', 'Gas: Cogeneration'.")
+    asset: str = Field(description="Asset name with its AESO id in parentheses.")
+    maximum_capability_mw: float | None
+    total_net_generation_mw: float | None
+    dispatched_contingency_reserve_mw: float | None
+    net_to_grid: bool = Field(description="AESO's '*' mark: MC is the gross MW value.")
+    includes_storage: bool = Field(description="AESO's '^' mark.")
+
+
+class AlbertaSupplyDemand(BaseModel):
+    last_update: str | None = Field(description="AESO's 'Last Update' stamp, Alberta time.")
+    alberta_internal_load_mw: float | None
+    total_net_generation_mw: float | None
+    net_actual_interchange_mw: float | None
+    net_to_grid_generation_mw: float | None
+    other_measures_mw: dict[str, float | None] = Field(
+        description="The report's other summary lines (contingency reserve, FFR, long lead "
+        "time volume), keyed in snake_case."
+    )
+    generation_by_fuel: list[AlbertaFuelGroup]
+    interchange: list[AlbertaInterchange]
+    assets: list[AlbertaAsset] = Field(
+        description="Per-asset rows, only when include_assets is true (filtered by group)."
+    )
+    commercial_use_notice: str = _AESO_NOTICE
+    provenance: Provenance

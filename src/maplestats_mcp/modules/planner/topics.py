@@ -91,6 +91,8 @@ _ELECTRICITY_PRICE_TERMS = (
     "electricity price",
     "power price",
     "hoep",
+    "pool price",
+    "prix du pool",
     "prix de l'electricite",
     "price of electricity",
 )
@@ -1118,6 +1120,21 @@ TOPICS: tuple[Topic, ...] = (
                 ("dam", "water flow", "spillway", "debit", "barrage", "reservoir"),
             ),
             PlanStep(
+                "electricity_alberta_get_pool_price",
+                "Alberta hourly pool price and internal load (AESO; non-commercial use only)",
+                ("aeso", "pool price", "prix du pool"),
+                (
+                    r"\balberta\b.*\b(electric\w*|power|pool)\b",
+                    r"\b(electric\w*|power)\b.*\balberta\b",
+                ),
+            ),
+            PlanStep(
+                "electricity_alberta_get_supply_demand",
+                "Alberta generation by fuel, interchange and load right now (AESO)",
+                ("aeso",),
+                (r"\balberta\b.*\b(wind|solar|generation|intertie|interchange)\b",),
+            ),
+            PlanStep(
                 "aer_get_production_volumes_link",
                 "Alberta production volumes: product='oil', 'gas'...",
                 ("oil", "natural gas", "gas production", "wells", "puits", "petrole"),
@@ -1131,8 +1148,8 @@ TOPICS: tuple[Topic, ...] = (
         ),
         (
             (
-                "Electricity demand and prices cover Ontario (IESO) and Quebec (Hydro-Quebec) "
-                "only; Alberta's AESO data are not covered."
+                "Electricity demand and prices cover Ontario (IESO), Quebec (Hydro-Quebec) and "
+                "Alberta (AESO) only; AESO and Hydro-Quebec data are for non-commercial use."
             ),
         ),
     ),

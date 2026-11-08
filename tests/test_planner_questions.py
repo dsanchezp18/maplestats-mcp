@@ -72,6 +72,7 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("Air quality in Montreal today", "environment", "eccc_search_collections"),
     ("Daily streamflow of the Bow River", "environment", "eccc_search_collections"),
     ("Ontario electricity prices yesterday", "energy", "electricity_ontario_get_prices"),
+    ("Alberta electricity prices yesterday", "energy", "electricity_alberta_get_pool_price"),
     ("Oil production in Alberta in 2023", "energy", "aer_get_production_volumes_link"),
     ("Pipeline throughput on Trans Mountain", "energy", "cer_list_datasets"),
     (

@@ -1,4 +1,4 @@
-"""MCP tools for electricity data: Ontario (IESO) and Quebec (Hydro-Quebec)."""
+"""MCP tools for electricity data: Ontario (IESO), Quebec (Hydro-Quebec) and Alberta (AESO)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,13 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.electricity import client, quebec_client, quebec_flows
+from maplestats_mcp.modules.electricity import alberta_client, client, quebec_client, quebec_flows
 from maplestats_mcp.modules.electricity.schemas import (
     AdequacyOutlook,
+    AlbertaDailyPrices,
+    AlbertaMonthlySummary,
+    AlbertaPoolPrice,
+    AlbertaSupplyDemand,
     HoepHistory,
     HourlyDemand,
     IntertieFlows,
@@ -44,9 +48,7 @@ async def electricity_ontario_get_hourly_demand(
     with no dates, the latest `limit` hours of `year` (default the current
     year). Use electricity_ontario_get_realtime_demand for the current hour.
     Use for: Ontario electricity load, peak demand, daily or seasonal demand
-    profile, demand history, how much power Ontario uses. Electricity
-    data here is Ontario (IESO) and Québec (Hydro-Québec) only; Alberta is
-    not covered.
+    profile, demand history, how much power Ontario uses.
     Keywords: Ontario, IESO, electricity demand, hourly demand, peak demand,
     load, MW, market demand, Ontario demand, power grid, consumption.
     Mots-clés : Ontario, Société indépendante d'exploitation du réseau
@@ -121,8 +123,8 @@ async def electricity_ontario_get_prices(
     files are kept about three months. Older HOEP averages:
     electricity_ontario_get_hoep_history.
     Use for: Ontario wholesale electricity price, day-ahead price, spot price
-    now, price spikes, congestion and loss components. Prices are
-    Ontario (IESO) only; Alberta pool prices are not covered.
+    now, price spikes, congestion and loss components. For Alberta pool
+    prices use electricity_alberta_get_pool_price.
     Keywords: Ontario, IESO, electricity price, zonal price, OZP, day-ahead,
     real-time, LMP, CAD/MWh, wholesale, spot, market renewal, congestion.
     Mots-clés : Ontario, Société indépendante d'exploitation du réseau
@@ -211,8 +213,7 @@ async def electricity_quebec_get_demand(
     hourly average MW from 2019-01-01 to 2025-01-01 only. Timestamps are UTC.
     Licence CC BY-NC 4.0: credit Hydro-Quebec, non-commercial use only.
     Use for: how much electricity Quebec is using now, Quebec peak demand,
-    Hydro-Quebec load history, winter peaks. Electricity data here is
-    Ontario (IESO) and Québec (Hydro-Québec) only; Alberta is not covered.
+    Hydro-Quebec load history, winter peaks.
     Keywords: Quebec, Hydro-Quebec, electricity demand, load, MW, peak
     demand, 15-minute, hourly, open data, power grid, consumption.
     Mots-clés : Québec, Hydro-Québec, demande d'électricité, charge, MW,
@@ -330,3 +331,106 @@ async def electricity_quebec_get_facility_flows(
     chronologique, m3/s.
     """
     return await quebec_flows.get_facility_flows(facility, kind, start, end, lang)
+
+
+@tool
+async def electricity_alberta_get_pool_price(
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 48,
+    lang: Lang = "en",
+) -> AlbertaPoolPrice:
+    """Alberta hourly pool price ($/MWh) and Alberta Internal Load (MW) from the AESO, 1999 on.
+
+    One row per hour ending (Alberta clock time) with the pool price, AESO's
+    30-day rolling average price and AIL demand. With no dates, the latest
+    `limit` settled hours; with dates (YYYY-MM-DD, up to 720 days), the
+    first `limit` hours of the range. AESO terms: non-commercial use only;
+    commercial use needs the AESO's written permission.
+    Use for: Alberta electricity price today, hourly power price spikes,
+    Alberta wholesale price history, Alberta electricity demand by hour.
+    Keywords: Alberta, AESO, pool price, wholesale electricity price, hourly
+    price, $/MWh, Alberta Internal Load, AIL, power market, electricity
+    demand, energy-only market.
+    Mots-clés : Alberta, AESO, prix du pool, prix de gros de l'électricité,
+    prix horaire, $/MWh, charge interne de l'Alberta, demande d'électricité,
+    marché de l'électricité, pointe.
+    """
+    return await alberta_client.get_pool_price(start_date, end_date, limit, lang=lang)
+
+
+@tool
+async def electricity_alberta_get_daily_pool_price(
+    start_date: str | None = None,
+    end_date: str | None = None,
+    lang: Lang = "en",
+) -> AlbertaDailyPrices:
+    """Alberta daily average pool price, on-peak and off-peak averages, and 30-day rolling averages.
+
+    AESO's Daily Average Pool Price report, $/MWh; on-peak is HE 08-23.
+    Default: the last 31 days; any range up to 366 days (YYYY-MM-DD),
+    fetched in 31-day requests. AESO terms: non-commercial use only;
+    commercial use needs the AESO's written permission.
+    Use for: Alberta power price by day, on-peak versus off-peak prices,
+    daily electricity price trend in Alberta.
+    Keywords: Alberta, AESO, daily average pool price, on-peak, off-peak,
+    30-day rolling average, electricity price, $/MWh, wholesale, power price.
+    Mots-clés : Alberta, AESO, prix moyen quotidien du pool, heures de
+    pointe, heures creuses, moyenne mobile sur 30 jours, prix de
+    l'électricité, prix de gros.
+    """
+    return await alberta_client.get_daily_prices(start_date, end_date, lang=lang)
+
+
+@tool
+async def electricity_alberta_get_monthly_summary(
+    start_month: str | None = None,
+    end_month: str | None = None,
+    lang: Lang = "en",
+) -> AlbertaMonthlySummary:
+    """Alberta monthly pool price and demand statistics from the AESO's Pool Monthly Summary, 1999 on.
+
+    Per month: pool price minimum, average, maximum and demand-weighted
+    average ($/MWh), on-peak and off-peak averages, AIL minimum, average and
+    maximum (MW), total energy (GWh) and load factor (newer pages; older
+    pages have fewer fields). Months as YYYY-MM, up to 24 per call; default
+    the latest published month. AESO terms: non-commercial use only;
+    commercial use needs the AESO's written permission.
+    Use for: Alberta average electricity price for a month or year, monthly
+    peak demand, Alberta energy consumption by month.
+    Keywords: Alberta, AESO, monthly average pool price, pool monthly
+    summary, peak demand, load factor, total energy, GWh, electricity price
+    history, wholesale.
+    Mots-clés : Alberta, AESO, prix moyen mensuel du pool, sommaire mensuel,
+    demande de pointe, facteur de charge, énergie totale, GWh, historique
+    des prix de l'électricité.
+    """
+    return await alberta_client.get_monthly_summary(start_month, end_month, lang=lang)
+
+
+@tool
+async def electricity_alberta_get_supply_demand(
+    include_assets: bool = False,
+    group: str | None = None,
+    lang: Lang = "en",
+) -> AlbertaSupplyDemand:
+    """Alberta grid right now: internal load, generation by fuel type, interchange and assets (AESO).
+
+    AESO's Current Supply Demand report (refreshed about every two
+    minutes): Alberta Internal Load, total net generation, net interchange
+    and reserves; maximum capability and net generation by fuel group
+    (cogeneration, combined cycle, simple cycle, gas-fired steam, wind,
+    solar, hydro, storage, other); flows on the BC, Montana and Saskatchewan
+    interties. include_assets=True adds every generating asset, filtered by
+    group (e.g. 'wind', 'cogeneration'). AESO terms: non-commercial use
+    only; commercial use needs the AESO's written permission.
+    Use for: how much wind Alberta is generating now, Alberta generation
+    mix, Alberta imports and exports, current Alberta electricity demand.
+    Keywords: Alberta, AESO, current supply demand, generation by fuel, wind
+    generation, solar, gas, cogeneration, interchange, imports, exports,
+    power plants, MW.
+    Mots-clés : Alberta, AESO, offre et demande actuelles, production par
+    combustible, éolien, solaire, gaz, cogénération, échanges, importations,
+    exportations, centrales électriques.
+    """
+    return await alberta_client.get_supply_demand(include_assets, group, lang=lang)
