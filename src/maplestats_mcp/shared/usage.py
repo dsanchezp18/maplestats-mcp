@@ -27,7 +27,8 @@ import os
 import re
 import time
 from collections import Counter, deque
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from pathlib import Path
@@ -150,10 +151,18 @@ class UsageStats:
         """Add the calls counted since the last save to the file; True when written.
 
         Synchronous on purpose: with no await between reading the file and taking
-        its counts as the totals, no call can be recorded in between and lost.
+        its counts as the totals, no call can be recorded in between and lost. The
+        read-add-replace runs under an advisory lock on a sidecar file, so two
+        processes saving at once (old and new replica during a rollout) cannot
+        both read the same file and lose one's counts.
         """
         if self.path is None:
             return False
+        with _file_lock(self.path):
+            return self._save_locked()
+
+    def _save_locked(self) -> bool:
+        assert self.path is not None
         try:
             saved = self._read()
         except OSError as exc:
@@ -235,6 +244,35 @@ class UsageStats:
             "by_tool": dict(ordered),
             "latency_ms": latency,
         }
+
+
+@contextmanager
+def _file_lock(path: Path) -> Iterator[None]:
+    """An exclusive advisory lock on `path`.lock where the platform has flock.
+
+    Best effort: without fcntl (Windows) or where the filesystem refuses the lock,
+    the save goes ahead unlocked, as it did before.
+    """
+    try:
+        import fcntl
+    except ImportError:  # Windows
+        yield
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        handle = open(path.with_name(path.name + ".lock"), "a+b")  # noqa: SIM115
+    except OSError:
+        yield
+        return
+    try:
+        try:
+            # Linux only (the import fails on Windows); pyright on Windows sees a stub.
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)  # pyright: ignore[reportAttributeAccessIssue]
+        except OSError as exc:
+            logger.debug("Usage stats lock not taken (%s); saving unlocked", exc)
+        yield
+    finally:
+        handle.close()  # closing releases the lock
 
 
 def _drop_old_days(days: dict[str, Counter[bool]]) -> None:

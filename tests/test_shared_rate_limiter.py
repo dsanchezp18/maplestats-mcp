@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 
 from maplestats_mcp.shared.rate_limiter import TokenBucket, get_limiter
@@ -34,3 +35,20 @@ def test_get_limiter_returns_different_instances_for_different_sources():
     a = get_limiter("test-source-y1", rate=5, capacity=5)
     b = get_limiter("test-source-y2", rate=5, capacity=5)
     assert a is not b
+
+
+async def test_the_rate_limiter_wait_counts_as_waiting_on_the_source() -> None:
+    from maplestats_mcp.shared import upstream_wait
+
+    state = upstream_wait.UpstreamWait()
+    token = upstream_wait.current.set(state)
+    try:
+        bucket = TokenBucket(rate=20.0, capacity=1.0)
+        await bucket.acquire()
+        task = asyncio.create_task(bucket.acquire())
+        await asyncio.sleep(0.01)
+        assert state.in_flight == 1
+        await task
+        assert state.in_flight == 0 and state.last_end is not None
+    finally:
+        upstream_wait.current.reset(token)

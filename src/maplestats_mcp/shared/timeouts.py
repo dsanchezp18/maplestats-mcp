@@ -9,8 +9,8 @@ import anyio
 from fastmcp.exceptions import ToolError
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 
+from maplestats_mcp.shared import upstream_wait
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
-from maplestats_mcp.shared.http import upstream_in_flight
 from maplestats_mcp.shared.i18n import pick
 
 
@@ -36,24 +36,31 @@ class ToolTimeoutMiddleware(Middleware):
         # cancelled_caught, so a TimeoutError the tool raised itself (an
         # upstream wait giving up) is not mistaken for the deadline running out.
         scope = anyio.CancelScope(deadline=anyio.current_time() + self.seconds)
-        in_flight = [0]
-        token = upstream_in_flight.set(in_flight)
-        # Read just before the deadline: once cancelled, the requests unwind to 0.
-        at_deadline: list[int] = []
+        # call_tool runs its target through this middleware again: the outer call's
+        # state is kept, so the deadline that fires first (the outer one) sees the
+        # inner call's requests.
+        state = upstream_wait.current.get()
+        token = None
+        if state is None:
+            state = upstream_wait.UpstreamWait()
+            token = upstream_wait.current.set(state)
+        # Read just before the deadline: once cancelled, the requests unwind.
+        at_deadline: list[bool] = []
         loop = asyncio.get_running_loop()
         watch = loop.call_later(
-            max(self.seconds - 0.05, 0), lambda: at_deadline.append(in_flight[0])
+            max(self.seconds - 0.05, 0), lambda: at_deadline.append(state.waiting())
         )
         try:
             with scope:
                 return await call_next(context)
         finally:
             watch.cancel()
-            upstream_in_flight.reset(token)
+            if token is not None:
+                upstream_wait.current.reset(token)
         inner = arguments.get("arguments") if isinstance(arguments, dict) else None
         used = inner if isinstance(inner, dict) else arguments
         lang = used.get("lang") if isinstance(used, dict) else None
-        waiting = bool(at_deadline and at_deadline[0] > 0)
+        waiting = bool(at_deadline and at_deadline[0])
         if waiting:
             message = pick(
                 str(lang or "en"),
