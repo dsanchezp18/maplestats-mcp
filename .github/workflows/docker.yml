@@ -177,7 +177,7 @@ jobs:
             --image "$IMAGE:${HEAD_SHA::7}" \
             --cpu 1 --memory 2Gi \
             --set-env-vars MAPLE_REQUIRE_AUTH=0 MAPLE_USAGE_STATS_FILE=/data/usage/stats.json \
-              MAPLE_PUMF_TABULATE=1 MAPLE_PUMF_CACHE_DIR=/data/pumf MAPLE_PUMF_CACHE_MAX_GB=5 \
+              MAPLE_PUMF_TABULATE=1 MAPLE_QUERY_SERIES=1 MAPLE_PUMF_CACHE_DIR=/data/pumf MAPLE_PUMF_CACHE_MAX_GB=5 \
               MAPLE_DUCKDB_MEMORY_LIMIT=384MB MAPLE_TOOL_TIMEOUT_SECONDS=230 \
             --only-show-errors --output none
       # The app keeps serving the previous revision until the new one passes
