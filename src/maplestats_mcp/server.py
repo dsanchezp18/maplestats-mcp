@@ -572,7 +572,9 @@ wds_get_full_table_download (a CSV link, not the rows) and offer the Python
 script it returns; run it only if the user agrees.
 Cite every figure you report: a StatCan series carries context.citation
 (table, vector, release date) to quote with each value's reference period;
-other results name their source in provenance.
+other results name their source in provenance. Keep StatCan quality flags
+(use with caution, too unreliable) with the value, and pass on the licence
+when the user will reuse the data.
 For a monthly StatCan headline (jobs, trade, permits, sales), report the
 seasonally adjusted series unless the question asks otherwise, and say which.
 After fetching data, offer reproduce_code (R, Python, Stata, Julia, Excel

@@ -37,7 +37,7 @@ Hi [name],
 
 Much of an analyst's week goes into finding the right Statistics Canada table and checking that a figure matches its source. I would like to propose a session for the network on a tool I built for that step: MapleStats MCP, an open-source server that lets AI assistants pull Canadian public data from the publisher, with the citation attached. The launch write-up is here: [blog post link].
 
-The session would cover a few live workflows: finding the right table, pulling a series with its citation, getting R or Python code that reproduces the pull, and tabulating Labour Force Survey public use microdata, with weights, on the hosted server. I would also show the mistakes it is built to catch, such as constant versus current dollars or an economic-family median reported as a household median, and where it falls short: the 2006-2016 census data tables are not available, because Statistics Canada's host for them blocks automated requests. About [30-45] minutes with questions.
+Every figure comes back with its table and vector, reference period, release date, StatCan's quality flags and the licence, and its `check_answer` tool re-reads the figures an answer cites before the answer goes out, reporting only the problems. The session would cover a few live workflows: finding the right table, pulling a series with its citation, getting R or Python code that reproduces the pull, and tabulating Labour Force Survey public use microdata, with weights, on the hosted server. I would also show the mistakes it is built to catch, such as constant versus current dollars or an economic-family median reported as a household median, and where it falls short: the 2006-2016 census data tables are not available, because Statistics Canada's host for them blocks automated requests. About [30-45] minutes with questions.
 
 Would the network be open to hosting it?
 
@@ -57,7 +57,7 @@ Hello [name], I hope you are well.
 
 Edmonton's own data (the City's open-data portal, Edmonton Police Service, ETS and EPCOR water quality) can now be queried from an AI assistant, alongside Statistics Canada, the Bank of Canada and CMHC. I am an Edmonton-based economist, and I built the open-source server that does it, MapleStats MCP. I would like to offer the society a talk on it.
 
-The talk would show the problem it addresses (Canadian data spread across many institutions and interfaces), a few live workflows on Edmonton questions, and how I tested it against other servers on a 61-question benchmark, including where it did not win. The write-up is here: [blog post link].
+The talk would show the problem it addresses (Canadian data spread across many institutions and interfaces), a few live workflows on Edmonton questions, and how I tested it against other servers on a 61-question benchmark, including where it did not win. On the 53 questions every server was asked, it answered 91.8% correctly over three runs, with no invented StatCan table or vector ids. The write-up is here: [blog post link].
 
 Would the society have room for it at an upcoming event?
 
@@ -115,7 +115,7 @@ Hello [name], I hope you are well.
 
 [One sentence on your connection to the department, e.g. degree and year.] Students in the department regularly need a Canadian figure they can cite, and often the same figure for the United States or Europe to compare against. I built an open-source tool for that: MapleStats MCP, a server that lets AI assistants read data directly from Statistics Canada, the Bank of Canada, CMHC and many federal and provincial sources, with OECD and Eurostat series as comparators. Every figure comes with its citation and the R, Python, Stata or Julia code that reproduces the pull. It is free to use and needs no installation. The write-up is here: [blog post link].
 
-I built it with MA students and researchers in mind, and tested it against other Canadian data servers on a 61-question benchmark; the results are published with their limitations.
+I built it with MA students and researchers in mind, and tested it against other Canadian data servers on a 61-question benchmark: on the 53 questions every server was asked, it answered 91.8% correctly over three runs. The results are published with their limitations.
 
 Would the department consider featuring it, for example in a profile or newsletter item? I can provide a short description or a demo.
 

@@ -32,10 +32,49 @@ MapleStats MCP gives AI agents (Claude, Cursor and any MCP client) typed
 access to Canadian open data through one server: Statistics Canada
 (tables, Census, public use microdata), the Bank of Canada, CMHC, federal
 agencies, and federal, provincial, territorial and municipal open-data
-portals, in English and French. Every result carries its source.
+portals, in English and French. Every figure comes back with its citation,
+its quality flags and its licence, so an answer built on it can be traced to
+the publisher and checked.
 
 *MapleStats MCP donne aux agents IA un accès structuré aux données
-ouvertes canadiennes par un seul serveur, en français et en anglais.*
+ouvertes canadiennes par un seul serveur, en français et en anglais. Chaque
+chiffre revient avec sa citation, ses indicateurs de qualité et sa licence.*
+
+## Provenance and accountability
+
+- **Every figure comes with its citation.** A Statistics Canada value carries
+  its table and vector, reference period, release date, unit and scale,
+  geography and a link to the table's page; a Bank of Canada value, its series
+  id and the Valet URL. Every result's `provenance` block names the source,
+  the exact URL and the time of the query.
+- **Quality flags are kept.** StatCan's "use with caution" and "too
+  unreliable to be published", preliminary and revised stay on each value;
+  public microdata tabulations give a CV and a quality grade per cell where
+  the survey's user guide sets one; staff forecasts are marked as forecasts.
+- **Gaps are named, not filled.** When a figure is not published or a period
+  is not released yet, the server says so and points to the closest published
+  figure. A date range that stops before the newest data gets a note that
+  newer data exist.
+- **Answers can be checked.** `check_answer` re-reads the StatCan and Bank of
+  Canada figures an answer cites and reports only the problems.
+  `reproduce_code` writes the R, Python, Stata or Julia script (or Excel Power
+  Query) that pulls the same data straight from the publisher, and
+  `reproduce_workbook` gives the rows.
+- **Licences travel with the data.** Each result carries the publisher's
+  licence, where it has one, and whether it allows commercial use
+  (`provenance.commercial_use`; the AESO's market data, for one, are
+  `not_allowed`).
+- **StatCan's data and its documentation.** Besides tables and vectors, the
+  server reaches definitions, methods and analysis (`statcan_reference_*`),
+  the survey directory and IMDB metadata (`statcan_surveys_*`), PUMF codebooks
+  and user guides (`statcan_pumf_*`), The Daily's articles and release tables
+  (`statcan_daily_*`) and classifications (`rdaas_*`).
+- **Measured.** On the 53 questions of the
+  [Maple Test](https://maplestats.danielstats.io/benchmarks.html), MapleStats
+  answered 91.8% correctly over three runs (November 3, 2026), with no false
+  claims and no invented StatCan table or vector ids. Fifty-three questions are
+  few, part of them were chosen from what MapleStats covers, and later
+  MapleStats runs are in-sample ([details](https://github.com/dsanchezp18/maplestats-mcp/blob/main/tests/maple_test/README.md)).
 
 ## Why MapleStats
 
@@ -49,9 +88,6 @@ other tools on public benchmarks: [see how it does](https://maplestats.danielsta
   income, annual average vs December over December, survey rent vs listing
   rent: it warns in plain language, and each fitness-for-use caution rests on
   the publisher's own documentation.
-- **Every number names its source:** every StatCan series carries a citation
-  (table, vector, release date, with the period, unit, geography and a link to
-  the official table); every other result names its source and licence.
 - **It says when data do not exist.** A series that is not published, a period
   not released yet or a date with no data gets a plain no, and the nearest
   figure that does exist.
