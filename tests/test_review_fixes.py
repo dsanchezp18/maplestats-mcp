@@ -54,7 +54,8 @@ def _timeout_server() -> FastMCP:
 
     server = FastMCP("t")
     server.add_middleware(ErrorHintMiddleware())  # same order as server.py
-    server.add_middleware(ToolTimeoutMiddleware(0.3))
+    # Generous: under a loaded parallel run the tool must start before the check.
+    server.add_middleware(ToolTimeoutMiddleware(1.5))
 
     @server.tool
     async def waiting() -> str:
