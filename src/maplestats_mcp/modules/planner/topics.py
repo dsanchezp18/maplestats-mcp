@@ -535,6 +535,11 @@ TOPICS: tuple[Topic, ...] = (
             "perspectives economiques",
             "productivite",
             "eurostat",
+            "ecb",
+            "european central bank",
+            "deposit facility rate",
+            "bce",
+            "banque centrale europeenne",
             "european union",
             "euro area",
             "eurozone",
@@ -573,6 +578,20 @@ TOPICS: tuple[Topic, ...] = (
                     "zone euro",
                     "hicp",
                     "ipch",
+                ),
+            ),
+            PlanStep(
+                "ecb_get_indicator",
+                "the euro area series by indicator (deposit_facility_rate, estr, eur_cad, "
+                "hicp_inflation, m3_growth): ECB key rates, the euro in Canadian dollars, HICP, "
+                "money and credit, with the Canadian series to pair with",
+                terms=(
+                    "ecb",
+                    "european central bank",
+                    "deposit facility",
+                    "estr",
+                    "bce",
+                    "banque centrale europeenne",
                 ),
             ),
         ),

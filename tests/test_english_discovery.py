@@ -231,6 +231,11 @@ CASES = [
     ("euro area HICP inflation compared with Germany and France", "eurostat_compare"),
     ("find a Eurostat dataset code for EU statistics", "eurostat_search_datasets"),
     ("Eurostat dataset dimensions codes and status flags", "eurostat_describe_dataset"),
+    # European Central Bank Data Portal, 2026-11-07.
+    ("ECB deposit facility rate compared with the Bank of Canada", "ecb_get_indicator"),
+    ("euro to Canadian dollar ECB reference exchange rate", "ecb_get_indicator"),
+    ("list of European Central Bank datasets", "ecb_list_datasets"),
+    ("find the series key of an ECB series", "ecb_search_series"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

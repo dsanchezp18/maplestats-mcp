@@ -263,6 +263,11 @@ SOURCE_LICENCES: dict[str, str] = {
         "(https://www.oecd.org/en/about/terms-conditions.html, section 3); third-party data "
         "excluded."
     ),
+    "ecb": (
+        "Source: ECB statistics. Free reuse, commercial included, with the source quoted and "
+        "the statistics unmodified; third-party data excluded (https://www.ecb.europa.eu/stats/"
+        "ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html)."
+    ),
     "eurostat": (
         "Source: Eurostat. Creative Commons Attribution 4.0; commercial reuse allowed with "
         "the source acknowledged, except data for countries outside the EU, EFTA and "
@@ -456,6 +461,12 @@ LICENCES_FR: dict[str, str] = {
         "Source : Explorateur de données de l'OCDE. Toute utilisation, y compris commerciale, "
         "en citant l'OCDE (https://www.oecd.org/en/about/terms-conditions.html, section 3) ; "
         "données de tiers exclues."
+    ),
+    SOURCE_LICENCES["ecb"]: (
+        "Source : statistiques de la BCE. Réutilisation libre, y compris commerciale, en citant "
+        "la source et sans modifier les statistiques ; données de tiers exclues "
+        "(https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/"
+        "usage_policy.en.html)."
     ),
     SOURCE_LICENCES["eurostat"]: (
         "Source : Eurostat. Creative Commons Attribution 4.0 ; réutilisation commerciale "
@@ -763,6 +774,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     "worldbank-wdi": "allowed",
     # Any use with credit; third-party data excepted (flagged per dataset).
     "oecd": "allowed",
+    # ESCB reuse policy: free reuse, commercial included (read 2026-11-07).
+    "ecb": "allowed",
     # CC BY 4.0, but not for non-EU/EFTA/candidate countries' data or
     # non-Eurostat sources (copyright notice, read 2026-11-07).
     "eurostat": "varies",

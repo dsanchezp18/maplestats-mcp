@@ -150,6 +150,13 @@ FR: dict[str, str] = {
     "Canada's series for the indicator, compared with G7 or OECD countries": (
         "la série du Canada pour l'indicateur, comparée aux pays du G7 ou de l'OCDE"
     ),
+    "the euro area series by indicator (deposit_facility_rate, estr, eur_cad, "
+    "hicp_inflation, m3_growth): ECB key rates, the euro in Canadian dollars, HICP, "
+    "money and credit, with the Canadian series to pair with": (
+        "la série de la zone euro par indicateur (indicator : deposit_facility_rate, estr, "
+        "eur_cad, hicp_inflation, m3_growth) : taux directeurs de la BCE, euro en dollars "
+        "canadiens, IPCH, monnaie et crédit, avec la série canadienne à mettre à côté"
+    ),
     "the EU, the euro area or European countries on a headline indicator (GDP "
     "growth, HICP inflation, unemployment, debt, house prices), with the Canadian "
     "series to pair with": (
