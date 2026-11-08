@@ -626,7 +626,8 @@ Sources, by tool-name prefix:
   peers: ilo_. Australian Bureau of Statistics (inflation, labour force, GDP,
   wages): abs_. UK Office for National Statistics (inflation, GDP, labour
   market): ons_. US Federal Reserve Board releases (fed funds, Treasury
-  yields, USD/CAD, industrial production): fed_.
+  yields, USD/CAD, industrial production): fed_. European Central Bank (key
+  rates, euro exchange rates incl. EUR/CAD, HICP, money and credit): ecb_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and

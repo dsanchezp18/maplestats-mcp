@@ -42,6 +42,7 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("USD to CAD exchange rate in 2024", "rates", "boc_search_series"),
     ("US 10-year Treasury yield", "united_states", "fed_get_indicator"),
     ("US federal funds rate", "united_states", "fed_get_indicator"),
+    ("ECB deposit facility rate compared with Canada", "international", "ecb_get_indicator"),
     ("Canada's GDP growth in the last quarter", "economy", "statcan_daily_get_releases"),
     ("Exports of lobster to the United States by province", "economy", "cimt_search_commodities"),
     ("How much wheat did Canada export to China in 2023?", "agriculture", "cgc_exports_query"),

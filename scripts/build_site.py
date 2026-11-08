@@ -714,6 +714,14 @@ SOURCES: dict[str, Source] = {
         "Réserve fédérale",
         domain="statistics",
     ),
+    "ecb": Source(
+        "European Central Bank Data Portal (euro area comparators)",
+        "Portail de données de la Banque centrale européenne (comparaisons avec la zone euro)",
+        "international",
+        "ECB",
+        "BCE",
+        domain="statistics",
+    ),
     "yukon_stats": Source(
         "Yukon Bureau of Statistics",
         "Bureau de la statistique du Yukon",

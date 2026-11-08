@@ -175,6 +175,13 @@ FR: dict[str, str] = {
         "jour. Les États-Unis ont un indice de la production industrielle ; la mesure "
         "canadienne la plus proche est le PIB mensuel par industrie."
     ),
+    "the euro area series by indicator (deposit_facility_rate, estr, eur_cad, "
+    "hicp_inflation, m3_growth): ECB key rates, the euro in Canadian dollars, HICP, "
+    "money and credit, with the Canadian series to pair with": (
+        "la série de la zone euro par indicateur (indicator : deposit_facility_rate, estr, "
+        "eur_cad, hicp_inflation, m3_growth) : taux directeurs de la BCE, euro en dollars "
+        "canadiens, IPCH, monnaie et crédit, avec la série canadienne à mettre à côté"
+    ),
     "the EU, the euro area or European countries on a headline indicator (GDP "
     "growth, HICP inflation, unemployment, debt, house prices), with the Canadian "
     "series to pair with": (

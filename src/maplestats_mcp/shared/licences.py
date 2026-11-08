@@ -267,6 +267,11 @@ SOURCE_LICENCES: dict[str, str] = {
         "Source: Board of Governors of the Federal Reserve System. Public domain; cite the "
         "Board as the source (https://www.federalreserve.gov/disclaimer.htm)."
     ),
+    "ecb": (
+        "Source: ECB statistics. Free reuse, commercial included, with the source quoted and "
+        "the statistics unmodified; third-party data excluded (https://www.ecb.europa.eu/stats/"
+        "ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html)."
+    ),
     "eurostat": (
         "Source: Eurostat. Creative Commons Attribution 4.0; commercial reuse allowed with "
         "the source acknowledged, except data for countries outside the EU, EFTA and "
@@ -488,6 +493,12 @@ LICENCES_FR: dict[str, str] = {
     SOURCE_LICENCES["fed"]: (
         "Source : Conseil des gouverneurs de la Réserve fédérale. Domaine public ; citez le "
         "Conseil comme source (https://www.federalreserve.gov/disclaimer.htm)."
+    ),
+    SOURCE_LICENCES["ecb"]: (
+        "Source : statistiques de la BCE. Réutilisation libre, y compris commerciale, en citant "
+        "la source et sans modifier les statistiques ; données de tiers exclues "
+        "(https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/"
+        "usage_policy.en.html)."
     ),
     SOURCE_LICENCES["eurostat"]: (
         "Source : Eurostat. Creative Commons Attribution 4.0 ; réutilisation commerciale "
@@ -797,6 +808,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     "oecd": "allowed",
     # Board information is public domain (disclaimer.htm, read 2026-11-07).
     "fed": "allowed",
+    # ESCB reuse policy: free reuse, commercial included (read 2026-11-07).
+    "ecb": "allowed",
     # CC BY 4.0, but not for non-EU/EFTA/candidate countries' data or
     # non-Eurostat sources (copyright notice, read 2026-11-07).
     "eurostat": "varies",

@@ -208,6 +208,7 @@ CASES = [
     ("taux de chômage de la zone euro et de l'Union européenne", "eurostat_compare"),
     ("trouver un jeu de données Eurostat", "eurostat_search_datasets"),
     ("taux des fonds fédéraux de la Réserve fédérale américaine", "fed_get_indicator"),
+    ("taux directeurs de la Banque centrale européenne", "ecb_get_indicator"),
     # French stop words in shared/search.py (2026-10-03): "de" and "par" no
     # longer decide the ranking.
     ("taux de chômage par province", "statcan_indicators_get_indicators"),
