@@ -674,6 +674,7 @@ async def get_group(name: str, lang: str = "en") -> GroupDetail:
         label=detail.get("label", ""),
         description=detail.get("description", ""),
         series=members,
+        link=detail.get("link") or None,
         provenance=make_provenance(
             source="boc",
             url=f"{_base(lang)}groups/{name}/json",

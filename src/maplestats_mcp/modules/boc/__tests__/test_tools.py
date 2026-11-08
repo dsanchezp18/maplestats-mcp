@@ -21,6 +21,10 @@ ALL_TOOLS = [
     tools.boc_get_group,
     tools.boc_get_observations,
     tools.boc_get_group_observations,
+    tools.boc_get_business_outlook,
+    tools.boc_get_consumer_expectations,
+    tools.boc_get_mpr_projection,
+    tools.boc_get_staff_projections,
 ]
 
 
@@ -127,3 +131,21 @@ def test_boc_mots_cles_capitalize_the_bank(tool_fn):
     mots_cles = (tool_fn.__doc__ or "").split("Mots-clés :")[1]
     assert "Banque du Canada" in mots_cles
     assert "banque du canada" not in mots_cles
+
+
+async def test_survey_tools_delegate_to_surveys(monkeypatch):
+    survey = AsyncMock(return_value="survey")
+    mpr = AsyncMock(return_value="mpr")
+    staff = AsyncMock(return_value="staff")
+    monkeypatch.setattr(tools.surveys, "get_survey", survey)
+    monkeypatch.setattr(tools.surveys, "get_mpr_projection", mpr)
+    monkeypatch.setattr(tools.surveys, "get_staff_projections", staff)
+
+    assert await tools.boc_get_business_outlook("2026Q3", lang="fr") == "survey"
+    survey.assert_awaited_with("bos", "2026Q3", "fr")
+    assert await tools.boc_get_consumer_expectations() == "survey"
+    survey.assert_awaited_with("csce", None, "en")
+    assert await tools.boc_get_mpr_projection("2026M10") == "mpr"
+    mpr.assert_awaited_once_with("2026M10", "en")
+    assert await tools.boc_get_staff_projections(["GDP"], "2019Q4", 0) == "staff"
+    staff.assert_awaited_once_with(["GDP"], "2019Q4", 0, "en")

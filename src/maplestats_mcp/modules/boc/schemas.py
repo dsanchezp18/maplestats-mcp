@@ -89,6 +89,9 @@ class GroupDetail(BaseModel):
     label: str
     description: str
     series: list[GroupMemberSeries]
+    link: str | None = Field(
+        default=None, description="The Bank's page for the group (a publication or chart)."
+    )
     provenance: Provenance
 
 
@@ -167,4 +170,122 @@ class GroupObservationsResult(BaseModel):
     group: GroupInfo
     series: dict[str, SeriesInfoBrief]
     observations: list[Observation]
+    provenance: Provenance
+
+
+# --- Surveys and projections (surveys.py) ---------------------------------
+#
+# The Bank publishes its Business Outlook Survey (BOS), Canadian Survey of
+# Consumer Expectations (CSCE), Monetary Policy Report (MPR) projection tables
+# and staff economic projections through Valet, among ~2,500 chart groups
+# (checked live 2026-11-07). These models are the tidy rows the four tools in
+# surveys.py return, one value per row.
+
+
+class ReleaseInfo(BaseModel):
+    """The Valet group for one publication (e.g. BOS_2026Q3, MPR_2026M10)."""
+
+    group: str = Field(description="Valet group of the publication, e.g. BOS_2026Q3.")
+    label: str
+    link: str | None = Field(default=None, description="The publication page on the Bank's site.")
+    released: str | None = Field(
+        default=None,
+        description=(
+            "Publication month, YYYY-MM, read from the group's name or label (Valet gives no "
+            "day); null when neither names a month."
+        ),
+    )
+    chart_groups: list[GroupSummary] = Field(
+        default_factory=list,
+        description=(
+            "Valet groups for the charts in that publication; pass one to "
+            "boc_get_group_observations for its values."
+        ),
+    )
+
+
+class SurveyRow(BaseModel):
+    series: str = Field(description="Valet series code.")
+    label: str
+    question: str | None = Field(
+        default=None, description="The survey question, as Valet gives it."
+    )
+    period: str = Field(description="Survey quarter, YYYYQn.")
+    ref_date: date
+    value: float | None
+    unit: str | None = None
+
+
+class SurveyResult(BaseModel):
+    survey: str = Field(
+        description="bos (Business Outlook Survey) or csce (consumer expectations)."
+    )
+    quarter: str = Field(description="The survey quarter returned, YYYYQn.")
+    release: ReleaseInfo | None = Field(
+        default=None, description="The quarter's publication group, when Valet has one."
+    )
+    rows: list[SurveyRow]
+    recent_quarters: list[str] = Field(
+        description="Quarters with a publication group in Valet, newest first (up to 8)."
+    )
+    provenance: Provenance
+
+
+class ProjectionRow(BaseModel):
+    table: str = Field(
+        description=(
+            "summary (quarterly projection for Canada), gdp_contributions (contributions to "
+            "annual real GDP growth) or global (projection for global growth)."
+        )
+    )
+    series: str
+    label: str
+    period: str | None = Field(
+        description=(
+            "YYYYQn for the summary table (a fourth quarter two or three years out is the "
+            "year-over-year change to that quarter), YYYY for the annual tables; null for a "
+            "share of world GDP, which is a weight, not a projection year."
+        )
+    )
+    ref_date: date
+    value: float | None
+    unit: str
+
+
+class MprProjectionResult(BaseModel):
+    report: str = Field(description="The Monetary Policy Report, YYYYMmm (e.g. 2026M10).")
+    release: ReleaseInfo
+    rows: list[ProjectionRow]
+    recent_reports: list[str] = Field(
+        description="Reports with projection tables in Valet, newest first (up to 8)."
+    )
+    provenance: Provenance
+
+
+class StaffProjectionRow(BaseModel):
+    variable: str = Field(description="Staff projection variable code, e.g. GDP, PCPI, R1N.")
+    series: str
+    period: str = Field(description="YYYYQn.")
+    ref_date: date
+    value: float | None
+    projected: bool = Field(
+        description=(
+            "True from the vintage quarter on (the staff forecast); false before it (the "
+            "historical data staff had at the time), the Bank's own convention."
+        )
+    )
+
+
+class StaffVariable(BaseModel):
+    code: str
+    label: str
+    unit: str
+    first_vintage: str
+    last_vintage: str
+
+
+class StaffProjectionResult(BaseModel):
+    vintage: str = Field(description="The projection vintage returned, YYYYQn.")
+    variables: list[StaffVariable]
+    rows: list[StaffProjectionRow]
     provenance: Provenance

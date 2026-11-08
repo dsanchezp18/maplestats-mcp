@@ -18,18 +18,25 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.boc import client, constants
+from maplestats_mcp.modules.boc import client, constants, surveys
 from maplestats_mcp.modules.boc.schemas import (
     GroupDetail,
     GroupList,
     GroupObservationsResult,
+    MprProjectionResult,
     ObservationsResult,
     SeriesDetail,
     SeriesList,
+    StaffProjectionResult,
+    SurveyResult,
 )
 from maplestats_mcp.shared.transform import Aggregation, Frequency, Transform, TransformRequest
 
 Lang = Literal["en", "fr"]
+StaffVariableCode = Literal[
+    "GDP", "GDPN", "PGDP", "GNEN", "PGNE", "C", "PC", "I", "IINVT", "IRES", "G", "X", "M",
+    "CIRINV", "PCIRINV", "LYGAP", "PCPI", "PCPIX", "URATE", "USCANPFX", "R1N", "R20N",
+]  # fmt: skip
 
 
 @tool
@@ -239,4 +246,132 @@ async def boc_get_group_observations(
         recent_months=recent_months,
         recent_years=recent_years,
         lang=lang,
+    )
+
+
+@tool
+async def boc_get_business_outlook(quarter: str | None = None, lang: Lang = "en") -> SurveyResult:
+    """Get the Bank of Canada's Business Outlook Survey (BOS) results for the
+    latest quarter (or a named one): what firms expect for sales, investment,
+    hiring, prices, labour costs and inflation.
+
+    Use for: business sentiment and expectations in Canada - the BOS
+    indicator and its activity and price indicators, balances of opinion on
+    future sales, investment in machinery and equipment, employment, input
+    and output prices, labour costs, labour shortages, capacity pressures and
+    credit conditions, and the share of firms expecting inflation below 1%,
+    1-2%, 2-3% or above 3% over the next two years. One row per question with
+    its unit and survey quarter; `release` names the quarter's publication
+    (month, page link) and its chart groups (regional, sector and firm-size
+    breakdowns, firms' 1-, 2- and 5-year inflation expectations) for
+    boc_get_group_observations. `quarter` like "2026Q3"; omit it for the
+    newest survey, found from the data, not a fixed date.
+    Keywords: business outlook survey, bos, business expectations, business
+    sentiment, firms expect inflation, business confidence, balance of
+    opinion, investment intentions, hiring plans, price expectations,
+    labour shortages, bank of canada survey.
+    Mots-clés : Enquête sur les perspectives des entreprises, EPE, attentes
+    des entreprises, sentiment des entreprises, confiance des entreprises,
+    attentes d'inflation des entreprises, solde des opinions, intentions
+    d'investissement, intentions d'embauche, pénuries de main-d'œuvre,
+    Banque du Canada.
+    """
+    return await surveys.get_survey("bos", quarter, lang)
+
+
+@tool
+async def boc_get_consumer_expectations(
+    quarter: str | None = None, lang: Lang = "en"
+) -> SurveyResult:
+    """Get the Bank of Canada's Canadian Survey of Consumer Expectations
+    (CSCE) for the latest quarter (or a named one): households' inflation
+    expectations by horizon and their views on jobs, income, spending and
+    interest rates.
+
+    Use for: consumer inflation expectations one, two and five years ahead
+    and perceived current inflation, expected pay growth, expected income
+    and spending growth, probabilities of losing, leaving or finding a job,
+    expected interest rates one, two and five years ahead, and the share of
+    consumers expecting the economy to grow or decline. One row per series
+    with its unit and survey quarter; `release` names the quarter's
+    publication (month, page link) and chart groups. Breakdowns by age,
+    income, education, province and other groups are in Valet group
+    CES_DEMOGRAPHICS (boc_get_group_observations). `quarter` like "2026Q3";
+    omit it for the newest survey, found from the data.
+    Keywords: consumer expectations, csce, inflation expectations, household
+    inflation expectations, consumers expect inflation, expected inflation
+    one year ahead, five-year inflation expectations, job loss probability, consumer sentiment, interest rate expectations.
+    Mots-clés : Enquête canadienne sur les attentes des consommateurs, ECAC,
+    attentes d'inflation, anticipations d'inflation des ménages, attentes des
+    consommateurs, inflation attendue dans un an, attentes salariales,
+    probabilité de perdre son emploi, sentiment des consommateurs, attentes
+    de taux d'intérêt, Banque du Canada.
+    """
+    return await surveys.get_survey("csce", quarter, lang)
+
+
+@tool
+async def boc_get_mpr_projection(
+    report: str | None = None, lang: Lang = "en"
+) -> MprProjectionResult:
+    """Get the Bank of Canada's projections from the latest Monetary Policy
+    Report (or a named one): real GDP growth, the inflation outlook,
+    contributions to GDP growth and global growth.
+
+    Use for: the Bank of Canada's forecast for the Canadian economy - the
+    summary of the quarterly projection (real GDP growth quarter over
+    quarter at annual rates and year over year, projected inflation, by
+    quarter and to the fourth quarter of the next two years), the
+    contributions of consumption, housing, government, business investment,
+    exports, imports and inventories to annual GDP growth with the
+    range for potential output, and projected growth for the United States,
+    euro area, China and the world. One row per value with its table, period
+    and unit; `release` gives the Report's month, page and chart groups.
+    `report` like "2026M10", "2026-10" or "October 2026"; omit it for the
+    newest Report in Valet. `recent_reports` lists others.
+    Keywords: monetary policy report, mpr, bank of canada forecast, gdp
+    forecast, inflation forecast, economic projection, growth outlook,
+    potential output, global growth projection, base-case
+    projection.
+    Mots-clés : Rapport sur la politique monétaire, RPM, prévisions de la
+    Banque du Canada, prévision du PIB, prévision de l'inflation, projection
+    économique, perspectives de croissance, production potentielle,
+    croissance mondiale, projection de référence.
+    """
+    return await surveys.get_mpr_projection(report, lang)
+
+
+@tool
+async def boc_get_staff_projections(
+    variables: list[StaffVariableCode] | None = None,
+    vintage: str | None = None,
+    history_quarters: int = 4,
+    lang: Lang = "en",
+) -> StaffProjectionResult:
+    """Get a vintage of the Bank of Canada staff economic projections: the
+    staff forecast prepared for Governing Council, with the data known then.
+
+    Use for: historical real-time projections (released yearly with a
+    five-year lag, vintages from 1970Q4) for forecast-evaluation and
+    real-time research - real GDP (GDP), nominal GDP (GDPN), deflators
+    (PGDP, PC), consumption (C), investment (I, IRES, IINVT), government (G),
+    exports (X), imports (M), the output gap (LYGAP), CPI (PCPI), core CPI
+    (PCPIX), the unemployment rate (URATE), the US/CAD exchange rate
+    (USCANPFX), the policy rate path (R1N) and the 5-year bond rate (R20N).
+    Default variables GDP, PCPI, PCPIX, URATE, LYGAP and R1N; `vintage` like
+    "2019Q4" (omit for the newest). Rows from `history_quarters` before the
+    vintage; `projected` marks the forecast quarters. Rates and the gap are
+    fractions (0.0175 is 1.75%); each variable's unit is given. For the
+    current outlook use boc_get_mpr_projection.
+    Keywords: staff economic projections, staff projection archive,
+    real-time data, vintage, historical projections, forecast
+    evaluation, output gap, policy rate path, sep, projection vintages,
+    five-year lag.
+    Mots-clés : projections économiques du personnel, prévisions du personnel
+    de la Banque du Canada, données en temps réel, millésime de prévision,
+    prévisions historiques, évaluation des prévisions, écart de production,
+    trajectoire du taux directeur, millésimes.
+    """
+    return await surveys.get_staff_projections(
+        list(variables) if variables else None, vintage, history_quarters, lang
     )

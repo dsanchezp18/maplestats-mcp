@@ -111,6 +111,39 @@ FR: dict[str, str] = {
         "trouver la série Valet (p. ex. FXUSDCAD, V39079)"
     ),
     "pull the series for the period": "extraire la série pour la période",
+    # Expectations and forecasts
+    "Expectations and forecasts: Bank of Canada surveys and projections": (
+        "Attentes et prévisions : enquêtes et projections de la Banque du Canada"
+    ),
+    "Business Outlook Survey: firms' expectations for sales, prices, wages and inflation, "
+    "newest quarter (quarter='2026Q3' for another)": (
+        "Enquête sur les perspectives des entreprises : attentes des entreprises pour les "
+        "ventes, les prix, les salaires et l'inflation, dernier trimestre (quarter='2026Q3' "
+        "pour un autre)"
+    ),
+    "Canadian Survey of Consumer Expectations: households' inflation expectations at 1, 2 "
+    "and 5 years, wages, jobs and spending, newest quarter": (
+        "Enquête canadienne sur les attentes des consommateurs : attentes d'inflation des "
+        "ménages à 1, 2 et 5 ans, salaires, emploi et dépenses, dernier trimestre"
+    ),
+    "Monetary Policy Report projections: real GDP growth and CPI inflation, newest Report "
+    "(report='2026M10' for another)": (
+        "Projections du Rapport sur la politique monétaire : croissance du PIB réel et "
+        "inflation de l'IPC, dernier Rapport (report='2026M10' pour un autre)"
+    ),
+    "staff economic projections by vintage (released with a five-year lag), for forecast "
+    "evaluation": (
+        "projections économiques du personnel par millésime (publiées avec un décalage de cinq "
+        "ans), pour évaluer les prévisions"
+    ),
+    "Survey answers are expectations, not forecasts. The Monetary Policy Report projection "
+    "is the Bank's base case; staff projections are released five years late and are not "
+    "the Report's projection.": (
+        "Les réponses aux enquêtes sont des attentes, non des prévisions. La projection du "
+        "Rapport sur la politique monétaire est le scénario de référence de la Banque ; les "
+        "projections du personnel sont publiées avec cinq ans de retard et ne sont pas celle "
+        "du Rapport."
+    ),
     # International
     "Canada compared with other countries": "Le Canada comparé à d'autres pays",
     "find the indicator code (query by words)": "trouver le code de l'indicateur (recherche par mots)",
