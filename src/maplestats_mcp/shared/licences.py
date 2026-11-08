@@ -258,10 +258,6 @@ SOURCE_LICENCES: dict[str, str] = {
         "Source: World Bank, World Development Indicators. Creative Commons Attribution 4.0 "
         "(https://datacatalog.worldbank.org/public-licenses)."
     ),
-    "bls": (
-        "Source: U.S. Bureau of Labor Statistics. Public domain; BLS asks to be cited as the "
-        "source (https://www.bls.gov/opub/copyright-information.htm)."
-    ),
     "oecd": (
         "Source: OECD Data Explorer. Any use, commercial included, with the OECD credited "
         "(https://www.oecd.org/en/about/terms-conditions.html, section 3); third-party data "
@@ -455,10 +451,6 @@ LICENCES_FR: dict[str, str] = {
     SOURCE_LICENCES["worldbank-wdi"]: (
         "Source : Banque mondiale, Indicateurs du développement dans le monde. Licence Creative "
         "Commons Attribution 4.0 (https://datacatalog.worldbank.org/public-licenses)."
-    ),
-    SOURCE_LICENCES["bls"]: (
-        "Source : Bureau of Labor Statistics des États-Unis. Domaine public ; le BLS demande "
-        "d'être cité comme source (https://www.bls.gov/opub/copyright-information.htm)."
     ),
     SOURCE_LICENCES["oecd"]: (
         "Source : Explorateur de données de l'OCDE. Toute utilisation, y compris commerciale, "
@@ -769,8 +761,6 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     # Commercial use is allowed if the BIS figures are not charged for separately.
     "bis": "allowed",
     "worldbank-wdi": "allowed",
-    # US federal works are public domain (17 U.S.C. 105).
-    "bls": "allowed",
     # Any use with credit; third-party data excepted (flagged per dataset).
     "oecd": "allowed",
     # CC BY 4.0, but not for non-EU/EFTA/candidate countries' data or

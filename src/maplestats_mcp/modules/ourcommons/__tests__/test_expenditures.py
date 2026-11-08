@@ -137,10 +137,10 @@ async def test_details_add_up_to_the_summary(httpx_mock):
     result = await expenditures.get_member_expenditure_details("aboultaif")
     assert result.travel is not None and result.hospitality is not None
     assert result.contracts is not None
-    assert round(sum(t.total for t in result.travel), 2) == result.travel_total == 62251.81
-    assert round(sum(h.amount for h in result.hospitality), 2) == result.hospitality_total
+    assert round(sum(t.total or 0.0 for t in result.travel), 2) == result.travel_total == 62251.81
+    assert round(sum(h.amount or 0.0 for h in result.hospitality), 2) == result.hospitality_total
     assert result.contracts[0].total == result.contracts_total == 14503
-    assert result.travel[0].total < 0 and result.travel[1].traveller_name is None
+    assert (result.travel[0].total or 0.0) < 0 and result.travel[1].traveller_name is None
     assert result.hospitality[0].attendees == 5
     assert result.hospitality[0].event_date == date(2026, 5, 7)
 

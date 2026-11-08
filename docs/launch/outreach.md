@@ -113,7 +113,7 @@ Daniel
 
 Hello [name], I hope you are well.
 
-[One sentence on your connection to the department, e.g. degree and year.] Students in the department regularly need a Canadian figure they can cite, and often the same figure for the United States or Europe to compare against. I built an open-source tool for that: MapleStats MCP, a server that lets AI assistants read data directly from Statistics Canada, the Bank of Canada, CMHC and many federal and provincial sources, with OECD, Eurostat and US Bureau of Labor Statistics series as comparators. Every figure comes with its citation and the R, Python, Stata or Julia code that reproduces the pull. It is free to use and needs no installation. The write-up is here: [blog post link].
+[One sentence on your connection to the department, e.g. degree and year.] Students in the department regularly need a Canadian figure they can cite, and often the same figure for the United States or Europe to compare against. I built an open-source tool for that: MapleStats MCP, a server that lets AI assistants read data directly from Statistics Canada, the Bank of Canada, CMHC and many federal and provincial sources, with OECD and Eurostat series as comparators. Every figure comes with its citation and the R, Python, Stata or Julia code that reproduces the pull. It is free to use and needs no installation. The write-up is here: [blog post link].
 
 I built it with MA students and researchers in mind, and tested it against other Canadian data servers on a 53-question benchmark; the results are published with their limitations.
 

@@ -223,12 +223,6 @@ CASES = [
     ("household debt service ratio Canada compared with other countries", "bis_compare_countries"),
     ("Bank for International Settlements datasets", "bis_list_datasets"),
     ("dimensions and codes of a BIS dataset series key", "bis_describe_dataset"),
-    # US Bureau of Labor Statistics, 2026-11-07.
-    ("US nonfarm payrolls jobs report", "bls_get_indicator"),
-    ("United States CPI inflation compared with Canada", "bls_get_indicator"),
-    ("BLS series id time series", "bls_get_series"),
-    ("find the BLS series id for US shelter inflation", "bls_search_series"),
-    ("list of Bureau of Labor Statistics surveys", "bls_list_surveys"),
     # OECD Data Explorer, 2026-11-07.
     ("OECD economic outlook GDP growth projections Canada vs G7", "oecd_compare_countries"),
     ("search OECD Data Explorer datasets", "oecd_search_datasets"),

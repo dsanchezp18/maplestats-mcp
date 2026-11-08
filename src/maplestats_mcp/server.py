@@ -618,10 +618,9 @@ Sources, by tool-name prefix:
   facility lookups): eccc_datamart_.
 - World Bank WDI, Canada and G7/OECD peers: worldbank_. BIS (policy rates,
   debt service ratios, credit, house prices, banking and payment
-  statistics), Canada and peers: bis_. US comparators: bls_ (payrolls,
-  unemployment, CPI). OECD Data Explorer (Economic Outlook projections,
-  productivity, unit labour costs, PPPs, tax revenue, house prices, leading
-  indicators), Canada and peers: oecd_.
+  statistics), Canada and peers: bis_. OECD Data Explorer (Economic Outlook
+  projections, productivity, unit labour costs, PPPs, tax revenue, house
+  prices, leading indicators), Canada and peers: oecd_.
   Eurostat (EU, euro area, member states): eurostat_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.

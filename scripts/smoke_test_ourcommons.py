@@ -84,12 +84,12 @@ async def main() -> int:
                 top.name, top.constituency, lang=lang
             )
             sums = (
-                round(sum(t.total for t in detail.travel or []), 2),
-                round(sum(h.amount for h in detail.hospitality or []), 2),
-                round(sum(c.total for c in detail.contracts or []), 2),
+                round(sum(t.total or 0.0 for t in detail.travel or []), 2),
+                round(sum(h.amount or 0.0 for h in detail.hospitality or []), 2),
+                round(sum(c.total or 0.0 for c in detail.contracts or []), 2),
             )
             expected = (top.travel, top.hospitality, top.contracts)
-            ok = all(abs(a - b) < 0.01 for a, b in zip(sums, expected, strict=True))
+            ok = all(abs(a - (b or 0.0)) < 0.01 for a, b in zip(sums, expected, strict=True))
             print(f"{'OK' if ok else 'FAIL'}: {top.name} ({lang}) {sums} vs summary {expected}")
             failures += not ok
         try:

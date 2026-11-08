@@ -38,12 +38,6 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ("USD to CAD exchange rate in 2024", "rates", "boc_search_series"),
     ("Canada's GDP growth in the last quarter", "economy", "statcan_daily_get_releases"),
     ("Exports of lobster to the United States by province", "economy", "cimt_search_commodities"),
-    (
-        "US nonfarm payrolls and the American unemployment rate",
-        "united_states",
-        "bls_get_indicator",
-    ),
-    ("US unemployment rate", "united_states", "bls_get_indicator"),
     ("How much wheat did Canada export to China in 2023?", "agriculture", "cgc_exports_query"),
     ("interprovincial trade flows between provinces", "economy", "sdmx_space_search"),
     ("Population estimates for Nova Scotia", "population", "wds_search_cubes"),
@@ -243,8 +237,7 @@ QUESTIONS: list[tuple[str, str, str]] = [
     ),
 ]
 
-# A US labour or price question is in scope since the BLS module (2026-11-07).
-OUT_OF_SCOPE = ["Unemployment rate in Germany", "Weather in Paris next week", "Inflation en France"]
+OUT_OF_SCOPE = ["US unemployment rate", "Weather in Paris next week", "Inflation en France"]
 
 # Modules being added or removed elsewhere: reported, never failed on.
 PENDING = {
