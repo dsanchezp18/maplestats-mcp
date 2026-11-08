@@ -572,6 +572,17 @@ def _pct(value: float | None) -> str:
     return "–" if value is None else f"{value:.0%}"
 
 
+# MapleStats arms that ran code changed after the Nov. 3 runs, with these questions in view
+# (README, "MapleStats after these runs"): in-sample, not comparable with the other arms.
+IN_SAMPLE = (
+    "maplestats-1105",
+    "maplestats_after",
+    "maplestats-cost",
+    "maplestats-current",
+    "maplestats-release",
+)
+
+
 def render(report: dict[str, Any], version: str = "v1") -> str:
     summary = report["summary"]
     repeated = any(s["repeats"] > 1 for s in summary)
@@ -622,6 +633,15 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
             f"| {s['abstained']:g} "
             f"| {s['hallucinated']:g} | {s['false_claims']} | {s.get('referrals', 0)} |"
         )
+    marked = [s["arm"] for s in summary if s["arm"] in IN_SAMPLE]
+    if marked:
+        lines += [
+            "",
+            "In-sample, not comparable with the other arms: "
+            + ", ".join(f"`{a}`" for a in marked)
+            + ". These ran MapleStats code changed after the Nov. 3 runs with these questions in"
+            " view; MapleStats' comparable score is `maplestats` (README).",
+        ]
     lines += [
         "",
         "## Citations and cost",

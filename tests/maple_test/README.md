@@ -427,6 +427,74 @@ was built; it is re-graded correct with that reason. These questions shaped earl
 accuracy here is in-sample; cost is not. Answers took longer (28.7 seconds) because two runs
 shared the machine.
 
+## Full run on every server, 2026-11-05 to 2026-11-08
+
+The whole v2 set (61 questions, three passes) on every arm, with the label `<arm>-1105`,
+graded with `--verify` and reviewed by hand as the Nov. 3 runs were. Mean correct answers per
+run, the other arms only (MapleStats' row is below the table):
+
+| Arm | Core (24) | Beyond (24) | Analyst (5) | Total (53) | Release (8) | False claims | Referrals | USD per question |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: |
+| Pipeworx (Nov. 3; not re-run) | 22.7 | 17.3 | 2.7 | 42.7 | – | 4 | 18 | 0.074 |
+| OpenMCP (Nov. 3; not re-run) | 22 | 11 | 3 | 36 | – | 6 | 16 | 0.053 |
+| arose26 | 22.3 | 5 | 3.7 | 31 | 0.7 | 3 | 77 | 0.018 |
+| mcp-canada | 20 | 9.7 | 1.3 | 31 | 2 | 3 | 43 | 0.061 |
+| mcp-statcan | 22.7 | 4.7 | 3.3 | 30.7 | 3 | 8 | 58 | 0.020 |
+| CanData-MCP | 21.7 | 1.3 | 2.7 | 25.7 | 2.7 | 3 | 36 | 0.030 |
+| OpenCanadaPublicDataMCP | 20.3 | 3.3 | 1.3 | 25 | 0.7 | 9 | 49 | 0.031 |
+| canada-data-agent | 19.3 | 2 | 2.7 | 24 | 0.3 | 7 | 81 | 0.022 |
+| statcan2 | 4.3 | 4 | 3.3 | 11.7 | 1 | 7 | 74 | 0.049 |
+| No data tool | 2 | 2 | 0 | 4 | 1 | 16 | 152 | 0.009 |
+
+**MapleStats is in-sample here, not comparable.** It ran a frozen checkout of be91871 (as
+merged in #146), which contains the changes made after the Nov. 3 runs with these questions in
+view (5d15f59, 605dfcd, 5a31394; see "MapleStats after these runs"). Its 1105 score, 52 of 53
+(core 23.7, beyond 23.3, analyst 5; release 6.3 of 8; no false claims or referrals; USD 0.060
+per question), belongs beside `maplestats_after` (52.3), not in the table above. MapleStats'
+comparable score stays 48.7, from Nov. 3, before those changes.
+
+False claims and referrals count all 61 questions over three runs, so the 1105 arms are not
+comparable with the Nov. 3 counts, which cover 53. Per-arm details are in
+[`results_v2.md`](results_v2.md) under each `-1105` label.
+
+**What differs from the Nov. 3 runs.**
+
+- **Pipeworx was not re-run.** Pipeworx enforced its advertised 50-calls-a-day anonymous limit
+  between Nov. 3 and Nov. 5; a full arm needs about 500, so the Nov. 3 score stands. Both
+  attempts (`runs_v2/paused/*_pipeworx-1105_*`) were set aside ungraded: most answers there
+  were sign-in requests, not answers.
+- **OpenMCP was not completed.** On this laptop its server took up to 3.3 GB and minutes of
+  CPU per tool call, and 40 of its first 103 answers hit the 10-minute cap (3 of 159 on Nov.
+  3). That measures the machine more than the server, so its Nov. 3 score stands and the
+  partial file is in `runs_v2/paused/`.
+- **Run errors were asked again** with the same settings and recorded under their pass
+  numbers; the failed answers are in `runs_v2/errors/`. MapleStats had 21 (its server missed
+  the CLI's start-up wait, before run.py set `MCP_TIMEOUT`); mcp-canada had 166, all from one
+  stretch when the session running the benchmark was closed by mistake. No arm has a run
+  error left.
+- **The key changed on 2026-11-07:** five Labour Force Survey release dates were corrected;
+  no values changed. StatCan also revised August's exports to the US on 2026-11-04 (C-14,
+  now $54,771.6 million). The eight Nov. 3 answers that gave the earlier $54,346.5 million
+  are kept correct, with that reason in the overrides file.
+- **Versions:** mcp-canada was at 0.13.0. statcan2's copy of StatCan data still ends in
+  August 2026, so it declined most September questions again.
+- The new runs were on Nov. 7 and 8, but every question names its period, so the answers
+  are graded against the same figures.
+
+**The review.** All 1,647 new answers from nine arms were read, one question at a time, with
+the arm's name hidden and the answers shuffled, under the Nov. 3 rules for each question
+(`overrides_v2.json`, keys `<arm>-1105/...`). One rule was settled the same way across all
+questions: a referral is an answer with no figure that says it cannot reach the publisher at
+all and points to the publisher's page. A data copy that ends early, an empty lookup or a tool
+error is not a referral. One new case, an answer that names the wrong province first and then
+corrects itself (C-01, four answers from three arms), was graded partial. The review took
+correct answers away from nine arms (statcan2 17, no tools 11, arose26 8, canada-data-agent
+7, mcp-statcan 7, CanData-MCP 6, mcp-canada 3, OpenCanadaPublicDataMCP 3, MapleStats 1) and
+gave a few back (OpenCanadaPublicDataMCP 2, mcp-canada 2, CanData-MCP 1, mcp-statcan 1). Most
+lost grades were a previous month offered in place of the one asked, or a drug status named
+only among possibilities (X-15, X-16), as on Nov. 3. MapleStats' lost grade is R-06 in one
+pass: it gave the 2025 accounts' release date without saying none is set for 2026.
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP
