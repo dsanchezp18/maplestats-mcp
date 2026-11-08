@@ -164,6 +164,13 @@ FR: dict[str, str] = {
         "(chômage, chômage des jeunes, taux d'activité, taux d'emploi, heures travaillées, "
         "gains et salaire minimum en dollars PPA, part du revenu du travail)"
     ),
+    "Australia's figure from the ABS by indicator (cpi_inflation, "
+    "trimmed_mean_inflation, unemployment_rate, gdp_quarterly_growth, ...), with "
+    "the Canadian table to pair with": (
+        "le chiffre australien de l'ABS par indicateur (cpi_inflation, "
+        "trimmed_mean_inflation, unemployment_rate, gdp_quarterly_growth, ...), avec le "
+        "tableau canadien à mettre en regard"
+    ),
     "Canada beside G7 or other economies on a BIS indicator (policy rate, debt "
     "service ratio, credit, house prices, inflation, exchange rate)": (
         "le Canada à côté du G7 ou d'autres économies pour un indicateur de la BRI (taux "

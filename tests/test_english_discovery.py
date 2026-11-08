@@ -235,6 +235,9 @@ CASES = [
     ("ILO unemployment rate Canada compared with G7 countries", "ilo_compare_countries"),
     ("search ILOSTAT labour statistics datasets", "ilo_search_datasets"),
     ("dimensions and codes of an ILOSTAT dataset series key", "ilo_describe_dataset"),
+    # Australian Bureau of Statistics, 2026-11-08.
+    ("Australian trimmed mean inflation ABS", "abs_get_indicator"),
+    ("search Australian Bureau of Statistics datasets", "abs_search_datasets"),
     # Ontario Energy Board open data, 2026-10-03.
     ("SAIDI SAIFI power outages Ontario utility", "oeb_query_dataset"),
     ("Ontario time-of-use electricity prices history", "oeb_rates"),

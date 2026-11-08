@@ -545,6 +545,7 @@ TOPICS: tuple[Topic, ...] = (
             "international labour organization",
             "organisation internationale du travail",
             "oit",
+            "australian bureau of statistics",
         ),
         (
             PlanStep("worldbank_search_indicators", "find the indicator code (query by words)"),
@@ -605,6 +606,13 @@ TOPICS: tuple[Topic, ...] = (
                     "salaire minimum",
                     "oit",
                 ),
+            ),
+            PlanStep(
+                "abs_get_indicator",
+                "Australia's figure from the ABS by indicator (cpi_inflation, "
+                "trimmed_mean_inflation, unemployment_rate, gdp_quarterly_growth, ...), with "
+                "the Canadian table to pair with",
+                terms=("australia", "australian", "australie", "australien", "abs"),
             ),
         ),
     ),

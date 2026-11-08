@@ -1,0 +1,420 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "ANA_AGG",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Australian National Accounts Key Aggregates",
+    "names": {
+     "en": "Australian National Accounts Key Aggregates"
+    },
+    "description": "Dataset: ANA_AGG. Headline statistics from the quarterly national accounts. Includes gross domestic product (GDP), GDP per capita, real income measures, and the household saving ratio",
+    "descriptions": {
+     "en": "Dataset: ANA_AGG. Headline statistics from the quarterly national accounts. Includes gross domestic product (GDP), GDP per capita, real income measures, and the household saving ratio"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD_START=2023-Q1",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:ANA_AGG(1.0.0)"
+   },
+   {
+    "id": "ANA_SFD",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Australian National Accounts - State Final Demand",
+    "names": {
+     "en": "Australian National Accounts - State Final Demand"
+    },
+    "description": "Dataset: ANA_SFD. Quarterly estimates of state final demand (SFD) and component series, measured in chain volume measures. Includes household and government expenditure, private and public sector investment, and compensation of employees by state. Catalogue number 5206.0.",
+    "descriptions": {
+     "en": "Dataset: ANA_SFD. Quarterly estimates of state final demand (SFD) and component series, measured in chain volume measures. Includes household and government expenditure, private and public sector investment, and compensation of employees by state. Catalogue number 5206.0."
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "LAYOUT_ROW_SECTION",
+      "title": "MEASURE,TSEST",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "id": "LAYOUT_COLUMN",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "LAYOUT_ROW",
+      "title": "SECTOR,DATA_ITEM",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "REGION=1,TIME_PERIOD_START=2023-Q1",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:ANA_SFD(1.0.0)"
+   },
+   {
+    "id": "CPI",
+    "version": "2.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Consumer Price Index (CPI)",
+    "names": {
+     "en": "Consumer Price Index (CPI)"
+    },
+    "description": "Dataset: CPI. The Consumer Price Index (CPI) measures changes in the price of a 'basket' of goods and services which account for a high proportion of expenditure by the CPI population group (i.e. metropolitan households). Unit of measure: Index. Geographic coverage: Australia/State. Catalogue number: 6401.0",
+    "descriptions": {
+     "en": "Dataset: CPI. The Consumer Price Index (CPI) measures changes in the price of a 'basket' of goods and services which account for a high proportion of expenditure by the CPI population group (i.e. metropolitan households). Unit of measure: Index. Geographic coverage: Australia/State. Catalogue number: 6401.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "INDEX",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "MEASURE,TSEST,REGION",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "MEASURE=3,REGION=50,FREQ=M,LASTNPERIODS=4",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:CPI(2.0.0)"
+   },
+   {
+    "id": "CPI_Q",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Consumer Price Index (CPI) Quarterly",
+    "names": {
+     "en": "Consumer Price Index (CPI) Quarterly"
+    },
+    "description": "Dataset: CPI_Q. The Consumer Price Index (CPI) measures quarterly changes in the price of a 'basket' of goods and services which account for a high proportion of expenditure by the CPI population group (i.e. metropolitan households). Unit of measure: Index Percent. Geographic coverage: Australia/State. Catalogue number: 6401.0",
+    "descriptions": {
+     "en": "Dataset: CPI_Q. The Consumer Price Index (CPI) measures quarterly changes in the price of a 'basket' of goods and services which account for a high proportion of expenditure by the CPI population group (i.e. metropolitan households). Unit of measure: Index Percent. Geographic coverage: Australia/State. Catalogue number: 6401.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "INDEX",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "MEASURE,TSEST",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "FREQ=Q,LASTNPERIODS=4",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/consumer-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:CPI_Q(1.0.0)"
+   },
+   {
+    "id": "CPI_WEIGHTS",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Consumer Price Index (CPI) Weights",
+    "names": {
+     "en": "Consumer Price Index (CPI) Weights"
+    },
+    "description": "Dataset: CPI_WEIGHTS. Group, sub-group and expenditure class weights used in the Consumer Price Index. Catalogue number: 6470.0.55.002.",
+    "descriptions": {
+     "en": "Dataset: CPI_WEIGHTS. Group, sub-group and expenditure class weights used in the Consumer Price Index. Catalogue number: 6470.0.55.002."
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "REGION",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "INDEX",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "MEASURE=1,FREQ=Q,TIME_PERIOD_START=2024-Q4",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/articles/annual-weight-update-cpi-and-living-cost-indexes#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/articles/annual-weight-update-cpi-and-living-cost-indexes#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:CPI_WEIGHTS(1.0.0)"
+   },
+   {
+    "id": "ERP_Q",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Quarterly Population Estimates (ERP), by State/Territory, Sex and Age",
+    "names": {
+     "en": "Quarterly Population Estimates (ERP), by State/Territory, Sex and Age"
+    },
+    "description": "Dataset: ERP_Q. Statistics about the population and components of change (births, deaths, migration) for Australia's capital cities and regions. Unit of measure: Persons/Percent. Geographic coverage: Australia/State. Catalogue number: 3101.0",
+    "descriptions": {
+     "en": "Dataset: ERP_Q. Statistics about the population and components of change (births, deaths, migration) for Australia's capital cities and regions. Unit of measure: Persons/Percent. Geographic coverage: Australia/State. Catalogue number: 3101.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REGION",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "AGE,SEX,MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "MEASURE=1+2+3,SEX=3,AGE=TOT,FREQ=Q,TIME_PERIOD_START=2020-Q3",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population/latest-release|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population/latest-release|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:ERP_Q(1.0.0)"
+   },
+   {
+    "id": "LF",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Labour Force",
+    "names": {
+     "en": "Labour Force"
+    },
+    "description": "Dataset: LF. Headline estimates of employment, unemployment, underemployment, participation and hours worked from the monthly Labour Force Survey. Unit of measure: Persons/rate/ratio/percent. Geographic coverage: Australia/State. Catalogue number: 6202.0",
+    "descriptions": {
+     "en": "Dataset: LF. Headline estimates of employment, unemployment, underemployment, participation and hours worked from the monthly Labour Force Survey. Unit of measure: Persons/rate/ratio/percent. Geographic coverage: Australia/State. Catalogue number: 6202.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "TSEST",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "REGION=AUS,SEX=3,AGE=1599,FREQ=M,LASTNPERIODS=18",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:LF(1.0.0)"
+   },
+   {
+    "id": "LF_AGES",
+    "version": "1.0.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Labour Force: Age Groups",
+    "names": {
+     "en": "Labour Force: Age Groups"
+    },
+    "description": "Dataset: LF_AGES. Estimates of employment, unemployment, underemployment, participation and hours worked from the monthly Labour Force Survey. Unit of measure: Persons/rate/ratio/percent. Geographic coverage: Australia/State. Catalogue number: 6202.0",
+    "descriptions": {
+     "en": "Dataset: LF_AGES. Estimates of employment, unemployment, underemployment, participation and hours worked from the monthly Labour Force Survey. Unit of measure: Persons/rate/ratio/percent. Geographic coverage: Australia/State. Catalogue number: 6202.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "MEASURE,TSEST",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "TSEST",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "REGION=AUS,SEX=3,AGE=1599,FREQ=M,LASTNPERIODS=18",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/labour/employment-and-unemployment/labour-force-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:LF_AGES(1.0.0)"
+   },
+   {
+    "id": "WPI",
+    "version": "1.2.0",
+    "agencyID": "ABS",
+    "isFinal": true,
+    "name": "Wage Price Index",
+    "names": {
+     "en": "Wage Price Index"
+    },
+    "description": "Dataset: WPI. The WPI measures changes in the price of labour, unaffected by compositional shifts in the labour force, hours worked or employee characteristics. Unit of measure: Index/percent. Geographic coverage: Australia/State. Catalogue number: 6345.0",
+    "descriptions": {
+     "en": "Dataset: WPI. The WPI measures changes in the price of labour, unaffected by compositional shifts in the labour force, hours worked or employee characteristics. Unit of measure: Index/percent. Geographic coverage: Australia/State. Catalogue number: 6345.0"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "title": "MEASURE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "TSEST,SECTOR",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "INDEX=THRPEB,INDUSTRY=TOT,REGION=AUS,FREQ=Q,TIME_PERIOD_START=2022-Q1",
+      "type": "DEFAULT"
+     },
+     {
+      "type": "EXT_RESOURCE",
+      "text": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/wage-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png",
+      "texts": {
+       "en": "Methodology|https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/wage-price-index-australia/latest-release#methodology|https://www.abs.gov.au/ausstats/wmdata.nsf/activeimages/methodology/$File/methodology.png"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ABS:WPI(1.2.0)"
+   }
+  ]
+ }
+}
