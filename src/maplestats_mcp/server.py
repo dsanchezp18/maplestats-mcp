@@ -621,7 +621,9 @@ Sources, by tool-name prefix:
   statistics), Canada and peers: bis_. OECD Data Explorer (Economic Outlook
   projections, productivity, unit labour costs, PPPs, tax revenue, house
   prices, leading indicators), Canada and peers: oecd_.
-  Eurostat (EU, euro area, member states): eurostat_.
+  Eurostat (EU, euro area, member states): eurostat_. ILOSTAT (ILO labour
+  statistics: unemployment, participation, hours, earnings), Canada and
+  peers: ilo_.
 - ISED: ised_corporations_, ised_spectrum_, ised_cipo_ (trademarks),
   ised_ip_horizons_ (patents, bulk IP files), ised_clean_growth_.
 - Federal agencies: finance_frt_ (Fiscal Reference Tables: federal and

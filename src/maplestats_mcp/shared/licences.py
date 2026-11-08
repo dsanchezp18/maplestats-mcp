@@ -269,6 +269,10 @@ SOURCE_LICENCES: dict[str, str] = {
         "candidate countries and data from non-Eurostat sources "
         "(https://ec.europa.eu/eurostat/help/copyright-notice)."
     ),
+    "ilo": (
+        "Source: ILOSTAT, International Labour Organization. Creative Commons Attribution 4.0 "
+        "(https://www.ilo.org/rights-and-permissions)."
+    ),
     # Quebec
     "isq": ISQ_LICENCE,
     # Federal: open.canada.ca and departmental open-data services (OGL - Canada)
@@ -456,6 +460,10 @@ LICENCES_FR: dict[str, str] = {
         "Source : Explorateur de données de l'OCDE. Toute utilisation, y compris commerciale, "
         "en citant l'OCDE (https://www.oecd.org/en/about/terms-conditions.html, section 3) ; "
         "données de tiers exclues."
+    ),
+    SOURCE_LICENCES["ilo"]: (
+        "Source : ILOSTAT, Organisation internationale du Travail. Creative Commons "
+        "Attribution 4.0 (https://www.ilo.org/rights-and-permissions)."
     ),
     SOURCE_LICENCES["eurostat"]: (
         "Source : Eurostat. Creative Commons Attribution 4.0 ; réutilisation commerciale "
@@ -766,6 +774,8 @@ _SOURCE_COMMERCIAL_USE: dict[str, CommercialUse] = {
     # CC BY 4.0, but not for non-EU/EFTA/candidate countries' data or
     # non-Eurostat sources (copyright notice, read 2026-11-07).
     "eurostat": "varies",
+    # CC BY 4.0 (ILO rights and permissions, datasets as of 3 May 2023).
+    "ilo": "allowed",
     "cbsa-tariff": "not_allowed",
     "electricity": "varies",
     "dfo-iwls": "unknown",

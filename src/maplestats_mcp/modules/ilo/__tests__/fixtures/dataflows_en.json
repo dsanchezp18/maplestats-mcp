@@ -1,0 +1,338 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "DF_EAP_DWAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Labour force participation rate by sex and age",
+    "names": {
+     "en": "Labour force participation rate by sex and age"
+    },
+    "description": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The labour force participation rate is the labour force as a percent of the working-age population. The labour force is the sum of all persons of working age who are employed and those who are unemployed. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>.",
+    "descriptions": {
+     "en": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The labour force participation rate is the labour force as a percent of the working-age population. The labour force is the sum of all persons of working age who are employed and those who are unemployed. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>."
+    },
+    "annotations": [
+     {
+      "title": "01/11/2026 07:13:16",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "135500",
+      "type": "ORDER"
+     },
+     {
+      "title": "864500",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:EAP_DWAP_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_EAR_INEE_CUR_NB",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Monthly minimum wage by currency",
+    "names": {
+     "en": "Monthly minimum wage by currency"
+    },
+    "description": "Data refer to the minimum monthly earnings of all employees as of December 31st of each year. Minimum wages are not reported for countries for which collective bargaining is in place for minimum wages. In cases where a national minimum wage is not mandated, the minimum wage in place in the capital or major city is used. In some cases, an average of multiple regional minimum wages is used. In countries where the minimum wage is set at the sectoral level or occupational level, the minimum wage for manufacturing or unskilled workers is generally applied. Data are converted to U.S. dollars as the common currency, using exchange rates or purchasing power parity (PPP) rates rates for private consumption expenditures. The latter series allows for international comparisons by taking account of the differences in relative prices between countries. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/cond/description/\">Wages and Working Time Statistics (COND) database description</a>.",
+    "descriptions": {
+     "en": "Data refer to the minimum monthly earnings of all employees as of December 31st of each year. Minimum wages are not reported for countries for which collective bargaining is in place for minimum wages. In cases where a national minimum wage is not mandated, the minimum wage in place in the capital or major city is used. In some cases, an average of multiple regional minimum wages is used. In countries where the minimum wage is set at the sectoral level or occupational level, the minimum wage for manufacturing or unskilled workers is generally applied. Data are converted to U.S. dollars as the common currency, using exchange rates or purchasing power parity (PPP) rates rates for private consumption expenditures. The latter series allows for international comparisons by taking account of the differences in relative prices between countries. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/cond/description/\">Wages and Working Time Statistics (COND) database description</a>."
+    },
+    "annotations": [
+     {
+      "title": "01/11/2026 07:09:04",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "CUR",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2026-12-31,CUR=CUR_TYPE_LCU+CUR_TYPE_PPP+CUR_TYPE_USD,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "557000",
+      "type": "ORDER"
+     },
+     {
+      "title": "443000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:EAR_INEE_CUR_NB(1.0)"
+   },
+   {
+    "id": "DF_HOW_TEMP_SEX_NB",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Average weekly hours actually worked per employed person by sex",
+    "names": {
+     "en": "Average weekly hours actually worked per employed person by sex"
+    },
+    "description": "<p><strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. Data on hours of work are presented, whenever possible, on the basis of the average number of hours of work per week, and with reference to hours worked in the main (paid) job regardless of working time arrangements (e.g. full-time and part-time). Data disaggregated by economic activity are provided according to the latest version of the International Standard Industrial Classification of All Economic Activities (ISIC) available for that year. Data may have been regrouped from national classifications, which may not be strictly compatible with ISIC. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/cond/description/\">Wages and Working Time Statistics (COND) database description</a>.</p>",
+    "descriptions": {
+     "en": "<p><strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. Data on hours of work are presented, whenever possible, on the basis of the average number of hours of work per week, and with reference to hours worked in the main (paid) job regardless of working time arrangements (e.g. full-time and part-time). Data disaggregated by economic activity are provided according to the latest version of the International Standard Industrial Classification of All Economic Activities (ISIC) available for that year. Data may have been regrouped from national classifications, which may not be strictly compatible with ISIC. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/cond/description/\">Wages and Working Time Statistics (COND) database description</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "25/10/2026 20:34:24",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "SEX",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,SEX=SEX_T+SEX_M+SEX_F+SEX_O,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "468980",
+      "type": "ORDER"
+     },
+     {
+      "title": "531020",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:HOW_TEMP_SEX_NB(1.0)"
+   },
+   {
+    "id": "DF_LAP_2GDP_NOC_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Labour income share as a percent of GDP -- ILO modelled estimates, Nov. 2025",
+    "names": {
+     "en": "Labour income share as a percent of GDP -- ILO modelled estimates, Nov. 2025"
+    },
+    "description": "<p><strong>Imputed observations are not based on national data, are subject to high uncertainty and should not be used for country comparisons or rankings. </strong>The labour income share in GDP is the ratio, in percentage, between total labour income and gross domestic product (a measure of total output), both provided in nominal terms. Labour income includes the compensation of employees and part of the income of the self-employed. Self-employed workers earn from both their work and capital ownership. Total compensation of employees refers to the remuneration, in cash or in kind, payable by an enterprise to an employee in return for work done by the latter during the accounting period. The labour income of self-employed is imputed on the basis of a statistical analysis of employees of similar characteristics. The labour income share after accounting for the labour income of the self-employed is often referred to as the adjusted labour income share in GDP. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/iloest/description/\">ILO Modelled Estimates (ILOEST) database description</a>.</p>",
+    "descriptions": {
+     "en": "<p><strong>Imputed observations are not based on national data, are subject to high uncertainty and should not be used for country comparisons or rankings. </strong>The labour income share in GDP is the ratio, in percentage, between total labour income and gross domestic product (a measure of total output), both provided in nominal terms. Labour income includes the compensation of employees and part of the income of the self-employed. Self-employed workers earn from both their work and capital ownership. Total compensation of employees refers to the remuneration, in cash or in kind, payable by an enterprise to an employee in return for work done by the latter during the accounting period. The labour income of self-employed is imputed on the basis of a statistical analysis of employees of similar characteristics. The labour income share after accounting for the labour income of the self-employed is often referred to as the adjusted labour income share in GDP. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/iloest/description/\">ILO Modelled Estimates (ILOEST) database description</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "20/03/2026 13:54:04",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "REF_AREA,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2026-12-31,NOC=NOC_VALUE,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "659000",
+      "type": "ORDER"
+     },
+     {
+      "title": "341000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:LAP_2GDP_NOC_RT(1.0)"
+   },
+   {
+    "id": "DF_SDG_0852_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "SDG indicator 8.5.2: Unemployment rate by sex and age",
+    "names": {
+     "en": "SDG indicator 8.5.2: Unemployment rate by sex and age"
+    },
+    "description": "<p><strong>Data may differ from nationally reported figures and the Global SDG Indicators Database due to differences in sources and/or reference years.</strong> The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/ilosdg/description/\">Labour Market-related SDG Indicators (ILOSDG) database description</a>.</p>",
+    "descriptions": {
+     "en": "<p><strong>Data may differ from nationally reported figures and the Global SDG Indicators Database due to differences in sources and/or reference years.</strong> The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/ilosdg/description/\">Labour Market-related SDG Indicators (ILOSDG) database description</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "25/10/2026 21:06:20",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "105500",
+      "type": "ORDER"
+     },
+     {
+      "title": "894500",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:SDG_0852_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_UNE_2EAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Unemployment rate by sex and age -- ILO modelled estimates, Nov. 2025",
+    "names": {
+     "en": "Unemployment rate by sex and age -- ILO modelled estimates, Nov. 2025"
+    },
+    "description": "<p><strong>Imputed observations are not based on national data, are subject to high uncertainty and should not be used for country comparisons or rankings. </strong>This series is based on the 13th ICLS definitions. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/iloest/description/\">ILO Modelled Estimates (ILOEST) database description</a>.</p>",
+    "descriptions": {
+     "en": "<p><strong>Imputed observations are not based on national data, are subject to high uncertainty and should not be used for country comparisons or rankings. </strong>This series is based on the 13th ICLS definitions. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href=\"https://ilostat.ilo.org/databases/iloest/description/\">ILO Modelled Estimates (ILOEST) database description</a>.</p>"
+    },
+    "annotations": [
+     {
+      "title": "02/12/2025 13:33:47",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "647000",
+      "type": "ORDER"
+     },
+     {
+      "title": "353000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:UNE_2EAP_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_UNE_DEAP_SEX_AGE_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Unemployment rate by sex and age",
+    "names": {
+     "en": "Unemployment rate by sex and age"
+    },
+    "description": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>.",
+    "descriptions": {
+     "en": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/lfs/description/\">Labour Force Statistics (LFS and STLFS) database description</a>."
+    },
+    "annotations": [
+     {
+      "title": "01/11/2026 07:13:16",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "AGE",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2027-12-31,AGE=AGE_YTHADULT_YGE15+AGE_YTHADULT_Y15-64+AGE_YTHADULT_Y15-24+AGE_YTHADULT_YGE25,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "366500",
+      "type": "ORDER"
+     },
+     {
+      "title": "633500",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:UNE_DEAP_SEX_AGE_RT(1.0)"
+   },
+   {
+    "id": "DF_UNE_DEAP_SEX_EDU_RT",
+    "version": "1.0",
+    "agencyID": "ILO",
+    "isExternalReference": false,
+    "isFinal": true,
+    "name": "Unemployment rate by sex and education",
+    "names": {
+     "en": "Unemployment rate by sex and education"
+    },
+    "description": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. Data disaggregated by level of education are provided on the highest level of education completed, classified according to the International Standard Classification of Education (ISCED). Data may have been regrouped from national classifications, which may not be strictly compatible with ISCED. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/emi/description/\">Education and Mismatch Indicators (EMI) database description</a>.",
+    "descriptions": {
+     "en": "<strong>With the aim of promoting international comparability, statistics presented on ILOSTAT are based on standard international definitions wherever feasible and may differ from official national figures. </strong>This series is based on the 13th ICLS definitions. For time series comparability, it includes countries that have implemented the 19th ICLS standards, for which data are also available in the Work Statistics -- 19th ICLS (WORK) database. The unemployment rate conveys the number of persons who are unemployed as a percent of the labour force (i.e., the employed plus the unemployed). The unemployed comprise all persons of working age who were: a) without work during the reference period, i.e. were not in paid employment or self-employment; b) currently available for work, i.e. were available for paid employment or self-employment during the reference period; and c) seeking work, i.e. had taken specific steps in a specified recent period to seek paid employment or self-employment. Data disaggregated by level of education are provided on the highest level of education completed, classified according to the International Standard Classification of Education (ISCED). Data may have been regrouped from national classifications, which may not be strictly compatible with ISCED. For more information, refer to the <a href = \"https://ilostat.ilo.org/databases/emi/description/\">Education and Mismatch Indicators (EMI) database description</a>."
+    },
+    "annotations": [
+     {
+      "title": "25/10/2026 20:57:32",
+      "type": "LAST_UPDATE"
+     },
+     {
+      "title": "EDU",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "title": "REF_AREA,SEX,TIME_PERIOD",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "title": "FREQ=A,endPeriod=2025-12-31,EDU=EDU_AGGREGATE_TOTAL+EDU_AGGREGATE_LTB+EDU_AGGREGATE_BAS+EDU_AGGREGATE_INT+EDU_AGGREGATE_ADV+EDU_AGGREGATE_X,SEX=SEX_T,LASTNOBSERVATIONS=1",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "370000",
+      "type": "ORDER"
+     },
+     {
+      "title": "630000",
+      "type": "SEARCH_WEIGHT"
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=ILO:UNE_DEAP_SEX_EDU_RT(1.0)"
+   }
+  ]
+ }
+}

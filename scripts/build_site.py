@@ -673,6 +673,14 @@ SOURCES: dict[str, Source] = {
         "Banque mondiale (WDI)",
         domain="statistics",
     ),
+    "ilo": Source(
+        "ILOSTAT labour statistics (Canada and peers)",
+        "Statistiques du travail d'ILOSTAT (Canada et pays comparables)",
+        "international",
+        "ILOSTAT (International Labour Organization)",
+        "ILOSTAT (Organisation internationale du Travail)",
+        domain="statistics",
+    ),
     "eurostat": Source(
         "Eurostat (EU, euro area and member states, as comparators)",
         "Eurostat (UE, zone euro et États membres, comme points de comparaison)",
