@@ -1,0 +1,1158 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MPD",
+    "isFinal": true,
+    "name": "Analytical house prices indicators",
+    "names": {
+     "en": "Analytical house prices indicators"
+    },
+    "description": "<p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>Residential Property Prices Indices (RPPIs) &ndash; also named House price indices (HPIs), are index numbers that measure the prices of residential properties over time. RPPIs are key statistics not only for citizens and households across the world, but also for economic and monetary policy makers. They can help, for example, to monitor potential macroeconomic imbalances and the risk exposure of the household and financial sectors.</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>This dataset covers the OECD member countries and some non-member countries. In addition to the nominal RPPIs it contains information on real house prices, rental prices, and the ratios of nominal prices to rents and to disposable household income per capita. This dataset contains quarterly and annual statistics for each country. Annual figures refer to the average of the year.</p>",
+    "descriptions": {
+     "en": "<p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>Residential Property Prices Indices (RPPIs) &ndash; also named House price indices (HPIs), are index numbers that measure the prices of residential properties over time. RPPIs are key statistics not only for citizens and households across the world, but also for economic and monetary policy makers. They can help, for example, to monitor potential macroeconomic imbalances and the risk exposure of the household and financial sectors.</p><p style='margin-top:0cm;margin-right:0cm;margin-bottom:8.0pt;margin-left:0cm;font-size:11.0pt;font-family:\"Calibri\",sans-serif;'>This dataset covers the OECD member countries and some non-member countries. In addition to the nominal RPPIs it contains information on real house prices, rental prices, and the ratios of nominal prices to rents and to disposable household income per capita. This dataset contains quarterly and annual statistics for each country. Annual figures refer to the average of the year.</p>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE,COMBINED_UNIT_MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "id": "@SDMX",
+      "title": "OBS_STATUS=A,UNIT_MULT=0,REF_AREA=WXOECD",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE=RHP,FREQ=Q,LASTNPERIODS=20",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,ADJUSTMENT,BASE_PER,UNIT_MULT",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.ECO.MPD:DSD_AN_HOUSE_PRICES(1.0)"
+   }
+  ],
+  "conceptSchemes": [
+   {
+    "id": "CS_ANA_HOUSE_PRI",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MPD",
+    "isFinal": true,
+    "name": "Concept scheme for analytical house prices indicators",
+    "names": {
+     "en": "Concept scheme for analytical house prices indicators"
+    },
+    "annotations": [
+     {
+      "title": "<?xml version=\"1.0\"?>\n<Decomposition>\n\t<Indicators>\n\t\t<Indicator Source1=\"\" Source2=\"Analytical house prices indicators\" Name=\"Real house price indices, s.a.\"><ConceptValues><ConceptValue ConceptName=\"Measure\" Value=\"Real house price indices\"/><ConceptValue ConceptName=\"Unit of measure\" Value=\"Index\"/><ConceptValue ConceptName=\"Adjustment\" Value=\"Seasonally adjusted\"/></ConceptValues></Indicator><Indicator Source1=\"\" Source2=\"\" Name=\"Nominal house price indices, s.a.\"><ConceptValues><ConceptValue ConceptName=\"Measure\" Value=\"Nominal house price indices\"/><ConceptValue ConceptName=\"Unit of measure\" Value=\"Index\"/><ConceptValue ConceptName=\"Adjustment\" Value=\"Seasonally adjusted\"/></ConceptValues></Indicator><Indicator Source1=\"\" Source2=\"\" Name=\"Rent prices, s.a.\"><ConceptValues><ConceptValue ConceptName=\"Measure\" Value=\"Rent prices\"/><ConceptValue ConceptName=\"Unit of measure\" Value=\"Index\"/><ConceptValue ConceptName=\"Adjustment\" Value=\"Seasonally adjusted\"/></ConceptValues></Indicator><Indicator Source1=\"\" Source2=\"\" Name=\"Price to rent ratio\"><ConceptValues><ConceptValue ConceptName=\"Measure\" Value=\"Price to rent ratio\"/><ConceptValue ConceptName=\"Unit of measure\" Value=\"Index\"/><ConceptValue ConceptName=\"Adjustment\" Value=\"Seasonally adjusted\"/></ConceptValues></Indicator><Indicator Source1=\"\" Source2=\"\" Name=\"Standardised price-rent ratio\"><ConceptValues><ConceptValue ConceptName=\"Measure\" Value=\"Standardised price-rent ratio\"/><ConceptValue ConceptName=\"Unit of measure\" Value=\"Percentage of long term average\"/><ConceptValue ConceptName=\"Adjustment\" Value=\"Seasonally adjusted\"/></ConceptValues></Indicator><Indicator Source1=\"\" Source2=\"\" Name=\"Price to income ratio\"><ConceptValues><ConceptValue ConceptName=\"Measure\" Value=\"Price to income ratio\"/><ConceptValue ConceptName=\"Unit of measure\" Value=\"Index\"/><ConceptValue ConceptName=\"Adjustment\" Value=\"Seasonally adjusted\"/></ConceptValues></Indicator><Indicator Source1=\"\" Source2=\"\" Name=\"Standardised price-income ratio\"><ConceptValues><ConceptValue ConceptName=\"Measure\" Value=\"Standardised price-income ratio\"/><ConceptValue ConceptName=\"Unit of measure\" Value=\"Percentage of long term average\"/><ConceptValue ConceptName=\"Adjustment\" Value=\"Seasonally adjusted\"/></ConceptValues></Indicator></Indicators>\n</Decomposition>\n",
+      "type": "DECOMPOSITION"
+     }
+    ],
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "REF_AREA",
+      "name": "Reference area",
+      "names": {
+       "en": "Reference area"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_AREA(1.0)"
+      }
+     },
+     {
+      "id": "FREQ",
+      "name": "Frequency of observation",
+      "names": {
+       "en": "Frequency of observation"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_FREQ(2.1)"
+      }
+     },
+     {
+      "id": "TIME_PERIOD",
+      "name": "Time period",
+      "names": {
+       "en": "Time period"
+      },
+      "coreRepresentation": {
+       "textFormat": {
+        "textType": "ObservationalTimePeriod",
+        "isSequence": false,
+        "isMultiLingual": false
+       }
+      }
+     },
+     {
+      "id": "MEASURE",
+      "name": "Measure",
+      "names": {
+       "en": "Measure"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD.ECO.MPD:CL_MEASURE_HOU(1.0)"
+      }
+     },
+     {
+      "id": "OBS_VALUE",
+      "name": "Observation value",
+      "names": {
+       "en": "Observation value"
+      }
+     },
+     {
+      "id": "OBS_STATUS",
+      "name": "Observation status",
+      "names": {
+       "en": "Observation status"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_OBS_STATUS(2.2)"
+      }
+     },
+     {
+      "id": "UNIT_MULT",
+      "name": "Unit multiplier",
+      "names": {
+       "en": "Unit multiplier"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_UNIT_MULT(1.1)"
+      }
+     },
+     {
+      "id": "UNIT_MEASURE",
+      "name": "Unit of measure",
+      "names": {
+       "en": "Unit of measure"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_UNIT_MEASURE(1.11)"
+      }
+     },
+     {
+      "id": "ADJUSTMENT",
+      "name": "Adjustment",
+      "names": {
+       "en": "Adjustment"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_ADJUSTMENT(1.0)"
+      }
+     },
+     {
+      "id": "DECIMALS",
+      "name": "Decimals",
+      "names": {
+       "en": "Decimals"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_DECIMALS(1.0)"
+      }
+     },
+     {
+      "id": "BASE_PER",
+      "name": "Base period",
+      "names": {
+       "en": "Base period"
+      }
+     }
+    ]
+   }
+  ],
+  "codelists": [
+   {
+    "id": "CL_ADJUSTMENT",
+    "version": "1.0",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for Adjustment",
+    "names": {
+     "en": "Codelist for Adjustment"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AA",
+      "name": "Amplitude adjusted",
+      "names": {
+       "en": "Amplitude adjusted"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "C",
+      "name": "Trend-cycle, calendar adjusted",
+      "names": {
+       "en": "Trend-cycle, calendar adjusted"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "140",
+        "texts": {
+         "en": "140"
+        }
+       }
+      ]
+     },
+     {
+      "id": "H",
+      "name": "Seasonally adjusted and weather normalised",
+      "names": {
+       "en": "Seasonally adjusted and weather normalised"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "100",
+        "texts": {
+         "en": "100"
+        }
+       }
+      ]
+     },
+     {
+      "id": "I",
+      "name": "Irregular component",
+      "names": {
+       "en": "Irregular component"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "50",
+        "texts": {
+         "en": "50"
+        }
+       }
+      ]
+     },
+     {
+      "id": "K",
+      "name": "Calendar component",
+      "names": {
+       "en": "Calendar component"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_AREA",
+    "version": "1.0",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for reference areas and geocoding",
+    "names": {
+     "en": "Codelist for reference areas and geocoding"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AUS",
+      "name": "Australia",
+      "names": {
+       "en": "Australia"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "CAN",
+      "name": "Canada",
+      "names": {
+       "en": "Canada"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ]
+     },
+     {
+      "id": "FRA",
+      "name": "France",
+      "names": {
+       "en": "France"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "120",
+        "texts": {
+         "en": "120"
+        }
+       }
+      ]
+     },
+     {
+      "id": "DEU",
+      "name": "Germany",
+      "names": {
+       "en": "Germany"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "130",
+        "texts": {
+         "en": "130"
+        }
+       }
+      ]
+     },
+     {
+      "id": "ITA",
+      "name": "Italy",
+      "names": {
+       "en": "Italy"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "190",
+        "texts": {
+         "en": "190"
+        }
+       }
+      ]
+     },
+     {
+      "id": "JPN",
+      "name": "Japan",
+      "names": {
+       "en": "Japan"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "200",
+        "texts": {
+         "en": "200"
+        }
+       }
+      ]
+     },
+     {
+      "id": "GBR",
+      "name": "United Kingdom",
+      "names": {
+       "en": "United Kingdom"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "370",
+        "texts": {
+         "en": "370"
+        }
+       }
+      ]
+     },
+     {
+      "id": "USA",
+      "name": "United States",
+      "names": {
+       "en": "United States"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "380",
+        "texts": {
+         "en": "380"
+        }
+       }
+      ]
+     },
+     {
+      "id": "EA17",
+      "name": "Euro area (17 countries)",
+      "names": {
+       "en": "Euro area (17 countries)"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "title": "BEL+DEU+IRL+ESP+FRA+ITA+LUX+NLD+AUT+PRT+FIN+GRC+SVN+CYP+MLT+SVK+EST",
+        "type": "COMP_RULE"
+       },
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "550",
+        "texts": {
+         "en": "550"
+        }
+       }
+      ]
+     },
+     {
+      "id": "OECD",
+      "name": "OECD",
+      "names": {
+       "en": "OECD"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "790",
+        "texts": {
+         "en": "790"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MEASURE",
+    "version": "1.11",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for Unit of measure",
+    "names": {
+     "en": "Codelist for Unit of measure"
+    },
+    "description": "Unit in which the data values are expressed.",
+    "descriptions": {
+     "en": "Unit in which the data values are expressed."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "PT_AVG_L_TERM",
+      "name": "Percentage of long term average",
+      "names": {
+       "en": "Percentage of long term average"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "7990",
+        "texts": {
+         "en": "7990"
+        }
+       }
+      ]
+     },
+     {
+      "id": "IX",
+      "name": "Index",
+      "names": {
+       "en": "Index"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "8390",
+        "texts": {
+         "en": "8390"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_MEASURE_HOU",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MPD",
+    "isFinal": true,
+    "name": "Codelist for house price indicators",
+    "names": {
+     "en": "Codelist for house price indicators"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "RHP",
+      "name": "Real house price indices",
+      "names": {
+       "en": "Real house price indices"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "HPI",
+      "name": "Nominal house price indices",
+      "names": {
+       "en": "Nominal house price indices"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "20",
+        "texts": {
+         "en": "20"
+        }
+       }
+      ]
+     },
+     {
+      "id": "HPI_RPI",
+      "name": "Price to rent ratio",
+      "names": {
+       "en": "Price to rent ratio"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ]
+     },
+     {
+      "id": "HPI_YDH",
+      "name": "Price to income ratio",
+      "names": {
+       "en": "Price to income ratio"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "60",
+        "texts": {
+         "en": "60"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_DECIMALS",
+    "version": "1.0",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Decimals",
+    "names": {
+     "en": "Decimals"
+    },
+    "description": "This code list provides a list of values showing the number of decimal digits used in the data. This code list was released in 2009. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.; syntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345.",
+    "descriptions": {
+     "en": "This code list provides a list of values showing the number of decimal digits used in the data. This code list was released in 2009. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.; syntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Zero",
+      "names": {
+       "en": "Zero"
+      }
+     },
+     {
+      "id": "1",
+      "name": "One",
+      "names": {
+       "en": "One"
+      }
+     },
+     {
+      "id": "2",
+      "name": "Two",
+      "names": {
+       "en": "Two"
+      }
+     },
+     {
+      "id": "3",
+      "name": "Three",
+      "names": {
+       "en": "Three"
+      }
+     },
+     {
+      "id": "4",
+      "name": "Four",
+      "names": {
+       "en": "Four"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_FREQ",
+    "version": "2.1",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Code list for concept \"Frequency\"",
+    "names": {
+     "en": "Code list for concept \"Frequency\""
+    },
+    "description": "This code list provides a set of values indicating\n\t\t\t\t\tthe \"frequency\" of the data (e.g. weekly, monthly, quarterly). The concept\n\t\t\t\t\t\"frequency\" may refer to various stages in the production process, e.g. data\n\t\t\t\t\tcollection or data dissemination. For example, a time series could be\n\t\t\t\t\tdisseminated at annual frequency but the underlying data are compiled monthly.\n\t\t\t\t\tThe code list is applicable for all different uses of\n\t\t\t\t\t\"frequency\".",
+    "descriptions": {
+     "en": "This code list provides a set of values indicating\n\t\t\t\t\tthe \"frequency\" of the data (e.g. weekly, monthly, quarterly). The concept\n\t\t\t\t\t\"frequency\" may refer to various stages in the production process, e.g. data\n\t\t\t\t\tcollection or data dissemination. For example, a time series could be\n\t\t\t\t\tdisseminated at annual frequency but the underlying data are compiled monthly.\n\t\t\t\t\tThe code list is applicable for all different uses of\n\t\t\t\t\t\"frequency\"."
+    },
+    "isPartial": true,
+    "codes": [
+     {
+      "id": "A",
+      "name": "Annual",
+      "names": {
+       "en": "Annual"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery year",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery year"
+      }
+     },
+     {
+      "id": "Q",
+      "name": "Quarterly",
+      "names": {
+       "en": "Quarterly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery quarter",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery quarter"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_OBS_STATUS",
+    "version": "2.2",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Code list for Observation Status",
+    "names": {
+     "en": "Code list for Observation Status"
+    },
+    "description": "Information on the quality of a value or an unusual or missing value.",
+    "descriptions": {
+     "en": "Information on the quality of a value or an unusual or missing value."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "A",
+      "name": "Normal value",
+      "names": {
+       "en": "Normal value"
+      },
+      "description": "To be used as default value if no value is provided or when no special coded qualification is assumed. Usually, it can be assumed that the source agency assigns sufficient confidence to the provided observation and/or the value is not expected to be\n\t\t\t\t\t\tdrama",
+      "descriptions": {
+       "en": "To be used as default value if no value is provided or when no special coded qualification is assumed. Usually, it can be assumed that the source agency assigns sufficient confidence to the provided observation and/or the value is not expected to be\n\t\t\t\t\t\tdrama"
+      }
+     },
+     {
+      "id": "B",
+      "name": "Time series break",
+      "names": {
+       "en": "Time series break"
+      },
+      "description": "Observations are characterised as such when different content exists or a different methodology has been applied to this observation as compared with the preceding one (the one given for the previous period).",
+      "descriptions": {
+       "en": "Observations are characterised as such when different content exists or a different methodology has been applied to this observation as compared with the preceding one (the one given for the previous period)."
+      }
+     },
+     {
+      "id": "D",
+      "name": "Definition differs",
+      "names": {
+       "en": "Definition differs"
+      },
+      "description": "Used to indicate slight deviations from the established methodology (footnote-type information); these divergences do not imply a break in time series.",
+      "descriptions": {
+       "en": "Used to indicate slight deviations from the established methodology (footnote-type information); these divergences do not imply a break in time series."
+      }
+     },
+     {
+      "id": "E",
+      "name": "Estimated value",
+      "names": {
+       "en": "Estimated value"
+      },
+      "description": "Observation obtained through an estimation methodology (e.g. to produce back-casts) or based on the use of a limited amount of data or ad hoc sampling and through additional calculations (e.g. to produce a value at an early stage of the production\n\t\t\t\t\t\tstage while not all data are available). It may also be used in case of experimental data (e.g. in the context of a pilot ahead of a full scale production process) or in case of data of (anticipated/assessed) low quality. If needed, additional information can be provided\n\t\t\t\t\t\tthrough free text using the COMMENT_OBS attribute at the observation level or at a higher level. This code is to be used when the estimation is done by a sender agency. When the imputation is carried out by a receiver agency in order to replace or fill gaps in reported data\n\t\t\t\t\t\tseries, the flag to use is I \"Value imputed by a receiving agency\".",
+      "descriptions": {
+       "en": "Observation obtained through an estimation methodology (e.g. to produce back-casts) or based on the use of a limited amount of data or ad hoc sampling and through additional calculations (e.g. to produce a value at an early stage of the production\n\t\t\t\t\t\tstage while not all data are available). It may also be used in case of experimental data (e.g. in the context of a pilot ahead of a full scale production process) or in case of data of (anticipated/assessed) low quality. If needed, additional information can be provided\n\t\t\t\t\t\tthrough free text using the COMMENT_OBS attribute at the observation level or at a higher level. This code is to be used when the estimation is done by a sender agency. When the imputation is carried out by a receiver agency in order to replace or fill gaps in reported data\n\t\t\t\t\t\tseries, the flag to use is I \"Value imputed by a receiving agency\"."
+      }
+     },
+     {
+      "id": "F",
+      "name": "Forecast value",
+      "names": {
+       "en": "Forecast value"
+      },
+      "description": "Value deemed to assess the magnitude which a quantity will assume at some future point of time (as distinct from \"estimated value\" which attempts to assess the magnitude of an already existent quantity).",
+      "descriptions": {
+       "en": "Value deemed to assess the magnitude which a quantity will assume at some future point of time (as distinct from \"estimated value\" which attempts to assess the magnitude of an already existent quantity)."
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MULT",
+    "version": "1.1",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Code list for the Unit Multiplier",
+    "names": {
+     "en": "Code list for the Unit Multiplier"
+    },
+    "description": "This code list provides code values for indicating the magnitude in the units of measurement. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.;\n\t\t\t\t\tsyntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345.",
+    "descriptions": {
+     "en": "This code list provides code values for indicating the magnitude in the units of measurement. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.;\n\t\t\t\t\tsyntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Units",
+      "names": {
+       "en": "Units"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of zero (100)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of zero (100)"
+      }
+     },
+     {
+      "id": "1",
+      "name": "Tens",
+      "names": {
+       "en": "Tens"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of one (101)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of one (101)"
+      }
+     },
+     {
+      "id": "2",
+      "name": "Hundreds",
+      "names": {
+       "en": "Hundreds"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of two (102)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of two (102)"
+      }
+     },
+     {
+      "id": "3",
+      "name": "Thousands",
+      "names": {
+       "en": "Thousands"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of three (103)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of three (103)"
+      }
+     },
+     {
+      "id": "4",
+      "name": "Tens of thousands",
+      "names": {
+       "en": "Tens of thousands"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of four (104)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of four (104)"
+      }
+     }
+    ]
+   }
+  ],
+  "dataStructures": [
+   {
+    "id": "DSD_AN_HOUSE_PRICES",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MPD",
+    "isFinal": true,
+    "name": "DSD for analytical house prices indicators",
+    "names": {
+     "en": "DSD for analytical house prices indicators"
+    },
+    "annotations": [
+     {
+      "title": "urn:sdmx:org.sdmx.infomodel.metadatastructure.MetadataStructure=OECD:MSD_REF_METADATA(1.0)",
+      "type": "METADATA"
+     }
+    ],
+    "dataStructureComponents": {
+     "attributeList": {
+      "id": "AttributeDescriptor",
+      "attributes": [
+       {
+        "id": "OBS_STATUS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).OBS_STATUS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_OBS_STATUS(2.2)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "UNIT_MULT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).UNIT_MULT",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_UNIT_MULT(1.1)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "REF_AREA",
+          "FREQ",
+          "UNIT_MEASURE",
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "ADJUSTMENT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).ADJUSTMENT",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_ADJUSTMENT(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "UNIT_MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "DECIMALS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).DECIMALS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_DECIMALS(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "UNIT_MEASURE",
+          "FREQ",
+          "REF_AREA",
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "BASE_PER",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).BASE_PER",
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "UNIT_MEASURE"
+         ]
+        }
+       }
+      ]
+     },
+     "dimensionList": {
+      "id": "DimensionDescriptor",
+      "dimensions": [
+       {
+        "id": "REF_AREA",
+        "position": 0,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).REF_AREA",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_AREA(1.0)"
+        }
+       },
+       {
+        "id": "FREQ",
+        "position": 1,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).FREQ",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_FREQ(2.1)"
+        }
+       },
+       {
+        "id": "MEASURE",
+        "position": 2,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD.ECO.MPD:CL_MEASURE_HOU(1.0)"
+        }
+       },
+       {
+        "id": "UNIT_MEASURE",
+        "position": 3,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).UNIT_MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_UNIT_MEASURE(1.11)"
+        }
+       }
+      ],
+      "timeDimensions": [
+       {
+        "id": "TIME_PERIOD",
+        "position": 4,
+        "type": "TimeDimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).TIME_PERIOD",
+        "localRepresentation": {
+         "textFormat": {
+          "textType": "ObservationalTimePeriod",
+          "isSequence": false,
+          "isMultiLingual": false
+         }
+        }
+       }
+      ]
+     },
+     "measureList": {
+      "id": "MeasureDescriptor",
+      "primaryMeasure": {
+       "id": "OBS_VALUE",
+       "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MPD:CS_ANA_HOUSE_PRI(1.0).OBS_VALUE",
+       "localRepresentation": {
+        "textFormat": {
+         "textType": "Double",
+         "isSequence": false,
+         "isMultiLingual": false
+        }
+       }
+      }
+     }
+    }
+   }
+  ],
+  "contentConstraints": [
+   {
+    "id": "CR_A_DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MPD",
+    "isExternalReference": false,
+    "isFinal": false,
+    "validFrom": "2026-10-27T08:32:57Z",
+    "name": "Availability (A) for DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES",
+    "names": {
+     "en": "Availability (A) for DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES"
+    },
+    "annotations": [
+     {
+      "title": "A",
+      "type": "ReleaseVersion"
+     },
+     {
+      "id": "obs_count",
+      "title": "59215",
+      "type": "sdmx_metrics"
+     }
+    ],
+    "type": "Actual",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=OECD.ECO.MPD:DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES(1.0)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "keyValues": [
+       {
+        "id": "REF_AREA",
+        "values": [
+         "ITA",
+         "DEU",
+         "USA",
+         "OECD",
+         "AUS",
+         "CAN",
+         "GBR",
+         "FRA",
+         "EA17",
+         "JPN"
+        ]
+       },
+       {
+        "id": "FREQ",
+        "values": [
+         "Q",
+         "A"
+        ]
+       },
+       {
+        "id": "MEASURE",
+        "values": [
+         "RHP",
+         "HPI_RPI",
+         "HPI",
+         "HPI_YDH"
+        ]
+       },
+       {
+        "id": "UNIT_MEASURE",
+        "values": [
+         "PT_AVG_L_TERM",
+         "IX"
+        ]
+       },
+       {
+        "id": "TIME_PERIOD",
+        "timeRange": {
+         "startPeriod": {
+          "period": "1956-01-01T00:00:00",
+          "isInclusive": true
+         },
+         "endPeriod": {
+          "period": "2026-09-30T00:00:00",
+          "isInclusive": true
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CR_DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MPD",
+    "isFinal": true,
+    "name": "OECD.ECO.MPD:CR_DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES(1.0)",
+    "names": {
+     "en": "OECD.ECO.MPD:CR_DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES(1.0)"
+    },
+    "type": "Allowed",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=OECD.ECO.MPD:DSD_AN_HOUSE_PRICES@DF_HOUSE_PRICES(1.0)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "attributes": [
+       {
+        "id": "UNIT_MULT",
+        "values": [
+         "0"
+        ]
+       },
+       {
+        "id": "DECIMALS",
+        "values": [
+         "1"
+        ]
+       }
+      ],
+      "keyValues": [
+       {
+        "id": "FREQ",
+        "values": [
+         "A",
+         "Q"
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "meta": {
+  "schema": "https://raw.githubusercontent.com/sdmx-twg/sdmx-json/develop/structure-message/tools/schemas/1.0/sdmx-json-structure-schema.json",
+  "contentLanguages": [
+   "en"
+  ],
+  "id": "IDREF10405",
+  "prepared": "2026-11-07T23:01:19Z",
+  "test": false,
+  "sender": {
+   "id": "Unknown"
+  },
+  "receiver": [
+   {
+    "id": "Unknown"
+   }
+  ]
+ }
+}

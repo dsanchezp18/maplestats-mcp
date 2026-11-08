@@ -202,6 +202,7 @@ CASES = [
     ("jeux de données de la Banque des règlements internationaux", "bis_list_datasets"),
     ("taux de chômage américain aux États-Unis", "bls_get_indicator"),
     ("inflation aux États-Unis IPC américain", "bls_get_indicator"),
+    ("productivité du travail Canada comparée aux pays de l'OCDE", "oecd_compare_countries"),
     # French stop words in shared/search.py (2026-10-03): "de" and "par" no
     # longer decide the ranking.
     ("taux de chômage par province", "statcan_indicators_get_indicators"),

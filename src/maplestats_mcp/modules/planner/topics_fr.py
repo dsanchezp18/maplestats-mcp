@@ -176,6 +176,14 @@ FR: dict[str, str] = {
         "directeur, ratio du service de la dette, crédit, prix des logements, inflation, "
         "taux de change)"
     ),
+    "Canada beside G7 or OECD countries on an OECD indicator (Economic Outlook "
+    "projections, productivity, unit labour costs, PPPs, tax-to-GDP, house prices, "
+    "leading indicator)": (
+        "le Canada à côté du G7 ou de pays de l'OCDE pour un indicateur de l'OCDE "
+        "(projections des Perspectives économiques, productivité, coûts unitaires de "
+        "main-d'œuvre, PPA, recettes fiscales en % du PIB, prix des logements, indicateur "
+        "avancé)"
+    ),
     # Economy
     "Canada's duty rates: tariff_item is the same HS code (MFN, General and "
     "CUSMA, CETA, CPTPP ... rates); cbsa_tariff_search finds it by words": (

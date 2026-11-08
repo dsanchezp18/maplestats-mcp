@@ -1,0 +1,1818 @@
+{
+ "data": {
+  "dataflows": [
+   {
+    "id": "DSD_EO@DF_EO",
+    "version": "1.5",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": true,
+    "name": "Economic Outlook 119",
+    "names": {
+     "en": "Economic Outlook 119"
+    },
+    "description": "<div>\nThe OECD Economic Outlook presents the OECD’s analysis of the major global economic trends and prospects for the next two years. The Outlook puts forward a consistent set of projections for output, employment, government spending, prices and current balances based on a review of each member country and of the induced effect on each of them on international developments. <br />\nOECD (2026), OECD Economic Outlook No 119 (Edition 2026/1)\n</div>\n\n<ul>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/EO119_Database_documentation.pdf\">EO119 Database documentation</a>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/Last_Historical_observation_EO_119.xlsx\">EO119 Last historical points</a>\n</ul>\n<div style='visibility:hidden'>gdp inflation cpi population unemployment real gdp gdp per capita employment</div>\n<div>\nOECD Economic Outlook website: <a href=\"https://www.oecd.org/economic-outlook/\">https://www.oecd.org/economic-outlook/</a><br />\n<b><i>Contact</i></b>: <a href=\"mailto:eco.outlook@oecd.org\">eco.outlook@oecd.org</a><br />\n<b><i>Keywords</i></b>: Outlook, forecasts, forecast, GDP\n</div>",
+    "descriptions": {
+     "en": "<div>\nThe OECD Economic Outlook presents the OECD’s analysis of the major global economic trends and prospects for the next two years. The Outlook puts forward a consistent set of projections for output, employment, government spending, prices and current balances based on a review of each member country and of the induced effect on each of them on international developments. <br />\nOECD (2026), OECD Economic Outlook No 119 (Edition 2026/1)\n</div>\n\n<ul>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/EO119_Database_documentation.pdf\">EO119 Database documentation</a>\n<li><a href=\"https://webfs-eco.oecd.org/files/.Stat/EO119/Last_Historical_observation_EO_119.xlsx\">EO119 Last historical points</a>\n</ul>\n<div style='visibility:hidden'>gdp inflation cpi population unemployment real gdp gdp per capita employment</div>\n<div>\nOECD Economic Outlook website: <a href=\"https://www.oecd.org/economic-outlook/\">https://www.oecd.org/economic-outlook/</a><br />\n<b><i>Contact</i></b>: <a href=\"mailto:eco.outlook@oecd.org\">eco.outlook@oecd.org</a><br />\n<b><i>Keywords</i></b>: Outlook, forecasts, forecast, GDP\n</div>"
+    },
+    "annotations": [
+     {
+      "type": "NonProductionDataflow",
+      "text": "true",
+      "texts": {
+       "en": "true"
+      }
+     },
+     {
+      "id": "@SDMX",
+      "title": "REF_AREA,COMBINED_UNIT_MEASURE",
+      "type": "LAYOUT_ROW"
+     },
+     {
+      "id": "@SDMX",
+      "title": "TIME_PERIOD",
+      "type": "LAYOUT_COLUMN"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE",
+      "type": "LAYOUT_ROW_SECTION"
+     },
+     {
+      "title": "DECIMALS",
+      "type": "LAYOUT_NOTE"
+     },
+     {
+      "id": "@SDMX",
+      "title": "UNIT_MULT=0,METHODOLOGY=_Z,FREQ=A",
+      "type": "NOT_DISPLAYED"
+     },
+     {
+      "id": "@SDMX",
+      "title": "MEASURE=GDPV_ANNPCT,FREQ=A",
+      "type": "DEFAULT"
+     },
+     {
+      "title": "UNIT_MEASURE,UNIT_MULT,PRICE_BASE,ADJUSTMENT,METHODOLOGY,BASE_PER,CURRENCY",
+      "type": "UNIT_MEASURE_CONCEPTS"
+     },
+     {
+      "title": "COMBINED_UNIT_MEASURE:UNIT_MEASURE,UNIT_MULT,PRICE_BASE,ADJUSTMENT,METHODOLOGY,BASE_PER,CURRENCY",
+      "type": "COMBINED_CONCEPTS",
+      "text": "COMBINED_UNIT_MEASURE:Combined unit of measure",
+      "texts": {
+       "en": "COMBINED_UNIT_MEASURE:Combined unit of measure"
+      }
+     }
+    ],
+    "structure": "urn:sdmx:org.sdmx.infomodel.datastructure.DataStructure=OECD.ECO.MAD:DSD_EO(1.5)"
+   }
+  ],
+  "conceptSchemes": [
+   {
+    "id": "CS_EO",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": true,
+    "name": "Economic Outlook Concept Scheme",
+    "names": {
+     "en": "Economic Outlook Concept Scheme"
+    },
+    "isPartial": false,
+    "concepts": [
+     {
+      "id": "REF_AREA",
+      "name": "Reference area",
+      "names": {
+       "en": "Reference area"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_AREA(1.0)"
+      }
+     },
+     {
+      "id": "MEASURE",
+      "name": "Measure",
+      "names": {
+       "en": "Measure"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD.ECO.MAD:CL_MEASURE(1.0)"
+      }
+     },
+     {
+      "id": "FREQ",
+      "name": "Frequency of observation",
+      "names": {
+       "en": "Frequency of observation"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_FREQ(2.1)"
+      }
+     },
+     {
+      "id": "TIME_PERIOD",
+      "name": "Time period",
+      "names": {
+       "en": "Time period"
+      },
+      "coreRepresentation": {
+       "textFormat": {
+        "textType": "ObservationalTimePeriod",
+        "isSequence": false,
+        "isMultiLingual": false
+       }
+      }
+     },
+     {
+      "id": "OBS_VALUE",
+      "name": "Observation value",
+      "names": {
+       "en": "Observation value"
+      }
+     },
+     {
+      "id": "OBS_STATUS",
+      "name": "Observation status",
+      "names": {
+       "en": "Observation status"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_OBS_STATUS(2.2)"
+      }
+     },
+     {
+      "id": "UNIT_MEASURE",
+      "name": "Unit of measure",
+      "names": {
+       "en": "Unit of measure"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_UNIT_MEASURE(1.12)"
+      }
+     },
+     {
+      "id": "PRICE_BASE",
+      "name": "Price base",
+      "names": {
+       "en": "Price base"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_PRICES(1.0)"
+      }
+     },
+     {
+      "id": "ADJUSTMENT",
+      "name": "Adjustment",
+      "names": {
+       "en": "Adjustment"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_ADJUSTMENT(1.0)"
+      }
+     },
+     {
+      "id": "UNIT_MULT",
+      "name": "Unit multiplier",
+      "names": {
+       "en": "Unit multiplier"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_UNIT_MULT(1.1)"
+      }
+     },
+     {
+      "id": "CURRENCY",
+      "name": "Currency",
+      "names": {
+       "en": "Currency"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_CURRENCY(1.0)"
+      }
+     },
+     {
+      "id": "BASE_PER",
+      "name": "Base period",
+      "names": {
+       "en": "Base period"
+      },
+      "coreRepresentation": {
+       "textFormat": {
+        "textType": "ReportingTimePeriod",
+        "isSequence": false,
+        "isMultiLingual": false
+       }
+      }
+     },
+     {
+      "id": "METHODOLOGY",
+      "name": "Methodology",
+      "names": {
+       "en": "Methodology"
+      },
+      "coreRepresentation": {
+       "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD.ECO.MAD:CL_METHODOLOGY(1.0)"
+      }
+     },
+     {
+      "id": "DECIMALS",
+      "name": "Decimals",
+      "names": {
+       "en": "Decimals"
+      }
+     }
+    ]
+   }
+  ],
+  "codelists": [
+   {
+    "id": "CL_ADJUSTMENT",
+    "version": "1.0",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for Adjustment",
+    "names": {
+     "en": "Codelist for Adjustment"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AA",
+      "name": "Amplitude adjusted",
+      "names": {
+       "en": "Amplitude adjusted"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "C",
+      "name": "Trend-cycle, calendar adjusted",
+      "names": {
+       "en": "Trend-cycle, calendar adjusted"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "140",
+        "texts": {
+         "en": "140"
+        }
+       }
+      ]
+     },
+     {
+      "id": "H",
+      "name": "Seasonally adjusted and weather normalised",
+      "names": {
+       "en": "Seasonally adjusted and weather normalised"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "100",
+        "texts": {
+         "en": "100"
+        }
+       }
+      ]
+     },
+     {
+      "id": "I",
+      "name": "Irregular component",
+      "names": {
+       "en": "Irregular component"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "50",
+        "texts": {
+         "en": "50"
+        }
+       }
+      ]
+     },
+     {
+      "id": "K",
+      "name": "Calendar component",
+      "names": {
+       "en": "Calendar component"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_AREA",
+    "version": "1.0",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for reference areas and geocoding",
+    "names": {
+     "en": "Codelist for reference areas and geocoding"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AUS",
+      "name": "Australia",
+      "names": {
+       "en": "Australia"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "CAN",
+      "name": "Canada",
+      "names": {
+       "en": "Canada"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ]
+     },
+     {
+      "id": "FRA",
+      "name": "France",
+      "names": {
+       "en": "France"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "120",
+        "texts": {
+         "en": "120"
+        }
+       }
+      ]
+     },
+     {
+      "id": "DEU",
+      "name": "Germany",
+      "names": {
+       "en": "Germany"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "130",
+        "texts": {
+         "en": "130"
+        }
+       }
+      ]
+     },
+     {
+      "id": "ITA",
+      "name": "Italy",
+      "names": {
+       "en": "Italy"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "190",
+        "texts": {
+         "en": "190"
+        }
+       }
+      ]
+     },
+     {
+      "id": "JPN",
+      "name": "Japan",
+      "names": {
+       "en": "Japan"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "200",
+        "texts": {
+         "en": "200"
+        }
+       }
+      ]
+     },
+     {
+      "id": "MEX",
+      "name": "Mexico",
+      "names": {
+       "en": "Mexico"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "250",
+        "texts": {
+         "en": "250"
+        }
+       }
+      ]
+     },
+     {
+      "id": "GBR",
+      "name": "United Kingdom",
+      "names": {
+       "en": "United Kingdom"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "370",
+        "texts": {
+         "en": "370"
+        }
+       }
+      ]
+     },
+     {
+      "id": "USA",
+      "name": "United States",
+      "names": {
+       "en": "United States"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "380",
+        "texts": {
+         "en": "380"
+        }
+       }
+      ]
+     },
+     {
+      "id": "EA17",
+      "name": "Euro area (17 countries)",
+      "names": {
+       "en": "Euro area (17 countries)"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "title": "BEL+DEU+IRL+ESP+FRA+ITA+LUX+NLD+AUT+PRT+FIN+GRC+SVN+CYP+MLT+SVK+EST",
+        "type": "COMP_RULE"
+       },
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "550",
+        "texts": {
+         "en": "550"
+        }
+       }
+      ]
+     },
+     {
+      "id": "OECD",
+      "name": "OECD",
+      "names": {
+       "en": "OECD"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "790",
+        "texts": {
+         "en": "790"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_CURRENCY",
+    "version": "1.0",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for Currency",
+    "names": {
+     "en": "Codelist for Currency"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "AED",
+      "name": "United Arab Emirates dirham",
+      "names": {
+       "en": "United Arab Emirates dirham"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "AFN",
+      "name": "Afghani",
+      "names": {
+       "en": "Afghani"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "20",
+        "texts": {
+         "en": "20"
+        }
+       }
+      ]
+     },
+     {
+      "id": "ALL",
+      "name": "Lek",
+      "names": {
+       "en": "Lek"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "30",
+        "texts": {
+         "en": "30"
+        }
+       }
+      ]
+     },
+     {
+      "id": "AMD",
+      "name": "Armenian dram",
+      "names": {
+       "en": "Armenian dram"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ]
+     },
+     {
+      "id": "ANG",
+      "name": "Netherlands Antillian guilder",
+      "names": {
+       "en": "Netherlands Antillian guilder"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "50",
+        "texts": {
+         "en": "50"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_PRICES",
+    "version": "1.0",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for Prices",
+    "names": {
+     "en": "Codelist for Prices"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "D",
+      "name": "Deflator",
+      "names": {
+       "en": "Deflator"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "80",
+        "texts": {
+         "en": "80"
+        }
+       }
+      ]
+     },
+     {
+      "id": "DR",
+      "name": "Deflator (rebased)",
+      "names": {
+       "en": "Deflator (rebased)"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "90",
+        "texts": {
+         "en": "90"
+        }
+       }
+      ]
+     },
+     {
+      "id": "L",
+      "name": "Chain linked volume",
+      "names": {
+       "en": "Chain linked volume"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "LR",
+      "name": "Chain linked volume (rebased)",
+      "names": {
+       "en": "Chain linked volume (rebased)"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "20",
+        "texts": {
+         "en": "20"
+        }
+       }
+      ]
+     },
+     {
+      "id": "O",
+      "name": "Previous year’s replacement cost",
+      "names": {
+       "en": "Previous year’s replacement cost"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "110",
+        "texts": {
+         "en": "110"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MEASURE",
+    "version": "1.12",
+    "agencyID": "OECD",
+    "isFinal": true,
+    "name": "Codelist for Unit of measure",
+    "names": {
+     "en": "Codelist for Unit of measure"
+    },
+    "description": "Unit in which the data values are expressed.",
+    "descriptions": {
+     "en": "Unit in which the data values are expressed."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "BBL_US",
+      "name": "Barrels",
+      "names": {
+       "en": "Barrels"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "10",
+        "texts": {
+         "en": "10"
+        }
+       }
+      ]
+     },
+     {
+      "id": "C",
+      "name": "Degrees celsius",
+      "names": {
+       "en": "Degrees celsius"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "20",
+        "texts": {
+         "en": "20"
+        }
+       }
+      ]
+     },
+     {
+      "id": "CAL",
+      "name": "Calories",
+      "names": {
+       "en": "Calories"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "30",
+        "texts": {
+         "en": "30"
+        }
+       }
+      ]
+     },
+     {
+      "id": "CT",
+      "name": "Carats",
+      "names": {
+       "en": "Carats"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "40",
+        "texts": {
+         "en": "40"
+        }
+       }
+      ]
+     },
+     {
+      "id": "CM",
+      "name": "Centimetres",
+      "names": {
+       "en": "Centimetres"
+      },
+      "annotations": [
+       {
+        "id": "@SDMX",
+        "type": "ORDER",
+        "text": "50",
+        "texts": {
+         "en": "50"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "CL_MEASURE",
+    "version": "1.5",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": true,
+    "name": "Variable",
+    "names": {
+     "en": "Variable"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "GDPV_ANNPCT",
+      "name": "Gross domestic product, volume, growth",
+      "names": {
+       "en": "Gross domestic product, volume, growth"
+      },
+      "parent": "SEL"
+     },
+     {
+      "id": "CPIH_YTYPCT",
+      "name": "Harmonised headline inflation",
+      "names": {
+       "en": "Harmonised headline inflation"
+      },
+      "parent": "SEL"
+     },
+     {
+      "id": "CPI_YTYPCT",
+      "name": "Headline inflation",
+      "names": {
+       "en": "Headline inflation"
+      },
+      "parent": "SEL"
+     },
+     {
+      "id": "UNR",
+      "name": "Unemployment rate",
+      "names": {
+       "en": "Unemployment rate"
+      },
+      "parent": "LAB"
+     }
+    ]
+   },
+   {
+    "id": "CL_METHODOLOGY",
+    "version": "1.0",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": true,
+    "name": "Methodology",
+    "names": {
+     "en": "Methodology"
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "BOP",
+      "name": "Balance of payments basis",
+      "names": {
+       "en": "Balance of payments basis"
+      }
+     },
+     {
+      "id": "GDP",
+      "name": "GDP expenditure approach",
+      "names": {
+       "en": "GDP expenditure approach"
+      }
+     },
+     {
+      "id": "HWWI",
+      "name": "HWWI (USD basis)",
+      "names": {
+       "en": "HWWI (USD basis)"
+      }
+     },
+     {
+      "id": "LFS",
+      "name": "Labour force survey basis",
+      "names": {
+       "en": "Labour force survey basis"
+      }
+     },
+     {
+      "id": "NA",
+      "name": "National accounts basis",
+      "names": {
+       "en": "National accounts basis"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_DECIMALS",
+    "version": "1.0",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Decimals",
+    "names": {
+     "en": "Decimals"
+    },
+    "description": "This code list provides a list of values showing the number of decimal digits used in the data. This code list was released in 2009. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.; syntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345.",
+    "descriptions": {
+     "en": "This code list provides a list of values showing the number of decimal digits used in the data. This code list was released in 2009. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.; syntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Zero",
+      "names": {
+       "en": "Zero"
+      }
+     },
+     {
+      "id": "1",
+      "name": "One",
+      "names": {
+       "en": "One"
+      }
+     },
+     {
+      "id": "2",
+      "name": "Two",
+      "names": {
+       "en": "Two"
+      }
+     },
+     {
+      "id": "3",
+      "name": "Three",
+      "names": {
+       "en": "Three"
+      }
+     },
+     {
+      "id": "4",
+      "name": "Four",
+      "names": {
+       "en": "Four"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_FREQ",
+    "version": "2.1",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Code list for concept \"Frequency\"",
+    "names": {
+     "en": "Code list for concept \"Frequency\""
+    },
+    "description": "This code list provides a set of values indicating\n\t\t\t\t\tthe \"frequency\" of the data (e.g. weekly, monthly, quarterly). The concept\n\t\t\t\t\t\"frequency\" may refer to various stages in the production process, e.g. data\n\t\t\t\t\tcollection or data dissemination. For example, a time series could be\n\t\t\t\t\tdisseminated at annual frequency but the underlying data are compiled monthly.\n\t\t\t\t\tThe code list is applicable for all different uses of\n\t\t\t\t\t\"frequency\".",
+    "descriptions": {
+     "en": "This code list provides a set of values indicating\n\t\t\t\t\tthe \"frequency\" of the data (e.g. weekly, monthly, quarterly). The concept\n\t\t\t\t\t\"frequency\" may refer to various stages in the production process, e.g. data\n\t\t\t\t\tcollection or data dissemination. For example, a time series could be\n\t\t\t\t\tdisseminated at annual frequency but the underlying data are compiled monthly.\n\t\t\t\t\tThe code list is applicable for all different uses of\n\t\t\t\t\t\"frequency\"."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "A",
+      "name": "Annual",
+      "names": {
+       "en": "Annual"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery year",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery year"
+      }
+     },
+     {
+      "id": "A2",
+      "name": "Biennial",
+      "names": {
+       "en": "Biennial"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two years",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two years"
+      }
+     },
+     {
+      "id": "A3",
+      "name": "Triennial",
+      "names": {
+       "en": "Triennial"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery three years",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery three years"
+      }
+     },
+     {
+      "id": "A4",
+      "name": "Quadrennial",
+      "names": {
+       "en": "Quadrennial"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery four years",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery four years"
+      }
+     },
+     {
+      "id": "A5",
+      "name": "Quinquennial",
+      "names": {
+       "en": "Quinquennial"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery five years",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery five years"
+      }
+     },
+     {
+      "id": "A10",
+      "name": "Decennial",
+      "names": {
+       "en": "Decennial"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery ten years",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery ten years"
+      }
+     },
+     {
+      "id": "A20",
+      "name": "Bidecennial",
+      "names": {
+       "en": "Bidecennial"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery twenty years",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery twenty years"
+      }
+     },
+     {
+      "id": "A30",
+      "name": "Tridecennial",
+      "names": {
+       "en": "Tridecennial"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery thirty years",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery thirty years"
+      }
+     },
+     {
+      "id": "A_3",
+      "name": "Three times a year",
+      "names": {
+       "en": "Three times a year"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tthree times a year",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tthree times a year"
+      }
+     },
+     {
+      "id": "S",
+      "name": "Half-yearly, semester",
+      "names": {
+       "en": "Half-yearly, semester"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery semester",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery semester"
+      }
+     },
+     {
+      "id": "Q",
+      "name": "Quarterly",
+      "names": {
+       "en": "Quarterly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery quarter",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery quarter"
+      }
+     },
+     {
+      "id": "M",
+      "name": "Monthly",
+      "names": {
+       "en": "Monthly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery month",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery month"
+      }
+     },
+     {
+      "id": "M2",
+      "name": "Bimonthly",
+      "names": {
+       "en": "Bimonthly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two months",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two months"
+      }
+     },
+     {
+      "id": "M_2",
+      "name": "Semimonthly",
+      "names": {
+       "en": "Semimonthly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\ttwice a month",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\ttwice a month"
+      }
+     },
+     {
+      "id": "M_3",
+      "name": "Three times a month",
+      "names": {
+       "en": "Three times a month"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tthree times a month",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tthree times a month"
+      }
+     },
+     {
+      "id": "W",
+      "name": "Weekly",
+      "names": {
+       "en": "Weekly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery week",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery week"
+      }
+     },
+     {
+      "id": "W2",
+      "name": "Biweekly",
+      "names": {
+       "en": "Biweekly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two weeks",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two weeks"
+      }
+     },
+     {
+      "id": "W3",
+      "name": "Triweekly",
+      "names": {
+       "en": "Triweekly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery three weeks",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery three weeks"
+      }
+     },
+     {
+      "id": "W4",
+      "name": "Four-weekly",
+      "names": {
+       "en": "Four-weekly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery four weeks",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery four weeks"
+      }
+     },
+     {
+      "id": "W_2",
+      "name": "Semiweekly",
+      "names": {
+       "en": "Semiweekly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\ttwice a week",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\ttwice a week"
+      }
+     },
+     {
+      "id": "W_3",
+      "name": "Three times a week",
+      "names": {
+       "en": "Three times a week"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tthree times a week",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tthree times a week"
+      }
+     },
+     {
+      "id": "D",
+      "name": "Daily",
+      "names": {
+       "en": "Daily"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery day",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery day"
+      }
+     },
+     {
+      "id": "D_2",
+      "name": "Twice a day",
+      "names": {
+       "en": "Twice a day"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\ttwice a day",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\ttwice a day"
+      }
+     },
+     {
+      "id": "H",
+      "name": "Hourly",
+      "names": {
+       "en": "Hourly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery hour",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery hour"
+      }
+     },
+     {
+      "id": "H2",
+      "name": "Bihourly",
+      "names": {
+       "en": "Bihourly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two hours",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery two hours"
+      }
+     },
+     {
+      "id": "H3",
+      "name": "Trihourly",
+      "names": {
+       "en": "Trihourly"
+      },
+      "description": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery three hours",
+      "descriptions": {
+       "en": "To be used for data collected or disseminated\n\t\t\t\t\t\tevery three hours"
+      }
+     },
+     {
+      "id": "B",
+      "name": "Daily – business week",
+      "names": {
+       "en": "Daily – business week"
+      },
+      "description": "Similar to \"daily\", however there are no\n\t\t\t\t\t\tobservations for Saturdays and Sundays (so, neither “missing values” nor\n\t\t\t\t\t\t“numeric values” should be provided for Saturday and\n\t\t\t\t\t\tSunday)",
+      "descriptions": {
+       "en": "Similar to \"daily\", however there are no\n\t\t\t\t\t\tobservations for Saturdays and Sundays (so, neither “missing values” nor\n\t\t\t\t\t\t“numeric values” should be provided for Saturday and\n\t\t\t\t\t\tSunday)"
+      }
+     },
+     {
+      "id": "N",
+      "name": "Minutely",
+      "names": {
+       "en": "Minutely"
+      },
+      "description": "While N denotes \"minutely\", usually, there may be\n\t\t\t\t\t\tno observations every minute (for several series the frequency is usually\n\t\t\t\t\t\t\"irregular\" within a day/days). And though observations may be sparse (not\n\t\t\t\t\t\tcollected or disseminated every minute), missing values do not need to be\n\t\t\t\t\t\tgiven for the minutes when no observations exist: in any case the time stamp\n\t\t\t\t\t\tdetermines when an observation is observed",
+      "descriptions": {
+       "en": "While N denotes \"minutely\", usually, there may be\n\t\t\t\t\t\tno observations every minute (for several series the frequency is usually\n\t\t\t\t\t\t\"irregular\" within a day/days). And though observations may be sparse (not\n\t\t\t\t\t\tcollected or disseminated every minute), missing values do not need to be\n\t\t\t\t\t\tgiven for the minutes when no observations exist: in any case the time stamp\n\t\t\t\t\t\tdetermines when an observation is observed"
+      }
+     },
+     {
+      "id": "I",
+      "name": "Irregular",
+      "names": {
+       "en": "Irregular"
+      },
+      "description": "To be used with irregular time series that stores\n\t\t\t\t\t\tdata for a sequence of arbitrary timepoints. Irregular time series are\n\t\t\t\t\t\tappropriate when the data arrives unpredictably, such as when the\n\t\t\t\t\t\tapplication records every stock trade or when random events are recorded\n\t\t\t\t\t\t(the interval between each element can be a different\n\t\t\t\t\t\tlength)",
+      "descriptions": {
+       "en": "To be used with irregular time series that stores\n\t\t\t\t\t\tdata for a sequence of arbitrary timepoints. Irregular time series are\n\t\t\t\t\t\tappropriate when the data arrives unpredictably, such as when the\n\t\t\t\t\t\tapplication records every stock trade or when random events are recorded\n\t\t\t\t\t\t(the interval between each element can be a different\n\t\t\t\t\t\tlength)"
+      }
+     },
+     {
+      "id": "OA",
+      "name": "Occasional annual",
+      "names": {
+       "en": "Occasional annual"
+      },
+      "description": "The event occurs occasionally with an infrequent\n\t\t\t\t\t\tupdate that could span from 1 year to several years between events. It\n\t\t\t\t\t\timplies a survey that experiences a gap for several years prior to the next\n\t\t\t\t\t\tsurvey update (this is commonly linked to funding available to run a\n\t\t\t\t\t\tspecific survey (i.e. health surveys), whereas a regular annual survey\n\t\t\t\t\t\trefers typically to ‘programs’ that are funded regularly and fall under the\n\t\t\t\t\t\tStatistics Act, and therefore never experience a gap)",
+      "descriptions": {
+       "en": "The event occurs occasionally with an infrequent\n\t\t\t\t\t\tupdate that could span from 1 year to several years between events. It\n\t\t\t\t\t\timplies a survey that experiences a gap for several years prior to the next\n\t\t\t\t\t\tsurvey update (this is commonly linked to funding available to run a\n\t\t\t\t\t\tspecific survey (i.e. health surveys), whereas a regular annual survey\n\t\t\t\t\t\trefers typically to ‘programs’ that are funded regularly and fall under the\n\t\t\t\t\t\tStatistics Act, and therefore never experience a gap)"
+      }
+     },
+     {
+      "id": "OM",
+      "name": "Occasional monthly",
+      "names": {
+       "en": "Occasional monthly"
+      },
+      "description": "The event occurs occasionally with an infrequent\n\t\t\t\t\t\tupdate that could span from 1 month to several months between events. It\n\t\t\t\t\t\timplies a survey that experiences a gap for several months prior to the next\n\t\t\t\t\t\tsurvey update",
+      "descriptions": {
+       "en": "The event occurs occasionally with an infrequent\n\t\t\t\t\t\tupdate that could span from 1 month to several months between events. It\n\t\t\t\t\t\timplies a survey that experiences a gap for several months prior to the next\n\t\t\t\t\t\tsurvey update"
+      }
+     },
+     {
+      "id": "_O",
+      "name": "Other",
+      "names": {
+       "en": "Other"
+      },
+      "description": "To be used when the qualitative or quantitative\n\t\t\t\t\t\tvalues that a variable takes in a data set is associated to multiple\n\t\t\t\t\t\toccurrences with frequency other than the already defined ones (for example\n\t\t\t\t\t\tevery 5 hours and 32 minutes etc.)",
+      "descriptions": {
+       "en": "To be used when the qualitative or quantitative\n\t\t\t\t\t\tvalues that a variable takes in a data set is associated to multiple\n\t\t\t\t\t\toccurrences with frequency other than the already defined ones (for example\n\t\t\t\t\t\tevery 5 hours and 32 minutes etc.)"
+      }
+     },
+     {
+      "id": "_U",
+      "name": "Unspecified",
+      "names": {
+       "en": "Unspecified"
+      },
+      "description": "To be used when a set of values are reported\n\t\t\t\t\t\twithin a time range but not associated to sub ranges. Often this could\n\t\t\t\t\t\thappen in case of missing or sparse information. (Let’s say we have two\n\t\t\t\t\t\tobservations for 2020 but we do not know if they are part of a monthly\n\t\t\t\t\t\treporting or quarterly reporting)",
+      "descriptions": {
+       "en": "To be used when a set of values are reported\n\t\t\t\t\t\twithin a time range but not associated to sub ranges. Often this could\n\t\t\t\t\t\thappen in case of missing or sparse information. (Let’s say we have two\n\t\t\t\t\t\tobservations for 2020 but we do not know if they are part of a monthly\n\t\t\t\t\t\treporting or quarterly reporting)"
+      }
+     },
+     {
+      "id": "_Z",
+      "name": "Not applicable",
+      "names": {
+       "en": "Not applicable"
+      },
+      "description": "To be used when the qualitative or quantitative\n\t\t\t\t\t\tvalues that a variable takes in a data set is not associated to multiple\n\t\t\t\t\t\toccurrences (only single occurrence exists) one can use the _Z as\n\t\t\t\t\t\tfrequency",
+      "descriptions": {
+       "en": "To be used when the qualitative or quantitative\n\t\t\t\t\t\tvalues that a variable takes in a data set is not associated to multiple\n\t\t\t\t\t\toccurrences (only single occurrence exists) one can use the _Z as\n\t\t\t\t\t\tfrequency"
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_OBS_STATUS",
+    "version": "2.2",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Code list for Observation Status",
+    "names": {
+     "en": "Code list for Observation Status"
+    },
+    "description": "Information on the quality of a value or an unusual or missing value.",
+    "descriptions": {
+     "en": "Information on the quality of a value or an unusual or missing value."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "A",
+      "name": "Normal value",
+      "names": {
+       "en": "Normal value"
+      },
+      "description": "To be used as default value if no value is provided or when no special coded qualification is assumed. Usually, it can be assumed that the source agency assigns sufficient confidence to the provided observation and/or the value is not expected to be\n\t\t\t\t\t\tdrama",
+      "descriptions": {
+       "en": "To be used as default value if no value is provided or when no special coded qualification is assumed. Usually, it can be assumed that the source agency assigns sufficient confidence to the provided observation and/or the value is not expected to be\n\t\t\t\t\t\tdrama"
+      }
+     },
+     {
+      "id": "B",
+      "name": "Time series break",
+      "names": {
+       "en": "Time series break"
+      },
+      "description": "Observations are characterised as such when different content exists or a different methodology has been applied to this observation as compared with the preceding one (the one given for the previous period).",
+      "descriptions": {
+       "en": "Observations are characterised as such when different content exists or a different methodology has been applied to this observation as compared with the preceding one (the one given for the previous period)."
+      }
+     },
+     {
+      "id": "D",
+      "name": "Definition differs",
+      "names": {
+       "en": "Definition differs"
+      },
+      "description": "Used to indicate slight deviations from the established methodology (footnote-type information); these divergences do not imply a break in time series.",
+      "descriptions": {
+       "en": "Used to indicate slight deviations from the established methodology (footnote-type information); these divergences do not imply a break in time series."
+      }
+     },
+     {
+      "id": "E",
+      "name": "Estimated value",
+      "names": {
+       "en": "Estimated value"
+      },
+      "description": "Observation obtained through an estimation methodology (e.g. to produce back-casts) or based on the use of a limited amount of data or ad hoc sampling and through additional calculations (e.g. to produce a value at an early stage of the production\n\t\t\t\t\t\tstage while not all data are available). It may also be used in case of experimental data (e.g. in the context of a pilot ahead of a full scale production process) or in case of data of (anticipated/assessed) low quality. If needed, additional information can be provided\n\t\t\t\t\t\tthrough free text using the COMMENT_OBS attribute at the observation level or at a higher level. This code is to be used when the estimation is done by a sender agency. When the imputation is carried out by a receiver agency in order to replace or fill gaps in reported data\n\t\t\t\t\t\tseries, the flag to use is I \"Value imputed by a receiving agency\".",
+      "descriptions": {
+       "en": "Observation obtained through an estimation methodology (e.g. to produce back-casts) or based on the use of a limited amount of data or ad hoc sampling and through additional calculations (e.g. to produce a value at an early stage of the production\n\t\t\t\t\t\tstage while not all data are available). It may also be used in case of experimental data (e.g. in the context of a pilot ahead of a full scale production process) or in case of data of (anticipated/assessed) low quality. If needed, additional information can be provided\n\t\t\t\t\t\tthrough free text using the COMMENT_OBS attribute at the observation level or at a higher level. This code is to be used when the estimation is done by a sender agency. When the imputation is carried out by a receiver agency in order to replace or fill gaps in reported data\n\t\t\t\t\t\tseries, the flag to use is I \"Value imputed by a receiving agency\"."
+      }
+     },
+     {
+      "id": "F",
+      "name": "Forecast value",
+      "names": {
+       "en": "Forecast value"
+      },
+      "description": "Value deemed to assess the magnitude which a quantity will assume at some future point of time (as distinct from \"estimated value\" which attempts to assess the magnitude of an already existent quantity).",
+      "descriptions": {
+       "en": "Value deemed to assess the magnitude which a quantity will assume at some future point of time (as distinct from \"estimated value\" which attempts to assess the magnitude of an already existent quantity)."
+      }
+     }
+    ]
+   },
+   {
+    "id": "CL_UNIT_MULT",
+    "version": "1.1",
+    "agencyID": "SDMX",
+    "isFinal": true,
+    "name": "Code list for the Unit Multiplier",
+    "names": {
+     "en": "Code list for the Unit Multiplier"
+    },
+    "description": "This code list provides code values for indicating the magnitude in the units of measurement. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.;\n\t\t\t\t\tsyntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345.",
+    "descriptions": {
+     "en": "This code list provides code values for indicating the magnitude in the units of measurement. More information about this code list and SDMX code lists in general (e.g. list of generic codes for expressing general concepts like \"Total\", \"Unknown\", etc.;\n\t\t\t\t\tsyntaxes for the creation of further codes; general guidelines for the creation of SDMX code lists) can be found at this address: https://sdmx.org/?page_id=4345."
+    },
+    "isPartial": false,
+    "codes": [
+     {
+      "id": "0",
+      "name": "Units",
+      "names": {
+       "en": "Units"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of zero (100)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of zero (100)"
+      }
+     },
+     {
+      "id": "1",
+      "name": "Tens",
+      "names": {
+       "en": "Tens"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of one (101)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of one (101)"
+      }
+     },
+     {
+      "id": "2",
+      "name": "Hundreds",
+      "names": {
+       "en": "Hundreds"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of two (102)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of two (102)"
+      }
+     },
+     {
+      "id": "3",
+      "name": "Thousands",
+      "names": {
+       "en": "Thousands"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of three (103)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of three (103)"
+      }
+     },
+     {
+      "id": "4",
+      "name": "Tens of thousands",
+      "names": {
+       "en": "Tens of thousands"
+      },
+      "description": "In scientific notation, expressed as ten raised to the power of four (104)",
+      "descriptions": {
+       "en": "In scientific notation, expressed as ten raised to the power of four (104)"
+      }
+     }
+    ]
+   }
+  ],
+  "dataStructures": [
+   {
+    "id": "DSD_EO",
+    "version": "1.5",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": true,
+    "name": "DSD for Economic Outlook",
+    "names": {
+     "en": "DSD for Economic Outlook"
+    },
+    "annotations": [
+     {
+      "title": "urn:sdmx:org.sdmx.infomodel.metadatastructure.MetadataStructure=OECD:MSD_REF_METADATA(1.0)",
+      "type": "METADATA"
+     }
+    ],
+    "dataStructureComponents": {
+     "attributeList": {
+      "id": "AttributeDescriptor",
+      "attributes": [
+       {
+        "id": "OBS_STATUS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).OBS_STATUS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_OBS_STATUS(2.2)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "primaryMeasure": "OBS_VALUE"
+        }
+       },
+       {
+        "id": "UNIT_MEASURE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).UNIT_MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_UNIT_MEASURE(1.12)"
+        },
+        "assignmentStatus": "Mandatory",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "UNIT_MULT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).UNIT_MULT",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_UNIT_MULT(1.1)"
+        },
+        "assignmentStatus": "Mandatory",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "CURRENCY",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).CURRENCY",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_CURRENCY(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE",
+          "REF_AREA"
+         ]
+        }
+       },
+       {
+        "id": "BASE_PER",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).BASE_PER",
+        "localRepresentation": {
+         "textFormat": {
+          "textType": "ReportingTimePeriod",
+          "isSequence": false,
+          "isMultiLingual": false
+         }
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "REF_AREA",
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "METHODOLOGY",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).METHODOLOGY",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD.ECO.MAD:CL_METHODOLOGY(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "DECIMALS",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).DECIMALS",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_DECIMALS(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE",
+          "REF_AREA",
+          "FREQ"
+         ]
+        }
+       },
+       {
+        "id": "PRICE_BASE",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).PRICE_BASE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_PRICES(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       },
+       {
+        "id": "ADJUSTMENT",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).ADJUSTMENT",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_ADJUSTMENT(1.0)"
+        },
+        "assignmentStatus": "Conditional",
+        "attributeRelationship": {
+         "dimensions": [
+          "MEASURE"
+         ]
+        }
+       }
+      ]
+     },
+     "dimensionList": {
+      "id": "DimensionDescriptor",
+      "dimensions": [
+       {
+        "id": "REF_AREA",
+        "position": 0,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).REF_AREA",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD:CL_AREA(1.0)"
+        }
+       },
+       {
+        "id": "MEASURE",
+        "position": 1,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).MEASURE",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=OECD.ECO.MAD:CL_MEASURE(1.5)"
+        }
+       },
+       {
+        "id": "FREQ",
+        "position": 2,
+        "type": "Dimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).FREQ",
+        "localRepresentation": {
+         "enumeration": "urn:sdmx:org.sdmx.infomodel.codelist.Codelist=SDMX:CL_FREQ(2.1)"
+        }
+       }
+      ],
+      "timeDimensions": [
+       {
+        "id": "TIME_PERIOD",
+        "position": 3,
+        "type": "TimeDimension",
+        "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).TIME_PERIOD",
+        "localRepresentation": {
+         "textFormat": {
+          "textType": "ObservationalTimePeriod",
+          "isSequence": false,
+          "isMultiLingual": false
+         }
+        }
+       }
+      ]
+     },
+     "measureList": {
+      "id": "MeasureDescriptor",
+      "primaryMeasure": {
+       "id": "OBS_VALUE",
+       "conceptIdentity": "urn:sdmx:org.sdmx.infomodel.conceptscheme.Concept=OECD.ECO.MAD:CS_EO(1.0).OBS_VALUE",
+       "localRepresentation": {
+        "textFormat": {
+         "textType": "Double",
+         "isSequence": false,
+         "isMultiLingual": false
+        }
+       }
+      }
+     }
+    }
+   }
+  ],
+  "contentConstraints": [
+   {
+    "id": "CR_A_DSD_EO@DF_EO",
+    "version": "1.5",
+    "agencyID": "OECD.ECO.MAD",
+    "isFinal": false,
+    "validFrom": "2026-06-03T07:02:44Z",
+    "name": "Availability (A) for DSD_EO@DF_EO",
+    "names": {
+     "en": "Availability (A) for DSD_EO@DF_EO"
+    },
+    "annotations": [
+     {
+      "title": "A",
+      "type": "ReleaseVersion"
+     },
+     {
+      "id": "obs_count",
+      "title": "1303640",
+      "type": "sdmx_metrics"
+     }
+    ],
+    "type": "Actual",
+    "constraintAttachment": {
+     "dataflows": [
+      "urn:sdmx:org.sdmx.infomodel.datastructure.Dataflow=OECD.ECO.MAD:DSD_EO@DF_EO(1.5)"
+     ]
+    },
+    "cubeRegions": [
+     {
+      "isIncluded": true,
+      "keyValues": [
+       {
+        "id": "REF_AREA",
+        "values": [
+         "AUS",
+         "CAN",
+         "DEU",
+         "EA17",
+         "FRA",
+         "GBR",
+         "ITA",
+         "JPN",
+         "OECD",
+         "USA"
+        ]
+       },
+       {
+        "id": "MEASURE",
+        "values": [
+         "CPI_YTYPCT",
+         "CPIH_YTYPCT",
+         "GDPV_ANNPCT",
+         "UNR"
+        ]
+       },
+       {
+        "id": "FREQ",
+        "values": [
+         "A",
+         "Q"
+        ]
+       },
+       {
+        "id": "TIME_PERIOD",
+        "timeRange": {
+         "startPeriod": {
+          "period": "1960-01-01T00:00:00",
+          "isInclusive": true
+         },
+         "endPeriod": {
+          "period": "2027-12-31T00:00:00",
+          "isInclusive": true
+         }
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "meta": {
+  "schema": "https://raw.githubusercontent.com/sdmx-twg/sdmx-json/develop/structure-message/tools/schemas/1.0/sdmx-json-structure-schema.json",
+  "contentLanguages": [
+   "en"
+  ],
+  "id": "IDREF10448",
+  "prepared": "2026-11-07T23:00:45Z",
+  "test": false,
+  "sender": {
+   "id": "Unknown"
+  },
+  "receiver": [
+   {
+    "id": "Unknown"
+   }
+  ]
+ }
+}

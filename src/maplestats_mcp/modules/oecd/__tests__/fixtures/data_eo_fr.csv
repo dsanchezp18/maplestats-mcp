@@ -1,0 +1,9 @@
+STRUCTURE,STRUCTURE_ID,ACTION,REF_AREA: Zone de référence,MEASURE: Mesure,FREQ: Fréquence d'observation,TIME_PERIOD: Période de temps,"OBS_VALUE: ","OBS_STATUS: ",UNIT_MEASURE: Unité de mesure,UNIT_MULT: Multiplicateur d'unité,CURRENCY: Monnaie,BASE_PER: Période de base,METHODOLOGY: Méthode,"DECIMALS: ",PRICE_BASE: Ajustement,ADJUSTMENT: Base de prix
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: États-Unis,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2025,2.10633762606889,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: États-Unis,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2024,2.793187184646,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2027,1.6865854732046,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2026,1.15664600311551,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2025,1.74268534332855,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,CAN: Canada,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2024,2.04626608033469,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: États-Unis,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2027,1.79896206247722,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
+DATAFLOW,OECD.ECO.MAD:DSD_EO@DF_EO(1.5),I,USA: États-Unis,"GDPV_ANNPCT: Produit intérieur brut, en volume, croissance",A: Annuelle,2026,1.95006403656728,,PA: Pourcentage par an,"0: ",,2017,,"2: ",,
