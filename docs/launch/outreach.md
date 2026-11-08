@@ -37,7 +37,7 @@ Hi [name],
 
 Much of an analyst's week goes into finding the right Statistics Canada table and checking that a figure matches its source. I would like to propose a session for the network on a tool I built for that step: MapleStats MCP, an open-source server that lets AI assistants pull Canadian public data from the publisher, with the citation attached. The launch write-up is here: [blog post link].
 
-The session would cover a few live workflows: finding the right table, pulling a series with its citation, getting R or Python code that reproduces the pull, and a weighted tabulation from Labour Force Survey public use microdata on the hosted server. I would also show the mistakes it is built to catch, such as constant versus current dollars or an economic-family median reported as a household median, and where it falls short: the 2006-2016 census data tables are not available, because Statistics Canada's host for them blocks automated requests. About [30-45] minutes with questions.
+The session would cover a few live workflows: finding the right table, pulling a series with its citation, getting R or Python code that reproduces the pull, and tabulating Labour Force Survey public use microdata, with weights, on the hosted server. I would also show the mistakes it is built to catch, such as constant versus current dollars or an economic-family median reported as a household median, and where it falls short: the 2006-2016 census data tables are not available, because Statistics Canada's host for them blocks automated requests. About [30-45] minutes with questions.
 
 Would the network be open to hosting it?
 
@@ -59,7 +59,7 @@ Edmonton's own data (the City's open-data portal, Edmonton Police Service, ETS a
 
 The talk would show the problem it addresses (Canadian data spread across many institutions and interfaces), a few live workflows on Edmonton questions, and how I tested it against other servers on a 53-question benchmark, including where it did not win. The write-up is here: [blog post link].
 
-If a talk would suit one of your upcoming events, I would be glad to fit your schedule.
+Would the society have room for it at an upcoming event?
 
 Regards,
 Daniel Sánchez Pazmiño
@@ -77,7 +77,7 @@ Hello [name], I hope you are well.
 
 For most charts, the slow part is getting a clean dataset with a source you can cite. I would like to offer [group name] a virtual talk on that step, using MapleStats MCP, an open-source server I built that lets AI assistants fetch Canadian public data from the publisher.
 
-For BC questions it reads BC Stats, DriveBC, BC's environmental monitoring data, BC Transit timetables and real-time vehicle positions, and the City of Vancouver's open-data portal, along with Statistics Canada, the Bank of Canada and CMHC. The talk would follow one question through: the assistant finds the series, the server returns it with its source, and a generated R or Python script pulls the same data again for charting. The browser demo also draws a chart and a sourced table under each answer. About [30-45] minutes over video. The write-up is here: [blog post link].
+For BC questions it reads BC Stats, DriveBC, BC's environmental monitoring data and the City of Vancouver's open-data portal, along with Statistics Canada, the Bank of Canada and CMHC. The talk would follow one question through: the assistant finds the series, the server returns it with its source, and a generated R or Python script pulls the same data again for charting. The chat demo on the website also draws a chart and a sourced table under each answer. About [30-45] minutes over video. The write-up is here: [blog post link].
 
 Would a session like this work for the group, at a time that suits you?
 
@@ -115,9 +115,9 @@ Hello [name], I hope you are well.
 
 [One sentence on your connection to the department, e.g. degree and year.] Students in the department regularly need a Canadian figure they can cite, and often the same figure for the United States or Europe to compare against. I built an open-source tool for that: MapleStats MCP, a server that lets AI assistants read data directly from Statistics Canada, the Bank of Canada, CMHC and many federal and provincial sources, with OECD, Eurostat and US Bureau of Labor Statistics series as comparators. Every figure comes with its citation and the R, Python, Stata or Julia code that reproduces the pull. It is free to use and needs no installation. The write-up is here: [blog post link].
 
-I built it with MA students and researchers in mind: the people who need a figure they can cite and a script they can put in a replication package. I also tested it against other Canadian data servers on a 53-question benchmark and published the results with their limitations.
+I built it with MA students and researchers in mind, and tested it against other Canadian data servers on a 53-question benchmark; the results are published with their limitations.
 
-Would the department consider featuring it, for example in a profile like the ones it has run for other economics initiatives? I can provide a short description or a demo.
+Would the department consider featuring it, for example in a profile or newsletter item? I can provide a short description or a demo.
 
 Regards,
 Daniel Sánchez Pazmiño
