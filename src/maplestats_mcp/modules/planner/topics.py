@@ -226,6 +226,11 @@ TOPICS: tuple[Topic, ...] = (
             "mls",
             "crea",
             "prix des maisons",
+            "rentsafe*",
+            "short-term rental*",
+            "airbnb",
+            "location a court terme",
+            "locations a court terme",
         ),
         (
             PlanStep(
@@ -271,6 +276,22 @@ TOPICS: tuple[Topic, ...] = (
                 "statcan_census_profile_get_data",
                 "census shelter cost and tenure: level, geography_codes (DGUIDs from "
                 "statcan_census_profile_search_geography) and characteristic_codes",
+            ),
+            PlanStep(
+                "toronto_summarize_apartment_scores",
+                "RentSafeTO apartment building scores by ward (group_by='ward'), open.toronto.ca; "
+                "toronto_get_apartment_evaluations lists the buildings",
+                ("rentsafe*", "apartment building", "building score", "landlord"),
+            ),
+            PlanStep(
+                "toronto_summarize_short_term_rentals",
+                "short-term rental registrations on open.toronto.ca by ward, property type or FSA",
+                (
+                    "short-term rental*",
+                    "airbnb",
+                    "location a court terme",
+                    "locations a court terme",
+                ),
             ),
         ),
         (
@@ -824,6 +845,12 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep(
                 "statcan_census_profile_get_data",
                 "2021 values: the same level, geography_codes and characteristic_codes",
+            ),
+            PlanStep(
+                "toronto_get_neighbourhood_profile",
+                "census indicators for one of the 140 neighbourhoods on open.toronto.ca (census "
+                "2016 to 2001): neighbourhood=<name or number>, characteristic or topic",
+                ("neighbourhood", "neighborhood", "quartier"),
             ),
             PlanStep("borealis_search_ivt", "older or custom census tables in Beyond 20/20 format"),
             PlanStep(
@@ -3051,7 +3078,7 @@ BUILDING_PERMITS = Topic(
         (
             "Ottawa and Saskatoon publish no permit records on the portals covered here: use "
             "the CMA rows of table 34-10-0292. Toronto's DataStore tables can be read; its "
-            "files cannot, since Toronto does not permit automated file downloads."
+            "files cannot, since Toronto's robots.txt disallows automated file downloads."
         ),
     ),
     (
@@ -3181,9 +3208,9 @@ FOOD_INSPECTIONS = Topic(
     ),
     (
         PlanStep(
-            "ckan_datastore_search",
-            "Toronto DineSafe inspections: portal='toronto' "
-            "resource_id='75dbb3ff-8281-4f03-9de2-bd1214761302'",
+            "toronto_search_dinesafe",
+            "Toronto DineSafe inspections: establishment or address words, or status='Closed'",
+            ("toronto", "dinesafe"),
         ),
         PlanStep(
             "ckan_datastore_search",
@@ -3229,9 +3256,8 @@ FOOD_INSPECTIONS = Topic(
             "Health show results only in web viewers, with no open-data release or API."
         ),
         (
-            "Toronto's DineSafe table answered HTTP 500 on 2026-10-27 while the city's other "
-            "tables answered; its file copies cannot be read here, since Toronto does not "
-            "permit automated file downloads."
+            "Toronto's DineSafe table keeps recent inspections only; the historical file is "
+            "not read here, since Toronto's robots.txt disallows automated file downloads."
         ),
     ),
 )

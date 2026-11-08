@@ -1298,11 +1298,11 @@ FR: dict[str, str] = {
     ),
     "Ottawa and Saskatoon publish no permit records on the portals covered here: use "
     "the CMA rows of table 34-10-0292. Toronto's DataStore tables can be read; its "
-    "files cannot, since Toronto does not permit automated file downloads.": (
+    "files cannot, since Toronto's robots.txt disallows automated file downloads.": (
         "Ottawa et Saskatoon ne publient aucun registre de permis sur les portails couverts "
         "ici : utilisez les lignes de leur RMR dans le tableau 34-10-0292. Les tableaux "
-        "DataStore de Toronto peuvent être lus, mais pas ses fichiers, car Toronto "
-        "n'autorise pas le téléchargement automatisé de fichiers."
+        "DataStore de Toronto peuvent être lus, mais pas ses fichiers, car le robots.txt de "
+        "Toronto interdit le téléchargement automatisé de fichiers."
     ),
     # Business licences
     "Business licences and business counts": "Licences d'entreprise et nombre d'entreprises",
@@ -1357,10 +1357,9 @@ FR: dict[str, str] = {
     "Restaurant and food premises inspections": (
         "Inspections des restaurants et des établissements alimentaires"
     ),
-    "Toronto DineSafe inspections: portal='toronto' "
-    "resource_id='75dbb3ff-8281-4f03-9de2-bd1214761302'": (
-        "inspections DineSafe de Toronto : portal='toronto' "
-        "resource_id='75dbb3ff-8281-4f03-9de2-bd1214761302'"
+    "Toronto DineSafe inspections: establishment or address words, or status='Closed'": (
+        "inspections DineSafe de Toronto : mots du nom (establishment) ou de l'adresse "
+        "(address), ou status='Closed'"
     ),
     "Montreal food offences and fines: portal='montreal' "
     "resource_id='7f939a08-be8a-45e1-b208-d8744dca8fc6' (establishments: "
@@ -1409,12 +1408,27 @@ FR: dict[str, str] = {
         "publique Ottawa, Alberta Health Services et Island Health n'affichent les "
         "résultats que dans des visionneuses Web, sans données ouvertes ni API."
     ),
-    "Toronto's DineSafe table answered HTTP 500 on 2026-10-27 while the city's other "
-    "tables answered; its file copies cannot be read here, since Toronto does not "
-    "permit automated file downloads.": (
-        "Le tableau DineSafe de Toronto a répondu HTTP 500 le 2026-10-27, alors que les "
-        "autres tableaux de la ville répondaient ; ses copies en fichier ne peuvent pas être "
-        "lues ici, car Toronto n'autorise pas le téléchargement automatisé de fichiers."
+    "Toronto's DineSafe table keeps recent inspections only; the historical file is "
+    "not read here, since Toronto's robots.txt disallows automated file downloads.": (
+        "Le tableau DineSafe de Toronto ne garde que les inspections récentes ; le fichier "
+        "historique n'est pas lu ici, car le robots.txt de Toronto interdit le "
+        "téléchargement automatisé de fichiers."
+    ),
+    "RentSafeTO apartment building scores by ward (group_by='ward'), open.toronto.ca; "
+    "toronto_get_apartment_evaluations lists the buildings": (
+        "notes RentSafeTO des immeubles d'appartements par quartier électoral "
+        "(group_by='ward'), open.toronto.ca ; toronto_get_apartment_evaluations liste "
+        "les immeubles"
+    ),
+    "short-term rental registrations on open.toronto.ca by ward, property type or FSA": (
+        "inscriptions de locations à court terme sur open.toronto.ca par quartier "
+        "électoral, type de propriété ou RTA"
+    ),
+    "census indicators for one of the 140 neighbourhoods on open.toronto.ca (census "
+    "2016 to 2001): neighbourhood=<name or number>, characteristic or topic": (
+        "indicateurs du recensement de l'un des 140 quartiers sur open.toronto.ca "
+        "(recensements de 2016 à 2001) : neighbourhood=<nom ou numéro>, characteristic "
+        "ou topic"
     ),
     # Planning applications
     "Planning and development applications": "Demandes d'urbanisme et d'aménagement",

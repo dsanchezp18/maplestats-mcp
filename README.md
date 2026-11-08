@@ -239,7 +239,7 @@ by a person
 
 ## What it covers
 
-450 tools in 87 modules. Run `docs://catalogue` for the full, bilingual list.
+455 tools in 88 modules. Run `docs://catalogue` for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -254,7 +254,7 @@ by a person
 | Housing (links only) | `crea_` | Links, release timing and terms for CREA's MLS® Home Price Index; no values, because CREA's terms allow private, non-commercial analysis only |
 | International | `worldbank_`, `bis_`, `oecd_`, `eurostat_`, `ilo_`, `abs_`, `ons_`, `fed_`, `ecb_` | World Bank World Development Indicators for Canada and peer countries (CC BY 4.0); Bank for International Settlements statistics: policy rates, debt service ratios, credit, house prices, banking and payment statistics (free reuse with citation); OECD Data Explorer for Canada and its peers: Economic Outlook projections, productivity, unit labour costs, PPPs, tax revenue, house prices, leading indicators (any use with credit, third-party data excepted); Eurostat for the EU, the euro area and member states (CC BY 4.0, not commercially for non-EU countries' data); ILOSTAT, the International Labour Organization's internationally comparable labour statistics for Canada and its peers: unemployment, participation, hours, earnings, minimum wages and ILO modelled estimates (CC BY 4.0); the Australian Bureau of Statistics' headline inflation, labour force, GDP, wage and population series, each with the Canadian table to pair with, and any ABS dataset by SDMX key (CC BY 4.0); the UK Office for National Statistics' headline inflation, GDP and labour market series, each with the Canadian table to pair with (Open Government Licence v3.0); US Federal Reserve Board releases: the federal funds rate, Treasury yields, the Canadian dollar per US dollar, industrial production and capacity utilization, money and credit (public domain, Board cited); European Central Bank Data Portal: key interest rates, €STR, euro reference rates (EUR/CAD), euro area HICP, money and credit (free reuse with 'Source: ECB statistics', third-party data excepted) |
 | Open-data portals | `ckan_`, `arcgis_hub_`, `socrata_` + `portal` | Federal, provincial, territorial and municipal catalogues (`*_list_portals` names each one) |
-| Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_`, `bc_transit_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality, BC Transit real-time vehicle positions, arrival predictions and service alerts |
+| Other municipal | `opendatasoft_vancouver_`, `nl_opendata_`, `eps_`, `ets_`, `epcor_`, `bc_transit_`, `toronto_` | Vancouver, Newfoundland and Labrador, Edmonton police, transit and water quality, BC Transit real-time vehicle positions, arrival predictions and service alerts, City of Toronto neighbourhood profiles, RentSafeTO building scores, short-term rental registrations and DineSafe inspections |
 | Transit schedules | `transit_` + `agency` | Static GTFS timetables of the STM (buses), OC Transpo, Calgary Transit, VIA Rail, GO Transit, UP Express, the BC Transit systems and the Quebec networks listed on Données Québec (exo, RTC, STL, STS and others), plus further agencies from Statistics Canada's 2025 Canadian Public Transit Network Database: stops, routes, scheduled departures, frequency by hour |
 
 Other federal series (CRA, OSFI, ISED insolvency) are ordinary
@@ -267,7 +267,9 @@ access. CanadaBuys, OpenParliament.ca and the Toronto Transit Commission's
 own schedule download were removed for the same reason (the TTC schedule is
 still served from Statistics Canada's national transit database). The City
 of Whitehorse's open data files are not built: its terms bar commercial
-reproduction without the City's written consent. The
+reproduction without the City's written consent. The City of Toronto's
+files (as opposed to its DataStore tables) are not read: its portal's robots.txt
+disallows automated file downloads. The
 City of Hamilton's portal and Niagara Open Data (niagaraopendata.ca) are left
 out because they answer automated requests with a Cloudflare challenge. The 2006-2016 census data tables and the 2016 Census Profile service were removed because Statistics Canada's www12 host answers automated clients with a bot challenge, 503 errors or timeouts (the 2021 profile and the WDS tables remain). Justice Laws (federal statutes and
 regulations) is out of scope, because legislation text is not data this
