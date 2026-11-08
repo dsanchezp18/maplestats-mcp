@@ -115,6 +115,18 @@ IESO_TERMS = (
     "of Use set out in the IESO's website (www.ieso.ca).'"
 )
 
+# AESO Terms and Conditions (www.aeso.ca/legal/, read 2026-11-08; the ETS
+# report site's legal notice links to the same page). No robots.txt on
+# ets.aeso.ca or www.aeso.ca (both 404) and nothing in the terms on automated
+# retrieval; the copyright clause limits reuse to non-commercial purposes.
+AESO_TERMS = (
+    "AESO Terms and Conditions (https://www.aeso.ca/legal/): the material 'may be used and "
+    "copied for non-commercial, personal or educational purposes, provided that the material "
+    "is not modified and that copyright notices are not deleted'; any other use, commercial "
+    "use included, needs the AESO's written permission. Copyright The Independent System "
+    "Operator (AESO), all rights reserved."
+)
+
 # statistique.quebec.ca links its reuse terms to the Québec government's
 # copyright page, which requires prior authorization (no open licence).
 ISQ_LICENCE = (
@@ -428,6 +440,13 @@ LICENCES_FR: dict[str, str] = {
         "all rights reserved. This information is subject to the Terms of Use set out in the "
         "IESO's website (www.ieso.ca).'"
     ),
+    AESO_TERMS: (
+        "Conditions d'utilisation de l'Alberta Electric System Operator (AESO) "
+        "(https://www.aeso.ca/legal/) : le contenu peut être utilisé et copié à des fins non "
+        "commerciales, personnelles ou éducatives, sans modification et sans retirer les avis "
+        "de droit d'auteur ; tout autre usage, y compris commercial, exige l'autorisation écrite "
+        "de l'AESO. Droit d'auteur The Independent System Operator (AESO), tous droits réservés."
+    ),
     PER_RECORD_LICENCE: (
         "Les licences diffèrent d'un jeu de données à l'autre sur cette plateforme : la licence "
         "de chaque jeu de données figure dans ses champs de licence. Vérifiez-la avant toute "
@@ -729,6 +748,9 @@ COMMERCIAL_USE: dict[str, CommercialUse] = {
     # notice and says nothing on commercial use; anything not expressly
     # permitted needs its written permission.
     IESO_TERMS: "unknown",
+    # "non-commercial, personal or educational purposes"; any other use needs
+    # the AESO's written permission.
+    AESO_TERMS: "not_allowed",
     # gov.nl.ca/disclaimer lets "the public" use the information and is silent
     # on commercial use.
     NL_STATS_TERMS: "unknown",

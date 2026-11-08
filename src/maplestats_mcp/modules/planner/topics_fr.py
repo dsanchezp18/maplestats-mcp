@@ -357,10 +357,17 @@ FR: dict[str, str] = {
     "StatCan energy supply and disposition tables": (
         "tableaux de l'offre et de l'utilisation de l'énergie de Statistique Canada"
     ),
-    "Electricity demand and prices cover Ontario (IESO) and Quebec (Hydro-Quebec) only; "
-    "Alberta's AESO data are not covered.": (
-        "La demande et les prix de l'électricité ne couvrent que l'Ontario (SIERE) et le "
-        "Québec (Hydro-Québec); les données de l'AESO de l'Alberta ne sont pas couvertes."
+    "Electricity demand and prices cover Ontario (IESO), Quebec (Hydro-Quebec) and "
+    "Alberta (AESO) only; AESO and Hydro-Quebec data are for non-commercial use.": (
+        "La demande et les prix de l'électricité ne couvrent que l'Ontario (SIERE), le "
+        "Québec (Hydro-Québec) et l'Alberta (AESO); les données de l'AESO et d'Hydro-Québec "
+        "sont réservées à un usage non commercial."
+    ),
+    "Alberta hourly pool price and internal load (AESO; non-commercial use only)": (
+        "prix horaire du pool et charge interne de l'Alberta (AESO; usage non commercial seulement)"
+    ),
+    "Alberta generation by fuel, interchange and load right now (AESO)": (
+        "production par combustible, échanges et charge de l'Alberta en ce moment (AESO)"
     ),
     # Weather
     "Weather, climate and natural hazards": "Météo, climat et risques naturels",

@@ -1,4 +1,4 @@
-"""Canadian electricity demand, supply and prices: Ontario (IESO) and Quebec.
+"""Canadian electricity demand, supply and prices: Ontario (IESO), Quebec and Alberta.
 
 Ontario (`electricity_ontario_*`): the Independent Electricity System
 Operator's public reports (reports-public.ieso.ca/public), keyless CSV and XML
@@ -18,12 +18,22 @@ dataset: credit Hydro-Quebec, non-commercial use only. Each response repeats
 the attribution and the non-commercial notice in provenance licence, and
 anyone redistributing the output commercially must not rely on this source.
 
+Alberta (`electricity_alberta_*`, 2026-11-08): the AESO's public Energy
+Trading System reports on ets.aeso.ca, keyless (hourly pool price and AIL,
+daily averages, the Pool Monthly Summary pages, and the Current Supply Demand
+page; see alberta_client.py). It was left out on 2026-09-29 because AESO's
+API (api.aeso.ca) needs a subscription key (HTTP 401) and the AESO terms
+(www.aeso.ca/legal/) allow copying "for non-commercial, personal or
+educational purposes" only. It was added once MapleStats was confirmed as
+non-commercial (free, MIT-licensed, self-funded), the same basis as
+Hydro-Quebec's CC BY-NC data: the keyed API is still not used, values are
+passed through unmodified, and every response repeats the AESO terms in
+provenance licence (commercial_use "not_allowed") plus a commercial-use
+notice. No robots.txt on ets.aeso.ca or www.aeso.ca (both HTTP 404), and the
+terms say nothing against automated retrieval.
+
 Other provinces were checked live on 2026-09-29 and left out:
 
-- Alberta (AESO): the pool-price and market API needs a subscription key
-  (HTTP 401, AzureApiManagementKey); the keyless ets.aeso.ca Current Supply
-  Demand page is HTML, and the AESO terms allow copying "for non-commercial,
-  personal or educational purposes" only.
 - British Columbia (BC Hydro): the load-data pages answer HTTP 403 to
   automated clients.
 - New Brunswick (NB Power): system-information page and monthly CSV archive
@@ -45,8 +55,10 @@ MODULE_DESCRIPTION = (
     "averages to 2025, the daily adequacy outlook and intertie schedules and "
     "flows; plus Quebec (Hydro-Quebec, CC BY-NC 4.0, non-commercial): 15-minute "
     "demand, generation by source, imports and exports, and hourly water flows and daily "
-    "natural inflows at 94 Hydro-Quebec dams and generating stations. Ontario (IESO) and Québec "
-    "(Hydro-Québec) only; Alberta is not covered, nor are other provinces."
+    "natural inflows at 94 Hydro-Quebec dams and generating stations; plus Alberta (AESO, "
+    "non-commercial use only): hourly pool price and Alberta Internal Load (1999 onward), daily "
+    "and monthly pool price averages, and the current supply and demand by fuel type, "
+    "interchange and asset. Other provinces are not covered."
 )
 MODULE_DESCRIPTION_FR = (
     "Données du réseau d'électricité de l'Ontario (rapports publics de la SIERE) : "
@@ -57,6 +69,8 @@ MODULE_DESCRIPTION_FR = (
     "quotidienne de suffisance et échanges aux interconnexions. Ainsi que le "
     "Québec (Hydro-Québec, CC BY-NC 4.0, usage non commercial) : demande aux 15 minutes, "
     "production par source, importations et exportations, et débits horaires et apports "
-    "naturels quotidiens à 94 centrales et barrages d'Hydro-Québec. Ontario (SIERE) et Québec "
-    "(Hydro-Québec) seulement; l'Alberta n'est pas couverte, ni les autres provinces."
+    "naturels quotidiens à 94 centrales et barrages d'Hydro-Québec. Ainsi que l'Alberta (AESO, "
+    "usage non commercial seulement) : prix horaire du pool et charge interne de l'Alberta "
+    "(depuis 1999), moyennes quotidiennes et mensuelles du prix du pool, et offre et demande "
+    "actuelles par combustible, échanges et centrale. Les autres provinces ne sont pas couvertes."
 )

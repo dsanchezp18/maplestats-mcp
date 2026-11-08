@@ -61,3 +61,25 @@ QUEBEC_FLOWS_MAX_FACILITIES = 200
 
 QUEBEC_CACHE_TTL_RECENT_SECONDS = 5 * 60
 QUEBEC_CACHE_TTL_HISTORY_SECONDS = 6 * 60 * 60
+
+# Alberta (AESO): the public Energy Trading System report servlets on
+# ets.aeso.ca, keyless (checked 2026-11-08). AESO's newer API (api.aeso.ca)
+# needs a subscription key and is not used. ets.aeso.ca answers plain HTTP
+# only (HTTPS fails the TLS handshake). Terms: AESO_TERMS in shared/licences
+# (non-commercial use only).
+AESO_REPORTS_URL = "http://ets.aeso.ca/ets_web/ip/Market/Reports"
+AESO_MONTHLY_URL = "http://ets.aeso.ca/Market/Reports/Manual/PoolMonthlySummary"
+# Report limits, read from the servlets' own "Validation Error" pages: the
+# hourly pool price report serves at most 721 days of CSV per request (its
+# endDate is exclusive, so 720 days of data), the
+# daily average report at most 31 days.
+AESO_HOURLY_MAX_DAYS = 721
+AESO_DAILY_MAX_DAYS = 31
+# This module splits a longer daily request into 31-day calls, up to a year.
+AESO_DAILY_SPAN_DAYS = 366
+AESO_MONTHLY_MAX_MONTHS = 24
+# Hourly pool prices start 1999-01-01 (oldest row served, checked live), and
+# monthly summaries the same month.
+AESO_FIRST_DATE = "1999-01-01"
+AESO_TIMEZONE = "America/Edmonton"
+AESO_CACHE_TTL_CURRENT_SECONDS = 2 * 60
