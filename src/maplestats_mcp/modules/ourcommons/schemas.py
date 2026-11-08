@@ -144,21 +144,25 @@ class MemberExpenditure(BaseModel):
     name: str = Field(description="'Last, First' as the report writes it, with 'Hon.'.")
     constituency: str
     caucus: str
-    salaries: float = Field(description="Salaries of the member's employees, dollars.")
-    travel: float
-    hospitality: float
-    contracts: float = Field(
+    salaries: float | None = Field(
+        description="Salaries of the member's employees, dollars; None where the report is blank."
+    )
+    travel: float | None
+    hospitality: float | None
+    contracts: float | None = Field(
         description="Service contracts, advertising, office leases and operations, gifts, training."
     )
-    total: float = Field(description="Sum of the four categories.")
+    total: float | None = Field(
+        description="Sum of the categories reported; blank ones are left out, not read as 0."
+    )
 
 
 class ExpenditureTotals(BaseModel):
-    salaries: float
-    travel: float
-    hospitality: float
-    contracts: float
-    total: float
+    salaries: float | None
+    travel: float | None
+    hospitality: float | None
+    contracts: float | None
+    total: float | None
 
 
 class MemberExpenditures(BaseModel):
@@ -181,10 +185,12 @@ class TravelLine(BaseModel):
     purpose: str
     traveller_name: str | None = Field(description="Blank for some designated travellers.")
     traveller_type: str = Field(description="Member, Designated Traveller, Dependant, Employee...")
-    transportation: float
-    accommodation: float
-    meals_and_incidentals: float
-    total: float = Field(description="Negative for a refund or correction of an earlier trip.")
+    transportation: float | None
+    accommodation: float | None
+    meals_and_incidentals: float | None
+    total: float | None = Field(
+        description="Negative for a refund or correction of an earlier trip."
+    )
 
 
 class HospitalityLine(BaseModel):
@@ -193,8 +199,8 @@ class HospitalityLine(BaseModel):
     attendees: int | None
     purpose: str
     supplier: str
-    amount: float = Field(description="This supplier's amount.")
-    event_total: float = Field(
+    amount: float | None = Field(description="This supplier's amount.")
+    event_total: float | None = Field(
         description="The event's total; an event paid to several suppliers has one line each."
     )
 
@@ -203,7 +209,7 @@ class ContractLine(BaseModel):
     supplier: str
     description: str
     contract_date: date | None
-    total: float
+    total: float | None
 
 
 class MemberExpenditureDetails(BaseModel):
@@ -214,9 +220,9 @@ class MemberExpenditureDetails(BaseModel):
     quarter: int
     period_start: date
     period_end: date
-    travel_total: float = Field(description="As in the quarter's summary.")
-    hospitality_total: float
-    contracts_total: float
+    travel_total: float | None = Field(description="As in the quarter's summary.")
+    hospitality_total: float | None
+    contracts_total: float | None
     travel: list[TravelLine] | None = Field(description="None when not asked for.")
     hospitality: list[HospitalityLine] | None
     contracts: list[ContractLine] | None

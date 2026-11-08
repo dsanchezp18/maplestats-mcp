@@ -21,6 +21,11 @@ SURVEYS = re.compile(r"https://api\.bls\.gov/publicAPI/v2/surveys$")
 POPULAR = re.compile(r"https://api\.bls\.gov/publicAPI/v2/timeseries/popular.*")
 
 
+@pytest.fixture(autouse=True)
+def _limit_not_reached(monkeypatch):
+    monkeypatch.setattr(client, "_exhausted_on", None)
+
+
 def _fixture(name: str):
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
@@ -120,6 +125,10 @@ async def test_daily_threshold_is_unavailable_with_key_hint(httpx_mock):
     with pytest.raises(UpstreamUnavailable, match="25 queries a day") as caught:
         await client.get_series(["LNS14000000"], 2025, 2026)
     assert "Fix:" in str(caught.value)
+    # BLS answers 200, so nothing else stops the next call: it fails locally.
+    with pytest.raises(UpstreamUnavailable, match="no query was sent"):
+        await client.get_series(["CUSR0000SA0"], 2025, 2026)
+    assert len(_bodies(httpx_mock)) == 1
 
 
 async def test_input_checks():
@@ -182,3 +191,15 @@ def test_known_series_cover_every_indicator():
         assert preset.not_seasonally_adjusted in constants.KNOWN_SERIES
         assert preset.seasonally_adjusted[2] == "S"
         assert preset.not_seasonally_adjusted[2] == "U"
+
+
+async def test_windows_inside_one_block_spend_one_query(httpx_mock):
+    # The 25 unregistered queries a day are shared by every user of the hosted
+    # server: 2018-2026, 2020-2026 and 2022-2024 all read the same cached block.
+    httpx_mock.add_response(url=DATA, method="POST", json=_fixture("data_missing_value.json"))
+    for start, end in ((2018, 2026), (2020, 2026), (2022, 2024)):
+        result = await client.get_series(["LNS14000000"], start, end)
+        assert result.start_year == start
+        years = {o.year for s in result.series for o in s.observations}
+        assert years and min(years) >= start and max(years) <= end
+    assert len(_bodies(httpx_mock)) == 1

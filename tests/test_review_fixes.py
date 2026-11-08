@@ -48,24 +48,68 @@ async def test_a_timed_out_call_is_counted_as_an_error() -> None:
     assert stats.snapshot()["by_tool"] == {"slow": {"ok": 0, "error": 1}}
 
 
-async def test_a_timed_out_call_is_coded_upstream_unavailable() -> None:
-    # tc_recalls_search ran past 120 s on 2026-11-07 and was coded [error]; a slow
-    # source is an outage to retry, like a request timeout.
+def _timeout_server() -> FastMCP:
     from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
+    from maplestats_mcp.shared.http import upstream_in_flight
 
     server = FastMCP("t")
     server.add_middleware(ErrorHintMiddleware())  # same order as server.py
-    server.add_middleware(ToolTimeoutMiddleware(0.05))
+    server.add_middleware(ToolTimeoutMiddleware(0.3))
 
     @server.tool
-    async def slow() -> str:
+    async def waiting() -> str:
+        # As BreakerClient.send does while a request to a publisher is pending.
+        counter = upstream_in_flight.get()
+        assert counter is not None
+        counter[0] += 1
         await asyncio.sleep(5)
         return "x"
 
-    async with Client(server) as client:
+    @server.tool
+    async def computing() -> str:
+        await asyncio.sleep(5)  # stands for a long DuckDB query: no request pending
+        return "x"
+
+    return server
+
+
+async def test_a_timeout_while_a_source_is_pending_is_upstream_unavailable() -> None:
+    # tc_recalls_search ran past 120 s on 2026-11-07 and was coded [error]; a slow
+    # source is an outage to retry, like a request timeout.
+    async with Client(_timeout_server()) as client:
         with pytest.raises(ToolError) as caught:
-            await client.call_tool("slow", {})
-    assert str(caught.value).startswith("[upstream_unavailable] slow did not finish within")
+            await client.call_tool("waiting", {})
+    assert str(caught.value).startswith("[upstream_unavailable] waiting did not finish within")
+
+
+async def test_a_timeout_in_the_servers_own_work_asks_to_narrow_the_request() -> None:
+    # A CSWC tabulation can run past the limit on the 1 vCPU host with the source
+    # healthy: telling the caller to retry would only time out again.
+    async with Client(_timeout_server()) as client:
+        with pytest.raises(ToolError) as caught:
+            await client.call_tool("computing", {})
+    text = str(caught.value)
+    assert text.startswith("[invalid_input] computing did not finish within")
+    assert "narrow the request" in text
+
+
+async def test_the_shared_client_counts_a_streamed_body_until_it_is_closed(httpx_mock) -> None:
+    from maplestats_mcp.shared.http import BreakerClient, upstream_in_flight
+
+    httpx_mock.add_response(url="https://example.org/big.zip", content=b"x" * 10)
+    httpx_mock.add_response(url="https://example.org/big.zip", content=b"x" * 10)
+    counter = [0]
+    token = upstream_in_flight.set(counter)
+    try:
+        async with BreakerClient() as client:
+            async with client.stream("GET", "https://example.org/big.zip") as response:
+                assert counter[0] == 1
+                await response.aread()
+            assert counter[0] == 0
+            await client.get("https://example.org/big.zip")
+            assert counter[0] == 0
+    finally:
+        upstream_in_flight.reset(token)
 
 
 async def test_a_timeout_error_raised_by_the_tool_is_not_reported_as_the_deadline() -> None:

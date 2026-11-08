@@ -275,3 +275,21 @@ async def test_generation_recent_calls_within_one_window_share_a_cache_key(httpx
     assert first.provenance.cached is False
     assert second.provenance.cached is True
     assert len(httpx_mock.get_requests()) == 2
+
+
+async def test_trade_at_the_maximum_limit_still_fetches_the_lag(httpx_mock):
+    # A fetch capped at MAX_LIMIT came back short after the unpublished hours were
+    # dropped; the extra rows go past the caller's cap.
+    from maplestats_mcp.modules.electricity import constants
+
+    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    httpx_mock.add_response(
+        url=_exports("importations-exportations-avec-transits"),
+        json=[_trade_row(now - timedelta(hours=1), 600.0, 200.0)],
+    )
+    httpx_mock.add_response(
+        url=_records("importations-exportations-avec-transits"), json={"total_count": 1}
+    )
+    await quebec_client.get_trade(limit=constants.MAX_LIMIT)
+    url = unquote_plus(str(httpx_mock.get_requests()[0].url))
+    assert f"limit={constants.MAX_LIMIT + 36}" in url

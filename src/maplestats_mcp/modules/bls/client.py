@@ -37,7 +37,8 @@ from __future__ import annotations
 
 import itertools
 import re
-from datetime import UTC, datetime
+from collections.abc import Awaitable, Callable
+from datetime import UTC, date, datetime
 from typing import Any, NoReturn
 
 import httpx
@@ -122,6 +123,10 @@ def _check_status(payload: Any, lang: str) -> list[str]:
         return messages
     joined = " ".join(messages) or status
     if "threshold" in joined.lower() or "limit" in joined.lower():
+        # BLS answers HTTP 200, so the circuit breaker never trips: remember the
+        # refusal and answer locally until the allowance resets at midnight UTC.
+        global _exhausted_on
+        _exhausted_on = datetime.now(UTC).date()
         raise_localized(
             UpstreamUnavailable,
             f"The BLS refused the request: {joined} This server uses the BLS API without "
@@ -143,7 +148,30 @@ def _check_status(payload: Any, lang: str) -> list[str]:
     )
 
 
+# The UTC day on which the BLS refused a query for the daily limit (None: not today).
+_exhausted_on: date | None = None
+
+
+def _raise_if_exhausted(lang: str) -> None:
+    if _exhausted_on is None or _exhausted_on != datetime.now(UTC).date():
+        return
+    raise_localized(
+        UpstreamUnavailable,
+        "The BLS daily limit for this server was reached earlier today (25 queries a day "
+        "without registration, shared by all its users); no query was sent. Fix: say the "
+        "BLS daily limit was reached and the data can be fetched after midnight UTC, or "
+        "from bls.gov. Do not answer from memory.",
+        "la limite quotidienne du BLS pour ce serveur a été atteinte plus tôt aujourd'hui "
+        "(25 requêtes par jour sans enregistrement, partagées par tous ses utilisateurs) ; "
+        "aucune requête n'a été envoyée. Solution : dites que la limite quotidienne du BLS "
+        "est atteinte et que les données pourront être obtenues après minuit UTC, ou sur "
+        "bls.gov. Ne répondez pas de mémoire.",
+        lang,
+    )
+
+
 async def _post(body: dict[str, Any], lang: str) -> Any:
+    _raise_if_exhausted(lang)
     await get_limiter(
         constants.RATE_LIMIT_SOURCE,
         rate=constants.RATE_LIMIT_PER_SECOND,
@@ -384,6 +412,13 @@ def _clean_ids(series_ids: list[str], lang: str, max_series: int) -> list[str]:
 # ---------------------------------------------------------------- data
 
 
+def _row_year(row: Any) -> int | None:
+    try:
+        return int(row["year"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 async def get_series(
     series_ids: list[str],
     start_year: int | None = None,
@@ -396,51 +431,68 @@ async def get_series(
     start, end = _years(start_year, end_year, lang)
     notes: list[str] = []
 
-    # Newest chunk first, so a range trimmed by MAX_CHUNKS keeps recent years.
-    chunks: list[tuple[int, int]] = []
-    chunk_end = end
-    while chunk_end >= start and len(chunks) < constants.MAX_CHUNKS:
-        chunks.append((max(start, chunk_end - max_years + 1), chunk_end))
-        chunk_end -= max_years
-    if chunk_end >= start:
-        first = chunks[-1][0]
+    # Fixed blocks of MAX_YEARS ending this year (2017-2026, 2007-2016...), newest
+    # first, each cached on its own: overlapping windows reuse one BLS query instead
+    # of spending another of the 25 a day that every user of the hosted server
+    # shares, and the default window is one block. A range trimmed by MAX_CHUNKS
+    # keeps the recent blocks.
+    this_year = datetime.now(UTC).year
+    blocks: list[tuple[int, int]] = []
+    block_stop = this_year - ((this_year - min(end, this_year)) // max_years) * max_years
+    while block_stop >= start and len(blocks) < constants.MAX_CHUNKS:
+        blocks.append((block_stop - max_years + 1, block_stop))
+        block_stop -= max_years
+    if blocks[-1][0] > start:
+        first = blocks[-1][0]
         notes.append(
             pick(
                 lang,
                 f"Years {start} to {first - 1} were left out: one call fetches at most "
-                f"{constants.MAX_CHUNKS * max_years} years ({constants.MAX_CHUNKS} queries of "
-                f"{max_years}). Ask again for the earlier years.",
+                f"{constants.MAX_CHUNKS} blocks of {max_years} years. Ask again for the "
+                "earlier years.",
                 f"Les années {start} à {first - 1} ont été omises : un appel couvre au plus "
-                f"{constants.MAX_CHUNKS * max_years} ans ({constants.MAX_CHUNKS} requêtes de "
-                f"{max_years}). Redemandez les années antérieures.",
+                f"{constants.MAX_CHUNKS} blocs de {max_years} ans. Redemandez les années "
+                "antérieures.",
             )
         )
         start = first
+    key_ids = ",".join(sorted(ids))
 
-    async def fetch() -> dict[str, Any]:
-        merged: dict[str, dict[str, Any]] = {}
-        messages: list[str] = []
-        for chunk_start, chunk_stop in chunks:
+    def block_fetch(block_start: int, block_stop: int) -> Callable[[], Awaitable[dict[str, Any]]]:
+        async def fetch() -> dict[str, Any]:
             body: dict[str, Any] = {
                 "seriesid": ids,
-                "startyear": str(chunk_start),
-                "endyear": str(chunk_stop),
+                "startyear": str(block_start),
+                "endyear": str(block_stop),
             }
             payload = await _post(body, lang)
-            for message in _check_status(payload, lang):
-                if message not in messages:
-                    messages.append(message)
+            messages = _check_status(payload, lang)
             results = payload.get("Results") if isinstance(payload.get("Results"), dict) else {}
+            found: dict[str, list[Any]] = {}
             for raw in list_or_empty(results or {}, "series"):
-                if not isinstance(raw, dict) or not raw.get("seriesID"):
-                    continue
-                sid = str(raw["seriesID"])
-                entry = merged.setdefault(sid, {"seriesID": sid, "data": []})
-                entry["data"].extend(list_or_empty(raw, "data"))
-        return {"series": merged, "messages": messages}
+                if isinstance(raw, dict) and raw.get("seriesID"):
+                    found.setdefault(str(raw["seriesID"]), []).extend(list_or_empty(raw, "data"))
+            return {"series": found, "messages": messages}
 
-    cache_key = f"bls:data:{','.join(ids)}:{start}:{end}"
-    payload, cached = await cached_fetch(cache_key, constants.CACHE_TTL_DATA_SECONDS, fetch)
+        return fetch
+
+    merged: dict[str, dict[str, Any]] = {}
+    messages: list[str] = []
+    cached = True
+    for block_start, block_stop in blocks:
+        part, part_cached = await cached_fetch(
+            f"bls:data:{key_ids}:{block_start}:{block_stop}",
+            constants.CACHE_TTL_DATA_SECONDS,
+            block_fetch(block_start, block_stop),
+        )
+        cached = cached and part_cached
+        for message in part["messages"]:
+            if message not in messages:
+                messages.append(message)
+        for sid, rows in part["series"].items():
+            kept = [r for r in rows if _row_year(r) is not None and start <= _row_year(r) <= end]
+            merged.setdefault(sid, {"seriesID": sid, "data": []})["data"].extend(kept)
+    payload = {"series": merged, "messages": messages}
 
     series: list[Series] = []
     missing: list[str] = []

@@ -132,6 +132,21 @@ def is_recording() -> bool:
     return _recorded.get() is not None
 
 
+# Requests to publishers in flight for the current tool call (ToolTimeoutMiddleware
+# sets a fresh one per call; child tasks share the same list). A deadline reached
+# while one is in flight is the source's slowness; with none, it is the server's own
+# work (a large tabulation or join), which a retry would not fix.
+upstream_in_flight: ContextVar[list[int] | None] = ContextVar(
+    "maplestats_upstream_in_flight", default=None
+)
+
+
+def _track(delta: int) -> None:
+    counter = upstream_in_flight.get()
+    if counter is not None:
+        counter[0] += delta
+
+
 class BreakerClient(httpx.AsyncClient):
     """An AsyncClient whose every request passes the host's circuit breaker.
 
@@ -145,17 +160,37 @@ class BreakerClient(httpx.AsyncClient):
     async def send(self, request: httpx.Request, *args: Any, **kwargs: Any) -> httpx.Response:
         host = request.url.host
         probe = BREAKER.before_request(host)
+        _track(1)
         try:
             response = await super().send(request, *args, **kwargs)
         except httpx.TimeoutException:
+            _track(-1)
             BREAKER.record_failure(host, "timeout", probe=probe)
             raise
         except (httpx.NetworkError, httpx.RemoteProtocolError):
+            _track(-1)
             BREAKER.record_failure(host, "network", probe=probe)
             raise
         except BaseException:
+            _track(-1)
             BREAKER.release(host, probe=probe)
             raise
+        if kwargs.get("stream"):
+            # A streamed body is read after send returns: the wait lasts until the
+            # response is closed (httpx's stream() closes it on exit).
+            close = response.aclose
+            closed = False
+
+            async def aclose() -> None:
+                nonlocal closed
+                if not closed:
+                    closed = True
+                    _track(-1)
+                await close()
+
+            response.aclose = aclose  # type: ignore[method-assign]
+        else:
+            _track(-1)
         if response.headers.get("cf-mitigated", "").lower() == "challenge":
             BREAKER.record_failure(host, "cloudflare", probe=probe)
         elif is_failure_status(response.status_code):

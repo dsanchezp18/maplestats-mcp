@@ -89,7 +89,13 @@ class UsageStats:
         self._new_days: dict[str, Counter[bool]] = {}
         self._task: asyncio.Task[None] | None = None
         if path is not None:
-            saved = self._read()
+            try:
+                saved = self._read()
+            except OSError as exc:
+                # Counted from zero here, but save() re-reads the file and never
+                # overwrites one it cannot read, so the history is kept.
+                logger.warning("Usage stats file unreadable at start: %s", exc)
+                saved = None
             if saved is not None:
                 self.since, self.tools, self.days = saved
 
@@ -117,18 +123,17 @@ class UsageStats:
     # ---- the file (MAPLE_USAGE_STATS_FILE)
 
     def _read(self) -> tuple[datetime, Counter[tuple[str, bool]], dict[str, Counter[bool]]] | None:
-        """The file's counts, or None when there is no file or it cannot be read.
+        """The file's counts, or None when there is no file or it is not valid.
 
         A file that is not valid is moved aside (`.bad`) rather than overwritten, so
-        a bad write or a hand edit never silently replaces the history.
+        a bad write or a hand edit never silently replaces the history. A file that
+        exists but cannot be read (a network share's transient error) raises
+        OSError: treating it as absent would let the next save overwrite it.
         """
         assert self.path is not None
         try:
             raw = self.path.read_text(encoding="utf-8")
         except FileNotFoundError:
-            return None
-        except OSError as exc:
-            logger.warning("Usage stats file unreadable, counting from zero: %s", exc)
             return None
         try:
             return _parse(json.loads(raw))
@@ -149,7 +154,12 @@ class UsageStats:
         """
         if self.path is None:
             return False
-        saved = self._read()
+        try:
+            saved = self._read()
+        except OSError as exc:
+            # The unsaved counts stay queued for the next save.
+            logger.warning("Usage stats file unreadable, not saved this time: %s", exc)
+            return False
         since, tools, days = saved if saved is not None else (self.since, Counter(), {})
         tools.update(self._new_tools)
         for day, counts in self._new_days.items():

@@ -254,3 +254,28 @@ def test_a_namespaced_name_counts_as_its_tool() -> None:
     stats = UsageStats(("wds_search_cubes",))
     stats.record("MapleStats.WDS_search_cubes", True)
     assert stats.snapshot()["by_tool"] == {"wds_search_cubes": {"ok": 1, "error": 0}}
+
+
+def test_an_unreadable_file_is_never_overwritten(tmp_path, monkeypatch) -> None:
+    # A transient read error on the Azure Files share must not let a save replace
+    # the saved history with only the counts since the last save.
+    path = tmp_path / "stats.json"
+    first = UsageStats(("wds_search_cubes",), path=path)
+    for _ in range(5):
+        first.record("wds_search_cubes", True)
+    assert first.save()
+    stats = UsageStats(("wds_search_cubes",), path=path)
+    stats.record("wds_search_cubes", True)
+    real_read = type(path).read_text
+
+    def flaky(self, *args, **kwargs):
+        if self == path:
+            raise OSError("transient SMB error")
+        return real_read(self, *args, **kwargs)
+
+    monkeypatch.setattr(type(path), "read_text", flaky)
+    assert not stats.save()
+    monkeypatch.setattr(type(path), "read_text", real_read)
+    assert UsageStats(path=path).snapshot()["calls"] == 5
+    assert stats.save()
+    assert UsageStats(path=path).snapshot()["calls"] == 6
