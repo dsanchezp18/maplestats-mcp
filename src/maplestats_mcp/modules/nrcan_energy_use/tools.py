@@ -20,7 +20,8 @@ async def nrcan_energy_use_list_products(lang: Lang = "en") -> ProductList:
     Use (SHEU 2019/2015, also by CMA), multi-unit residential buildings,
     commercial and institutional buildings (SCIEU), arenas, industrial
     consumption (ICE), appliance shipments. The comprehensive database
-    covers energy use and GHG emissions by sector and province since 2000.
+    covers energy use and GHG emissions by sector and province, 2000 to
+    2023.
     Keywords: NRCan, energy use, energy consumption, household energy
     survey, SHEU, GHG emissions, energy efficiency, residential, buildings.
     Mots-clés : Ressources naturelles Canada (RNCan), consommation
@@ -62,7 +63,9 @@ async def nrcan_energy_use_get_table(table_key: str, lang: Lang = "en") -> Energ
     shares, and commercial or industrial energy use. `table_key` comes
     from nrcan_energy_use_list_tables. `lang="fr"` returns NRCan's
     French table. Survey tables print a quality letter after each value;
-    the legend is in `notes`.
+    the legend is in `notes`. Comprehensive-database keys end in page=0
+    (2000 and the latest six years, to 2023); page=1 gives the years
+    between.
     Keywords: NRCan, energy consumption, petajoules, GHG emissions,
     household energy use survey, heating, natural gas, electricity.
     Mots-clés : Ressources naturelles Canada (RNCan), consommation

@@ -78,14 +78,9 @@ _TODAY = datetime.now(UTC).date()
 DOWN_MODULES: dict[str, str] = {}
 
 # Single tools whose upstream is down while the rest of their module works.
-# oee.nrcan.gc.ca times out at TCP connect on port 443 (2026-10-03; it failed
-# the TLS handshake on 2026-09-29). nrcan_energy_use_list_products still
-# answers from its fixed survey list, so it keeps its step.
-_OEE_DOWN = "oee.nrcan.gc.ca does not accept a TCP connection"
-DOWN_TOOLS: dict[str, str] = {
-    "nrcan_energy_use_list_tables": _OEE_DOWN,
-    "nrcan_energy_use_get_table": _OEE_DOWN,
-}
+# oee.nrcan.gc.ca was unreachable from 2026-09-29 to at least 2026-10-03 and
+# answered again on 2026-11-07, so its tools run again.
+DOWN_TOOLS: dict[str, str] = {}
 
 
 async def _ourcommons_blocked_on_ci() -> bool:
@@ -1075,6 +1070,25 @@ STEPS: list[Step] = [
         "nrcan_energy_use",
         "nrcan_energy_use_get_table",
         lambda ctx: {"table_key": _first_table_key(ctx["nrcan_energy_use_list_tables"])},
+    ),
+    # The Comprehensive Energy Use Database runs to 2023 (2026-11-07): the
+    # Alberta residential menu links year=2023 tables, and table 1's first page
+    # ends with a 2023 column.
+    Step(
+        "nrcan_energy_use",
+        "nrcan_energy_use_list_tables",
+        {"product": "comprehensive", "sector": "res", "jurisdiction": "ab"},
+        lambda data: (
+            all("year=" in t["table_key"] for t in data["tables"])
+            and max(int(t["table_key"].split("year=")[1].split("&")[0]) for t in data["tables"])
+            >= 2023
+        ),
+    ),
+    Step(
+        "nrcan_energy_use",
+        "nrcan_energy_use_get_table",
+        {"table_key": "type=CP&sector=res&juris=ab&year=2023&rn=1&page=0"},
+        lambda data: "2023" in data["header_rows"][0] and bool(data["rows"]),
     ),
     # NRCan geocoding and place names
     Step("nrcan_geo", "nrcan_geo_locate", {"query": "Ottawa"}, _non_empty("locations")),
