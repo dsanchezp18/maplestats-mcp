@@ -8,6 +8,376 @@ each; `scripts/build_changelog.py` writes them in here at release time.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-08
+
+The largest release so far: 457 tools in 89 modules (399 in 78 for 0.4.8). New international comparators (OECD, Eurostat, ILOSTAT, UK ONS, ABS, Federal Reserve Board, ECB), Bank of Canada survey and projection tools, cross-series `calc_` tools, R, Python and Julia clients, Alberta energy (AER ST98, AESO) and fisheries (DFO) data, City of Toronto tools, StatCan Daily release tables, and LFS standard errors and CVs with SAS, SPSS and Stata files in PUMF tabulation. The hosted server now offers PUMF tabulation. No tool from 0.4.8 was removed.
+
+### Added
+
+- `ab_wildfire_get_municipal_fires`: wildfires that Alberta municipalities report
+  outside the Forest Protection Area, from the two municipal layers of Alberta
+  Wildfire's status map: status, hectares, start date, the local government with
+  its fire line and website, mutual aid zone and location, filtered by state,
+  municipality, date or distance from a point.
+- Australian Bureau of Statistics module, `abs_` (4 tools): `abs_get_indicator` gives eight
+  headline Australian series (CPI and trimmed-mean inflation, unemployment, participation
+  and employment-to-population rates, quarterly GDP growth, Wage Price Index growth,
+  population growth), each naming the Statistics Canada table to pair with;
+  `abs_search_datasets`, `abs_describe_dataset` and `abs_get_data` reach any of the ABS's
+  1,228 datasets by SDMX key as tidy rows. CC BY 4.0, no key (the ABS removed Data API keys
+  in November 2024).
+- `aer_st98_list_tables` and `aer_st98_get_table`: AER's ST98 Alberta Energy
+  Outlook, from the executive-summary data workbook of each edition (2022 to
+  2026; a new edition linked on the ST98 page is picked up without a release).
+  Reserves and resources, WTI, WCS and Henry Hub prices, capital expenditure,
+  primary energy production, demand and removals, crude oil and bitumen supply,
+  bitumen upgrading and drilling, as tidy rows (series, year or month or item,
+  value, unit, edition) with AER's ten-year forecast flagged (`forecast` is true
+  from the edition year on) and estimated years marked from AER's own notes.
+  Checked against the reports: the 2026 workbook gives 16 007 PJ of primary
+  energy production in 2025 and 18 503 PJ in 2035, the 2025 workbook 16 969 PJ
+  (base case) and 16 723 PJ (tariff case) in 2034. AER's copyright terms apply
+  (non-commercial reproduction with attribution), as for ST1 and ST3.
+- Alberta electricity from the AESO's public Energy Trading System reports
+  (ets.aeso.ca, keyless; the keyed api.aeso.ca is not used), four tools:
+  `electricity_alberta_get_pool_price` (hourly pool price, 30-day rolling
+  average and Alberta Internal Load since 1999),
+  `electricity_alberta_get_daily_pool_price` (daily, on-peak and off-peak
+  averages, up to a year per call), `electricity_alberta_get_monthly_summary`
+  (the Pool Monthly Summary since 1999) and
+  `electricity_alberta_get_supply_demand` (current load, generation by fuel,
+  interchange and assets). AESO's terms allow non-commercial use only: every
+  result carries them in `provenance.licence`, `commercial_use: not_allowed`
+  and a `commercial_use_notice`.
+- `skills/maplestats/SKILL.md`: a portable instruction file (Agent Skills
+  format) that teaches Claude Code, Codex, Cursor and similar agents to use
+  MapleStats well: start with `plan_query`, ask for latest periods, report
+  seasonally adjusted monthly headlines, read `context` and caveats, cite the
+  table, vector, period and release date, run `check_answer`, offer
+  `reproduce_code`, and handle unpublished figures and error codes. The README
+  and the Connect page link to it.
+- `arcgis_hub_*`: the City of Nanaimo's GIS Open Data Portal (`portal="nanaimo"`,
+  gisdata.nanaimo.ca, 86 feature layers), under the Open Government Licence -
+  Nanaimo. Whitehorse (terms bar commercial use) and the District of North
+  Vancouver's GEOweb (no catalogue API) were checked and are recorded as not built.
+- `bc_transit_*` (3 tools): BC Transit real-time GTFS feeds for the 12 systems
+  `transit_*` already schedules (Victoria, Kelowna, Kamloops, Nanaimo and eight
+  more), with the same `bct_<system>` keys. `bc_transit_get_vehicle_positions`
+  gives live bus positions with occupancy, `bc_transit_get_stop_predictions`
+  predicted departures with delays and cancelled trips flagged, and
+  `bc_transit_get_service_alerts` detours and stop closures. BC Transit Open
+  Data Terms of Use in `provenance.licence`.
+- Bank of Canada surveys and projections, found without a Valet group name:
+  `boc_get_business_outlook` (Business Outlook Survey: the BOS, activity and price
+  indicators, balances of opinion and firms' inflation expectations),
+  `boc_get_consumer_expectations` (Canadian Survey of Consumer Expectations: inflation
+  expectations at 1, 2 and 5 years, wages, job probabilities, spending, interest
+  rates), `boc_get_mpr_projection` (the Monetary Policy Report's quarterly projection
+  for Canada, contributions to GDP growth and global growth, latest or named Report)
+  and `boc_get_staff_projections` (staff economic projections by vintage, with
+  forecast quarters marked). Each finds the newest quarter, Report or vintage from
+  Valet's live inventory and returns one row per value with its unit and period, plus
+  the publication's month, page and chart groups. `plan_query` routes questions about
+  expectations and forecasts ("what do businesses expect for inflation", "Bank of
+  Canada GDP forecast") to them.
+- `boc_get_group` returns the group's page `link`.
+- Calculations across series, done by MapleStats with the formula shown instead of by
+  the assistant: `calc_ratio` divides one StatCan or Bank of Canada series by another,
+  period by period, after applying StatCan's scale factors (a province's share of
+  national employment, rent over income with `frequency='annual'`); `calc_rank` ranks
+  places for one period, from a list of series or a table coordinate with `*` at the
+  dimension to rank across, with ties sharing a rank; `calc_cagr` gives the compound
+  annual growth between two periods, with the number of years; `calc_count_changes`
+  counts and lists the times a series moved in a window, such as the Bank of Canada's
+  policy rate decisions (Valet `V39079`). Every result carries each input's citation
+  (table, vector, release or retrieval date) and the values used. Series of different
+  frequencies are refused unless `frequency` and `aggregation` convert both; an index
+  divided by another unit, current by constant dollars, a ranking across units and the
+  compound growth of a rate are refused with the fix.
+- The chat demo serves `/stats`: how each question ended (answered, refused and by which
+  limit, failed), billed model tokens by kind, model and tool calls with the tools by
+  name, the model's stop reasons, the turn number of each question, the p50 and p95 time
+  to an answer, the same per UTC day, and how much of today's question and token limits
+  is used. It keeps no questions, answers, tool arguments or addresses. With
+  `CHAT_USAGE_STATS_FILE` the counts are kept in a file across restarts (the Azure
+  deploy mounts the `chat/` folder of the server's file storage for it);
+  `CHAT_USAGE_STATS=0` turns the route off.
+- `GET /.well-known/openai-apps-challenge` on the HTTP server answers with the
+  token in `MAPLE_OPENAI_APPS_CHALLENGE` as plain text, without a bearer
+  token, for OpenAI's plugin domain verification; unset, it answers 404.
+- A terms of service page on the website (`terms.html`, English and French),
+  linked from the footer.
+- `distribution/chatgpt/`: the ChatGPT app directory package (`plugin.json`
+  with five positive and three negative review test cases, `mcp.json`), a ZIP
+  builder, a live checker for the test cases and the demo video script.
+- `ckan_*`: Niagara Open Data (`portal="niagara"`, niagaraopendata.ca), the regional
+  CKAN catalogue of Niagara Region, its municipalities and Brock University (546
+  datasets, DataStore row queries included). Each publisher has its own Open
+  Government Licence 2.0. The site had answered with a Cloudflare challenge on
+  2026-11-03; its API answered every call on 2026-11-08.
+- `statcan_daily_get_release_tables`: reads the tables published inside a Daily
+  release (`t003a-eng.htm` and, before 2014, `t131206a003-eng.htm`) as tidy rows,
+  with the values as first published, before later revisions: the free source of
+  first estimates for surveys with no real-time table, such as the Labour Force
+  Survey. Each row has its heading group (a province), parent rows, row, column,
+  unit, the cell as published and as a number; each table its title, units,
+  notes, sources and CSV link. `tables`, `search` and `limit` (500 by default,
+  5,000 at most) keep responses bounded, and `truncated` says when rows were left
+  out. Releases from 2012 on, in English and French.
+- `statcan_daily_get_article`: new `release_tables` field listing the release's own
+  tables (number, title, page).
+- `dfo_landings_*` (2 tools): Fisheries and Oceans Canada commercial fisheries
+  landings from open.canada.ca (Open Government Licence - Canada, commercial
+  use allowed). `dfo_landings_get_landings` returns tidy rows (year, province
+  or territory, species group, species, quantity in tonnes, value in dollars,
+  suppressed and total flags) for sea fisheries 1990-2024 and freshwater
+  fisheries 1990-2019, in English or French; `dfo_landings_list_tables` lists
+  the years and files.
+- European Central Bank Data Portal as a euro area comparator (`ecb_`, 5 tools),
+  over the ECB's SDMX 2.1 API, no key. `ecb_get_indicator` gives thirteen
+  headline series (the deposit facility, main refinancing and marginal lending
+  rates, €STR, the euro in Canadian and US dollars, euro area HICP inflation,
+  M3, household loans, mortgage rates and the 10-year yield), each with the
+  Bank of Canada or Statistics Canada series to set beside it;
+  `ecb_list_datasets`, `ecb_describe_dataset`, `ecb_search_series` and
+  `ecb_get_series` reach any series of the ECB's 105 datasets by SDMX key.
+  Rows are tidy (date, value, unit, frequency, series id). Free reuse,
+  commercial included, with "Source: ECB statistics".
+- Eurostat module (`eurostat_`, 4 tools), keyless: compare the EU, the euro area
+  and member states on twelve headline indicators (GDP growth, GDP per capita in
+  PPS, HICP inflation, unemployment, employment rate, house prices, government
+  debt and deficit, exports and imports) with the Canadian series to pair with;
+  search Eurostat's datasets and tables by title or code in English or French;
+  describe a dataset's dimensions, codes and status flags; and get any dataset as
+  tidy rows (geo, time, unit, value, flag), with EU27, euro area and country-name
+  shortcuts and flags such as provisional, estimated and break in series decoded.
+- US Federal Reserve Board releases as comparators for Canada (`fed_`, 5 tools),
+  read from each release's complete XML file, no key: H.15 interest rates,
+  policy rates, H.10/G.5 exchange rates, G.17 industrial production and
+  capacity utilization, H.6 money stock, G.19 consumer credit, household debt
+  service ratios, H.8, H.4.1, commercial paper, G.20, charge-off and
+  delinquency rates, SLOOS and SCOOS. `fed_get_indicator` gives fifteen
+  headline series (the federal funds rate, 2- and 10-year Treasury yields, the
+  Canadian dollar per US dollar, industrial production and others), each with
+  the Bank of Canada or Statistics Canada series to set beside it;
+  `fed_search_series`, `fed_describe_release` and `fed_get_series` reach any
+  other series. Rows are tidy (date, value, unit, frequency, series id). The
+  module does not use the Data Download Program, which the Board is retiring.
+  The planner now answers US interest rate, Treasury yield, dollar, industrial
+  production and money questions with a Federal Reserve plan.
+- ILOSTAT module, `ilo_` (4 tools): `ilo_compare_countries` puts Canada beside the G7 or
+  other countries on 13 internationally comparable labour indicators from the
+  International Labour Organization (unemployment, youth unemployment, participation,
+  employment-to-population, LU3 underutilisation, NEET, weekly hours, temporary
+  employees, monthly earnings and minimum wage in PPP dollars, and the ILO modelled
+  estimates of unemployment, labour income share and output per hour), by sex and, for
+  survey series, quarterly or monthly; `ilo_search_datasets`, `ilo_describe_dataset` and
+  `ilo_get_data` reach any of ILOSTAT's 1,215 datasets by SDMX key as tidy rows, in
+  English or French. CC BY 4.0, no key.
+- A Julia client, `clients/julia/` (`MapleStats.jl`, not registered yet): `search_tools`,
+  `plan_query`, `call_tool`, `get_data` (a DataFrame with `citation`, `provenance` and
+  `left_out` in its metadata) and `reproduce_code` over the hosted `/mcp` endpoint,
+  using HTTP.jl. Its row rule is `reproduce_workbook`'s. Design in `docs/clients.md`.
+- OECD Data Explorer module, `oecd_` (4 tools): `oecd_compare_countries` puts Canada
+  beside the G7 or other OECD countries on 16 preset indicators (Economic Outlook
+  projections, GDP per hour worked, productivity growth, GDP per capita, unit labour
+  costs, PPPs, tax-to-GDP, real house prices, price-to-income and price-to-rent ratios,
+  the composite leading indicator); `oecd_search_datasets`, `oecd_describe_dataset`
+  and `oecd_get_data` reach any of the OECD's 1,552 dataflows by SDMX key as tidy rows.
+  The module keeps to the OECD's limit of 60 data downloads an hour (at most 50, cached)
+  and flags datasets whose metadata point to third-party owners.
+- UK Office for National Statistics module, `ons_` (3 tools): `ons_get_indicator` gives 15
+  headline UK series (CPI, CPIH, core and RPI inflation, quarterly, annual and monthly GDP
+  growth, unemployment, employment and inactivity rates, regular and total pay growth,
+  vacancies, public sector net debt, retail sales volume), each naming the Statistics
+  Canada table to pair with and how the definitions differ; `ons_search_series` and
+  `ons_get_series` reach any ONS time series by its id (CDID). Open Government Licence
+  v3.0, no key.
+- The planner answers UK questions about prices, output, jobs, pay and public debt with
+  the new `united_kingdom` topic instead of calling them out of scope.
+- `ourcommons_list_expenditure_reports`, `ourcommons_get_member_expenditures` and
+  `ourcommons_get_member_expenditure_details`: the House of Commons' quarterly
+  Members' Expenditures Reports from 2020-2021 Q2, in English and French. Spending
+  per MP on staff salaries, travel, hospitality and contracts, filtered by name,
+  riding or caucus and sorted by any category, and one MP's itemized trips,
+  hospitality events and contracts.
+- `statcan_pumf_tabulate`: standard errors and CVs for the Labour Force Survey PUMF
+  (71M0001X), which ships no bootstrap weights. The server builds the calibrated
+  Poisson bootstrap that the LFS PUMF User Guide 2025 prescribes (sections 6.1 and
+  6.2, Appendix A): 1,000 replicate weights calibrated to the 220 province, age group
+  and gender domains of Appendix B, with a fixed seed so a table repeats exactly. It
+  works for totals, shares and means. On the October 2026 file, unemployment by
+  province matches Table 14-10-0287 and the standard errors fall within 0% to 15% of
+  the published ones.
+- `statcan_pumf_tabulate`: each cell has a new `quality` field: acceptable, marginal
+  or unacceptable, per the LFS guide's Table 5 (5 or more respondents; CV under 15%,
+  15% to 35%, above 35%). Cells are flagged, not suppressed. The field is null where
+  a guide's rule has not been checked.
+- `statcan_pumf_tabulate` and `statcan_pumf_get_codebook` read SAS (`.sas7bdat`), SPSS
+  (`.sav`, `.zsav`) and Stata (`.dta`) data files when a ZIP has no CSV or
+  fixed-width file, such as the Canada's Core Public Infrastructure Survey PUMF
+  (34-25-0001, 2020 and 2022). With no codebook file in the ZIP, the variables come
+  from the data file itself. The file is converted once, in chunks, to a cached CSV.
+  The new dependency is `pyreadstat` (Apache-2.0, over the MIT ReadStat library),
+  because DuckDB 2.0 has no reader for these formats. On the 86 MB CCPI 2022 file the
+  first table took 31 s with a 194 MB peak process memory, and later tables took 4 s.
+- A Python client, `clients/python/` (`maplestats`, not on PyPI yet): `search_tools`,
+  `plan_query`, `call_tool`, `get_data` (a polars frame with citation and provenance)
+  and `reproduce_code` over the hosted `/mcp` endpoint, with no MCP SDK. Its row rule
+  is `reproduce_workbook`'s, and `tests/test_client_tidy_parity.py` keeps the two equal.
+  Design in `docs/clients.md`.
+- An R client, `clients/r/` (`maplestats`, not on CRAN yet): `ms_search_tools()`,
+  `ms_plan_query()`, `ms_call_tool()`, `ms_get_data()` (a tibble with `citation`,
+  `provenance` and `left_out` attributes) and `ms_reproduce_code()` over the hosted
+  `/mcp` endpoint, using httr2. Its row rule is `reproduce_workbook`'s. Design in
+  `docs/clients.md`.
+- `toronto_*` (5 tools): City of Toronto open data from the portal's DataStore
+  tables, as tidy rows with the dataset citation and the Open Government Licence
+  – Toronto. `toronto_get_neighbourhood_profile` gives one of the 140
+  neighbourhoods' census indicators (2016, 2011, 2006, 2001) beside the city
+  total; `toronto_get_apartment_evaluations` and
+  `toronto_summarize_apartment_scores` read RentSafeTO apartment building scores
+  by building, ward or property type; `toronto_summarize_short_term_rentals`
+  counts registered short-term rentals by ward, property type or FSA;
+  `toronto_search_dinesafe` searches DineSafe restaurant inspections.
+- `docs/examples/toronto/`: a worked example (RentSafeTO scores by neighbourhood
+  beside the 2016 renter share) with a script that re-fetches the data.
+- `MAPLE_USAGE_STATS_FILE`: the `/stats` call counts (per tool and per UTC day) can be
+  kept in a JSON file, read at startup and saved every minute and on exit, so a deploy
+  or restart no longer starts them from zero. Processes sharing the file add their
+  counts together, which keeps the calls served by both revisions during a rollout.
+  The hosted Azure server keeps it on its file share at `/data/usage/stats.json`;
+  `docker-compose.yml` uses a named volume.
+
+### Changed
+
+- The public endpoint (`https://mcp.maplestats.danielstats.io/mcp`) now offers
+  `statcan_pumf_tabulate`. It runs on 1 vCPU and 2 GiB instead of 0.5 vCPU and 1 GiB,
+  and keeps downloaded microdata files on its Azure file share (at most 5 GB), so only
+  the first table from a file waits for the download. Tool calls there may run 230 s
+  (`MAPLE_TOOL_TIMEOUT_SECONDS`) instead of 120 s, just under Container Apps' 240 s
+  ingress limit. The
+  README, the Connect, FAQ and StatCan pages no longer say the tool is off there. The
+  Render backup keeps it off.
+- `search_tools` with `MAPLE_SEARCH=hybrid` (the optional semantic prototype, off by default):
+  a query that names a tool, a tool family, a StatCan table number or a vector is now ranked by
+  BM25 and the identifier boosts alone, as in the default mode. Fused with the embedding, such
+  queries ranked a wrong tool first more often (identifier probes R@1 0.79 to 0.69). The default
+  `search_tools` is unchanged. Phase 2 re-measured on 2026-11-07 (gate still not met) in
+  `tests/discovery_benchmark/phase2.md`; Phases 3 and 4 proposed in `docs/discovery-phases-3-4.md`.
+- `statcan_indicators_get_indicators`: every word of `query` must appear in the title,
+  in any order and ignoring accents, instead of the whole query as one phrase; "CPI" and
+  "inflation" find the Consumer Price Index and "GDP" finds gross domestic product.
+  `geo_code` also takes a province name or abbreviation ("AB", "Alberta", "Québec"), and
+  a place named in `query` ("unemployment rate Alberta") filters by it when `geo_code` is
+  not given. A `limit` above 300 is lowered to 300 and noted instead of failing. When
+  nothing matches, `provenance.limits` says why: the geographies the indicator is
+  published for, or titles holding some of the words.
+- `call_tool` runs a tool whose name a client changed only by a namespace, case or
+  separator (`maplestats.wds_get_data_from_vectors`, `WDS-GET-DATA-FROM-VECTORS`), and an
+  unknown name's error suggests up to three close tool names. A misspelled name is never
+  run. `/stats` counts such a call under the tool it ran.
+- Website: the OECD, Eurostat, World Bank and BIS modules have their own group, International
+  comparators, on the Sources and Tools pages instead of sitting under federal and national
+  sources, and the About page counts them separately. The Connect page shows how to install
+  the R, Python and Julia clients and links the agent skill file from the hosted-server
+  section, which now says the maintainer pays for it and that a tool call can run 230 s.
+  `llms.txt` lists the skill file.
+- `ckan_read_resource` and `ckan_describe_resource` now give the precise reason
+  they refuse Toronto's files: the portal's robots.txt disallows
+  `/dataset/*/resource/*/download/*` for automated agents (the API stays
+  allowed). `plan_query` sends Toronto restaurant inspection questions to
+  `toronto_search_dinesafe`, whose table answers again after the HTTP 500
+  errors of 2026-10-27.
+- The `/stats` per-day counts are now kept for 400 days, not 90.
+- `wds_get_data_from_vectors`, `wds_get_data_by_reference_period_range` and
+  `wds_get_data_from_cube_coord` ask StatCan's independent requests together instead of
+  one after another: the data and the code legend at once, the series information and
+  each table's metadata beside them, and several tables' metadata at the same time. A
+  cold call for three vectors went from about 3.0 s to 1.3 s (live, 2026-11-06); the
+  hosted server's median for `wds_get_data_from_vectors` was 6.4 s. Series information is
+  now cached, so a `transform` no longer asks for it twice or again on every repeat.
+
+### Fixed
+
+- The AER licence text now links AER's current copyright page
+  (aer.ca/copyright-and-disclaimer; the old address answers a redirect).
+- Tool time limit: a call made through `call_tool` (every HTTP client's path) that ran
+  out of time waiting on a publisher was reported as the server's own slow work;
+  nested calls now share one count of pending requests. A deadline that falls in a
+  retry's backoff, a Retry-After wait or a publisher's rate-limit wait, within 35 s of
+  the last request, also counts as waiting on the source.
+- `/stats`: two processes saving the counts at once (old and new replica during a
+  deploy) no longer lose one's counts on Linux: the read-add-replace runs under an
+  advisory lock.
+- `oecd_` inflation preset: where a country publishes both, the national CPI is kept
+  over the harmonised index.
+- ISED corporations: the landing-page link points to the current federal corporation
+  search page (the old page answers 404).
+- Python client: `citations()` runs in linear time (a 200-series result took 87 s).
+- `statcan_daily_get_article`: negative numbers in the text are whole again. StatCan
+  wraps the sign and first digit in a separate element, and the text came out with
+  a space inside the number ("( -1 37,000)" for -137,000 in the January 2018 Labour
+  Force Survey release). A Unicode minus is now written "-", and screen-reader
+  labels such as "Catalogue number" stay separate from the number that follows.
+- `statcan_pumf_tabulate`: queries run on two DuckDB threads. On a many-core machine
+  with `MAPLE_DUCKDB_MEMORY_LIMIT` set, DuckDB's default thread count ran out of memory
+  on the Census 2021 individuals file (384MB limit) and on the EICS 2024 bootstrap join
+  (384MB and 512MB); two threads finish both inside 384MB.
+- `nrcan_energy_use_get_table`: Comprehensive Energy Use Database titles read
+  "Residential Sector - Alberta - Table 1: ..." instead of the glued
+  "Residential SectorAlberta1Table 1: ...". The database now runs to 2023 and
+  the tools return it (no year bound in the client); the docstrings say so and
+  explain page=0 (2000 and the latest six years) and page=1. oee.nrcan.gc.ca
+  answers again, so the live smoke test runs these tools and reads a 2023 table.
+- `electricity_quebec_get_trade`: the latest hours fill `limit` again when Hydro-Québec
+  publishes exports more than 12 hours late. On 2026-11-07 the lag reached 14 hours,
+  and a request for the latest 3 or 6 hours returned fewer; 36 extra hours are now
+  fetched before the unpublished ones are dropped.
+- `reproduce_code` and `reproduce_workbook`: when the tool being reproduced fails, the
+  error keeps that tool's code. An outage of open.canada.ca on 2026-11-07 came back as
+  `[invalid_input]`, which tells an agent to change its arguments; it is now
+  `[upstream_unavailable]` (retry later), and likewise for `[not_found]`,
+  `[upstream_error]` and `[data_locked]`.
+- `/stats`: a usage-stats file that exists but cannot be read for a moment (a network
+  share's transient error) is no longer treated as missing, so a save can no longer
+  replace the saved history with only the latest counts.
+- Tool time limit: a call that runs out of time while waiting on a publisher is still
+  `[upstream_unavailable]` (retry later), but one that runs out while the server is
+  computing (a large tabulation or join) is now `[invalid_input]`, asking for a
+  narrower request, since retrying it unchanged would time out again.
+- `ourcommons_` expenditures: a blank amount in a member's report is returned as
+  missing (`null`), not 0, and sorts last; totals add the amounts reported.
+- `electricity_quebec_get_trade`: a `limit` near the maximum is filled too when
+  Hydro-Québec publishes late (the extra hours are no longer capped).
+- Website: the home page's square counted 48 federal publishers while the Sources section
+  counted 49 federal and national sources, because the two CRA sources shared the short name
+  "CRA". Each now has its own name, and the site build stops if two national sources share one.
+- `ilo_`: ILOSTAT answers an IIS "403 Access is denied" page now and then (seen on
+  2026-11-08 from three networks, including the hosted server). That page is now
+  `[upstream_unavailable]` (retry later), and describing or comparing a dataset
+  falls back to the dataflow's own definition when the full dataflow list is
+  refused, so `ilo_compare_countries` keeps working.
+- A tool call that runs past the server's time limit (120 s by default) now carries the
+  `[upstream_unavailable]` code and the "retry in a minute" fix, as a request timeout
+  does. It was coded `[error]`, so a slow `tc_recalls_search` on 2026-11-07 failed the
+  live smoke test instead of being skipped as an outage.
+- Tool errors: an upstream HTTP 5xx now carries the `[upstream_unavailable]` code
+  and the "source is down or slow, retry in a minute" fix, for every source. About
+  80 call sites raised a 5xx as a plain upstream error, so a Borealis outage on
+  2026-11-05 (`borealis_*`, `elections_results_get_historical`) told agents the
+  source had answered with an error. A 4xx or an unexpected response is unchanged.
+
+### Security
+
+- `plan_query` reads at most the first 2,000 characters of a question. The planner
+  runs on the event loop and its time grew faster than the length (13.5 s at
+  400,000 characters, minutes at 1 MB), so one oversized question under the 2 MB
+  body cap stalled every request on a hosted server, health checks included.
+- `wds_query_series` workers ask the kernel to kill them first if the container
+  runs out of memory, so a runaway query fails on its own instead of taking the
+  server, and every caller's session, down with it.
+
 ## [0.4.8] - 2026-11-05
 
 ### Added
@@ -1660,7 +2030,8 @@ published to PyPI and the MCP Registry.
 
 - Statistics Canada WDS observation release times are read as Eastern time.
 
-[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.8...HEAD
+[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.8...v0.5.0
 [0.4.8]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.5...v0.4.6
