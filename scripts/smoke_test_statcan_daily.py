@@ -132,6 +132,43 @@ async def main() -> int:
         print(f"OK: get_release_files({old}) -> {len(old_files.tables)} tables, {mapped} mapped")
         ok &= mapped > 0 and bool(old_files.pdf_url)
 
+    # The release's own tables, as first published: January 2018 LFS, Table 3, in
+    # both languages (Alberta: employment -5.9 thousand, unemployment rate 7.0%).
+    labels = (
+        ("en", "Employment", "Unemployment rate", "January 2018", "December 2017 to"),
+        ("fr", "Emploi", "Taux de chômage", "Janvier 2018", "Décembre 2017 à"),
+    )
+    for lang, employment, rate, january, monthly in labels:
+        lfs = await client.get_release_tables("dq180209a", lang=lang, tables=[3], search="Alberta")
+        rows = lfs.tables[0].rows
+        change = [
+            r.value
+            for r in rows
+            if r.row == employment and r.column.startswith(monthly) and r.unit and "%" not in r.unit
+        ]
+        jan_rate = [r.value for r in rows if r.row == rate and r.column == january]
+        print(f"OK: get_release_tables(dq180209a, {lang}) -> change {change}, rate {jan_rate}")
+        ok &= change == [-5.9] and jan_rate == [7.0]
+        ok &= lfs.tables[0].csv_url is not None and len(lfs.available_tables) == 3
+    article = await client.get_article("dq180209a")
+    print(f"OK: get_article(dq180209a) -> {len(article.release_tables)} release tables")
+    ok &= "(-137,000)" in article.sections[0].text and len(article.release_tables) == 3
+    # A 2012 release (old file names, no <main>) and a current one, capped.
+    for release in ("dq121221b", "dq261106a"):
+        tabs = await client.get_release_tables(release, limit=200)
+        print(
+            f"OK: get_release_tables({release}) -> {tabs.total_rows} values, "
+            f"{tabs.returned_count} returned, truncated={tabs.truncated}"
+        )
+        ok &= tabs.returned_count > 0
+        ok &= any(r.value is not None for t in tabs.tables for r in t.rows)
+    try:
+        await client.get_release_tables("dq180209a", tables=[99])
+        print("FAIL: expected NotFound for a missing table number")
+        ok = False
+    except NotFound:
+        print("OK: missing table number raises NotFound as expected")
+
     print("\nSTATCAN DAILY SMOKE TEST PASSED" if ok else "\nSMOKE TEST FAILED")
     return 0 if ok else 1
 

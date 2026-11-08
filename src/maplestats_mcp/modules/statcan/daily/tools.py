@@ -13,6 +13,7 @@ from maplestats_mcp.modules.statcan.daily.schemas import (
     DailyReleaseList,
     ReleaseCalendarResult,
     ReleaseFilesResult,
+    ReleaseTablesResult,
     UpcomingReleasesResult,
 )
 from maplestats_mcp.modules.statcan.lang import use_lang
@@ -265,3 +266,41 @@ async def statcan_daily_get_release_files(
     """
     use_lang(lang)
     return await client.get_release_files(article, lang=lang, previous=previous)
+
+
+@tool
+async def statcan_daily_get_release_tables(
+    article: str,
+    lang: Literal["en", "fr"] = "en",
+    tables: list[int] | None = None,
+    search: str = "",
+    limit: int = constants.RELEASE_TABLE_ROWS_DEFAULT,
+) -> ReleaseTablesResult:
+    """Read the tables published inside a Daily release, with the values as first published.
+
+    Use for: the figures exactly as StatCan released them on the day --
+    first estimates before revision, e.g. the January 2018 LFS change in
+    employment by province -- which the wds_ tables no longer show once
+    revised (the LFS has no real-time table). `article` is a Daily
+    article id ("dq180209a") or URL from statcan_daily_search_archive or
+    statcan_daily_get_releases. Returns every table the article links
+    (Table 1, Table 2...) with its title, units, columns, notes and
+    sources, its page and CSV links, and its values as tidy rows: group
+    (e.g. the province), parent rows, row, column, unit, the cell as
+    published and as a number. `tables` picks tables by number ([3]);
+    `search` keeps rows whose labels contain every word ("Alberta
+    employment"); `limit` caps rows across tables (default 500, max
+    5000) and `truncated` says when more exist. Releases from 2012 on,
+    English or French.
+    Keywords: first published, as released, release tables, preliminary
+    estimate, unrevised, original release, vintage, real-time data, Daily
+    table, LFS release table, CPI release table, GDP release table.
+    Mots-clés : première publication, données non révisées, tableaux du
+    communiqué, estimation préliminaire, valeurs d'origine, millésime,
+    données en temps réel, tableau du Quotidien, tableau de l'EPA,
+    tableau de l'IPC, tableau du PIB.
+    """
+    use_lang(lang)
+    return await client.get_release_tables(
+        article, lang=lang, tables=tables, search=search, limit=limit
+    )
