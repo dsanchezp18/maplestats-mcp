@@ -8,11 +8,14 @@ retry finds it finished rather than starting over.
 CSV members are read as text with a header; fixed-width members (.dat,
 .txt) are read one line per row and sliced with the codebook's column
 positions. Everything is read as VARCHAR and cast explicitly, so a code
-like "02" and the number 2 compare correctly.
+like "02" and the number 2 compare correctly. A ZIP with neither has its
+SAS, SPSS or Stata file converted once to such a CSV (statfiles.py).
 
-Standard errors are not computed: each survey documents its own
-replicate or bootstrap variance method, and none has been verified here
-yet. Results say so and list the replicate weights found.
+Standard errors come from the survey's own documented method where it has
+been checked against the user guide (VARIANCE_METHODS): replicate weights
+shipped with the file (Census, EICS, CSWC) or, for the LFS, which ships
+none, the calibrated Poisson bootstrap its guide prescribes, generated here.
+Other PUMFs get none, and results say so.
 """
 
 from __future__ import annotations
@@ -23,14 +26,14 @@ import logging
 import math
 import re
 import zipfile
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
 from maplestats_mcp import config
 from maplestats_mcp.modules.statcan.lang import say, use_lang
-from maplestats_mcp.modules.statcan.pumf import client, codebooks, constants
+from maplestats_mcp.modules.statcan.pumf import client, codebooks, constants, statfiles
 from maplestats_mcp.modules.statcan.pumf.schemas import (
     PumfVariable,
     TableCell,
@@ -47,7 +50,7 @@ from maplestats_mcp.shared.http import new_client, request_headers
 Statistic = Literal["total", "share", "mean"]
 
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
-_DATA_EXT = (".csv", ".dat", ".txt")
+_DATA_EXT = (".csv", ".dat", ".txt", *statfiles.EXTENSIONS)
 _NOT_DATA = ("bsw", "readme", "lisez", "layout", "frq", "codebook", "record", "_i.", "_o.")
 _downloads: dict[str, asyncio.Task[Path]] = {}
 _client = new_client(timeout=600.0, follow_redirects=True)
@@ -76,8 +79,11 @@ def _pick_member(
         and not any(marker in m.name.lower() for marker in _NOT_DATA)
         and m.size > 100_000
     ]
+    # CSV first, then fixed-width text; a SAS, SPSS or Stata file only when the
+    # ZIP has neither (CCPI 34-25-0001), since it must be converted first.
     csvs = [m for m in candidates if m.name.lower().endswith(".csv")]
-    pool = csvs or candidates
+    text = [m for m in candidates if not statfiles.is_stat_file(m.name)]
+    pool = csvs or text or candidates
     if len(pool) == 1:
         return pool[0]
     if not pool:
@@ -276,6 +282,67 @@ class DataSource:
         return f"SELECT {columns} FROM {self.relation()}"
 
 
+def _conditions(
+    col: Callable[[str], str],
+    filters: dict[str, list[str]],
+    statistic: Statistic,
+    value_variable: str | None,
+    exclude_values: list[float] | None,
+) -> tuple[list[str], list[Any], str | None]:
+    """WHERE clauses with their parameters, and the value expression for means."""
+    where: list[str] = []
+    params: list[Any] = []
+    for name, codes in filters.items():
+        numeric = all(re.fullmatch(r"-?\d+(\.\d+)?", c.strip()) for c in codes)
+        placeholders = ", ".join("?" for _ in codes)
+        if numeric:
+            where.append(f"TRY_CAST({col(name)} AS DOUBLE) IN ({placeholders})")
+            params.extend(float(c) for c in codes)
+        else:
+            where.append(f"{col(name)} IN ({placeholders})")
+            params.extend(c.strip() for c in codes)
+    value_expr = None
+    if statistic == "mean" and value_variable:
+        value_expr = f"TRY_CAST({col(value_variable)} AS DOUBLE)"
+        where.append(f"{value_expr} IS NOT NULL")
+        if exclude_values:
+            placeholders = ", ".join("?" for _ in exclude_values)
+            where.append(f"{value_expr} NOT IN ({placeholders})")
+            params.extend(exclude_values)
+    return where, params, value_expr
+
+
+def _execute[T](run: Callable[[Any], T]) -> T:
+    """Run queries on a fresh DuckDB connection; a DuckDB error is the file's fault."""
+    # DuckDB draws a terminal progress bar on long queries, on by default
+    # (seen 2026-09-24 on the 1,000-replicate joins); over the stdio transport
+    # anything printed to stdout corrupts the MCP stream and drops the client.
+    # Imported on first use: duckdb takes ~0.5 s to import and only this tool
+    # needs it, so server startup stays faster (2026-09-24).
+    import duckdb
+
+    try:
+        with duck.connect() as connection:
+            connection.execute("SET enable_progress_bar = false")
+            # Each thread holds its own CSV buffers. Measured 2026-11-07 on 20 cores
+            # with MAPLE_DUCKDB_MEMORY_LIMIT=384MB: the default threads ran out of
+            # memory on the Census 2021 individuals file (16 replicate weights) and
+            # the EICS 2024 bootstrap join; two threads finished both, at about
+            # +400 MB and +215 MB of process memory, in about 80 s and 40 s (one
+            # thread: 88 s and 74 s). The default ran out at 512MB too, on EICS.
+            connection.execute("SET threads=2")
+            return run(connection)
+    except duckdb.Error as exc:
+        # A ragged CSV row, a column the file does not have, or a bad join key
+        # is a fault in the file, not in the caller's arguments.
+        raise UpstreamError(
+            say(
+                f"statcan_pumf: the data file could not be tabulated: {exc}",
+                f"statcan_pumf : le fichier de données n'a pas pu être tabulé : {exc}",
+            )
+        ) from exc
+
+
 def _run_query(
     main: DataSource,
     group_by: list[str],
@@ -313,26 +380,8 @@ def _run_query(
     def col(name: str) -> str:
         return f'"{name}"' if name not in (id_variable,) else f'm."{name}"'
 
-    where: list[str] = []
-    params: list[Any] = []
-    for name, codes in filters.items():
-        numeric = all(re.fullmatch(r"-?\d+(\.\d+)?", c.strip()) for c in codes)
-        placeholders = ", ".join("?" for _ in codes)
-        if numeric:
-            where.append(f"TRY_CAST({col(name)} AS DOUBLE) IN ({placeholders})")
-            params.extend(float(c) for c in codes)
-        else:
-            where.append(f"{col(name)} IN ({placeholders})")
-            params.extend(c.strip() for c in codes)
+    where, params, value_expr = _conditions(col, filters, statistic, value_variable, exclude_values)
     groups = [f"{col(name)} AS g{i}" for i, name in enumerate(group_by)]
-    value_expr = None
-    if statistic == "mean" and value_variable:
-        value_expr = f"TRY_CAST({col(value_variable)} AS DOUBLE)"
-        where.append(f"{value_expr} IS NOT NULL")
-        if exclude_values:
-            placeholders = ", ".join("?" for _ in exclude_values)
-            where.append(f"{value_expr} NOT IN ({placeholders})")
-            params.extend(exclude_values)
     sums: list[str] = []
     for weight in weights:
         weight_expr = f"TRY_CAST({col(weight)} AS DOUBLE)"
@@ -345,35 +394,170 @@ def _run_query(
         f"GROUP BY {group_list} ORDER BY {group_list}" if group_by else ""
     )
     totals_sql = f"SELECT COUNT(*), SUM({weight_expr}) FROM {relation} {condition}"
-    # DuckDB draws a terminal progress bar on long queries, on by default
-    # (seen 2026-09-24 on the 1,000-replicate joins); over the stdio transport
-    # anything printed to stdout corrupts the MCP stream and drops the client.
-    # Imported on first use: duckdb takes ~0.5 s to import and only this tool
-    # needs it, so server startup stays faster (2026-09-24).
-    import duckdb
 
-    try:
-        with duck.connect() as connection:
-            connection.execute("SET enable_progress_bar = false")
-            # Each thread holds its own CSV buffers. Measured 2026-11-07 on 20 cores
-            # with MAPLE_DUCKDB_MEMORY_LIMIT=384MB: the default threads ran out of
-            # memory on the Census 2021 individuals file (16 replicate weights) and
-            # the EICS 2024 bootstrap join; two threads finished both, at about
-            # +400 MB and +215 MB of process memory, in about 80 s and 40 s (one
-            # thread: 88 s and 74 s). The default ran out at 512MB too, on EICS.
-            connection.execute("SET threads=2")
-            rows = connection.execute(sql, params).fetchall()
-            total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
-    except duckdb.Error as exc:
-        # A ragged CSV row, a column the file does not have, or a bad join key
-        # is a fault in the file, not in the caller's arguments.
-        raise UpstreamError(
-            say(
-                f"statcan_pumf: the data file could not be tabulated: {exc}",
-                f"statcan_pumf : le fichier de données n'a pas pu être tabulé : {exc}",
-            )
-        ) from exc
-    return rows, int(total_n or 0), float(total_weight or 0.0)
+    def run(connection: Any) -> tuple[list[tuple[Any, ...]], int, float]:
+        rows = connection.execute(sql, params).fetchall()
+        total_n, total_weight = connection.execute(totals_sql, params).fetchone() or (0, 0.0)
+        return rows, int(total_n or 0), float(total_weight or 0.0)
+
+    return _execute(run)
+
+
+# Any fixed value: the replicates then come out the same on every call, so a
+# retried or repeated table reports the same standard errors.
+_POISSON_SEED = 123
+
+
+def _poisson_sign(record: str, replicate: str) -> str:
+    """+1 or -1 with probability 1/2, independently per record and replicate.
+
+    The top bit of DuckDB's hash: its lowest bit is not independent across
+    consecutive replicate numbers (correlation -0.21 between replicate b and
+    b + 1 for the same record, measured 2026-11-08 on 2 million pairs); the
+    top bit's correlations were all under 0.002 in absolute value.
+    """
+    return f"(CASE WHEN (hash({record}, {replicate}, {_POISSON_SEED}) >> 63) = 0 THEN 1.0 ELSE -1.0 END)"
+
+
+def lfs_calibration_domain(col: Callable[[str], str]) -> str:
+    """LFS PUMF User Guide 2025, Appendix B: province x age group x gender, 220 domains.
+
+    Age groups as the guide's sample code builds them (Appendix D): AGE_6
+    codes 1 and 2 (15-16, 17-19) on their own, AGE_12 codes 5-6 (35-44) and
+    7-8 (45-54) merged, every other AGE_12 code as is (2 is 20-24).
+    """
+
+    def code(name: str) -> str:
+        return f"TRY_CAST({col(name)} AS INTEGER)"
+
+    age = (
+        f"CASE WHEN {code('AGE_6')} IN (1, 2) THEN 'a' || {code('AGE_6')} "
+        f"WHEN {code('AGE_12')} IN (5, 6) THEN '5' "
+        f"WHEN {code('AGE_12')} IN (7, 8) THEN '7' "
+        f"ELSE CAST({code('AGE_12')} AS VARCHAR) END"
+    )
+    return f"concat_ws('|', {code('PROV')}, {code('GENDER')}, {age})"
+
+
+def _run_poisson_query(
+    main: DataSource,
+    group_by: list[str],
+    weight: str,
+    statistic: Statistic,
+    value_variable: str | None,
+    filters: dict[str, list[str]],
+    method: VarianceMethod,
+    exclude_values: list[float] | None = None,
+) -> tuple[list[tuple[Any, ...]], int, float]:
+    """Like _run_query, with replicate weights generated per the LFS PUMF guide.
+
+    LFS PUMF User Guide 2025, section 6.1 and Appendix A1: for each record k
+    and replicate b, a_bk = 1 + z_bk * sqrt(1 - 1/w_k) with z_bk = +1 or -1 at
+    random (eq. 1), w_bk = a_bk * w_k (eq. 2), then w*_bk = w_bk * (sum of w
+    in the record's calibration domain / sum of w_b in it) (eq. 3). The
+    weights are calibrated on the whole file, before any filter, as the
+    guide's sample code does. The rows come back in _run_query's layout, the
+    replicates after the main weight, for VarianceMethod.standard_error.
+    """
+    replicates = method.generated_replicates
+    id_variable = method.id_variable or ""
+    domain_of = method.calibration_domain
+    assert domain_of is not None and replicates > 0
+
+    def col(name: str) -> str:
+        return f'"{name}"'
+
+    where, params, value_expr = _conditions(col, filters, statistic, value_variable, exclude_values)
+    listed: list[str] = [
+        *group_by,
+        *filters,
+        *([value_variable] if value_variable else []),
+        weight,
+        id_variable,
+        *method.calibration_variables,
+    ]
+    needed = list(dict.fromkeys(listed))
+    groups = [f"{col(name)} AS g{i}" for i, name in enumerate(group_by)]
+    keep = " AND ".join(where) if where else "TRUE"
+    base_sql = (
+        f"CREATE TEMP TABLE base AS SELECT {''.join(g + ', ' for g in groups)}"
+        f"TRY_CAST({col(id_variable)} AS BIGINT) AS rid, "
+        f"TRY_CAST({col(weight)} AS DOUBLE) AS w, "
+        f"{domain_of(col)} AS dom, "
+        f"{value_expr or 'NULL'} AS x, ({keep}) AS keep "
+        f"FROM ({main.select(needed)})"
+    )
+    # sqrt(1 - 1/w) is the guide's adjustment; GREATEST keeps a weight under 1
+    # (none in the LFS) from making it NaN.
+    boot = f"base.w * (1 + {_poisson_sign('base.rid', 'r.b')} * sqrt(GREATEST(0, 1 - 1 / base.w)))"
+    replicates_sql = f"range(1, {replicates + 1}) AS r(b)"
+    factor_sql = (
+        "CREATE TEMP TABLE factor AS "
+        f"WITH boot AS (SELECT base.dom, r.b, SUM({boot}) AS wb FROM base, {replicates_sql} "
+        "GROUP BY base.dom, r.b), "
+        "full_sample AS (SELECT dom, SUM(w) AS wd FROM base GROUP BY dom) "
+        "SELECT boot.dom, boot.b, full_sample.wd / boot.wb AS f "
+        "FROM boot JOIN full_sample ON boot.dom = full_sample.dom"
+    )
+    group_cols = [f"g{i}" for i in range(len(group_by))]
+    group_list = ", ".join(group_cols)
+    numerator = "x * w" if value_expr else "w"
+    main_sql = (
+        f"SELECT {', '.join([*group_cols, 'COUNT(*)', f'SUM({numerator})', 'SUM(w)'])} "
+        "FROM base WHERE keep"
+        + (f" GROUP BY {group_list} ORDER BY {group_list}" if group_by else "")
+    )
+    calibrated = f"{boot} * factor.f"
+    replicate_numerator = f"base.x * {calibrated}" if value_expr else calibrated
+    replicate_sql = (
+        f"SELECT {', '.join([*(f'base.{g}' for g in group_cols), 'r.b'])}, "
+        f"SUM({replicate_numerator}), SUM({calibrated}) "
+        f"FROM base, {replicates_sql}, factor "
+        "WHERE base.keep AND factor.dom = base.dom AND factor.b = r.b "
+        f"GROUP BY {', '.join([*(f'base.{g}' for g in group_cols), 'r.b'])}"
+    )
+    totals_sql = "SELECT COUNT(*), SUM(w) FROM base WHERE keep"
+
+    def run(connection: Any) -> tuple[list[tuple[Any, ...]], int, float]:
+        connection.execute(base_sql, params)
+        connection.execute(factor_sql)
+        rows = connection.execute(main_sql).fetchall()
+        by_group: dict[tuple[Any, ...], list[Any]] = {}
+        width = len(group_by)
+        for row in rows:
+            by_group[tuple(row[:width])] = [None, None] * replicates
+        for *codes, b, numerator_b, denominator_b in connection.execute(replicate_sql).fetchall():
+            slots = by_group.get(tuple(codes))
+            if slots is not None:
+                slots[2 * (b - 1)] = numerator_b
+                slots[2 * (b - 1) + 1] = denominator_b
+        total_n, total_weight = connection.execute(totals_sql).fetchone() or (0, 0.0)
+        wide = [(*row, *by_group[tuple(row[:width])]) for row in rows]
+        return wide, int(total_n or 0), float(total_weight or 0.0)
+
+    return _execute(run)
+
+
+Quality = Literal["acceptable", "marginal", "unacceptable"]
+
+
+@dataclass(frozen=True)
+class ReleaseRule:
+    """A user guide's quality bands: respondents in the cell and CV (SE / estimate)."""
+
+    min_respondents: int
+    acceptable_below: float  # CV under this is acceptable
+    marginal_up_to: float  # CV from acceptable_below up to this is marginal
+    citation: str
+
+    def quality(self, respondents: int, cv: float | None) -> Quality | None:
+        if respondents < self.min_respondents:
+            return "unacceptable"
+        if cv is None:
+            return None
+        if cv < self.acceptable_below:
+            return "acceptable"
+        return "marginal" if cv <= self.marginal_up_to else "unacceptable"
 
 
 @dataclass(frozen=True)
@@ -390,12 +574,22 @@ class VarianceMethod:
     description: str
     replicate_file: str | None = None  # substring of the separate bootstrap file's name
     id_variable: str | None = None
+    # Replicates this server generates when the PUMF ships none (LFS), with the
+    # variables and domains the guide calibrates them on.
+    generated_replicates: int = 0
+    calibration_variables: tuple[str, ...] = ()
+    calibration_domain: Callable[[Callable[[str], str]], str] | None = None
+    release: ReleaseRule | None = None
+
+    @property
+    def replicate_count(self) -> int:
+        return self.generated_replicates or len(self.replicates)
 
     def standard_error(
         self, estimate: float | None, replicate_estimates: Sequence[float | None]
     ) -> float | None:
         values = [v for v in replicate_estimates if v is not None]
-        if len(values) != len(self.replicates) or estimate is None:
+        if len(values) != self.replicate_count or estimate is None:
             return None
         centre = sum(values) / len(values) if self.centre == "mean" else estimate
         return math.sqrt(sum((v - centre) ** 2 for v in values) / self.divisor)
@@ -454,6 +648,39 @@ VARIANCE_METHODS: tuple[VarianceMethod, ...] = (
         ),
         replicate_file="pumf_bsw.txt",
         id_variable="PUMFID",
+    ),
+    VarianceMethod(
+        # LFS PUMF User Guide 2025 (UserGuide_LFS_PUMF_2025_ENG.pdf in every
+        # 71M0001X ZIP, monthly and historical, checked 2026-11-08): the PUMF has
+        # no bootstrap weights; section 6.0 says to approximate the variance with
+        # a calibrated Poisson bootstrap, built per 6.1 and Appendix A1 (equations
+        # 1-3), calibrated on the Appendix B domains, with the variance of 6.2 and
+        # A2 (sum of squared deviations from the FINALWT estimate / 1000), and the
+        # Table 5 quality bands of section 5.2. The guide gives no CV lookup table.
+        url_marker="/71m0001x/",
+        main_weight="FINALWT",
+        replicates=(),
+        divisor=1000.0,
+        centre="estimate",
+        description=(
+            "calibrated Poisson bootstrap (LFS PUMF User Guide 2025, s. 6.1-6.2 and "
+            "Appendix A): 1,000 replicate weights FINALWT x (1 +/- sqrt(1 - 1/FINALWT)), "
+            "each calibrated to the FINALWT totals of the 220 province x age group x gender "
+            "domains of Appendix B, then sqrt(sum of squared deviations from the "
+            "full-sample estimate / 1000). The replicates are generated by this server with "
+            "a fixed seed, so the standard error approximates StatCan's (the guide says so "
+            "of the method itself) and repeats exactly from call to call."
+        ),
+        id_variable="REC_NUM",
+        generated_replicates=1000,
+        calibration_variables=("PROV", "GENDER", "AGE_6", "AGE_12"),
+        calibration_domain=lfs_calibration_domain,
+        release=ReleaseRule(
+            min_respondents=5,
+            acceptable_below=0.15,
+            marginal_up_to=0.35,
+            citation="LFS PUMF User Guide 2025, s. 5.2, Table 5",
+        ),
     ),
 )
 
@@ -520,6 +747,42 @@ def _to_shares(
     return shares
 
 
+def _release_notes(release: ReleaseRule | None, statistic: Statistic) -> list[str]:
+    if release is None:
+        return []
+    acceptable, marginal = (
+        round(100 * release.acceptable_below),
+        round(100 * release.marginal_up_to),
+    )
+    notes = [
+        say(
+            f"quality follows {release.citation}: acceptable with {release.min_respondents} or more "
+            f"respondents and a CV under {acceptable}%; marginal (publish with a warning on "
+            f"quality) at a CV of {acceptable}% to {marginal}%; unacceptable under "
+            f"{release.min_respondents} respondents or above {marginal}%, which Statistics "
+            "Canada recommends not releasing. Cells are flagged, not suppressed.",
+            f"quality suit {release.citation} : acceptable si au moins {release.min_respondents} "
+            f"répondants et un CV inférieur à {acceptable} % ; marginale (à publier avec une mise "
+            f"en garde sur la qualité) pour un CV de {acceptable} % à {marginal} % ; "
+            f"inacceptable sous {release.min_respondents} répondants ou au-delà de {marginal} %, "
+            "et Statistique Canada recommande alors de ne pas diffuser. Les cellules sont "
+            "signalées, pas supprimées.",
+        )
+    ]
+    if statistic in ("share", "mean"):
+        notes.append(
+            say(
+                "For small ratios such as an unemployment rate the guide warns that the CV can be "
+                "misleadingly large; a confidence interval (estimate +/- 2 standard errors at 95%) "
+                "describes them better.",
+                "Pour de petits ratios comme un taux de chômage, le guide prévient que le CV peut "
+                "être trompeusement élevé ; un intervalle de confiance (estimation +/- 2 erreurs "
+                "types à 95 %) les décrit mieux.",
+            )
+        )
+    return notes
+
+
 async def tabulate(
     url: str,
     *,
@@ -544,7 +807,14 @@ async def tabulate(
                 "La statistique « mean » exige value_variable.",
             )
         )
-    variables, _, _ = await client.load_codebook(url, lang)
+    members, _, _ = await client._members(url)
+    member = _pick_member(members, data_file)
+    stat_file = statfiles.is_stat_file(member.name)
+    # A SAS, SPSS or Stata file names its own variables when the ZIP has no
+    # codebook the parsers read (CCPI); load_codebook then downloads it.
+    variables, _, _ = await client.load_codebook(
+        url, lang, data_member=member.name if stat_file else None
+    )
     by_name = {v.name: v for v in variables}
     weights = client.weight_names(variables)
     chosen_weight = (weight or client.main_weight(variables) or "").upper()
@@ -567,9 +837,7 @@ async def tabulate(
     upper_rows = [r.upper() for r in rows]
     upper_filters = {k.upper(): [str(c) for c in v] for k, v in (filters or {}).items()}
 
-    members, _, _ = await client._members(url)
-    member = _pick_member(members, data_file)
-    fixed_width = not member.name.lower().endswith(".csv")
+    fixed_width = not member.name.lower().endswith(".csv") and not stat_file
     if fixed_width:
         missing = [
             n for n in wanted if not by_name[n.upper()].position or not by_name[n.upper()].width
@@ -582,10 +850,18 @@ async def tabulate(
                 )
             )
     path = await local_data_file(url, member)
+    if stat_file:
+        path = await run_in_pool(statfiles.to_csv, path)
 
     method = variance_method(url)
     if method and chosen_weight != method.main_weight:
         method = None
+    if method and method.generated_replicates:
+        # Generated replicates need the record id and the calibration variables,
+        # by name (CSV) or by position (fixed width).
+        needed = [method.id_variable or "", *method.calibration_variables]
+        if any(n not in by_name or (fixed_width and not by_name[n].position) for n in needed):
+            method = None
     all_weights = [chosen_weight, *(method.replicates if method else [])]
     replicate_source = None
     if method and method.replicate_file:
@@ -632,23 +908,39 @@ async def tabulate(
 
     value_name = value_variable.upper() if value_variable else ""
     reserved = reserve_codes(by_name[value_name]) if statistic == "mean" and value_variable else []
-    result_rows, total_n, total_weight = await run_in_pool(
-        _run_query,
-        DataSource(path, fixed_width, by_name),
-        upper_rows,
-        all_weights,
-        statistic,
-        value_variable.upper() if value_variable else None,
-        upper_filters,
-        replicate_source,
-        method.id_variable if method else None,
-        reserved,
-    )
+    source = DataSource(path, fixed_width, by_name)
+    if method and method.generated_replicates:
+        result_rows, total_n, total_weight = await run_in_pool(
+            _run_poisson_query,
+            source,
+            upper_rows,
+            chosen_weight,
+            statistic,
+            value_name or None,
+            upper_filters,
+            method,
+            reserved,
+        )
+    else:
+        result_rows, total_n, total_weight = await run_in_pool(
+            _run_query,
+            source,
+            upper_rows,
+            all_weights,
+            statistic,
+            value_name or None,
+            upper_filters,
+            replicate_source,
+            method.id_variable if method else None,
+            reserved,
+        )
+    weight_count = 1 + (method.replicate_count if method else 0)
     width = len(upper_rows)
     labels = {name: _labels(by_name[name]) for name in upper_rows}
-    estimates = [_estimates(row, width, len(all_weights), statistic) for row in result_rows]
+    estimates = [_estimates(row, width, weight_count, statistic) for row in result_rows]
     if statistic == "share":
         estimates = _to_shares(result_rows, estimates, width)
+    release = method.release if method else None
     cells: list[TableCell] = []
     for row, per_weight in list(zip(result_rows, estimates, strict=True))[
         : constants.TABLE_ROWS_MAX
@@ -656,6 +948,8 @@ async def tabulate(
         codes = [str(c) if c is not None else "" for c in row[:width]]
         estimate = per_weight[0]
         standard_error = method.standard_error(estimate, per_weight[1:]) if method else None
+        cv = abs(standard_error / estimate) if standard_error is not None and estimate else None
+        respondents = int(row[width])
         cells.append(
             TableCell(
                 groups=[
@@ -664,13 +958,10 @@ async def tabulate(
                 ],
                 estimate=estimate,
                 standard_error=standard_error,
-                cv=(
-                    abs(standard_error / estimate)
-                    if standard_error is not None and estimate
-                    else None
-                ),
-                unweighted_n=int(row[width]),
-                low_count=int(row[width]) < min_count,
+                cv=cv,
+                quality=release.quality(respondents, cv) if release else None,
+                unweighted_n=respondents,
+                low_count=respondents < min_count,
             )
         )
     replicates = [w for w in weights if w != chosen_weight]
@@ -725,6 +1016,20 @@ async def tabulate(
         variance_method=method.description if method else None,
         notes=[
             variance_note,
+            *_release_notes(release, statistic),
+            *(
+                [
+                    say(
+                        f"{member.name} was converted to text once (pyreadstat) and read like a "
+                        "CSV; variable names are upper case, other characters replaced by '_'.",
+                        f"{member.name} a été converti une fois en texte (pyreadstat) et lu comme "
+                        "un CSV ; les noms de variables sont en majuscules, les autres caractères "
+                        "remplacés par « _ ».",
+                    )
+                ]
+                if stat_file
+                else []
+            ),
             say(
                 f"Cells with fewer than {min_count} respondents are flagged low_count; StatCan "
                 "guidelines usually suppress or qualify them.",

@@ -87,7 +87,9 @@ async def statcan_pumf_get_codebook(
     labels and value labels, e.g. "tenure", "smok"), what each code
     means, column positions for fixed-width files, and which weights to
     use (final and bootstrap/replicate). Reads only the codebook files
-    inside the ZIP. url comes from statcan_pumf_list_files.
+    inside the ZIP; a ZIP without one but with a SAS, SPSS or Stata data
+    file has that file downloaded and its own variables read. url comes
+    from statcan_pumf_list_files.
     Keywords: codebook, data dictionary, variables, value labels, survey
     weights, bootstrap weights, record layout, PUMF.
     Mots-clés : dictionnaire de données, variables, étiquettes de valeurs,
@@ -120,10 +122,13 @@ if config.get_pumf_tabulate_enabled():
         listed codes (e.g. {"PROV": ["48"]}); share gives percentages within
         each group of all but the last row variable. Uses the survey weight
         (default: the codebook's main weight) and returns unweighted counts,
-        flagging small cells. Standard errors and CVs come from the survey's
-        documented replicate weights where verified (2021 Census individuals).
-        The first call downloads the file (may take a minute or two; retry
-        if it times out).
+        flagging small cells. Standard errors and CVs follow the survey's user
+        guide where verified: replicate weights (2021 Census individuals, EICS,
+        CSWC) or, for the LFS, the guide's calibrated Poisson bootstrap, with
+        each cell's quality band (acceptable, marginal, unacceptable). Reads
+        CSV and fixed-width files, and SAS, SPSS or Stata files when the ZIP
+        has nothing else. The first call downloads the file (may take a minute
+        or two; retry if it times out).
         Keywords: weighted estimate, tabulation, crosstab, microdata analysis,
         survey weight, weighted total, PUMF, LFS.
         Mots-clés : estimation pondérée, totalisation, tableau croisé,

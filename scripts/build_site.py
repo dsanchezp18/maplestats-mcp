@@ -3514,6 +3514,10 @@ VARIANCE_FILES: dict[str, tuple[str, str]] = {
         "CSWC, 2024-2025 (14-25-0001)",
         "CSWC, 2024-2025 (14-25-0001)",
     ),
+    "/71m0001x/": (
+        "Labour Force Survey, every monthly file (71M0001X)",
+        "Enquête sur la population active, chaque fichier mensuel (71M0001X)",
+    ),
 }
 
 # The search_tools query the post shows, and the tool its text says the
@@ -3870,13 +3874,23 @@ def _variance_table(lang: Lang) -> str:
                 else f"Bootstrap : écarts au carré à l'estimation sur l'échantillon complet, divisés par {divisor}"
             )
         replicates = method.replicates
+        if method.generated_replicates:
+            # The LFS ships none: the guide's calibrated Poisson bootstrap is built here.
+            how = (
+                f"Calibrated Poisson bootstrap built by the server; {how[0].lower()}{how[1:]}"
+                if en
+                else f"Bootstrap de Poisson calé, construit par le serveur ; "
+                f"{how[0].lower()}{how[1:]}"
+            )
+            named = "generated" if en else "générées"
+        else:
+            named = f"<code>{esc(replicates[0])}</code>–<code>{esc(replicates[-1])}</code>"
         rows.append(
             # data-label names each cell where the phone layout hides the header row.
             f"<tr><td>{esc(name)}</td>"
             f'<td data-label="{head[1]}"><code>{esc(method.main_weight)}</code></td>'
-            f'<td data-label="{head[2]}"><code>{esc(replicates[0])}</code>–'
-            f"<code>{esc(replicates[-1])}</code> "
-            f'<span class="count">{number(len(replicates), lang)}</span></td>'
+            f'<td data-label="{head[2]}">{named} '
+            f'<span class="count">{number(method.replicate_count, lang)}</span></td>'
             f'<td data-label="{head[3]}">{esc(how)}</td></tr>'
         )
     caption = (

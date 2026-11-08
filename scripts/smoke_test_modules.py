@@ -1574,6 +1574,40 @@ STEPS: list[Step] = [
         },
         _non_empty("cells"),
     ),
+    # LFS: no bootstrap weights shipped; the guide's Poisson bootstrap gives SEs.
+    Step(
+        "statcan/pumf",
+        "statcan_pumf_tabulate",
+        {
+            "url": "https://www150.statcan.gc.ca/n1/pub/71m0001x/2021001/hist/2024-CSV.zip",
+            "data_file": "pub0124.csv",
+            "rows": ["PROV"],
+            "filters": {"LFSSTAT": ["3"]},
+        },
+        lambda data: (
+            len(data["cells"]) == 10
+            and all(c["standard_error"] and c["quality"] for c in data["cells"])
+        ),
+    ),
+    # CCPI 2022 ships only a .sas7bdat: codebook and table come from that file.
+    Step(
+        "statcan/pumf",
+        "statcan_pumf_get_codebook",
+        {"url": "https://www150.statcan.gc.ca/n1/pub/34-25-0001/2025001/2022.zip"},
+        lambda data: "CWEIGHT" in data["weight_variables"],
+    ),
+    Step(
+        "statcan/pumf",
+        "statcan_pumf_tabulate",
+        {
+            "url": "https://www150.statcan.gc.ca/n1/pub/34-25-0001/2025001/2022.zip",
+            "rows": ["PR"],
+            "statistic": "mean",
+            "value_variable": "VALUE",
+            "filters": {"CELLID": ["C0A03101"]},
+        },
+        _non_empty("cells"),
+    ),
     # Reproduction code (argument-based and provenance-based)
     Step(
         "reproduce",

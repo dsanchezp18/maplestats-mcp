@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
@@ -89,9 +91,18 @@ class TableCell(BaseModel):
         description="Weighted total, weighted mean, or percent share, per `statistic`."
     )
     standard_error: float | None = Field(
-        default=None, description="From the survey's documented replicate-weight method, if any."
+        default=None,
+        description="From the survey's documented variance method, if any: replicate weights "
+        "shipped with the file, or the LFS guide's calibrated Poisson bootstrap.",
     )
-    cv: float | None = Field(default=None, description="Coefficient of variation (SE / estimate).")
+    cv: float | None = Field(
+        default=None, description="Coefficient of variation (SE / estimate), as a fraction."
+    )
+    quality: Literal["acceptable", "marginal", "unacceptable"] | None = Field(
+        default=None,
+        description="The user guide's release band for this cell, from its respondents and CV "
+        "(LFS: Table 5); null where the guide's rule has not been verified.",
+    )
     unweighted_n: int = Field(description="Respondents in the cell (sample, not population).")
     low_count: bool
 
@@ -107,6 +118,8 @@ class WeightedTable(BaseModel):
     truncated: bool
     unweighted_n: int
     weighted_total: float
-    variance_method: str | None = None
+    variance_method: str | None = Field(
+        default=None, description="How standard errors were computed, citing the user guide."
+    )
     notes: list[str]
     provenance: Provenance
