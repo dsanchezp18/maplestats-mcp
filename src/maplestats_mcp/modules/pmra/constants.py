@@ -10,7 +10,6 @@ RATE_LIMIT_CAPACITY = 2.0
 
 # The database is refreshed once a night (2:30-3:30 a.m. Eastern, per the API guide).
 EXTRACT_TTL_SECONDS = 6 * 60 * 60
-PRODUCT_TTL_SECONDS = 60 * 60
 # The largest extract, application, was 16 MB; product was 11-12 MB.
 MAX_EXTRACT_BYTES = 40 * 1024 * 1024
 

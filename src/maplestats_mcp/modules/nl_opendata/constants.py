@@ -6,7 +6,6 @@ header or JSON API, so this module uses a conservative per-host limiter.
 """
 
 BASE_URL = "https://opendata.gov.nl.ca/public/opendata/page/"
-FILE_DOWNLOAD_URL = "https://opendata.gov.nl.ca/public/opendata/filedownload/"
 RATE_LIMIT_SOURCE = "nl-opendata"
 RATE_LIMIT_PER_SECOND = 1.0
 RATE_LIMIT_CAPACITY = 2.0

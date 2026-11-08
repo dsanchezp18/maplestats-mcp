@@ -19,7 +19,6 @@ Confirmed live 2026-09-26 against health-infobase.canada.ca:
 """
 
 BASE_URL = "https://health-infobase.canada.ca"
-FRENCH_SITE = "https://sante-infobase.canada.ca"
 API_URL = f"{BASE_URL}/api"
 # health.canada.ca hosts the Canadian Notifiable Disease Surveillance System
 # extract that the Notifiable Diseases Online charts are built from.

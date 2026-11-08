@@ -10,7 +10,6 @@ CKAN_SEARCH_URL = "https://open.canada.ca/data/api/3/action/package_search"
 CKAN_QUERY = 'title:"Monthly IRCC Updates"'
 CKAN_ROWS = 50
 DATASET_PAGE_URL = "https://open.canada.ca/data/en/dataset/"
-DATASET_PAGE_URL_FR = "https://ouvert.canada.ca/data/fr/dataset/"
 FILE_HOST = "www.ircc.canada.ca"
 FILE_PREFIX = "https://www.ircc.canada.ca/opendata-donneesouvertes/data/"
 

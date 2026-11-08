@@ -5,10 +5,6 @@ HOST = "www.canada.ca"
 # The publications pages are filled by a script from this feed (every
 # Finance publication with its type, title, links and date in both languages).
 FEED_URL = SITE + "/content/dam/fin/documents/publications/pub-rep/json.json"
-FRT_INDEX = {
-    "en": SITE + "/en/department-finance/services/publications/fiscal-reference-tables.html",
-    "fr": SITE + "/fr/ministere-finances/services/publications/tableaux-reference-financiers.html",
-}
 FRT_PAGE = {
     "en": SITE + "/en/department-finance/services/publications/fiscal-reference-tables/{year}.html",
     "fr": SITE + "/fr/ministere-finances/services/publications/tableaux-reference-financiers/"

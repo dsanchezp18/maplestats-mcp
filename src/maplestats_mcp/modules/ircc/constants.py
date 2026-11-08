@@ -11,10 +11,6 @@ round is published roughly weekly, not continuously.
 BASE_URL_EN = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
 BASE_URL_FR = "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_fr.json"
 
-CATALOGUE_PAGE_URL = (
-    "https://www.canada.ca/en/immigration-refugees-citizenship/services/"
-    "immigrate-canada/express-entry/rounds-invitations.html"
-)
 DETAILS_URL_PREFIX = "https://www.canada.ca"
 
 RATE_LIMIT_SOURCE = "ircc-express-entry"

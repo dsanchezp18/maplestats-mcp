@@ -1,7 +1,6 @@
 """Constants for the PBO distribution API (checked 2026-09-26)."""
 
 API = "https://99bank.pbo-dpb.ca/distribution/1/"
-WEBSITE = "https://www.pbo-dpb.ca"
 
 RATE_LIMIT_SOURCE = "pbo"
 RATE_LIMIT_PER_SECOND = 1.0

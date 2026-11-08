@@ -19,10 +19,6 @@ DATA_ACCEPT = "application/vnd.sdmx.data+csv;version=2.0.0;labels=both"
 STRUCTURE_ACCEPT = "application/vnd.sdmx.structure+json;version=1.0"
 
 TERMS_URL = "https://www.oecd.org/en/about/terms-conditions.html"
-LIMITS_URL = (
-    "https://www.oecd.org/en/data/insights/data-explainers/2024/11/"
-    "Api-best-practices-and-recommendations.html"
-)
 
 # The OECD terms, section 3 "Data" (read 2026-11-07, last updated 2024-07-01).
 # CC BY 4.0 covers OECD written content published since 2024-07-01; data have

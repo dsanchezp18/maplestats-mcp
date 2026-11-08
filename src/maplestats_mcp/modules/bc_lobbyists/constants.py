@@ -56,7 +56,6 @@ TOPIC_PREVIEW_CHARS = 300
 SEARCH_TOPICS_SHOWN = 5
 SEARCH_LOBBYISTS_SHOWN = 15
 
-LTA_START = "2020-05-04"
 
 # Labels shown in the language asked for; the data themselves are in English only.
 LABELS: dict[str, tuple[str, str]] = {

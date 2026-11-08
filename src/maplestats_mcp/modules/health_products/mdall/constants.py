@@ -20,7 +20,6 @@ LOOKUP_TTL_SECONDS = 6 * 60 * 60
 
 LIMIT_DEFAULT = 50
 LIMIT_MAX = 500
-COMPANIES_MAX = 200
 
 # French licence type labels, as `licencetype?lang=fr` names them.
 LICENCE_TYPES_FR = {
