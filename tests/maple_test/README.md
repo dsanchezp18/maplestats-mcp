@@ -403,12 +403,11 @@ shared the machine.
 ## Full run on every server, 2026-11-05 to 2026-11-08
 
 The whole v2 set (61 questions, three passes) on every arm, with the label `<arm>-1105`,
-graded with `--verify` and reviewed by hand as the Nov. 3 runs were. MapleStats ran a frozen
-checkout of be91871 (as merged in #146). Mean correct answers per run:
+graded with `--verify` and reviewed by hand as the Nov. 3 runs were. Mean correct answers per
+run, the other arms only (MapleStats' row is below the table):
 
 | Arm | Core (24) | Beyond (24) | Analyst (5) | Total (53) | Release (8) | False claims | Referrals | USD per question |
 | :-- | --: | --: | --: | --: | --: | --: | --: | --: |
-| MapleStats | 23.7 | 23.3 | 5 | 52 | 6.3 | 0 | 0 | 0.060 |
 | Pipeworx (Nov. 3; not re-run) | 22.7 | 17.3 | 2.7 | 42.7 | – | 4 | 18 | 0.074 |
 | OpenMCP (Nov. 3; not re-run) | 22 | 11 | 3 | 36 | – | 6 | 16 | 0.053 |
 | arose26 | 22.3 | 5 | 3.7 | 31 | 0.7 | 3 | 77 | 0.018 |
@@ -419,6 +418,13 @@ checkout of be91871 (as merged in #146). Mean correct answers per run:
 | canada-data-agent | 19.3 | 2 | 2.7 | 24 | 0.3 | 7 | 81 | 0.022 |
 | statcan2 | 4.3 | 4 | 3.3 | 11.7 | 1 | 7 | 74 | 0.049 |
 | No data tool | 2 | 2 | 0 | 4 | 1 | 16 | 152 | 0.009 |
+
+**MapleStats is in-sample here, not comparable.** It ran a frozen checkout of be91871 (as
+merged in #146), which contains the changes made after the Nov. 3 runs with these questions in
+view (5d15f59, 605dfcd, 5a31394; see "MapleStats after these runs"). Its 1105 score, 52 of 53
+(core 23.7, beyond 23.3, analyst 5; release 6.3 of 8; no false claims or referrals; USD 0.060
+per question), belongs beside `maplestats_after` (52.3), not in the table above. MapleStats'
+comparable score stays 48.7, from Nov. 3, before those changes.
 
 False claims and referrals count all 61 questions over three runs, so the 1105 arms are not
 comparable with the Nov. 3 counts, which cover 53. Per-arm details are in

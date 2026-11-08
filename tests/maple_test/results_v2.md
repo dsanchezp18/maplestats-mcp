@@ -33,6 +33,8 @@ Outcomes are per run (mean over repeats; worst and best run beside correct).
 | statcan2 | 11.3 | 2.3 of 5 | 4.3 of 24 | 4.7 of 24 | – | 11–12 | 94% | 4.3 | 37 | 0.3 | 6 | 66 |
 | statcan2-1105 | 12.7 | 3.3 of 5 | 4 of 24 | 4.3 of 24 | 1 of 8 | 12–14 | 89% | 4.3 | 42.7 | 1.3 | 7 | 74 |
 
+In-sample, not comparable with the other arms: `maplestats-1105`, `maplestats-cost`, `maplestats-current`, `maplestats-release`, `maplestats_after`. These ran MapleStats code changed after the Nov. 3 runs with these questions in view; MapleStats' comparable score is `maplestats` (README).
+
 ## Citations and cost
 
 - **Key coverage:** share of the answer key's own tables and vectors the answer names.
