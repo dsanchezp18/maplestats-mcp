@@ -230,7 +230,7 @@ def page_url(name: str, lang: Lang) -> str:
     return f"{SITE_URL}{'' if lang == 'en' else 'fr/'}{path}"
 
 
-Level = Literal["national", "provincial", "municipal", "catalogue", "utility"]
+Level = Literal["national", "international", "provincial", "municipal", "catalogue", "utility"]
 Row = Literal["provincial_catalogue", "provincial_agency", "municipal_catalogue", "municipal_feed"]
 
 
@@ -255,6 +255,7 @@ class Source:
 
 LEVELS: dict[Level, tuple[str, str]] = {
     "national": ("Federal and national", "Fédéral et national"),
+    "international": ("International comparators", "Comparateurs internationaux"),
     "provincial": ("Provincial", "Provincial"),
     "municipal": ("Municipal", "Municipal"),
     "catalogue": ("Open-data catalogues", "Catalogues de données ouvertes"),
@@ -651,7 +652,7 @@ SOURCES: dict[str, Source] = {
     "bis": Source(
         "Bank for International Settlements statistics (Canada and peers)",
         "Statistiques de la Banque des règlements internationaux (Canada et pays comparables)",
-        "national",
+        "international",
         "BIS statistics",
         "Statistiques de la BRI",
         domain="statistics",
@@ -659,7 +660,7 @@ SOURCES: dict[str, Source] = {
     "oecd": Source(
         "OECD Data Explorer statistics (Canada and peers)",
         "Statistiques de l'Explorateur de données de l'OCDE (Canada et pays comparables)",
-        "national",
+        "international",
         "OECD statistics",
         "Statistiques de l'OCDE",
         domain="statistics",
@@ -667,7 +668,7 @@ SOURCES: dict[str, Source] = {
     "worldbank": Source(
         "World Bank World Development Indicators (Canada and peers)",
         "Indicateurs du développement dans le monde de la Banque mondiale (Canada et pays comparables)",
-        "national",
+        "international",
         "World Bank WDI",
         "Banque mondiale (WDI)",
         domain="statistics",
@@ -675,7 +676,7 @@ SOURCES: dict[str, Source] = {
     "eurostat": Source(
         "Eurostat (EU, euro area and member states, as comparators)",
         "Eurostat (UE, zone euro et États membres, comme points de comparaison)",
-        "national",
+        "international",
         "Eurostat",
         "Eurostat",
         domain="statistics",
@@ -1539,7 +1540,14 @@ def breakable(name: str) -> str:
 # Fragments.
 # --------------------------------------------------------------------------
 
-LEVEL_ORDER: tuple[Level, ...] = ("national", "provincial", "municipal", "catalogue", "utility")
+LEVEL_ORDER: tuple[Level, ...] = (
+    "national",
+    "international",
+    "provincial",
+    "municipal",
+    "catalogue",
+    "utility",
+)
 
 
 def ordered(modules: list[ModuleDoc], lang: Lang) -> list[ModuleDoc]:
@@ -1850,6 +1858,19 @@ def national_sources(modules: list[ModuleDoc], lang: Lang, root: str) -> str:
             f'<div class="dom"><h3>{esc(labels[0 if lang == "en" else 1])}</h3><ul>{items}</ul></div>'
         )
     return "".join(blocks)
+
+
+def international_sources(modules: list[ModuleDoc], lang: Lang, root: str) -> str:
+    """The foreign publishers a Canadian figure can be set beside, largest first."""
+    members = sorted(
+        (m for m in modules if m.source.level == "international"), key=lambda m: -len(m.tools)
+    )
+    items = "".join(
+        f'<li><a href="{root}tools.html#m-{m.key}">{esc(m.source.title(lang))}</a>'
+        f'<span class="count">{len(m.tools)}</span></li>'
+        for m in members
+    )
+    return f'<div class="dom"><ul>{items}</ul></div>'
 
 
 def plan_panel(lang: Lang, root: str, heading: int = 4) -> str:
@@ -3238,12 +3259,10 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
     """The square: every publisher inscribed, the tools as segments by subject."""
     en = lang == "en"
     tools = sum(len(m.tools) for m in modules)
-    # The same count as the Sources page: national modules plus local sources.
-    sources = (
-        sum(1 for m in modules if m.source.level == "national")
-        + coverage_counts()["local_source_count"]
-    )
-    national = [m for m in modules if m.source.level == "national"]
+    # The same count as the Sources page: national and international modules
+    # plus local sources.
+    national = [m for m in modules if m.source.level in ("national", "international")]
+    sources = len(national) + coverage_counts()["local_source_count"]
     outer = sorted({m.source.short(lang) for m in national}, key=alphabetical)
     # One name per national source, so the square counts what the Sources
     # section counts; sibling modules of one publisher need distinct shorts.
@@ -3252,7 +3271,7 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
     by_subject: dict[str, int] = {}
     for module in modules:
         source = module.source
-        key = source.domain if source.level == "national" else source.level
+        key = source.domain if source.level in ("national", "international") else source.level
         if key:
             by_subject[key] = by_subject.get(key, 0) + len(module.tools)
     arcs = []
@@ -3268,10 +3287,12 @@ def finale_context(counts: dict[str, Any], modules: list[ModuleDoc], lang: Lang)
     grouped = {k for _, _, keys in SQUARE_GROUPS for k in keys}
     assert set(by_subject) - grouped <= {"utility"}, set(by_subject) - grouped
     label = (
-        f"The square: {len(outer)} federal publishers around the outside, the provinces and "
+        f"The square: {len(outer)} federal and international publishers around the outside, "
+        "the provinces and "
         f"cities with local sources inside, and {tools} tools as segments by subject"
         if en
-        else f"Le carré : {len(outer)} éditeurs fédéraux à l'extérieur, les provinces et les "
+        else f"Le carré : {len(outer)} éditeurs fédéraux et internationaux à l'extérieur, "
+        "les provinces et les "
         f"villes dotées de sources locales à l'intérieur, et {tools} outils en segments par sujet"
     )
     micro = load_case("micro")["calls"][0]["response"]
@@ -4170,6 +4191,7 @@ async def build(out: Path) -> dict[str, int]:
     if missing:
         raise SystemExit(f"FEATURED_SOURCES names no national module: {sorted(missing)}")
     other_national = [m for m in national if m.key not in FEATURED_SOURCES]
+    international = [m for m in modules if m.source.level == "international"]
     shared: dict[str, str] = {
         "version": __version__,
         "repo": REPO,
@@ -4178,13 +4200,15 @@ async def build(out: Path) -> dict[str, int]:
         "searchable_count": str(len(index["tools"])),
         "national_count": str(len(national)),
         "other_national_count": str(len(other_national)),
+        "international_count": str(len(international)),
         "places_covered": str(counts["places_covered"]),
         "catalogue_count": str(counts["catalogue_count"]),
         "local_catalogue_count": str(counts["local_catalogue_count"]),
         "local_source_count": str(counts["local_source_count"]),
         # A source is one entry on the Sources page: a federal or national
-        # module, or a provincial, territorial or city catalogue, agency or feed.
-        "source_count": str(len(national) + counts["local_source_count"]),
+        # module, an international comparator, or a provincial, territorial or
+        # city catalogue, agency or feed.
+        "source_count": str(len(national) + len(international) + counts["local_source_count"]),
         "search_top": str(index["top"]),
     }
     scripts = reproduce_scripts()
@@ -4332,6 +4356,7 @@ def _write_site(
                 "coverage_matrix": coverage_matrix(lang),
                 "coverage_lists": coverage_lists(lang),
                 "national_sources": national_sources(modules, lang, root),
+                "international_sources": international_sources(modules, lang, root),
                 "atlas": atlas(modules, lang),
                 "atlas_index": atlas_index(modules, lang),
                 "level_filters": level_filters(modules, lang),
@@ -4457,6 +4482,7 @@ def llms_txt(modules: list[ModuleDoc], counts: dict[str, int]) -> str:
         f"- [FAQ and licences]({page_url('faq.html', 'en')}): whether queries are saved, and what applies to the data",
         f"- [About]({page_url('about.html', 'en')}): what MapleStats is, who builds it, alternatives",
         f"- [Contributing]({page_url('contributing.html', 'en')}): report a number, suggest a source, add code",
+        f"- [Agent skill]({REPO}/blob/main/skills/maplestats/SKILL.md): how an agent should use MapleStats (Agent Skills format)",
         "",
     ]
     tools_url = page_url("tools.html", "en")

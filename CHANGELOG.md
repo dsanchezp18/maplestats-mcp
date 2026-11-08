@@ -1660,7 +1660,13 @@ published to PyPI and the MCP Registry.
 
 - Statistics Canada WDS observation release times are read as Eastern time.
 
-[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.8...HEAD
+[0.4.8]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.7...v0.4.8
+[0.4.7]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.6...v0.4.7
+[0.4.6]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.5...v0.4.6
+[0.4.5]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.4...v0.4.5
+[0.4.4]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.3...v0.4.4
+[0.4.3]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.4.0...v0.4.2
 [0.4.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/dsanchezp18/maplestats-mcp/compare/v0.2.0...v0.3.0

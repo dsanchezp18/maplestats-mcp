@@ -776,8 +776,9 @@ def test_llms_txt_links_each_tool_to_its_entry(built_site: Path):
     assert len(anchors) == len(re.findall(r'<details class="tool" id="t-', tools_page))
     for anchor in anchors:
         assert f'id="{anchor}"' in tools_page, anchor
+    # Every link is a site page, or a file in the repository (the agent skill).
     for _, url in links:
-        assert url.startswith(site.SITE_URL), url
+        assert url.startswith((site.SITE_URL, site.REPO + "/blob/main/")), url
 
 
 def test_stylesheets_close_every_block():

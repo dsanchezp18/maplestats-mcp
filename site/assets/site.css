@@ -1649,6 +1649,10 @@ mark {
   margin-left: auto;
 }
 
+.intl {
+  margin-top: clamp(40px, 5vw, 64px);
+}
+
 /* The coverage table sits centred on the page, with its heading, note,
    legend and list toggle centred above and below it. */
 .local {
