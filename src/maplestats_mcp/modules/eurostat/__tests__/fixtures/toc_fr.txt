@@ -1,0 +1,57 @@
+"title"	"code"	"type"	"last update of data"	"last table structure change"	"data start"	"data end"	"values"
+"Base de données par thèmes"	"data"	"folder"	" "	" "	" "	" "	
+"    Statistiques générales et régionales"	"general"	"folder"	" "	" "	" "	" "	
+"        Indicateurs européens et nationaux pour l'analyse à court terme"	"euroind"	"folder"	" "	" "	" "	" "	
+"            Marché du travail"	"ei_lm"	"folder"	" "	" "	" "	" "	
+"                Taux de chômage (%) - données mensuelles"	"ei_lmhr_m"	"table"	"05.11.2026"	"05.11.2026"	"1983-01"	"2026-10"	259206
+"            Comptes nationaux"	"ei_qna"	"folder"	" "	" "	" "	" "	
+"                Principaux agrégats du PIB"	"ei_namq_10_ma"	"folder"	" "	" "	" "	" "	
+"                    Produit intérieur brut (PIB) et principales composantes (production, dépenses et revenu) - données trimestrielles"	"namq_10_gdp"	"dataset"	"05.11.2026"	"29.10.2026"	"1978-Q1"	"2026-Q3"	8409995
+"                Produit intérieur brut (PIB) et principales composantes (production, dépenses et revenu) - données annuelles"	"nama_10_gdp"	"dataset"	"05.11.2026"	"20.10.2026"	"1975"	"2025"	1087944
+"    Économie et finances"	"economy"	"folder"	" "	" "	" "	" "	
+"        Comptes nationaux (SEC 2010)"	"na10"	"folder"	" "	" "	" "	" "	
+"            Comptes nationaux annuels"	"nama10"	"folder"	" "	" "	" "	" "	
+"                PIB et composantes"	"nama_10_ma"	"folder"	" "	" "	" "	" "	
+"                    Produit intérieur brut (PIB) et principales composantes (production, dépenses et revenu) - données annuelles"	"nama_10_gdp"	"dataset"	"05.11.2026"	"20.10.2026"	"1975"	"2025"	1087944
+"            Comptes nationaux trimestriels"	"namq_10"	"folder"	" "	" "	" "	" "	
+"                PIB et composantes"	"namq_10_ma"	"folder"	" "	" "	" "	" "	
+"                    Produit intérieur brut (PIB) et principales composantes (production, dépenses et revenu) - données trimestrielles"	"namq_10_gdp"	"dataset"	"05.11.2026"	"29.10.2026"	"1978-Q1"	"2026-Q3"	8409995
+"        Prix"	"prc"	"folder"	" "	" "	" "	" "	
+"            Indices des prix à la consommation harmonisés (IPCH)"	"prc_hicp"	"folder"	" "	" "	" "	" "	
+"                Indices des prix à la consommation harmonisés (IPCH) - ECOICOP ver.2"	"prc_hicp_ecoicop2"	"folder"	" "	" "	" "	" "	
+"                    ___"	"prc_hicp_ecoicop2_"	"folder"	" "	" "	" "	" "	
+"                        Indice des prix à la consommation harmonisé (IPCH) - ECOICOP ver.2 - Indices et taux de variation à taux de taxation constants"	"prc_hicp_ct"	"dataset"	"16.10.2026"	"16.10.2026"	"2002-12"	"2026-09"	16971982
+"                    Indice des prix à la consommation harmonisé (IPCH) - ECOICOP ver.2 - indices et taux de variation, données mensuelles"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679
+"                Indices des prix à la consommation harmonisés (IPCH) - ECOICOP ver.1"	"prc_hicp_ecoicop1"	"folder"	" "	" "	" "	" "	
+"                    IPCH - données mensuelles (taux de change annuel) (1997-2025)"	"prc_hicp_manr"	"dataset"	"06.02.2026"	"07.01.2026"	"1997-01"	"2025-12"	3511040
+"    Population et conditions sociales"	"popul"	"folder"	" "	" "	" "	" "	
+"        Marché du travail"	"labour"	"folder"	" "	" "	" "	" "	
+"            Emploi et chômage (Enquête sur les forces de travail)"	"employ"	"folder"	" "	" "	" "	" "	
+"                EFT - indicateurs principaux"	"lfsi"	"folder"	" "	" "	" "	" "	
+"                    Chômage - séries EFT ajustées"	"une"	"folder"	" "	" "	" "	" "	
+"                        Chômage par sexe et âge - données mensuelles"	"une_rt_m"	"dataset"	"05.11.2026"	"05.11.2026"	"1983-01"	"2026-10"	759687
+"        Culture"	"cult"	"folder"	" "	" "	" "	" "	
+"            Dépenses des ménages privés pour la culture"	"cult_exp"	"folder"	" "	" "	" "	" "	
+"                -----"	"cult_exp_"	"folder"	" "	" "	" "	" "	
+"                    Indice des prix à la consommation harmonisé (IPCH) - ECOICOP ver.2 - indices et taux de variation, données mensuelles"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679
+"        Sport"	"sprt"	"folder"	" "	" "	" "	" "	
+"            Dépenses des ménages privés pour le sport"	"sprt_exp"	"folder"	" "	" "	" "	" "	
+"                -----"	"sprt_exp_"	"folder"	" "	" "	" "	" "	
+"                    Indice des prix à la consommation harmonisé (IPCH) - ECOICOP ver.2 - indices et taux de variation, données mensuelles"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679
+"Thèmes transversaux"	"data"	"folder"	" "	" "	" "	" "	
+"    Politiques de l'UE"	"tb_eu"	"folder"	" "	" "	" "	" "	
+"        Euro-indicateurs / PIEEs"	"shorties"	"folder"	" "	" "	" "	" "	
+"            Comptes nationaux"	"teieuro_na"	"folder"	" "	" "	" "	" "	
+"                Finances publiques - statistiques sur la procédure concernant les déficits excessifs"	"teina_geng"	"folder"	" "	" "	" "	" "	
+"                    Dette brute des administrations publiques - données annuelles"	"teina225"	"table"	"21.10.2026"	"22.04.2026"	"2014"	"2025"	720
+"        Indicateurs de la politique de l'emploi et de la politique sociale"	"es"	"folder"	" "	" "	" "	" "	
+"            Indicateurs de l'intégration sociale et de la politique sociale"	"tesip"	"folder"	" "	" "	" "	" "	
+"                Indicateurs transversaux"	"tesov"	"folder"	" "	" "	" "	" "	
+"                    Information contextuelle"	"tesovcont"	"folder"	" "	" "	" "	" "	
+"                        Dette brute des administrations publiques - données annuelles"	"teina225"	"table"	"21.10.2026"	"22.04.2026"	"2014"	"2025"	720
+"    Thèmes transversaux"	"cc"	"folder"	" "	" "	" "	" "	
+"        Logement"	"hous"	"folder"	" "	" "	" "	" "	
+"            Économie et finances"	"hous_econ"	"folder"	" "	" "	" "	" "	
+"                Prix"	"hous_prc"	"folder"	" "	" "	" "	" "	
+"                    Indice des prix à la consommation harmonisés"	"hous_prc_hicp"	"folder"	" "	" "	" "	" "	
+"                        Indice des prix à la consommation harmonisé (IPCH) - ECOICOP ver.2 - indices et taux de variation, données mensuelles"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679

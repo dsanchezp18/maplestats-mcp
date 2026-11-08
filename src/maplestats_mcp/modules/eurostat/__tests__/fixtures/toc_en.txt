@@ -1,0 +1,57 @@
+"title"	"code"	"type"	"last update of data"	"last table structure change"	"data start"	"data end"	"values"
+"Database by themes"	"data"	"folder"	" "	" "	" "	" "	
+"    General and regional statistics"	"general"	"folder"	" "	" "	" "	" "	
+"        European and national indicators for short-term analysis"	"euroind"	"folder"	" "	" "	" "	" "	
+"            Labour market"	"ei_lm"	"folder"	" "	" "	" "	" "	
+"                Unemployment rate (%) - monthly data"	"ei_lmhr_m"	"table"	"05.11.2026"	"05.11.2026"	"1983-01"	"2026-10"	259206
+"            National accounts"	"ei_qna"	"folder"	" "	" "	" "	" "	
+"                Main GDP aggregates"	"ei_namq_10_ma"	"folder"	" "	" "	" "	" "	
+"                    Gross domestic product (GDP) and main components (output, expenditure and income) - quarterly data"	"namq_10_gdp"	"dataset"	"05.11.2026"	"29.10.2026"	"1978-Q1"	"2026-Q3"	8409995
+"                Gross domestic product (GDP) and main components (output, expenditure and income) - annual data"	"nama_10_gdp"	"dataset"	"05.11.2026"	"20.10.2026"	"1975"	"2025"	1087944
+"    Economy and finance"	"economy"	"folder"	" "	" "	" "	" "	
+"        National accounts (ESA 2010)"	"na10"	"folder"	" "	" "	" "	" "	
+"            Annual national accounts"	"nama10"	"folder"	" "	" "	" "	" "	
+"                GDP and components"	"nama_10_ma"	"folder"	" "	" "	" "	" "	
+"                    Gross domestic product (GDP) and main components (output, expenditure and income) - annual data"	"nama_10_gdp"	"dataset"	"05.11.2026"	"20.10.2026"	"1975"	"2025"	1087944
+"            Quarterly national accounts"	"namq_10"	"folder"	" "	" "	" "	" "	
+"                GDP and components"	"namq_10_ma"	"folder"	" "	" "	" "	" "	
+"                    Gross domestic product (GDP) and main components (output, expenditure and income) - quarterly data"	"namq_10_gdp"	"dataset"	"05.11.2026"	"29.10.2026"	"1978-Q1"	"2026-Q3"	8409995
+"        Prices"	"prc"	"folder"	" "	" "	" "	" "	
+"            Harmonised index of consumer prices (HICP)"	"prc_hicp"	"folder"	" "	" "	" "	" "	
+"                Harmonised index of consumer prices (HICP) - ECOICOP ver.2"	"prc_hicp_ecoicop2"	"folder"	" "	" "	" "	" "	
+"                    ___"	"prc_hicp_ecoicop2_"	"folder"	" "	" "	" "	" "	
+"                        Harmonised index of consumer prices (HICP) - ECOICOP ver.2 - indices and rates of change at constant tax rates, monthly data"	"prc_hicp_ct"	"dataset"	"16.10.2026"	"16.10.2026"	"2002-12"	"2026-09"	16971982
+"                    Harmonised index of consumer prices (HICP) - ECOICOP ver.2 - indices and rates of change, monthly data"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679
+"                Harmonised index of consumer prices (HICP) - ECOICOP ver.1"	"prc_hicp_ecoicop1"	"folder"	" "	" "	" "	" "	
+"                    HICP - monthly data (annual rate of change) (1997-2025)"	"prc_hicp_manr"	"dataset"	"06.02.2026"	"07.01.2026"	"1997-01"	"2025-12"	3511040
+"    Population and social conditions"	"popul"	"folder"	" "	" "	" "	" "	
+"        Labour market"	"labour"	"folder"	" "	" "	" "	" "	
+"            Employment and unemployment (Labour force survey)"	"employ"	"folder"	" "	" "	" "	" "	
+"                LFS main indicators"	"lfsi"	"folder"	" "	" "	" "	" "	
+"                    Unemployment - LFS adjusted series"	"une"	"folder"	" "	" "	" "	" "	
+"                        Unemployment by sex and age - monthly data"	"une_rt_m"	"dataset"	"05.11.2026"	"05.11.2026"	"1983-01"	"2026-10"	759687
+"        Culture"	"cult"	"folder"	" "	" "	" "	" "	
+"            Private households expenditure on culture"	"cult_exp"	"folder"	" "	" "	" "	" "	
+"                -----"	"cult_exp_"	"folder"	" "	" "	" "	" "	
+"                    Harmonised index of consumer prices (HICP) - ECOICOP ver.2 - indices and rates of change, monthly data"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679
+"        Sport"	"sprt"	"folder"	" "	" "	" "	" "	
+"            Private households expenditure on sport"	"sprt_exp"	"folder"	" "	" "	" "	" "	
+"                -----"	"sprt_exp_"	"folder"	" "	" "	" "	" "	
+"                    Harmonised index of consumer prices (HICP) - ECOICOP ver.2 - indices and rates of change, monthly data"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679
+"Cross cutting topics"	"data"	"folder"	" "	" "	" "	" "	
+"    EU policies"	"tb_eu"	"folder"	" "	" "	" "	" "	
+"        Euro indicators / PEEIs"	"shorties"	"folder"	" "	" "	" "	" "	
+"            National accounts"	"teieuro_na"	"folder"	" "	" "	" "	" "	
+"                Public finance - excessive deficit procedure statistics"	"teina_geng"	"folder"	" "	" "	" "	" "	
+"                    General government gross debt - annual data"	"teina225"	"table"	"21.10.2026"	"22.04.2026"	"2014"	"2025"	720
+"        Employment and social policy indicators"	"es"	"folder"	" "	" "	" "	" "	
+"            Social inclusion and social policy indicators"	"tesip"	"folder"	" "	" "	" "	" "	
+"                Overarching portfolio"	"tesov"	"folder"	" "	" "	" "	" "	
+"                    Context information"	"tesovcont"	"folder"	" "	" "	" "	" "	
+"                        General government gross debt - annual data"	"teina225"	"table"	"21.10.2026"	"22.04.2026"	"2014"	"2025"	720
+"    Cross cutting topics"	"cc"	"folder"	" "	" "	" "	" "	
+"        Housing"	"hous"	"folder"	" "	" "	" "	" "	
+"            Economy and finance"	"hous_econ"	"folder"	" "	" "	" "	" "	
+"                Prices"	"hous_prc"	"folder"	" "	" "	" "	" "	
+"                    Harmonised index of consumer prices"	"hous_prc_hicp"	"folder"	" "	" "	" "	" "	
+"                        Harmonised index of consumer prices (HICP) - ECOICOP ver.2 - indices and rates of change, monthly data"	"prc_hicp_minr"	"dataset"	"04.11.2026"	"04.11.2026"	"1996-01"	"2026-10"	22481679
