@@ -71,7 +71,7 @@ _FEDERAL_PACKAGE = {
 
 def test_portal_key_literal_matches_registry():
     assert set(get_args(PortalKey)) == set(constants.PORTALS)
-    assert len(constants.PORTALS) == 10
+    assert len(constants.PORTALS) == 11
 
 
 def test_list_portals_reports_capabilities_in_both_languages():
@@ -82,6 +82,9 @@ def test_list_portals_reports_capabilities_in_both_languages():
     assert by_key["federal"].has_groups is False
     assert by_key["yt"].has_datastore is False
     assert by_key["bc"].has_groups is True
+    # Niagara's only group ("key-thing", checked 2026-11-08) holds no datasets.
+    assert by_key["niagara"].has_groups is False
+    assert by_key["niagara"].has_datastore is True
     assert {p.portal: p.name for p in fr.portals}["montreal"].startswith("Données ouvertes")
 
 

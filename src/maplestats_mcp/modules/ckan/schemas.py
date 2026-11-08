@@ -29,6 +29,7 @@ PortalKey = Literal[
     "montreal",
     "toronto",
     "regina",
+    "niagara",
 ]
 
 

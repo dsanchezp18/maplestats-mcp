@@ -224,7 +224,12 @@ CITIES: dict[str, tuple[str, tuple[PlanStep, ...]]] = {
     "niagara falls": ("Niagara Falls", (_arcgis("niagara_falls"), _arcgis("niagara_region"))),
     "niagara": (
         "Niagara Region",
-        (_arcgis("niagara_region"), _arcgis("niagara_falls"), _arcgis("st_catharines")),
+        (
+            _arcgis("niagara_region"),
+            _arcgis("niagara_falls"),
+            _arcgis("st_catharines"),
+            _ckan("niagara", " (regional catalogue)"),
+        ),
     ),
     # Keys are matched after normalization, which turns "St." into "st".
     "st catharines": ("St. Catharines", (_arcgis("st_catharines"),)),

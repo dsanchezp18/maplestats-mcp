@@ -22,6 +22,8 @@ DATASTORE_RESOURCES = {
     "montreal": "b7817317-55ca-4f23-98fe-30cf6c36d57c",
     "toronto": "e9f77756-2baf-46ba-b2c6-4050e2fba755",
     "regina": "38971b87-f58d-4499-8382-a30159a6da01",
+    # Niagara Weather Information Systems, January to April 2021 (2,500 rows).
+    "niagara": "913c64d3-7de0-425a-9c96-92acaa55deba",
 }
 
 

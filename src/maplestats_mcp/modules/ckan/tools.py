@@ -51,7 +51,8 @@ async def ckan_list_portals(lang: Lang = "en") -> PortalList:
     which portals support tags, groups, and row-level DataStore queries.
     Portals: federal (open.canada.ca), on (Ontario), bc (British
     Columbia), ab (Alberta), qc (Québec, Données Québec), nt (Northwest
-    Territories), yt (Yukon), montreal, toronto, regina.
+    Territories), yt (Yukon), montreal, toronto, regina, niagara
+    (Niagara Region and its municipalities).
     Keywords: CKAN, open data portal, catalogue, federal, provincial,
     territorial, municipal, city, list portals.
     Mots-clés : CKAN, portail de données ouvertes, catalogue de données,
