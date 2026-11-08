@@ -200,7 +200,7 @@ SOURCE_LICENCES: dict[str, str] = {
     "open-alberta": OGL_ALBERTA,
     "ab_wildfire": OGL_ALBERTA + " Credit: Alberta Wildfire, Government of Alberta.",
     "aer": (
-        "Alberta Energy Regulator copyright terms (https://www.aer.ca/copyright-disclaimer): "
+        "Alberta Energy Regulator copyright terms (https://www.aer.ca/copyright-and-disclaimer): "
         "non-commercial reproduction is allowed without permission, identifying the AER as "
         "the source and not presenting it as official; commercial redistribution needs the "
         "AER's written permission."
@@ -475,7 +475,7 @@ LICENCES_FR: dict[str, str] = {
     ),
     SOURCE_LICENCES["aer"]: (
         "Conditions de droit d'auteur de l'Alberta Energy Regulator "
-        "(https://www.aer.ca/copyright-disclaimer) : la reproduction non commerciale est "
+        "(https://www.aer.ca/copyright-and-disclaimer) : la reproduction non commerciale est "
         "permise sans autorisation, en indiquant l'AER comme source et sans la présenter comme "
         "officielle ; la redistribution commerciale exige l'autorisation écrite de l'AER."
     ),

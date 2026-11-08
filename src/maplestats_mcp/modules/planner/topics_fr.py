@@ -423,6 +423,10 @@ FR: dict[str, str] = {
     "Alberta production volumes: product='oil', 'gas'...": (
         "volumes de production de l'Alberta : product='oil', 'gas'..."
     ),
+    "AER's Alberta Energy Outlook (ST98): reserves, oil sands and gas forecasts": (
+        "perspectives énergétiques de l'Alberta de l'AER (ST98) : réserves, prévisions pour "
+        "les sables bitumineux et le gaz"
+    ),
     "CCEI energy information flows (efficiency, supply): query=<topic>": (
         "flux d'information sur l'énergie du CCIE (efficacité, approvisionnement) : query=<sujet>"
     ),

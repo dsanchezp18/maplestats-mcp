@@ -1140,6 +1140,20 @@ TOPICS: tuple[Topic, ...] = (
                 ("oil", "natural gas", "gas production", "wells", "puits", "petrole"),
             ),
             PlanStep(
+                "aer_st98_list_tables",
+                "AER's Alberta Energy Outlook (ST98): reserves, oil sands and gas forecasts",
+                (
+                    "forecast",
+                    "outlook",
+                    "reserves",
+                    "oil sands",
+                    "bitumen",
+                    "prevision",
+                    "perspectives",
+                    "sables bitumineux",
+                ),
+            ),
+            PlanStep(
                 "sdmx_space_search",
                 "CCEI energy information flows (efficiency, supply): query=<topic>",
             ),

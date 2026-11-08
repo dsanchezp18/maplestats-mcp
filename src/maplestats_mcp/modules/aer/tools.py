@@ -9,6 +9,8 @@ from fastmcp.tools import tool
 from maplestats_mcp.modules.aer import client
 from maplestats_mcp.modules.aer.schemas import (
     ProductionVolumesLink,
+    St98Table,
+    St98TableList,
     WellLicenceArchiveLink,
     WellLicenceDailyReport,
 )
@@ -93,3 +95,75 @@ async def aer_get_production_volumes_link(product: str, lang: Lang = "en") -> Pr
     mensuelles, industrie énergétique.
     """
     return await client.get_production_volumes_link(product, lang=lang)
+
+
+@tool
+async def aer_st98_list_tables(
+    edition: int | None = None, query: str = "", lang: Lang = "en"
+) -> St98TableList:
+    """List the figures and tables in AER's ST98 Alberta Energy Outlook
+    data workbook for one edition (default the latest), with each one's
+    title, series (with units), year range and whether it holds forecasts;
+    also lists the editions (2022 to the latest).
+
+    The workbook behind each edition's executive summary: reserves and
+    resources, oil and gas prices (WTI, WCS, Henry Hub), capital
+    expenditure, primary energy production, demand and removals, crude
+    oil and bitumen supply, bitumen upgrading, NGLs, and drilling. query
+    filters on words in the title or series ("bitumen", "price",
+    "reserves"). Pass a `table` id to aer_st98_get_table for the values.
+    Use for: finding which ST98 figure holds Alberta's oil sands or
+    natural gas outlook, or AER's price and capital-spending forecast.
+    Keywords: Alberta, AER, ST98, Alberta Energy Outlook, energy
+    forecast, reserves, oil sands, bitumen, crude oil, natural gas, NGL,
+    oil price, capital expenditure, supply and demand, outlook.
+    Mots-clés : Alberta, AER, ST98, perspectives énergétiques de
+    l'Alberta, prévisions énergétiques, réserves, sables bitumineux,
+    bitume, pétrole brut, gaz naturel, LGN, prix du pétrole, dépenses en
+    immobilisations, offre et demande.
+    """
+    return await client.list_st98_tables(edition, query=query, lang=lang)
+
+
+@tool
+async def aer_st98_get_table(
+    table: str,
+    edition: int | None = None,
+    series: str | None = None,
+    start_year: int | None = None,
+    end_year: int | None = None,
+    forecast: bool | None = None,
+    lang: Lang = "en",
+) -> St98Table:
+    """Read one figure or table of AER's ST98 Alberta Energy Outlook as
+    tidy rows: series, year (or month, or item), value, unit, a forecast
+    flag (true from the edition year on, AER's projection; false for
+    history), an estimated flag, and the edition.
+
+    table is an id from aer_st98_list_tables ("figure_8", "table_1");
+    figure numbers differ between editions, so list first. series keeps
+    the columns whose label contains that text ("bitumen",
+    "petajoules"); start_year/end_year bound the years; forecast=true
+    keeps only forecast years, false only history. Notes carry AER's
+    sources and footnotes. Values are as published (nominal dollars).
+    Use for: AER's forecast of Alberta bitumen or natural gas production
+    to 2035, WTI or Henry Hub price assumptions, remaining reserves,
+    capital spending, or wells drilled by year.
+    Keywords: Alberta, AER, ST98, Alberta Energy Outlook, forecast,
+    projection, oil sands production, bitumen, crude oil, natural gas,
+    reserves, WTI, Henry Hub, capital expenditure, drilling, energy
+    demand.
+    Mots-clés : Alberta, AER, ST98, perspectives énergétiques, prévision,
+    projection, production des sables bitumineux, bitume, pétrole brut,
+    gaz naturel, réserves, prix WTI, dépenses en immobilisations, forage,
+    demande d'énergie.
+    """
+    return await client.get_st98_table(
+        table,
+        edition=edition,
+        series=series,
+        start_year=start_year,
+        end_year=end_year,
+        forecast=forecast,
+        lang=lang,
+    )

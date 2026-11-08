@@ -29,27 +29,37 @@ statistical reports are ST96 (Pipeline Approval and Disposition Daily
 List) and ST100 (Pipeline Construction Notification List), neither
 pursued in this pass; this module does not claim pipeline coverage.
 
-Content parsing stays link-resolution-only for ST3's `.xlsx` files
-(confirmed existence via HEAD, not spreadsheet parsing), matching
-`modules/cmhc/data_tables/`'s own precedent -- this project has no
-pinned XLSX-parsing dependency, and adding one is a call for the
-project maintainer, not a decision made inside a single module.
+ST3's `.xlsx` files stay link-resolution-only (confirmed existence via
+HEAD). ST98's executive-summary workbooks are parsed into tidy rows
+(st98.py): each holds a few hundred values, where an ST3 workbook is a
+full monthly production file better downloaded whole.
+
+ST98 is AER's annual Alberta Energy Outlook: history to the year before
+the edition and AER's forecast for the next ten years, flagged per row.
 """
 
 MODULE_NAME = "aer"
 MODULE_DESCRIPTION = (
     "Alberta Energy Regulator (AER) statistical reports (www.aer.ca): ST1 "
     "daily well-licence lists (raw report text) and monthly/yearly archive "
-    "links, and ST3 monthly production-volume/price XLSX download links "
-    "(butane, ethane, gas, NGL, oil, propane, sulphur, oil prices). "
-    "Distinct from open.alberta.ca's CKAN catalogue already covered by "
-    'ckan_* (portal="ab").'
+    "links, ST3 monthly production-volume/price XLSX download links "
+    "(butane, ethane, gas, NGL, oil, propane, sulphur, oil prices), and the "
+    "ST98 Alberta Energy Outlook data (2022 to the latest edition) as tidy "
+    "rows: reserves, prices, capital expenditure, energy production, demand "
+    "and removals, crude oil and bitumen supply, and drilling, with AER's "
+    "ten-year forecast flagged. Distinct from open.alberta.ca's CKAN "
+    'catalogue already covered by ckan_* (portal="ab").'
 )
 MODULE_DESCRIPTION_FR = (
     "Rapports statistiques de l'Alberta Energy Regulator (AER, www.aer.ca) : "
     "listes quotidiennes ST1 des permis de puits (texte brut) et liens "
-    "d'archives mensuelles/annuelles, ainsi que liens de téléchargement "
-    "XLSX ST3 des volumes de production mensuels et des prix (butane, "
-    "éthane, gaz, LGN, pétrole, propane, soufre, prix du pétrole). Distinct "
-    'du catalogue CKAN d\'open.alberta.ca déjà couvert par ckan_* (portal="ab").'
+    "d'archives mensuelles/annuelles, liens de téléchargement XLSX ST3 des "
+    "volumes de production mensuels et des prix (butane, éthane, gaz, LGN, "
+    "pétrole, propane, soufre, prix du pétrole), et données ST98 des "
+    "perspectives énergétiques de l'Alberta (de 2022 à la dernière édition) "
+    "en lignes ordonnées : réserves, prix, dépenses en immobilisations, "
+    "production, demande et sorties d'énergie, offre de pétrole brut et de "
+    "bitume, forage, avec les prévisions décennales de l'AER signalées. "
+    "Distinct du catalogue CKAN d'open.alberta.ca déjà couvert par ckan_* "
+    '(portal="ab").'
 )
