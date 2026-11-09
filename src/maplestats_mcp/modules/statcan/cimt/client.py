@@ -10,6 +10,8 @@ partners, units), which are parsed here and cached for a week.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import re
 import unicodedata
 from collections.abc import Callable
@@ -36,6 +38,7 @@ from maplestats_mcp.modules.statcan.cimt.schemas import (
 )
 from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
 from maplestats_mcp.shared.cache import cached_fetch
+from maplestats_mcp.shared.concurrency import gather_or_cancel
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.http import api_get, get_raw
@@ -48,6 +51,13 @@ _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
     rate=constants.RATE_LIMIT_PER_SECOND,
     capacity=constants.RATE_LIMIT_CAPACITY,
+)
+# The static code-list files are counted apart from the REST service (see
+# constants.py), so a trade request never waits behind them, nor they behind it.
+_CODES_LIMITER = get_limiter(
+    constants.CODES_RATE_LIMIT_SOURCE,
+    rate=constants.CODES_RATE_LIMIT_PER_SECOND,
+    capacity=constants.CODES_RATE_LIMIT_CAPACITY,
 )
 
 _CAVEAT = (
@@ -68,8 +78,14 @@ _UNIT_NOTE_FR = (
 _PERIOD = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])(?:-01)?$")
 _DIGITS = re.compile(r"^\d+$")
 
-# One object per `{ ... }` in the code-list files; they are JavaScript array
-# literals with trailing commas, so json.loads cannot read them.
+# The code-list files are JavaScript array literals (`var HS10 = [ ... ]`)
+# whose objects end with a trailing comma before the closing brace, on its own
+# line. Without those commas the array is JSON. The comma is removed only when
+# a line break follows it, and a line break cannot occur inside a JSON string,
+# so no value is touched. Should a file not parse that way, the regex reader
+# below takes over: one object per `{ ... }`, about three times slower (1.1 s
+# against 0.35 s for a synthetic 16 MB list shaped like HS10, 2026-11-09).
+_TRAILING_COMMA = re.compile(r",(?=[ \t]*\r?\n\s*[}\]])")
 _OBJECT = re.compile(r"\{[^{}]*\}")
 _FIELD = re.compile(r'"(\w+)"\s*:\s*("(?:[^"\\]|\\.)*"|-?\d+)')
 
@@ -314,7 +330,7 @@ async def _resolve_period(period: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _parse_objects(text: str) -> list[dict[str, str | int]]:
+def _parse_objects_regex(text: str) -> list[dict[str, str | int]]:
     objects: list[dict[str, str | int]] = []
     for match in _OBJECT.finditer(text):
         fields: dict[str, str | int] = {}
@@ -325,9 +341,50 @@ def _parse_objects(text: str) -> list[dict[str, str | int]]:
     return objects
 
 
+def _parse_objects_json(text: str) -> list[dict[str, str | int]] | None:
+    """The array read as JSON, or None when the file is not shaped for it."""
+    start, end = text.find("["), text.rfind("]")
+    if start < 0 or end < start:
+        return None
+    try:
+        data = json.loads(_TRAILING_COMMA.sub("", text[start : end + 1]))
+    except ValueError:
+        return None
+    if not isinstance(data, list):
+        return None
+    objects: list[dict[str, str | int]] = []
+    for item in data:
+        if not isinstance(item, dict):
+            return None
+        # The same fields the regex reader keeps: strings and whole numbers.
+        fields: dict[str, str | int] = {
+            str(key): value
+            for key, value in item.items()
+            if isinstance(value, str) or (isinstance(value, int) and not isinstance(value, bool))
+        }
+        if fields:
+            objects.append(fields)
+    return objects
+
+
+def _parse_objects(text: str) -> list[dict[str, str | int]]:
+    objects = _parse_objects_json(text)
+    return objects if objects is not None else _parse_objects_regex(text)
+
+
+async def _parse_code_file(content: bytes) -> list[dict[str, str | int]]:
+    # The files start with a byte-order mark.
+    if len(content) < constants.CODES_THREAD_PARSE_BYTES:
+        return _parse_objects(content.decode("utf-8-sig"))
+    # Even as JSON the 16 MB HS10 list takes a fraction of a second, which would
+    # stall every other request the server is handling; a thread keeps it off
+    # the event loop.
+    return await asyncio.to_thread(lambda: _parse_objects(content.decode("utf-8-sig")))
+
+
 async def _fetch_list(name: str) -> list[dict[str, str | int]]:
     url = f"{constants.CODES_BASE_URL}/{name}.js"
-    await _LIMITER.acquire()
+    await _CODES_LIMITER.acquire()
     try:
         response = await get_raw(url, timeout=constants.CODES_TIMEOUT_SECONDS)
     except httpx.HTTPStatusError as exc:
@@ -344,8 +401,7 @@ async def _fetch_list(name: str) -> list[dict[str, str | int]]:
                 f"statcan_cimt : la liste de codes {name}.js n'a pas répondu.",
             )
         ) from exc
-    # The files start with a byte-order mark.
-    objects = _parse_objects(response.content.decode("utf-8-sig"))
+    objects = await _parse_code_file(response.content)
     if not objects:
         raise UpstreamError(
             say(
@@ -809,41 +865,58 @@ async def get_trade(
                 f"from_period {start[:7]} est après to_period {end[:7]}.",
             )
         )
-    await _check_in_range(("from_period", start), ("to_period", end))
 
-    country_id, _, state_id, _ = await _resolve_partner_pair(partner, us_state, lang)
-    province_ids = [(await _resolve_province(p, lang))[0] for p in (provinces or [])]
-    # (1, 35) returns Canada only (confirmed live), so a list with 1 is just Canada.
-    if constants.CANADA_ID in province_ids or not province_ids:
-        province_ids = [constants.CANADA_ID]
-    province_ids = sorted(set(province_ids))
+    async def report() -> tuple[Any, bool, str]:
+        await _check_in_range(("from_period", start), ("to_period", end))
+        country_id, _, state_id, _ = await _resolve_partner_pair(partner, us_state, lang)
+        province_ids = [(await _resolve_province(p, lang))[0] for p in (provinces or [])]
+        # (1, 35) returns Canada only (confirmed live), so a list with 1 is just Canada.
+        if constants.CANADA_ID in province_ids or not province_ids:
+            province_ids = [constants.CANADA_ID]
+        province_ids = sorted(set(province_ids))
 
-    path = "/".join(
-        [
-            "getReport",
-            _province_path(province_ids),
-            str(country_id),
-            str(state_id),
-            hs or "0",
-            "1" if hs_level == "hs6" else "0",
-            str(limit),
-            str(constants.TRADE_TYPE[direction]),
-            "1" if annualize else "0",
-            start,
-            end,
-        ]
+        path = "/".join(
+            [
+                "getReport",
+                _province_path(province_ids),
+                str(country_id),
+                str(state_id),
+                hs or "0",
+                "1" if hs_level == "hs6" else "0",
+                str(limit),
+                str(constants.TRADE_TYPE[direction]),
+                "1" if annualize else "0",
+                start,
+                end,
+            ]
+        )
+        return await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
+
+    # The code lists that name the rows load while the periods and the trade
+    # rows are fetched: they have their own rate limit, and resolving the
+    # partner or province waits on the same in-flight list rather than asking
+    # twice. The largest list starts first.
+    (
+        (body, was_cached, url),
+        (descriptions, descriptions_failed),
+        country_list,
+        state_list,
+        province_list,
+        (units, units_failed),
+    ) = await gather_or_cancel(
+        report(),
+        _description_lookup("hs6" if hs_level == "hs6" else "national", direction, lang),
+        _countries(),
+        _states(),
+        _provinces(),
+        _unit_labels(lang),
     )
-    body, was_cached, url = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
     raw_rows = list_or_empty(body, "trade")
     total = int(body.get("count") or len(raw_rows))
 
-    descriptions, descriptions_failed = await _description_lookup(
-        "hs6" if hs_level == "hs6" else "national", direction, lang
-    )
-    units, units_failed = await _unit_labels(lang)
-    countries = {int(e["id"]): _country_name(e, lang) for e in await _countries()}
-    states = {int(e["id"]): _state_name(e, lang) for e in await _states()}
-    province_names = {int(e["id"]): _province_name(e, lang) for e in await _provinces()}
+    countries = {int(e["id"]): _country_name(e, lang) for e in country_list}
+    states = {int(e["id"]): _state_name(e, lang) for e in state_list}
+    province_names = {int(e["id"]): _province_name(e, lang) for e in province_list}
     province_names[constants.CANADA_ID] = _CANADA_NAME[lang]
     countries[constants.WORLD_ID] = _WORLD_NAME[lang]
 
@@ -949,26 +1022,31 @@ async def get_top_partners(
             )
         )
     chapter = _clean_chapter(hs_chapter)
-    refper = await _resolve_period(period)
-    province_id, province_name = await _resolve_province(province, lang)
-
     country_id = constants.WORLD_ID if view == "country" else constants.US_ID
-    path = "/".join(
-        [
-            "getTopPartners",
-            refper,
-            str(province_id),
-            str(country_id),
-            str(_NO_STATE),
-            chapter or "0",
-            "0" if view == "country" else "1",
-            str(constants.TRADE_TYPE[direction]),
-        ]
+
+    async def top() -> tuple[str, str, tuple[Any, bool, str]]:
+        refper = await _resolve_period(period)
+        province_id, province_name = await _resolve_province(province, lang)
+        path = "/".join(
+            [
+                "getTopPartners",
+                refper,
+                str(province_id),
+                str(country_id),
+                str(_NO_STATE),
+                chapter or "0",
+                "0" if view == "country" else "1",
+                str(constants.TRADE_TYPE[direction]),
+            ]
+        )
+        return refper, province_name, await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
+
+    # Only the list that names this view's partners, loaded alongside the data.
+    (refper, province_name, (body, was_cached, url)), names = await gather_or_cancel(
+        top(), _countries() if view == "country" else _states()
     )
-    body, was_cached, url = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
-    countries = {str(e["id"]): _country_name(e, lang) for e in await _countries()}
-    states = {str(e["id"]): _state_name(e, lang) for e in await _states()}
-    lookup = countries if view == "country" else states
+    name_of = _country_name if view == "country" else _state_name
+    lookup = {str(e["id"]): name_of(e, lang) for e in names}
     total = float(body.get("total") or 0)
     items = _ranked(list_or_empty(body, "trade"), "C", lambda c: lookup.get(c, c), total)
     return TopPartnersResult(
@@ -1016,27 +1094,34 @@ async def get_top_commodities(
             )
         )
     chapter = _clean_chapter(hs_chapter)
-    refper = await _resolve_period(period)
-    province_id, province_name = await _resolve_province(province, lang)
-    country_id, country_name, state_id, state_name = await _resolve_partner_pair(
-        partner, us_state, lang
-    )
 
-    path = "/".join(
-        [
-            "getTopCommodities",
-            refper,
-            str(province_id),
-            str(country_id),
-            str(state_id),
-            chapter or "0",
-            "1" if hs_level == "hs6" else "0",
-            str(constants.TRADE_TYPE[direction]),
-        ]
-    )
-    body, was_cached, url = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
-    descriptions, descriptions_failed = await _description_lookup(
-        "hs6" if hs_level == "hs6" else "national", direction, lang
+    async def top() -> tuple[str, str, str, int, str, tuple[Any, bool, str]]:
+        refper = await _resolve_period(period)
+        province_id, province_name = await _resolve_province(province, lang)
+        country_id, country_name, state_id, state_name = await _resolve_partner_pair(
+            partner, us_state, lang
+        )
+        path = "/".join(
+            [
+                "getTopCommodities",
+                refper,
+                str(province_id),
+                str(country_id),
+                str(state_id),
+                chapter or "0",
+                "1" if hs_level == "hs6" else "0",
+                str(constants.TRADE_TYPE[direction]),
+            ]
+        )
+        fetched = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
+        return refper, province_name, country_name, state_id, state_name, fetched
+
+    # The commodity names load alongside the data (see get_trade).
+    (
+        (refper, province_name, country_name, state_id, state_name, (body, was_cached, url)),
+        (descriptions, descriptions_failed),
+    ) = await gather_or_cancel(
+        top(), _description_lookup("hs6" if hs_level == "hs6" else "national", direction, lang)
     )
     items = _ranked(
         list_or_empty(body, "trade"), "H", lambda c: descriptions.get(c, (c, ""))[0], None
@@ -1082,23 +1167,31 @@ async def get_province_breakdown(
     lang = _validate_lang(lang)
     direction = _validate_direction(direction)
     chapter = _clean_chapter(hs_chapter)
-    refper = await _resolve_period(period)
-    country_id, country_name, state_id, state_name = await _resolve_partner_pair(
-        partner, us_state, lang
-    )
 
-    path = "/".join(
-        [
-            "getProvinces",
-            refper,
-            str(country_id),
-            str(state_id),
-            chapter or "0",
-            str(constants.TRADE_TYPE[direction]),
-        ]
-    )
-    body, was_cached, url = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
-    names = {str(e["id"]): _province_name(e, lang) for e in await _provinces()}
+    async def breakdown() -> tuple[str, str, int, str, tuple[Any, bool, str]]:
+        refper = await _resolve_period(period)
+        country_id, country_name, state_id, state_name = await _resolve_partner_pair(
+            partner, us_state, lang
+        )
+        path = "/".join(
+            [
+                "getProvinces",
+                refper,
+                str(country_id),
+                str(state_id),
+                chapter or "0",
+                str(constants.TRADE_TYPE[direction]),
+            ]
+        )
+        fetched = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
+        return refper, country_name, state_id, state_name, fetched
+
+    # The province names load alongside the data (see get_trade).
+    (
+        (refper, country_name, state_id, state_name, (body, was_cached, url)),
+        province_list,
+    ) = await gather_or_cancel(breakdown(), _provinces())
+    names = {str(e["id"]): _province_name(e, lang) for e in province_list}
     domestic = float(body.get("domestic") or 0)
     reexports = float(body.get("reexports") or 0)
     items = _ranked(
@@ -1150,28 +1243,48 @@ async def get_series(
                 "hs_code doit être un chapitre à 2 chiffres ou une marchandise à 6, 8 ou 10 chiffres ; le service n'a aucune série à 4 chiffres.",
             )
         )
-    refper = await _resolve_period(period)
-    province_id, province_name = await _resolve_province(province, lang)
-    country_id, country_name, state_id, state_name = await _resolve_partner_pair(
-        partner, us_state, lang
-    )
-
     if len(hs) == 2:
         method = "getChapterChart"
     else:
         method = "getCommodityChart"
-    path = "/".join(
-        [
-            method,
-            refper,
-            str(province_id),
-            str(country_id),
-            str(state_id),
-            hs,
-            str(constants.TRADE_TYPE[direction]),
-        ]
-    )
-    body, was_cached, url = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
+
+    async def chart() -> tuple[str, str, str, int, str, tuple[Any, bool, str]]:
+        refper = await _resolve_period(period)
+        province_id, province_name = await _resolve_province(province, lang)
+        country_id, country_name, state_id, state_name = await _resolve_partner_pair(
+            partner, us_state, lang
+        )
+        path = "/".join(
+            [
+                method,
+                refper,
+                str(province_id),
+                str(country_id),
+                str(state_id),
+                hs,
+                str(constants.TRADE_TYPE[direction]),
+            ]
+        )
+        fetched = await _call(path, direction, constants.CACHE_TTL_DATA_SECONDS)
+        return refper, province_name, country_name, state_id, state_name, fetched
+
+    # A commodity's unit comes from its code list and the unit labels; both
+    # load alongside the data (see get_trade). A chapter series has no unit.
+    names_failed = units_failed = False
+    descriptions: dict[str, tuple[str, str]] = {}
+    labels: dict[str, str] = {}
+    if method == "getCommodityChart":
+        level = "hs6" if len(hs) == 6 else "national"
+        (
+            (refper, province_name, country_name, state_id, state_name, fetched),
+            (descriptions, names_failed),
+            (labels, units_failed),
+        ) = await gather_or_cancel(
+            chart(), _description_lookup(level, direction, lang), _unit_labels(lang)
+        )
+    else:
+        refper, province_name, country_name, state_id, state_name, fetched = await chart()
+    body, was_cached, url = fetched
     measures = constants.ESTIMATE_MEASURES[direction]
     points: list[SeriesPoint] = []
     for item in list_or_empty(body, "chart"):
@@ -1189,15 +1302,10 @@ async def get_series(
                 )
             )
     points.sort(key=lambda p: (p.period, p.measure))
-    unit: str | None = None
-    names_failed = units_failed = False
-    if method == "getCommodityChart":
-        level = "hs6" if len(hs) == 6 else "national"
-        descriptions, names_failed = await _description_lookup(level, direction, lang)
-        _, unit_code = descriptions.get(hs, (None, ""))
-        if unit_code:
-            labels, units_failed = await _unit_labels(lang)
-            unit = labels.get(unit_code)
+    _, unit_code = descriptions.get(hs, ("", ""))
+    unit = labels.get(unit_code) if unit_code else None
+    # A failed unit list matters only when the commodity has a unit to name.
+    units_failed = units_failed and bool(unit_code)
     return SeriesResult(
         direction=direction,
         hs_code=hs,

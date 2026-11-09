@@ -47,6 +47,7 @@ from maplestats_mcp.modules.statcan.wds import transforms as wds_transforms
 from maplestats_mcp.modules.statcan.wds.client import Legend
 from maplestats_mcp.modules.statcan.wds.transforms import TransformRequest
 from maplestats_mcp.shared.cache import cached_fetch
+from maplestats_mcp.shared.concurrency import gather_or_cancel
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import (
     DataLocked,
@@ -107,10 +108,24 @@ def _upstream_message(response: httpx.Response) -> str:
     return str(body.get("message", "")) if isinstance(body, dict) else ""
 
 
+def _parse_xml(content: bytes) -> Element:
+    try:
+        return defused_ET.fromstring(content)
+    except ParseError as exc:
+        raise _BadBodyError(len(content), str(exc)) from exc
+
+
 async def _fetch_xml(
     url: str, *, params: dict[str, Any] | None = None, lang: str = "en", hint: str = ""
 ) -> Element:
-    """GET and parse SDMX-ML, mapping every live failure to a typed error.
+    """GET and parse SDMX-ML (see _fetch_bytes for the errors)."""
+    return _parse_xml(await _fetch_bytes(url, params=params, lang=lang, hint=hint))
+
+
+async def _fetch_bytes(
+    url: str, *, params: dict[str, Any] | None = None, lang: str = "en", hint: str = ""
+) -> bytes:
+    """GET SDMX-ML, mapping every live failure to a typed error.
 
     Confirmed live 2026-10-02: unknown table -> 406 {"message":"The parameter
     is not valid"}; bad period or key -> 406 {"message":"Wrong date format or
@@ -184,10 +199,33 @@ async def _fetch_xml(
                 f"{upstream or 'sans message'}). {hint}",
             ).strip()
         )
-    try:
-        return defused_ET.fromstring(response.content)
-    except ParseError as exc:
-        raise _BadBodyError(len(response.content), str(exc)) from exc
+    return response.content
+
+
+async def _data_xml(
+    url: str, params: dict[str, Any], *, lang: str, hint: str
+) -> tuple[Element, bool]:
+    """(parsed data document, was_cached). The bytes are cached for an hour.
+
+    The same TTL as WDS observations (getDataFromVectorsAndLatestNPeriods),
+    through the same cached_fetch: an error or an unparsable body (a key
+    matching nothing) is never cached, and while reproduce_code records a
+    tool's requests the cache is read through. The raw bytes are what is
+    stored, not the parsed tree: their size is known exactly for the cache's
+    memory cap, and parsing them again on a hit is cheap next to a request.
+    """
+    parsed: list[Element] = []
+
+    async def fetch() -> bytes:
+        content = await _fetch_bytes(url, params=params or None, lang=lang, hint=hint)
+        parsed.append(_parse_xml(content))
+        return content
+
+    key = f"sdmx:data:{url}?{sorted(params.items())}"
+    content, was_cached = await cached_fetch(
+        key, wds_constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch
+    )
+    return (parsed[0] if parsed else _parse_xml(content)), was_cached
 
 
 def _check_period(value: str | None, name: str, lang: str) -> None:
@@ -749,22 +787,32 @@ async def get_data(
         "un segment par dimension non temporelle (voir sdmx_get_structure) et les périodes "
         "ressemblent à 2026-03.",
     )
-    try:
-        root = await _fetch_xml(url, params=params or None, lang=lang, hint=hint)
-    except _BadBodyError as exc:
-        # Confirmed live: a key matching no series answers HTTP 200 with a
-        # GenericData document whose only Series tag is a stray closing one.
-        raise NotFound(
-            _say(
-                lang,
-                f"Key {key!r} matched no series in table {product_id} (StatCan returned a "
-                "malformed empty document). Check each member id with sdmx_get_structure.",
-                f"La clé {key!r} ne correspond à aucune série du tableau {product_id} (StatCan "
-                "a renvoyé un document vide mal formé). Vérifiez chaque identifiant avec "
-                "sdmx_get_structure.",
-            )
-        ) from exc
-    legend = await wds_client.observation_legend()
+
+    async def data() -> tuple[Element, bool]:
+        try:
+            return await _data_xml(url, params, lang=lang, hint=hint)
+        except _BadBodyError as exc:
+            # Confirmed live: a key matching no series answers HTTP 200 with a
+            # GenericData document whose only Series tag is a stray closing one.
+            raise NotFound(
+                _say(
+                    lang,
+                    f"Key {key!r} matched no series in table {product_id} (StatCan returned a "
+                    "malformed empty document). Check each member id with sdmx_get_structure.",
+                    f"La clé {key!r} ne correspond à aucune série du tableau {product_id} "
+                    "(StatCan a renvoyé un document vide mal formé). Vérifiez chaque "
+                    "identifiant avec sdmx_get_structure.",
+                )
+            ) from exc
+
+    # The code legend (getCodeSets) and the table metadata behind the
+    # newer-data note do not depend on the data; asked together they cost one
+    # round trip instead of three. Both are cached and neither raises.
+    (root, was_cached), legend, newer = await gather_or_cancel(
+        data(),
+        wds_client.observation_legend(),
+        _newer_data(product_id, end_period, lang),
+    )
     series, any_series_truncated = _parse_data(
         root, max_rows=constants.MAX_ROWS, legend=legend, lang=lang
     )
@@ -826,7 +874,6 @@ async def get_data(
                 "getCodeSets du SDW n'a pas répondu",
             )
         )
-    newer = await _newer_data(product_id, end_period, lang)
     if newer:
         notes.insert(0, newer)
     fetched = ", ".join(f"{name}={value}" for name, value in params.items())
@@ -839,7 +886,7 @@ async def get_data(
         provenance=make_provenance(
             source="statcan-sdmx",
             url=url,
-            cached=False,
+            cached=was_cached,
             schema_name="statcan.sdmx.SdmxData",
             coverage=(
                 _say(
