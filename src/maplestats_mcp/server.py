@@ -771,7 +771,8 @@ Language: every tool accepts lang "en"|"fr"; on single-language or
 already-bilingual sources it is a documented no-op. Read
 docs://statcan/addressing and docs://statcan/gotchas before StatCan work,
 and the docs://boc/, docs://eccc/ and docs://cmhc/ resources for those
-sources.
+sources. No resources in your client? docs_ tools read any docs:// page
+through call_tool (docs_read_resource with its uri).
 
 Every result carries a provenance block (source URL, query time,
 freshness, limits, caveats). Cite the source it names and follow its

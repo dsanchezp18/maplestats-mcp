@@ -463,6 +463,7 @@ SOURCES: dict[str, Source] = {
         "ACI",
         domain="housing",
     ),
+    "docs": Source("Server documentation", "Documentation du serveur", "utility"),
     "dfo_iwls": Source(
         "Fisheries and Oceans Canada: tides and water levels",
         "Pêches et Océans Canada : marées et niveaux d'eau",

@@ -144,3 +144,9 @@ class TableDataResult(BaseModel):
     applied_filters: dict[str, str] = Field(
         default_factory=dict, description="The filters (if any) actually applied to this result."
     )
+    flag_legend: dict[str, str] = Field(
+        default_factory=dict,
+        description="What each cell flag in this result means (a/b/c/d reliability, ** "
+        "suppressed, ++ not significant); CMHC's thresholds and release rules are in "
+        "docs://cmhc/rms-methodology.",
+    )
