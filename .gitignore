@@ -18,6 +18,3 @@ data/
 
 # Review reports are working notes, never tracked.
 quality_reports/
-
-# Maple Test v4: upstream HTTP cassettes for the frozen maplestats arm (large; one per key build)
-tests/maple_test/v4/cassettes/
