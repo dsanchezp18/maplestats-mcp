@@ -69,6 +69,15 @@ SUITES = {
         HERE / "results_v2.json",
         HERE / "citation_checks.json",
     ),
+    # Technical data and documentation questions (README, "Version 3"), out of sample.
+    "v3": Suite(
+        "v3",
+        HERE / "maple_test_v3.json",
+        HERE / "runs_v3",
+        HERE / "overrides_v3.json",
+        HERE / "results_v3.json",
+        HERE / "citation_checks.json",
+    ),
 }
 
 TABLE = re.compile(r"\b\d{2}-\d{2}-\d{4}(?:-\d{2})?\b|\b\d{10}\b|\b\d{8}\b")
@@ -119,6 +128,8 @@ WINNER = re.compile(
     re.IGNORECASE,
 )
 OUTCOMES = ("correct", "partial", "abstained", "hallucinated")
+# Report column names for groups that do not read well capitalized (v3's sources).
+GROUP_LABELS = {"boc": "BoC", "cmhc": "CMHC", "statcan": "StatCan"}
 
 
 def load_key(version: str = "v1") -> list[dict[str, Any]]:
@@ -346,6 +357,25 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
             outcome, reason = "hallucinated", "gave a date that is not the release date"
         else:
             outcome, reason = "abstained", "no release date"
+    elif kind == "facts":
+        # v3: text answers (a definition, a licence, a field type), graded on the facts each
+        # must state, one pattern per fact; `wrong` holds statements the key shows are false.
+        hit = {k: bool(re.search(p, text, re.IGNORECASE)) for k, p in question["facts"].items()}
+        recall = sum(hit.values()) / len(hit)
+        missing = [k for k, ok in hit.items() if not ok]
+        wrong = any(re.search(p, text, re.IGNORECASE) for p in question.get("wrong", []))
+        headline_ok = all(hit.get(k, False) for k in question.get("headline", []))
+        if wrong:
+            outcome, reason = "hallucinated", "states a fact the key shows is false"
+        elif recall == 1.0:
+            outcome, reason = "correct", "every expected fact"
+        elif recall >= 0.5 and headline_ok:
+            outcome, reason = "partial", "missing: " + ", ".join(missing)
+        elif declined or (not any(hit.values()) and not figures):
+            outcome, reason = "abstained", "declined, or none of the key's facts"
+        else:
+            # Some facts wrong or missing, or none right with a code or figure of its own.
+            outcome, reason = "hallucinated", "missing: " + ", ".join(missing)
     elif kind == "refusal":
         if absent:
             outcome, reason = "correct", "said the figure is not published"
@@ -600,7 +630,7 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         + ".",
         "",
         "| Arm | Correct | "
-        + "".join(f"{g.capitalize()} | " for g in group_names if split)
+        + "".join(f"{GROUP_LABELS.get(g, g.capitalize())} | " for g in group_names if split)
         + ("Worst–best | Consistency | " if repeated else "")
         + "Partial | Abstained | Hallucinated | False claims | Referrals |",
         "| :-- | --: | "

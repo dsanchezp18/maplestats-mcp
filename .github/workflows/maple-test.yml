@@ -4,8 +4,10 @@ name: Maple Test
 # by tests/test_maple_test_replay.py in the ordinary test run; this workflow does the
 # parts that need the live sources or a model.
 #
-# - keys (scheduled): rebuild both answer keys from StatCan and the Bank of Canada and
-#   fail if a published figure was revised or a trap no longer holds. smoke.yml's
+# - keys (scheduled): rebuild the v1 and v2 answer keys from StatCan and the Bank of
+#   Canada, and the v3 key from StatCan's IMDB and RDaaS, Valet, CMHC's methodology pages
+#   and five CKAN portals, and fail if a published figure was revised, a documented
+#   passage was reworded, or a trap no longer holds. smoke.yml's
 #   answer-keys job runs the same check on Mondays; this one runs on Thursdays, so a
 #   revision in a weekly release (LFS on Fridays, CPI mid-month) is seen within days.
 # - benchmark (manual only): ask the 15 v1 questions through headless Claude Code with
@@ -45,7 +47,7 @@ jobs:
       - name: Check the Maple Test keys against the sources
         run: |
           status=0
-          for key in build_key build_key_v2; do
+          for key in build_key build_key_v2 build_key_v3; do
             echo "== tests.maple_test.$key --check"
             uv run python -m "tests.maple_test.$key" --check 2>&1 | tee -a keys.log || status=1
           done

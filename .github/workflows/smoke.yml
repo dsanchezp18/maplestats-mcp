@@ -109,7 +109,7 @@ jobs:
       - name: Check the Maple Test keys against the sources
         run: |
           status=0
-          for key in build_key build_key_v2; do
+          for key in build_key build_key_v2 build_key_v3; do
             echo "== tests.maple_test.$key --check"
             uv run python -m "tests.maple_test.$key" --check 2>&1 | tee -a keys.log || status=1
           done
