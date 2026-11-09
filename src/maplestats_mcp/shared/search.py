@@ -15,6 +15,7 @@ Okapi BM25 (k1 1.5, b 0.75) over the same text, so the ranking did not move.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 import unicodedata
@@ -324,5 +325,109 @@ def serialize_tools_compact(tools: Sequence[Tool]) -> list[dict[str, Any]]:
         hints = {k: v for k, v in (result.pop("annotations", None) or {}).items() if k != "title"}
         if hints.get("readOnlyHint") is not True or hints.get("destructiveHint"):
             result["annotations"] = hints
+        results.append(result)
+    return results
+
+
+# 2026-11-09, for cost: in the Maple Test about 59% of a question's cost was tool
+# results written into the conversation, and search_tools (1.5 to 2 calls a
+# question) answered about 5,700 characters for five tools, of which about 3,400
+# were descriptions and 2,100 input schemas with long enums (the ArcGIS portals).
+# The default answer is now one line of description and a one-line argument
+# signature per tool. search_tools(detail="full") returns serialize_tools_compact's
+# form, and a call_tool whose arguments fail validation returns that tool's full
+# input schema (server.py), so a wrong guess costs one retry, not another search.
+BRIEF_FIELDS = ("name", "description", "arguments", "annotations")
+
+# A description longer than this is cut to its first sentence.
+_BRIEF_DESCRIPTION_CHARS = 240
+# An enum whose values take more than this is shortened to its first values and a count.
+_ENUM_INLINE_CHARS = 140
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z(`\"'«])")
+_JSON_TYPES = {
+    "string": "str",
+    "integer": "int",
+    "number": "number",
+    "boolean": "bool",
+    "object": "object",
+    "array": "list",
+    "null": "null",
+}
+
+
+def brief_description(description: str | None) -> str:
+    """A tool's first paragraph on one line, cut to its first sentence when long."""
+    text = caller_description(description) or ""
+    first = re.split(r"\n\s*\n", text.strip(), maxsplit=1)[0]
+    first = " ".join(first.split())
+    if len(first) > _BRIEF_DESCRIPTION_CHARS:
+        first = _SENTENCE_END.split(first, maxsplit=1)[0]
+    if len(first) > _BRIEF_DESCRIPTION_CHARS:
+        first = first[: _BRIEF_DESCRIPTION_CHARS - 3].rstrip() + "..."
+    return first
+
+
+def _enum_text(values: list[Any]) -> str:
+    shown = [json.dumps(v, ensure_ascii=False) for v in values]
+    whole = "|".join(shown)
+    if len(whole) <= _ENUM_INLINE_CHARS:
+        return whole
+    kept: list[str] = []
+    for value in shown:
+        if kept and len("|".join([*kept, value])) > _ENUM_INLINE_CHARS - 50:
+            break
+        kept.append(value)
+    return "|".join(kept) + f"|... ({len(values)} values)"
+
+
+def schema_type(schema: dict[str, Any]) -> str:
+    """One parameter's JSON schema as a short type: str, int, "en"|"fr", str[], ..."""
+    if "enum" in schema:
+        return _enum_text(list(schema["enum"]))
+    if "const" in schema:
+        return json.dumps(schema["const"], ensure_ascii=False)
+    for key in ("anyOf", "oneOf"):
+        if key in schema:
+            parts = [schema_type(s) for s in schema[key] if s.get("type") != "null"]
+            return "|".join(dict.fromkeys(parts)) or "null"
+    if "$ref" in schema:
+        return "object"
+    kind = schema.get("type")
+    if isinstance(kind, list):
+        return "|".join(_JSON_TYPES.get(k, str(k)) for k in kind if k != "null") or "null"
+    if kind == "array":
+        inner = schema_type(schema.get("items") or {})
+        return f"({inner})[]" if "|" in inner else f"{inner}[]"
+    if kind == "string" and schema.get("format") in ("date", "date-time"):
+        return str(schema["format"])
+    return _JSON_TYPES.get(str(kind), "any")
+
+
+def signature(schema: dict[str, Any] | None) -> str:
+    """A tool's input schema on one line: {name: type, optional?: type, ...}."""
+    properties = (schema or {}).get("properties") or {}
+    required = set((schema or {}).get("required") or [])
+    parts = [
+        f"{name}{'' if name in required else '?'}: {schema_type(spec)}"
+        for name, spec in properties.items()
+    ]
+    return "{" + ", ".join(parts) + "}"
+
+
+def serialize_tools_brief(tools: Sequence[Tool]) -> list[dict[str, Any]]:
+    """Search results as name, one-line description and one-line argument signature.
+
+    Annotations stay only on a tool that is not plain read-only, as in
+    serialize_tools_compact, which is what search_tools(detail="full") returns.
+    """
+    results = []
+    for full in serialize_tools_compact(tools):
+        result: dict[str, Any] = {
+            "name": full["name"],
+            "description": brief_description(full.get("description")),
+            "arguments": signature(full.get("inputSchema")),
+        }
+        if "annotations" in full:
+            result["annotations"] = full["annotations"]
         results.append(result)
     return results

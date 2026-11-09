@@ -41,7 +41,7 @@ import re
 from collections.abc import Mapping
 from typing import Any, Literal
 
-from maplestats_mcp.shared.i18n import pick
+from maplestats_mcp.shared.i18n import normalize_lang, pick
 
 Detail = Literal["brief", "full"]
 DEFAULT_DETAIL: Detail = "brief"
@@ -63,6 +63,64 @@ EXEMPT_TOOLS = frozenset(
         "reproduce_workbook",
     }
 )
+
+# Catalogue and metadata tools: what a model reads to pick a table, dataset or
+# release before fetching values. The search tools among them used to keep their
+# own format with every search tool (ckan_search_datasets answered 4,596 characters
+# brief and 4,595 full in the 2026-11 Maple Test), and the rest got only the generic
+# rules. A brief result of these also keeps one language of a bilingual pair, cuts
+# long notes to their first sentence, drops per-item tags and codes, states a value
+# every item of a list shares once, and lists the first members of a long dimension
+# with its count (see _metadata).
+METADATA_TOOLS = frozenset(
+    {
+        "wds_get_cube_metadata",
+        "wds_search_cubes",
+        "ckan_search_datasets",
+        "ckan_get_dataset",
+        "ckan_get_resource",
+        "ckan_describe_resource",
+        "ckan_get_organization_or_group",
+        "ckan_list_organizations",
+        "ckan_list_groups",
+        "ckan_list_tags",
+        "ckan_list_licenses",
+        "statcan_census_profile_search_geography",
+        "statcan_census_profile_search_characteristic",
+        "statcan_geo_list_services",
+        "statcan_geo_list_spatial_layers",
+        "statcan_geo_get_layer_detail",
+        "statcan_geo_get_spatial_layer_detail",
+        "statcan_daily_get_release_calendar",
+    }
+)
+# A dimension with more members than this lists its first _MEMBERS_SHOWN in a brief
+# result, unless the call asked for members (dimension= or member_query=).
+MEMBERS_KEPT = 30
+_MEMBERS_SHOWN = 10
+# A note or description longer than this is cut to its first sentence.
+_LONG_TEXT_CHARS = 200
+_LONG_TEXT_KEYS = frozenset(
+    {"notes", "notes_excerpt", "description", "text", "text_en", "text_fr", "abstract"}
+)
+# Per-item fields a list of catalogue entries drops: tags and topic groups (a search
+# result's title says what it is) and the ids of footnotes with the same text.
+_ITEM_DROPPED = frozenset({"tags", "groups", "same_text_ids"})
+# StatCan subject and survey codes: numbers a reader does not act on.
+_CODES_DROPPED = frozenset({"subject_codes", "survey_codes"})
+# A machine name dropped when its display twin is there (an organization's slug).
+_TWINS = {"organization_name": "organization_title", "license_id": "license_title"}
+# Item flags that restate the usual case.
+_ITEM_DEFAULTS: dict[str, tuple[Any, ...]] = {
+    "archived": (False,),
+    "real_time": (False,),
+    "has_uom": (False,),
+}
+# A list with at least this many items states a value they all share once.
+_COMMON_MIN_ITEMS = 3
+_SENTENCE = re.compile(r"^(.+?[.!?])(?:\s|$)", re.DOTALL)
+# CKAN notes are often HTML (<p>, <br>); a brief note is plain text.
+_HTML_TAG = re.compile(r"<[^<>]{1,200}>")
 
 # Provenance fields a brief result keeps. Dropped: queried_at, cached, lang,
 # schema_name, freshness and reproduce (said once, in the result's `detail`).
@@ -132,22 +190,32 @@ def normalize_detail(value: Any) -> Detail:
 
 
 def exempt(tool: str) -> bool:
-    """Whether `tool` keeps its own format (see EXEMPT_TOOLS; any search tool too)."""
-    return tool in EXEMPT_TOOLS or "search" in tool
+    """Whether `tool` keeps its own format (see EXEMPT_TOOLS; any search tool too,
+    except the catalogue searches in METADATA_TOOLS)."""
+    return tool in EXEMPT_TOOLS or ("search" in tool and tool not in METADATA_TOOLS)
 
 
 def shape(
-    payload: dict[str, Any], detail: Detail, lang: str = "en", wrapped: bool = False
+    payload: dict[str, Any],
+    detail: Detail,
+    lang: str = "en",
+    wrapped: bool = False,
+    tool: str = "",
+    arguments: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """The result to send for `detail`, or None when it is `payload` unchanged.
 
     `payload` is a tool's structured content; `wrapped` when FastMCP wrapped a
-    non-object result as {"result": ...}. It is not modified.
+    non-object result as {"result": ...}. It is not modified. `tool` and the call's
+    `arguments` pick the catalogue rules (METADATA_TOOLS) of a brief result.
     """
     out = copy.deepcopy(payload)
     changed = share_repeated_notes(out)
     if detail == "brief":
-        out = _brief(out, lang, wrapped)
+        cut: set[str] = set()
+        if tool in METADATA_TOOLS:
+            out = _brief_metadata(out, lang, wrapped, arguments or {}, cut)
+        out = _brief(out, lang, wrapped, cut)
         changed = True
     return out if changed else None
 
@@ -229,12 +297,149 @@ def _share_in(items: list[dict[str, Any]], shared: list[str]) -> bool:
 # ---- brief --------------------------------------------------------------------------
 
 
-def _brief(payload: dict[str, Any], lang: str, wrapped: bool) -> dict[str, Any]:
+def _brief(
+    payload: dict[str, Any], lang: str, wrapped: bool, cut: set[str] | None = None
+) -> dict[str, Any]:
     body: Any = payload.get("result") if wrapped else payload
     body = _clean(body)
     if isinstance(body, dict):
-        body["detail"] = brief_note(lang)
+        body["detail"] = " ".join(
+            [brief_note(lang), *(_cut_note(c, lang) for c in sorted(cut or ()))]
+        )
     return {**payload, "result": body} if wrapped else body
+
+
+# ---- brief, catalogue and metadata tools --------------------------------------------
+
+
+def _cut_note(kind: str, lang: str) -> str:
+    """One sentence on what a brief catalogue result shortened, and how to get it all."""
+    if kind == "members":
+        return pick(
+            lang,
+            f"A dimension with more than {MEMBERS_KEPT} members lists its first "
+            f"{_MEMBERS_SHOWN} (`members_shown`; `member_count` is the total): pass "
+            "dimension= and member_query= to find members, or detail='full' for the list.",
+            f"Une dimension de plus de {MEMBERS_KEPT} membres n'en montre que les "
+            f"{_MEMBERS_SHOWN} premiers (`members_shown` ; `member_count` est le total) : "
+            "passez dimension= et member_query= pour trouver des membres, ou detail='full' "
+            "pour la liste.",
+        )
+    return pick(
+        lang,
+        "Long notes are cut to their first sentence (ending '...'); detail='full' has them whole.",
+        "Les notes longues sont coupées à leur première phrase (fin « ... ») ; detail='full' "
+        "les donne en entier.",
+    )
+
+
+def _brief_metadata(
+    payload: dict[str, Any],
+    lang: str,
+    wrapped: bool,
+    arguments: Mapping[str, Any],
+    cut: set[str],
+) -> dict[str, Any]:
+    body: Any = payload.get("result") if wrapped else payload
+    # A call that names a dimension or searches members wants those members.
+    keep_members = any(arguments.get(k) not in (None, "") for k in ("dimension", "member_query"))
+    body = _metadata(body, normalize_lang(lang), keep_members, cut)
+    return {**payload, "result": body} if wrapped else body
+
+
+def _short_text(text: str) -> tuple[str, bool]:
+    """`text` on one line without HTML tags, cut to its first sentence when longer than
+    _LONG_TEXT_CHARS, and whether it was cut ("..." ends a cut text)."""
+    flat = " ".join(_HTML_TAG.sub(" ", text).split())
+    if len(flat) <= _LONG_TEXT_CHARS:
+        return flat, False
+    first = _SENTENCE.match(flat)
+    if first and len(first.group(1)) <= _LONG_TEXT_CHARS:
+        return first.group(1) + " ...", True
+    return flat[: _LONG_TEXT_CHARS - 3].rstrip() + "...", True
+
+
+def _metadata(
+    node: Any, lang: str, keep_members: bool, cut: set[str], in_rows: bool = False
+) -> Any:
+    """`node` with the catalogue rules of a brief result applied (see METADATA_TOOLS)."""
+    if isinstance(node, list):
+        rows = bool(node) and all(isinstance(v, dict) for v in node)
+        items = [_metadata(v, lang, keep_members, cut, in_rows=rows) for v in node]
+        return items
+    if not isinstance(node, dict):
+        return node
+    other = "_fr" if lang == "en" else "_en"
+    out: dict[str, Any] = {}
+    for key, value in node.items():
+        if key == "provenance":
+            out[key] = value
+            continue
+        # One language of a bilingual pair (cube_title_en / cube_title_fr).
+        if key.endswith(other) and f"{key[: -len(other)]}_{lang}" in node:
+            continue
+        if key in _CODES_DROPPED or (in_rows and key in _ITEM_DROPPED):
+            continue
+        if key in _TWINS and node.get(_TWINS[key]):
+            continue
+        if in_rows and key in _ITEM_DEFAULTS and value in _ITEM_DEFAULTS[key]:
+            continue
+        # A slug that only repeats the id (open.canada.ca names datasets by their id).
+        if key == "name" and value is not None and value == node.get("id"):
+            continue
+        # Every member matched: the count already says it.
+        if key == "members_matched" and value == node.get("member_count"):
+            continue
+        if key in _LONG_TEXT_KEYS and isinstance(value, str):
+            value, was_cut = _short_text(value)
+            if was_cut:
+                cut.add("notes")
+        if in_rows and isinstance(value, list) and value and all(isinstance(v, str) for v in value):
+            # A short list of codes or formats in a row, as one cell ("CSV; XML").
+            value = "; ".join(value)
+        out[key] = _metadata(value, lang, keep_members, cut)
+    _cap_members(out, keep_members, cut)
+    for key, value in list(out.items()):
+        if key != "provenance" and isinstance(value, list):
+            common = _common_values(value)
+            if common:
+                out[f"{key}_common"] = common
+    return out
+
+
+def _cap_members(dimension: dict[str, Any], keep_members: bool, cut: set[str]) -> None:
+    """The first members of a long dimension, with how many there are."""
+    members = dimension.get("members")
+    if keep_members or not isinstance(members, list) or len(members) <= MEMBERS_KEPT:
+        return
+    dimension["members"] = members[:_MEMBERS_SHOWN]
+    dimension["members_shown"] = _MEMBERS_SHOWN
+    cut.add("members")
+
+
+def _common_values(items: list[Any]) -> dict[str, Any]:
+    """Scalar fields every item of `items` holds with one value, removed from each item."""
+    if len(items) < _COMMON_MIN_ITEMS or not all(isinstance(i, dict) for i in items):
+        return {}
+    first = items[0]
+    common = {
+        key: value
+        for key, value in first.items()
+        if not isinstance(value, dict | list)
+        and value not in (None, "")
+        and key not in _VALUE_KEYS
+        and key not in _ROW_CODES
+        and value not in _DEFAULT_FLAGS.get(key, ())
+        and value not in _ITEM_DEFAULTS.get(key, ())
+        and all(key in item and item[key] == value for item in items[1:])
+    }
+    # Items that would be left empty are identical; they stay as they are.
+    if any(set(item) <= set(common) for item in items):
+        return {}
+    for item in items:
+        for key in common:
+            del item[key]
+    return common
 
 
 def licence_id(text: str) -> str:
