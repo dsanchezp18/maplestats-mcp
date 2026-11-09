@@ -5,8 +5,9 @@ unit and frequency, a survey's target population and collection rules, a revisio
 policy, a classification code, a quality code, and, for open-data portals, a dataset's
 publisher, licence, update frequency, formats, DataStore fields and values. A third of
 the questions are on Statistics Canada, a few on the Bank of Canada and CMHC, and the
-rest on CKAN portals (open.canada.ca, BC, Quebec, Toronto, Montreal), so most answers
-are text, graded by the facts each must state (`eval_type: "facts"`), not by numbers.
+rest on CKAN portals (open.canada.ca, BC, Ontario, Alberta, Quebec, Toronto, Montreal),
+so most answers are text, graded by the facts each must state (`eval_type: "facts"`),
+not by numbers.
 
 The rule is the one at the top of README.md: the questions were written and this key
 built on 2026-11-08, before MapleStats or any other server was asked them, and no
@@ -14,10 +15,12 @@ MapleStats change may be tuned on them without a new set to check it on. Every v
 read here, with httpx, from the publisher's own API or documentation page, never
 through MapleStats:
 
-- Statistics Canada: IMDB survey pages (www23) and the RDaaS classification API.
+- Statistics Canada: IMDB survey pages (www23), the RDaaS classification API, and the
+  Web Data Service (getSeriesInfoFromVector, getCubeMetadata, getCodeSets).
 - Bank of Canada: Valet series and group metadata.
 - CMHC: its survey methodology pages.
-- CKAN: each portal's Action API (`package_show`, `datastore_search`).
+- CKAN: each portal's Action API (`package_show`, `datastore_search`), including
+  Ontario's and Alberta's catalogues for T-33 to T-36.
 
     uv run python -m tests.maple_test.build_key_v3            # rebuild maple_test_v3.json
     uv run python -m tests.maple_test.build_key_v3 --check    # report drift, write nothing
@@ -69,6 +72,9 @@ BC = "https://catalogue.data.gov.bc.ca/api/3/action/"
 QC = "https://www.donneesquebec.ca/recherche/api/3/action/"
 TOR = "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/"
 MTL = "https://donnees.montreal.ca/api/3/action/"
+WDS = "https://www150.statcan.gc.ca/t1/wds/rest/"
+ON = "https://data.ontario.ca/api/3/action/"
+AB = "https://open.alberta.ca/api/3/action/"
 
 # A fact stated as absent: "no DataStore", "not in the DataStore", "isn't queryable".
 NOT_NEAR = r"(?:\bno\b|\bnot\b|n't|n’t|\bnone\b|\bneither\b|\bnor\b|unavailable|without)"
@@ -1476,18 +1482,520 @@ def municipal() -> list[dict[str, Any]]:
     return out
 
 
+# Added 2026-11-08 (T-29 to T-36) ------------------------------------------------------
+# WDS, Ontario's catalogue and Alberta's refused this machine when the first 28 were
+# keyed; these were written and keyed once they answered again, before any server was
+# asked them. Those hosts had blocked the machine after heavy use, so each fact here is
+# one request, with a pause, and a 403 or 429 stops the build instead of retrying.
+
+
+def polite(method: str, url: str, body: Any = None, **params: Any) -> Any:
+    """One request, no retries: a refusal (403/429) stops the build."""
+    response = _client.request(method, url, json=body, params=params or None)
+    if response.status_code in (403, 429):
+        fail(f"{url} answered HTTP {response.status_code}; not retrying")
+    response.raise_for_status()
+    time.sleep(1.5)
+    return response.json()
+
+
+def polite_ckan(base: str, action: str, **params: Any) -> Any:
+    body = polite("GET", base + action, **params)
+    if not body.get("success"):
+        fail(f"{base}{action} {params}: {body.get('error')}")
+    return body["result"]
+
+
+def date_pattern(day: str) -> str:
+    """'2026-09-23' as ISO, 'September 23, 2026' or '23 September 2026'."""
+    d = datetime.strptime(day, "%Y-%m-%d")
+    month = d.strftime("%B")
+    return rf"{day}|{month} {d.day},? {d.year}|\b{d.day} {month},? {d.year}"
+
+
+def statcan_wds() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    series = {
+        s["object"]["vectorId"]: s["object"]
+        for s in polite(
+            "POST",
+            f"{WDS}getSeriesInfoFromVector",
+            [{"vectorId": v} for v in (2062811, 62305752, 41690973)],
+        )
+    }
+    cubes = {
+        int(c["object"]["productId"]): c["object"]
+        for c in polite(
+            "POST",
+            f"{WDS}getCubeMetadata",
+            [{"productId": p} for p in (36100104, 18100004, 17100005)],
+        )
+    }
+    codes = polite("GET", f"{WDS}getCodeSets")["object"]
+    frequency = {c["frequencyCode"]: c["frequencyDescEn"] for c in codes["frequency"]}
+    scalar = {c["scalarFactorCode"]: c["scalarFactorDescEn"] for c in codes["scalar"]}
+    uom = {c["memberUomCode"]: c["memberUomEn"] for c in codes["uom"]}
+
+    def table(pid: int) -> str:
+        s = str(pid)
+        return f"{s[:2]}-{s[2:4]}-{s[4:8]}-01"
+
+    emp = series[2062811]
+    out.append(
+        _q(
+            category="Units",
+            group="statcan",
+            eval_type="facts",
+            question="In Statistics Canada's Web Data Service, what are the unit of measure "
+            "and the scalar factor of vector v2062811, and what does the series measure?",
+            expected={
+                "series": emp["SeriesTitleEn"],
+                "unit": uom[emp["memberUomCode"]],
+                "scalar_factor": scalar[emp["scalarFactorCode"]],
+                "table": table(emp["productId"]),
+            },
+            facts={
+                "unit": r"\bpersons?\b|\bpeople\b",
+                "scalar": r"thousands?",
+                "series": r"employ",
+                "seasonally_adjusted": r"seasonally adjusted",
+            },
+            headline=["scalar", "series"],
+            tolerance="Persons, in thousands (scalar factor: thousands); Canada, employment, "
+            "15 years and over, seasonally adjusted (table 14-10-0287-01).",
+            grading={
+                "correct": "Persons in thousands, employment in Canada (15+), seasonally adjusted.",
+                "partial": "Thousands and employment, the unit or the adjustment missing.",
+                "referral": "No answer, only a link to the table or to WDS.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    "v2062811",
+                    emp["SeriesTitleEn"],
+                    {
+                        "unit": uom[emp["memberUomCode"]],
+                        "scalar_factor": scalar[emp["scalarFactorCode"]],
+                    },
+                    f"{WDS}getSeriesInfoFromVector",
+                ),
+            ],
+            traps=[
+                (
+                    "Values are in thousands: about 21,000 means about 21 million people "
+                    "employed, not 21,000."
+                ),
+            ],
+        )
+    )
+
+    gdp = series[62305752]
+    gdp_cube = cubes[gdp["productId"]]
+    out.append(
+        _q(
+            category="Series metadata",
+            group="statcan",
+            eval_type="facts",
+            question="Which Statistics Canada table does vector v62305752 belong to, how often "
+            "is that table published, and what does the series measure?",
+            expected={
+                "table": table(gdp["productId"]),
+                "table_title": gdp_cube["cubeTitleEn"],
+                "frequency": frequency[gdp_cube["frequencyCode"]],
+                "series": gdp["SeriesTitleEn"],
+            },
+            facts={
+                "table": r"36-?10-?0104|36100104",
+                "frequency": r"quarterly",
+                "gdp": r"gross domestic product|\bGDP\b",
+                "chained": r"chained|2017 dollars|real",
+            },
+            headline=["table", "frequency"],
+            tolerance="Table 36-10-0104-01 (GDP, expenditure-based, quarterly); GDP at market "
+            "prices, chained (2017) dollars, seasonally adjusted at annual rates.",
+            grading={
+                "correct": "36-10-0104-01, quarterly, and real GDP at market prices.",
+                "partial": "The table and quarterly, without what the series is; or the table "
+                "and the series without the frequency.",
+                "referral": "No answer, only a link to WDS.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    "v62305752",
+                    gdp["SeriesTitleEn"],
+                    table(gdp["productId"]),
+                    f"{WDS}getSeriesInfoFromVector",
+                ),
+                cite(
+                    "Other",
+                    table(gdp["productId"]),
+                    gdp_cube["cubeTitleEn"],
+                    frequency[gdp_cube["frequencyCode"]],
+                    f"{WDS}getCubeMetadata",
+                ),
+            ],
+            traps=[
+                "Monthly GDP by industry (basic prices) is another table, 36-10-0434-01.",
+            ],
+        )
+    )
+
+    cpi = series[41690973]
+    cpi_cube = cubes[cpi["productId"]]
+    if "not seasonally adjusted" not in cpi_cube["cubeTitleEn"]:
+        fail(f"{table(cpi['productId'])} no longer says 'not seasonally adjusted'")
+    out.append(
+        _q(
+            category="Seasonal adjustment",
+            group="statcan",
+            eval_type="facts",
+            question="Is Statistics Canada vector v41690973 seasonally adjusted, and what does "
+            "it measure?",
+            expected={
+                "seasonally_adjusted": "No",
+                "series": cpi["SeriesTitleEn"],
+                "table": table(cpi["productId"]),
+                "table_title": cpi_cube["cubeTitleEn"],
+                "unit": uom[cpi["memberUomCode"]],
+            },
+            facts={
+                "not_adjusted": r"\bnot seasonally adjusted|non[- ]seasonally adjusted|"
+                r"unadjusted|n['’]t seasonally adjusted|not adjusted|\bno\b[^.]{0,20}seasonal",
+                "cpi": r"Consumer Price Index|\bCPI\b",
+                "all_items": r"all[- ]items",
+                "table": r"18-?10-?0004|18100004",
+            },
+            headline=["not_adjusted", "cpi"],
+            tolerance="Not seasonally adjusted: the all-items CPI for Canada (2002=100), table "
+            "18-10-0004-01.",
+            grading={
+                "correct": "Not seasonally adjusted, and the all-items CPI for Canada.",
+                "partial": "Not seasonally adjusted and the CPI, without all-items or the table.",
+                "referral": "No answer, only a link to WDS.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    "v41690973",
+                    cpi["SeriesTitleEn"],
+                    cpi_cube["cubeTitleEn"],
+                    f"{WDS}getCubeMetadata",
+                ),
+            ],
+            traps=[
+                (
+                    "The headline CPI is the unadjusted series; seasonally adjusted CPI series "
+                    "are in a different table."
+                ),
+            ],
+        )
+    )
+
+    pop = cubes[17100005]
+    released = pop["releaseTime"][:10]
+    latest = pop["cubeEndDate"][:4]
+    out.append(
+        _q(
+            category="Release dates",
+            group="statcan",
+            eval_type="facts",
+            question="On what date did Statistics Canada release the latest update of table "
+            "17-10-0005-01 (Population estimates on July 1, by age and gender), how often is "
+            "it updated, and what is the latest reference date it holds?",
+            expected={
+                "released": released,
+                "frequency": frequency[pop["frequencyCode"]],
+                "latest_reference": f"July 1, {latest}",
+            },
+            facts={
+                "released": date_pattern(released),
+                "frequency": r"annual|yearly|once a year|each year",
+                "latest_reference": rf"July 1,? {latest}|1 July,? {latest}|{latest}-07-01",
+            },
+            headline=["released"],
+            tolerance=f"Released {released}; annual; latest reference date July 1, {latest}.",
+            grading={
+                "correct": "The release date, annual, and July 1 of the latest year.",
+                "partial": "The release date with one of the other two.",
+                "referral": "No date, only a link to the table.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    "17-10-0005-01",
+                    pop["cubeTitleEn"],
+                    released,
+                    f"{WDS}getCubeMetadata",
+                    period=f"{latest}-07-01",
+                    released=pop["releaseTime"],
+                ),
+            ],
+            traps=[
+                (
+                    "The quarterly population estimates are a different table; this one "
+                    "holds July 1 of each year and is updated once a year."
+                ),
+            ],
+        )
+    )
+    return out
+
+
+def ontario_alberta() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    names = polite_ckan(ON, "package_show", id="ontario-top-baby-names-female")
+    (csv,) = names["resources"]
+    out.append(
+        _q(
+            category="Dataset metadata",
+            group="provincial",
+            eval_type="facts",
+            question="On Ontario's Data Catalogue (data.ontario.ca), which ministry publishes "
+            "the 'Ontario top baby names (female)' dataset, under which licence, how often is "
+            "it updated, and how many resources does it have, in what format?",
+            expected={
+                "organization": names["organization"]["title"],
+                "licence": names["license_title"],
+                "update_frequency": names["update_frequency"],
+                "resources": names["num_resources"],
+                "format": csv["format"],
+                "datastore": bool(csv.get("datastore_active")),
+            },
+            facts={
+                "organization": r"Government and Consumer Services|\bMGCS\b",
+                "licence": r"Open Government Licen[cs]e\s*[-–—(]?\s*Ontario|OGL[- ]ON",
+                "frequency": r"yearly|annual|once a year|each year",
+                "resources": r"\b(one|1|single|a)\b[^.]{0,30}(resource|file|CSV)",
+                "format": r"\bCSV\b",
+            },
+            headline=["organization", "licence"],
+            tolerance="Ministry of Government and Consumer Services; Open Government Licence - "
+            "Ontario; yearly; one CSV resource.",
+            grading={
+                "correct": "Ministry, licence, yearly, and one CSV.",
+                "partial": "Ministry and licence, frequency or the resource missing.",
+                "referral": "No answer, only the dataset's link.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    names["name"],
+                    names["title"],
+                    names["license_title"],
+                    dataset_url(ON, names["name"]),
+                ),
+            ],
+            traps=[
+                (
+                    "ServiceOntario registers births, but the catalogue lists the ministry, "
+                    "Government and Consumer Services, as the publisher."
+                ),
+            ],
+        )
+    )
+
+    fields = polite_ckan(ON, "datastore_search", resource_id=csv["id"], limit=0)["fields"]
+    types = {f["id"]: f["type"] for f in fields if f["id"] != "_id"}
+    suppressed = find(
+        names["notes"], r"Counts of fewer than 5 names were suppressed", "Ontario names notes"
+    ).group(0)
+    out.append(
+        _q(
+            category="DataStore fields",
+            group="provincial",
+            eval_type="facts",
+            question="In the DataStore table of Ontario's 'Ontario top baby names (female)' "
+            "dataset, which fields hold the year, the name and the count, what are their data "
+            "types, and how are names given fewer than five times handled?",
+            expected={"fields": types, "small_counts": suppressed},
+            reference={"data_range_end": csv.get("data_range_end")},
+            facts={
+                "year": r"Year/Ann[ée]e|\bYear\b",
+                "name": r"Name/Nom|\bName\b",
+                "count": r"Frequency/Fr[ée]quence|\bFrequency\b",
+                "numeric": r"numeric|number|integer",
+                "text": r"\btext\b|\bstring\b",
+                "suppressed": r"suppress|omit|exclud|withheld|not (shown|included|listed)|"
+                r"left out|removed",
+            },
+            headline=["count", "suppressed"],
+            tolerance="Year/Année (numeric), Name/Nom (text), Frequency/Fréquence (numeric); "
+            "counts under five are suppressed.",
+            grading={
+                "correct": "The three fields with their types, and counts under five suppressed.",
+                "partial": "The count field and the suppression, types missing.",
+                "referral": "No answer, only the dataset's link.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    csv["id"],
+                    "Ontario top baby names (female): DataStore fields",
+                    types,
+                    f"{ON}datastore_search?resource_id={csv['id']}",
+                ),
+                cite(
+                    "Other",
+                    names["name"],
+                    "Ontario top baby names (female): notes",
+                    suppressed,
+                    dataset_url(ON, names["name"]),
+                ),
+            ],
+            traps=[
+                (
+                    "Unlike Quebec's name bank, which shows '<5', Ontario leaves names with "
+                    "fewer than five births out of the table."
+                ),
+                "'Frequency' is a count of registrations, not a rank.",
+            ],
+        )
+    )
+
+    cit = polite_ckan(AB, "package_show", id="net-corporate-income-tax-revenue")
+    usage = cit.get("usage") or ""
+    mismatch = find(
+        usage,
+        r"These totals will not match information in the Financial Statement and Annual "
+        r"Report due to accounting adjustments",
+        "Alberta CIT usage",
+    ).group(0)
+    out.append(
+        _q(
+            category="Dataset metadata",
+            group="provincial",
+            eval_type="facts",
+            question="On open.alberta.ca, which ministry publishes the 'Net corporate income "
+            "tax revenue, Alberta' dataset, under which licence, how often is it updated, in "
+            "what file format, and do its totals match the province's Financial Statement "
+            "and Annual Report?",
+            expected={
+                "organization": cit["organization"]["title"],
+                "licence": cit["license_title"],
+                "update_frequency": cit["updatefrequency"],
+                "formats": sorted({r["format"] for r in cit["resources"]}),
+                "matches_annual_report": "No",
+            },
+            facts={
+                "organization": r"Treasury Board and Finance|\bTBF\b",
+                "licence": r"Open Government Licen[cs]e\s*[-–—(]?\s*Alberta|OGL[- ]A",
+                "frequency": r"annual|yearly|once a year|each year",
+                "format": r"\bXLSX\b|Excel",
+                "mismatch": rf"({NOT_NEAR}|differ)[^.]{{0,120}}(match|agree|reconcile|"
+                r"Financial Statement|Annual Report)|(Financial Statement|Annual Report)"
+                rf"[^.]{{0,120}}({NOT_NEAR}|differ)",
+            },
+            headline=["organization", "mismatch"],
+            tolerance="Treasury Board and Finance; Open Government Licence - Alberta; annual; "
+            "XLSX; the totals do not match the Financial Statement and Annual Report "
+            "(accounting adjustments).",
+            grading={
+                "correct": "Ministry, licence, annual, XLSX, and the totals do not match.",
+                "partial": "Ministry and the mismatch, with licence, frequency or format missing.",
+                "referral": "No answer, only the dataset's link.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    cit["name"],
+                    cit["title"],
+                    cit["license_title"],
+                    dataset_url(AB, cit["name"]),
+                ),
+                cite(
+                    "Other",
+                    cit["name"],
+                    "Usage considerations",
+                    mismatch,
+                    dataset_url(AB, cit["name"]),
+                ),
+            ],
+            traps=[
+                (
+                    "The industry split rests on the NAICS code each company chooses when it "
+                    "files; the totals differ from the audited statements."
+                ),
+            ],
+        )
+    )
+
+    grains = polite_ckan(AB, "package_show", id="canada-supply-and-disposition")
+    grain_formats = sorted({r["format"] for r in grains["resources"]})
+    if grains["type"] != "publications" or grain_formats != ["PDF"]:
+        fail("Alberta 'Canada supply and disposition' is no longer a PDF publication")
+    out.append(
+        _q(
+            category="Dataset metadata",
+            group="provincial",
+            eval_type="facts",
+            question="On open.alberta.ca, is 'Canada supply and disposition' listed as an open "
+            "data set or as a publication, which ministry publishes it, how often is it "
+            "released, and in what file format?",
+            expected={
+                "type": grains["type"],
+                "organization": grains["organization"]["title"],
+                "update_frequency": grains["updatefrequency"],
+                "formats": grain_formats,
+            },
+            reference={"resources": grains["num_resources"]},
+            facts={
+                "publication": r"publication",
+                "organization": r"Agriculture and Irrigation",
+                "frequency": r"quarterly|four times a year|every (three|3) months",
+                "format": r"\bPDF\b",
+            },
+            headline=["publication", "format"],
+            tolerance="A publication (not an open data set); Agriculture and Irrigation; "
+            "quarterly; PDF.",
+            grading={
+                "correct": "Publication, Agriculture and Irrigation, quarterly, PDF.",
+                "partial": "Publication and PDF, ministry or frequency missing.",
+                "referral": "No answer, only the record's link.",
+            },
+            citations=[
+                cite(
+                    "Other",
+                    grains["name"],
+                    grains["title"],
+                    grains["updatefrequency"],
+                    dataset_url(AB, grains["name"]),
+                ),
+            ],
+            traps=[
+                (
+                    "Open Alberta lists publications beside open data; this one is a series of "
+                    "PDF reports on grain supplies, with no table to query."
+                ),
+            ],
+        )
+    )
+    return out
+
+
 def build() -> dict[str, Any]:
     questions: list[dict[str, Any]] = []
-    for part in (statcan, bank_of_canada, cmhc, federal, provincial, municipal):
+    # New parts go last: ids follow list order, and the first 28 must keep theirs.
+    for part in (
+        statcan,
+        bank_of_canada,
+        cmhc,
+        federal,
+        provincial,
+        municipal,
+        statcan_wds,
+        ontario_alberta,
+    ):
         questions += part()
     for q in questions:
         q.setdefault("eval_type", "facts")
     return {
         "benchmark": "maple_test_v3",
         "built_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        "sources": "Publishers' own APIs and documentation, read directly: StatCan IMDB and "
-        "RDaaS, Bank of Canada Valet, CMHC methodology pages, CKAN Action APIs "
-        "(open.canada.ca, BC Data Catalogue, Données Québec, Toronto, Montréal)",
+        "sources": "Publishers' own APIs and documentation, read directly: StatCan IMDB, "
+        "RDaaS and WDS, Bank of Canada Valet, CMHC methodology pages, CKAN Action APIs "
+        "(open.canada.ca, BC Data Catalogue, Ontario Data Catalogue, Open Alberta, Données "
+        "Québec, Toronto, Montréal)",
         "questions": [{"id": f"T-{i:02d}", **q} for i, q in enumerate(questions, 1)],
     }
 

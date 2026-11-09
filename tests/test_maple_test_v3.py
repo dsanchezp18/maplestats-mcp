@@ -25,7 +25,7 @@ def test_v3_is_registered_for_run_and_grade():
 
 def test_ids_and_spread_across_sources():
     assert sorted(V3) == [f"T-{i:02d}" for i in range(1, len(V3) + 1)]
-    assert 24 <= len(V3) <= 30
+    assert 24 <= len(V3) <= 40
     groups = [q["group"] for q in V3.values()]
     assert set(groups) == {"statcan", "boc", "cmhc", *CKAN}
     # About a third StatCan, at least a third CKAN portals, a few BoC and CMHC.
@@ -89,6 +89,51 @@ def test_every_question_has_a_rule_a_source_and_a_trap(qid):
         ("T-26", "MUSAN means 'Unsanitary vehicle'.", "correct"),
         ("T-26", "I can't find that code in my tools.", "abstained"),
         ("T-28", "Severity is in GRAVITE; NB_MORTS is numeric.", "correct"),
+        # Added later (T-29 to T-36): WDS metadata, Ontario and Alberta catalogues.
+        (
+            "T-29",
+            "Persons, in thousands: seasonally adjusted employment in Canada, 15 and over.",
+            "correct",
+        ),
+        (
+            "T-30",
+            "Table 36-10-0104-01, quarterly: real GDP at market prices in chained 2017 dollars.",
+            "correct",
+        ),
+        (
+            "T-31",
+            "No, it is not seasonally adjusted: the all-items CPI for Canada (18-10-0004-01).",
+            "correct",
+        ),
+        (
+            "T-32",
+            (
+                "Released on September 23, 2026; the table is updated annually and its latest "
+                "reference date is July 1, 2026."
+            ),
+            "correct",
+        ),
+        (
+            "T-34",
+            (
+                "Year/Année and Frequency/Fréquence are numeric, Name/Nom is text; names given "
+                "fewer than five times are suppressed."
+            ),
+            "correct",
+        ),
+        (
+            "T-35",
+            (
+                "Treasury Board and Finance publishes it annually as an XLSX file; its totals "
+                "do not match the Financial Statement and Annual Report."
+            ),
+            "partial",
+        ),
+        (
+            "T-36",
+            "It is a publication: quarterly PDF reports from Agriculture and Irrigation.",
+            "correct",
+        ),
         # Refusals: say it does not exist; a figure for it is invented.
         ("T-04", "None: the unadjusted CPI is never revised.", "correct"),
         ("T-04", "It was revised up by 0.1 point to 165.3.", "hallucinated"),

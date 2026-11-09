@@ -1,7 +1,7 @@
 {
   "benchmark": "maple_test_v3",
   "built_at": "2026-11-09T00:03:07+00:00",
-  "sources": "Publishers' own APIs and documentation, read directly: StatCan IMDB and RDaaS, Bank of Canada Valet, CMHC methodology pages, CKAN Action APIs (open.canada.ca, BC Data Catalogue, Données Québec, Toronto, Montréal)",
+  "sources": "Publishers' own APIs and documentation, read directly: StatCan IMDB, RDaaS and WDS, Bank of Canada Valet, CMHC methodology pages, CKAN Action APIs (open.canada.ca, BC Data Catalogue, Ontario Data Catalogue, Open Alberta, Données Québec, Toronto, Montréal)",
   "questions": [
     {
       "id": "T-01",
@@ -1236,6 +1236,410 @@
       ],
       "traps": [
         "Severity is a text label (GRAVITE), not a code; the counts are numeric."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-29",
+      "category": "Units",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "In Statistics Canada's Web Data Service, what are the unit of measure and the scalar factor of vector v2062811, and what does the series measure?",
+      "expected": {
+        "series": "Canada;Employment;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+        "unit": "Persons in thousands",
+        "scalar_factor": "thousands",
+        "table": "14-10-0287-01"
+      },
+      "facts": {
+        "unit": "\\bpersons?\\b|\\bpeople\\b",
+        "scalar": "thousands?",
+        "series": "employ",
+        "seasonally_adjusted": "seasonally adjusted"
+      },
+      "headline": [
+        "scalar",
+        "series"
+      ],
+      "tolerance": "Persons, in thousands (scalar factor: thousands); Canada, employment, 15 years and over, seasonally adjusted (table 14-10-0287-01).",
+      "grading": {
+        "correct": "Persons in thousands, employment in Canada (15+), seasonally adjusted.",
+        "partial": "Thousands and employment, the unit or the adjustment missing.",
+        "referral": "No answer, only a link to the table or to WDS."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "v2062811",
+          "series_title": "Canada;Employment;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+          "reference_period": null,
+          "value": {
+            "unit": "Persons in thousands",
+            "scalar_factor": "thousands"
+          },
+          "release_or_revision_date": null,
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getSeriesInfoFromVector"
+        }
+      ],
+      "traps": [
+        "Values are in thousands: about 21,000 means about 21 million people employed, not 21,000."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-30",
+      "category": "Series metadata",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "Which Statistics Canada table does vector v62305752 belong to, how often is that table published, and what does the series measure?",
+      "expected": {
+        "table": "36-10-0104-01",
+        "table_title": "Gross domestic product, expenditure-based, Canada, quarterly",
+        "frequency": "Quarterly",
+        "series": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices"
+      },
+      "facts": {
+        "table": "36-?10-?0104|36100104",
+        "frequency": "quarterly",
+        "gdp": "gross domestic product|\\bGDP\\b",
+        "chained": "chained|2017 dollars|real"
+      },
+      "headline": [
+        "table",
+        "frequency"
+      ],
+      "tolerance": "Table 36-10-0104-01 (GDP, expenditure-based, quarterly); GDP at market prices, chained (2017) dollars, seasonally adjusted at annual rates.",
+      "grading": {
+        "correct": "36-10-0104-01, quarterly, and real GDP at market prices.",
+        "partial": "The table and quarterly, without what the series is; or the table and the series without the frequency.",
+        "referral": "No answer, only a link to WDS."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "v62305752",
+          "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
+          "reference_period": null,
+          "value": "36-10-0104-01",
+          "release_or_revision_date": null,
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getSeriesInfoFromVector"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "36-10-0104-01",
+          "series_title": "Gross domestic product, expenditure-based, Canada, quarterly",
+          "reference_period": null,
+          "value": "Quarterly",
+          "release_or_revision_date": null,
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata"
+        }
+      ],
+      "traps": [
+        "Monthly GDP by industry (basic prices) is another table, 36-10-0434-01."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-31",
+      "category": "Seasonal adjustment",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "Is Statistics Canada vector v41690973 seasonally adjusted, and what does it measure?",
+      "expected": {
+        "seasonally_adjusted": "No",
+        "series": "Canada;All-items",
+        "table": "18-10-0004-01",
+        "table_title": "Consumer Price Index, monthly, not seasonally adjusted",
+        "unit": "2002=100"
+      },
+      "facts": {
+        "not_adjusted": "\\bnot seasonally adjusted|non[- ]seasonally adjusted|unadjusted|n['’]t seasonally adjusted|not adjusted|\\bno\\b[^.]{0,20}seasonal",
+        "cpi": "Consumer Price Index|\\bCPI\\b",
+        "all_items": "all[- ]items",
+        "table": "18-?10-?0004|18100004"
+      },
+      "headline": [
+        "not_adjusted",
+        "cpi"
+      ],
+      "tolerance": "Not seasonally adjusted: the all-items CPI for Canada (2002=100), table 18-10-0004-01.",
+      "grading": {
+        "correct": "Not seasonally adjusted, and the all-items CPI for Canada.",
+        "partial": "Not seasonally adjusted and the CPI, without all-items or the table.",
+        "referral": "No answer, only a link to WDS."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "v41690973",
+          "series_title": "Canada;All-items",
+          "reference_period": null,
+          "value": "Consumer Price Index, monthly, not seasonally adjusted",
+          "release_or_revision_date": null,
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata"
+        }
+      ],
+      "traps": [
+        "The headline CPI is the unadjusted series; seasonally adjusted CPI series are in a different table."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-32",
+      "category": "Release dates",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "On what date did Statistics Canada release the latest update of table 17-10-0005-01 (Population estimates on July 1, by age and gender), how often is it updated, and what is the latest reference date it holds?",
+      "expected": {
+        "released": "2026-09-23",
+        "frequency": "Annual",
+        "latest_reference": "July 1, 2026"
+      },
+      "facts": {
+        "released": "2026-09-23|September 23,? 2026|\\b23 September,? 2026",
+        "frequency": "annual|yearly|once a year|each year",
+        "latest_reference": "July 1,? 2026|1 July,? 2026|2026-07-01"
+      },
+      "headline": [
+        "released"
+      ],
+      "tolerance": "Released 2026-09-23; annual; latest reference date July 1, 2026.",
+      "grading": {
+        "correct": "The release date, annual, and July 1 of the latest year.",
+        "partial": "The release date with one of the other two.",
+        "referral": "No date, only a link to the table."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "17-10-0005-01",
+          "series_title": "Population estimates on July 1, by age and gender",
+          "reference_period": "2026-07-01",
+          "value": "2026-09-23",
+          "release_or_revision_date": "2026-09-23T08:30",
+          "url": "https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata"
+        }
+      ],
+      "traps": [
+        "The quarterly population estimates are a different table; this one holds July 1 of each year and is updated once a year."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-33",
+      "category": "Dataset metadata",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "On Ontario's Data Catalogue (data.ontario.ca), which ministry publishes the 'Ontario top baby names (female)' dataset, under which licence, how often is it updated, and how many resources does it have, in what format?",
+      "expected": {
+        "organization": "Government and Consumer Services",
+        "licence": "Open Government Licence – Ontario",
+        "update_frequency": "yearly",
+        "resources": 1,
+        "format": "CSV",
+        "datastore": true
+      },
+      "facts": {
+        "organization": "Government and Consumer Services|\\bMGCS\\b",
+        "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*Ontario|OGL[- ]ON",
+        "frequency": "yearly|annual|once a year|each year",
+        "resources": "\\b(one|1|single|a)\\b[^.]{0,30}(resource|file|CSV)",
+        "format": "\\bCSV\\b"
+      },
+      "headline": [
+        "organization",
+        "licence"
+      ],
+      "tolerance": "Ministry of Government and Consumer Services; Open Government Licence - Ontario; yearly; one CSV resource.",
+      "grading": {
+        "correct": "Ministry, licence, yearly, and one CSV.",
+        "partial": "Ministry and licence, frequency or the resource missing.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "ontario-top-baby-names-female",
+          "series_title": "Ontario top baby names (female)",
+          "reference_period": null,
+          "value": "Open Government Licence – Ontario",
+          "release_or_revision_date": null,
+          "url": "https://data.ontario.ca/api/3/action/package_show?id=ontario-top-baby-names-female"
+        }
+      ],
+      "traps": [
+        "ServiceOntario registers births, but the catalogue lists the ministry, Government and Consumer Services, as the publisher."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-34",
+      "category": "DataStore fields",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "In the DataStore table of Ontario's 'Ontario top baby names (female)' dataset, which fields hold the year, the name and the count, what are their data types, and how are names given fewer than five times handled?",
+      "expected": {
+        "fields": {
+          "Year/Année": "numeric",
+          "Name/Nom": "text",
+          "Frequency/Fréquence": "numeric"
+        },
+        "small_counts": "Counts of fewer than 5 names were suppressed"
+      },
+      "reference": {
+        "data_range_end": "2024-12-31"
+      },
+      "facts": {
+        "year": "Year/Ann[ée]e|\\bYear\\b",
+        "name": "Name/Nom|\\bName\\b",
+        "count": "Frequency/Fr[ée]quence|\\bFrequency\\b",
+        "numeric": "numeric|number|integer",
+        "text": "\\btext\\b|\\bstring\\b",
+        "suppressed": "suppress|omit|exclud|withheld|not (shown|included|listed)|left out|removed"
+      },
+      "headline": [
+        "count",
+        "suppressed"
+      ],
+      "tolerance": "Year/Année (numeric), Name/Nom (text), Frequency/Fréquence (numeric); counts under five are suppressed.",
+      "grading": {
+        "correct": "The three fields with their types, and counts under five suppressed.",
+        "partial": "The count field and the suppression, types missing.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "acc72e92-3100-4a04-8f5f-4fad9cd77cc5",
+          "series_title": "Ontario top baby names (female): DataStore fields",
+          "reference_period": null,
+          "value": {
+            "Year/Année": "numeric",
+            "Name/Nom": "text",
+            "Frequency/Fréquence": "numeric"
+          },
+          "release_or_revision_date": null,
+          "url": "https://data.ontario.ca/api/3/action/datastore_search?resource_id=acc72e92-3100-4a04-8f5f-4fad9cd77cc5"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "ontario-top-baby-names-female",
+          "series_title": "Ontario top baby names (female): notes",
+          "reference_period": null,
+          "value": "Counts of fewer than 5 names were suppressed",
+          "release_or_revision_date": null,
+          "url": "https://data.ontario.ca/api/3/action/package_show?id=ontario-top-baby-names-female"
+        }
+      ],
+      "traps": [
+        "Unlike Quebec's name bank, which shows '<5', Ontario leaves names with fewer than five births out of the table.",
+        "'Frequency' is a count of registrations, not a rank."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-35",
+      "category": "Dataset metadata",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "On open.alberta.ca, which ministry publishes the 'Net corporate income tax revenue, Alberta' dataset, under which licence, how often is it updated, in what file format, and do its totals match the province's Financial Statement and Annual Report?",
+      "expected": {
+        "organization": "Treasury Board and Finance",
+        "licence": "Open Government Licence - Alberta",
+        "update_frequency": "Annual",
+        "formats": [
+          "XLSX"
+        ],
+        "matches_annual_report": "No"
+      },
+      "facts": {
+        "organization": "Treasury Board and Finance|\\bTBF\\b",
+        "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*Alberta|OGL[- ]A",
+        "frequency": "annual|yearly|once a year|each year",
+        "format": "\\bXLSX\\b|Excel",
+        "mismatch": "((?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)|differ)[^.]{0,120}(match|agree|reconcile|Financial Statement|Annual Report)|(Financial Statement|Annual Report)[^.]{0,120}((?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)|differ)"
+      },
+      "headline": [
+        "organization",
+        "mismatch"
+      ],
+      "tolerance": "Treasury Board and Finance; Open Government Licence - Alberta; annual; XLSX; the totals do not match the Financial Statement and Annual Report (accounting adjustments).",
+      "grading": {
+        "correct": "Ministry, licence, annual, XLSX, and the totals do not match.",
+        "partial": "Ministry and the mismatch, with licence, frequency or format missing.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "net-corporate-income-tax-revenue",
+          "series_title": "Net corporate income tax revenue, Alberta",
+          "reference_period": null,
+          "value": "Open Government Licence - Alberta",
+          "release_or_revision_date": null,
+          "url": "https://open.alberta.ca/api/3/action/package_show?id=net-corporate-income-tax-revenue"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "net-corporate-income-tax-revenue",
+          "series_title": "Usage considerations",
+          "reference_period": null,
+          "value": "These totals will not match information in the Financial Statement and Annual Report due to accounting adjustments",
+          "release_or_revision_date": null,
+          "url": "https://open.alberta.ca/api/3/action/package_show?id=net-corporate-income-tax-revenue"
+        }
+      ],
+      "traps": [
+        "The industry split rests on the NAICS code each company chooses when it files; the totals differ from the audited statements."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-36",
+      "category": "Dataset metadata",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "On open.alberta.ca, is 'Canada supply and disposition' listed as an open data set or as a publication, which ministry publishes it, how often is it released, and in what file format?",
+      "expected": {
+        "type": "publications",
+        "organization": "Agriculture and Irrigation",
+        "update_frequency": "Quarterly",
+        "formats": [
+          "PDF"
+        ]
+      },
+      "reference": {
+        "resources": 26
+      },
+      "facts": {
+        "publication": "publication",
+        "organization": "Agriculture and Irrigation",
+        "frequency": "quarterly|four times a year|every (three|3) months",
+        "format": "\\bPDF\\b"
+      },
+      "headline": [
+        "publication",
+        "format"
+      ],
+      "tolerance": "A publication (not an open data set); Agriculture and Irrigation; quarterly; PDF.",
+      "grading": {
+        "correct": "Publication, Agriculture and Irrigation, quarterly, PDF.",
+        "partial": "Publication and PDF, ministry or frequency missing.",
+        "referral": "No answer, only the record's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "canada-supply-and-disposition",
+          "series_title": "Canada supply and disposition",
+          "reference_period": null,
+          "value": "Quarterly",
+          "release_or_revision_date": null,
+          "url": "https://open.alberta.ca/api/3/action/package_show?id=canada-supply-and-disposition"
+        }
+      ],
+      "traps": [
+        "Open Alberta lists publications beside open data; this one is a series of PDF reports on grain supplies, with no table to query."
       ],
       "tolerances": {}
     }
