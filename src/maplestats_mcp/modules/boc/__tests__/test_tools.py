@@ -75,6 +75,7 @@ async def test_boc_search_series_without_query_lists(monkeypatch):
     monkeypatch.setattr(tools.client, "list_series", mock_list)
     monkeypatch.setattr(tools.client, "search_series", mock_search)
     monkeypatch.setattr(tools.client, "page_series", lambda result, limit, lang: (result, limit))
+    monkeypatch.setattr(tools.client, "annotate_series", AsyncMock(side_effect=lambda r, lang: r))
 
     assert await tools.boc_search_series() == ("all", 50)
     assert await tools.boc_search_series("cpi") == "some"
@@ -106,6 +107,7 @@ async def test_boc_limit_without_query_trims_list(monkeypatch):
         ),
     )
     monkeypatch.setattr(tools.client, "list_series", AsyncMock(return_value=full))
+    monkeypatch.setattr(tools.client, "annotate_series", AsyncMock(side_effect=lambda r, lang: r))
     result = await tools.boc_search_series(limit=2)
     assert [s.name for s in result.series] == ["S0", "S1"]
     assert result.total_count == 3

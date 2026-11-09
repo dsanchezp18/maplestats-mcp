@@ -22,7 +22,11 @@
     "label": "Target for the overnight rate (business daily)",
     "description": "Also called the policy interest rate, the average rate that the Bank of Canada wants to see in the market for overnight money market financing. (V39079)",
     "unit": "Percent",
-    "frequency": "Business daily"
+    "frequency": "Business daily",
+    "status": "active",
+    "last_observation": "2026-11-05",
+    "successor": null,
+    "note": null
    }
   },
   "observations": [

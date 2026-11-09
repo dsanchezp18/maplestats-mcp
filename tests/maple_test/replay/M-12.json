@@ -22,7 +22,11 @@
     "label": "Benchmark bond yield, 10-year",
     "description": "The yield on the Government of Canada 10-year benchmark bond. This series represents the prevailing market interest rate for the 10-year Government of Canada bond and is used as a reference for financial market analysis and reporting.",
     "unit": "Percent",
-    "frequency": "Business daily"
+    "frequency": "Business daily",
+    "status": "active",
+    "last_observation": "2026-11-05",
+    "successor": null,
+    "note": null
    }
   },
   "observations": [
