@@ -235,9 +235,7 @@ function search_tools(
     query::AbstractString; detail::AbstractString="full", client::Client=default_client()
 )
     found = try
-        call_server_tool(
-            client, "search_tools", Dict("query" => query, "detail" => detail)
-        )
+        call_server_tool(client, "search_tools", Dict("query" => query, "detail" => detail))
     catch err
         # A server older than the compact search has no `detail` and rejects it;
         # its answer is the full form anyway.
