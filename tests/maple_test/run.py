@@ -52,8 +52,13 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 TIMEOUT_S = 600
 MAX_TURNS = 25
+# MAPLE_HOSTED_URL points both hosted arms at another deployment of the same code (the
+# 2026-11-09 full-arm re-runs used a local server at the commit the hosted one ran).
+HOSTED = os.environ.get("MAPLE_HOSTED_URL", "https://mcp.maplestats.danielstats.io/mcp")
 ARMS = (
     "maplestats",
+    "maplestats_hosted",
+    "maplestats_full",
     "mcp_statcan",
     "pipeworx",
     "arose26",
@@ -182,6 +187,27 @@ def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, A
                 "command": "uv",
                 "args": ["run", "--directory", str(server_dir), "maplestats-mcp"],
                 "env": {"MAPLE_TRANSPORT": "stdio"},
+            }
+        }
+    if arm == "maplestats_hosted":
+        # The hosted server as users reach it (brief results, the default since #203).
+        return {"maplestats": {"type": "http", "url": HOSTED}}
+    if arm == "maplestats_full":
+        # The same hosted server through a local relay that sets detail='full' on every
+        # call_tool request (relay_full.py), so full results do not depend on the model.
+        return {
+            "maplestats": {
+                "command": "uv",
+                "args": [
+                    "run",
+                    "--directory",
+                    str(REPO),
+                    "python",
+                    "-m",
+                    "tests.maple_test.relay_full",
+                    HOSTED,
+                ],
+                "env": {"MAPLE_RELAY_LOG": os.environ.get("MAPLE_RELAY_LOG", "")},
             }
         }
     if arm == "mcp_statcan":

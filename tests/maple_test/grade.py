@@ -715,6 +715,15 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
             f"| {s['hallucinated']:g} | {s['false_claims']} | {s.get('referrals', 0)} |"
         )
     marked = [s["arm"] for s in summary if s["arm"] in IN_SAMPLE]
+    if version == "v3" and any(s["arm"] == "maplestats-postfix" for s in summary):
+        lines += [
+            "",
+            (
+                "Partly in-sample: `maplestats-postfix` ran server fixes chosen after seeing"
+                " the first v3 runs' misses; MapleStats' comparable v3 score is"
+                " `maplestats-brief` (README)."
+            ),
+        ]
     if marked:
         lines += [
             "",
