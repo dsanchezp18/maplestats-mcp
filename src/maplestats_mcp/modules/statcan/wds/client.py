@@ -40,6 +40,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     CubeSummary,
     CubeSummaryList,
     DimensionMember,
+    FailedCoordinate,
     FailedVector,
     Footnote,
     FullTableDownloadLink,
@@ -315,7 +316,17 @@ def _cube_summary_from_json(obj: dict[str, Any]) -> CubeSummary:
     )
 
 
-async def get_all_cubes_list(*, lite: bool = True) -> CubeSummaryList:
+# The parsed inventory and its folded titles, per method, for the raw list they
+# came from. Building ~8,000 CubeSummary models and NFKD-folding ~16,000 titles
+# took about 245 ms per wds_search_cubes (hosted p50, 2026-11-08), blocking the
+# event loop; the raw list only changes when cached_fetch refetches it (an hour),
+# so both are rebuilt only when a different list object comes back. The memo
+# holds the raw list itself, so its identity cannot be reused by another object.
+_parsed_inventory: dict[str, tuple[Any, list[CubeSummary], list[str]]] = {}
+
+
+async def _inventory(lite: bool) -> tuple[str, bool, list[CubeSummary], list[str]]:
+    """(method, was_cached, parsed cubes, folded "English French" title per cube)."""
     method = "getAllCubesListLite" if lite else "getAllCubesList"
     cache_key = f"wds:{method}"
 
@@ -323,9 +334,19 @@ async def get_all_cubes_list(*, lite: bool = True) -> CubeSummaryList:
         return await _get(method, timeout=constants.CUBES_LIST_TIMEOUT_SECONDS)
 
     data, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_CUBES_LIST_SECONDS, fetch)
-    cubes = [_cube_summary_from_json(obj) for obj in data]
+    memo = _parsed_inventory.get(method)
+    if memo is None or memo[0] is not data:
+        cubes = [_cube_summary_from_json(obj) for obj in data]
+        titles = [f"{_fold(c.cube_title_en)} {_fold(c.cube_title_fr)}" for c in cubes]
+        memo = (data, cubes, titles)
+        _parsed_inventory[method] = memo
+    return method, was_cached, memo[1], memo[2]
+
+
+async def get_all_cubes_list(*, lite: bool = True) -> CubeSummaryList:
+    method, was_cached, cubes, _ = await _inventory(lite)
     return CubeSummaryList(
-        cubes=cubes,
+        cubes=list(cubes),
         total_count=len(cubes),
         returned_count=len(cubes),
         provenance=make_provenance(
@@ -412,8 +433,7 @@ async def search_cubes(
         )
     if offset < 0:
         raise InvalidInput(_m("offset must be 0 or more.", "offset doit être 0 ou plus."))
-    inventory = await get_all_cubes_list(lite=lite)
-    cubes = inventory.cubes
+    method, was_cached, cubes, haystacks = await _inventory(lite)
     note: str | None = None
     if query is not None and query.strip():
         number = _table_number_key(query)
@@ -425,7 +445,6 @@ async def search_cubes(
         else:
             all_words = [w for w in _fold(query).split() if w]
             words = [w for w in all_words if w not in _STOPWORDS] or all_words
-            haystacks = [f"{_fold(c.cube_title_en)} {_fold(c.cube_title_fr)}" for c in cubes]
             scores = [sum(w in h for w in words) for h in haystacks]
             best = max(scores, default=0)
             wanted = len(words) if best == len(words) else best
@@ -462,8 +481,8 @@ async def search_cubes(
         offset=offset,
         provenance=make_provenance(
             source="statcan-wds",
-            url=inventory.provenance.url,
-            cached=inventory.provenance.cached,
+            url=f"{constants.BASE_URL}{method}",
+            cached=was_cached,
             schema_name="statcan.wds.CubeSummaryList",
             freshness=_m("daily at 8:30am ET", "chaque jour à 8 h 30, HE"),
             coverage=note
@@ -1058,28 +1077,141 @@ async def get_data_from_vectors_and_latest_n_periods(
     return _vector_data_set(items, vector_ids, method=method, cached=was_cached, legend=legend)
 
 
+def check_coordinates(coordinates: list[str], latest_n: int) -> list[str]:
+    """The coordinates padded to ten dimensions, in order and without repeats.
+
+    One coordinate keeps the old rules (no inline cap on latest_n). Several are
+    one POST, so they take the vector tool's limits: at most WDS_MAX_LIST pairs
+    (WDS answers HTTP 416 past 300) and INLINE_MAX_OBSERVATIONS observations.
+    """
+    if not coordinates:
+        raise InvalidInput(_m("Pass at least one coordinate.", "Indiquez au moins une coordonnée."))
+    if latest_n < 1:
+        raise InvalidInput(_m("latest_n must be 1 or more.", "latest_n doit être 1 ou plus."))
+    padded = list(dict.fromkeys(_pad_coordinate(c) for c in coordinates))
+    if len(padded) > constants.WDS_MAX_LIST:
+        raise InvalidInput(
+            _m(
+                f"WDS takes at most {constants.WDS_MAX_LIST} coordinates per call, got "
+                f"{len(padded)}; split them into several calls, or use "
+                "wds_get_full_table_download for a whole table.",
+                f"le WDS accepte au plus {constants.WDS_MAX_LIST} coordonnées par appel, reçu "
+                f"{len(padded)} ; répartissez-les sur plusieurs appels, ou utilisez "
+                "wds_get_full_table_download pour un tableau entier.",
+            )
+        )
+    if len(padded) > 1 and (
+        latest_n > constants.QUERY_MAX_LATEST_N
+        or len(padded) * latest_n > constants.INLINE_MAX_OBSERVATIONS
+    ):
+        raise InvalidInput(
+            _m(
+                f"latest_n={latest_n} for {len(padded)} coordinates is too much to return "
+                f"inline (at most {constants.QUERY_MAX_LATEST_N} periods and "
+                f"{constants.INLINE_MAX_OBSERVATIONS:,} observations per call); ask for fewer "
+                "periods or coordinates, or use wds_get_full_table_download.",
+                f"latest_n={latest_n} pour {len(padded)} coordonnées dépasse ce qui peut être "
+                f"renvoyé directement (au plus {constants.QUERY_MAX_LATEST_N} périodes et "
+                f"{constants.INLINE_MAX_OBSERVATIONS:,} observations par appel) ; demandez "
+                "moins de périodes ou de coordonnées, ou utilisez wds_get_full_table_download.",
+            )
+        )
+    return padded
+
+
+async def get_data_from_cube_pid_coords_and_latest_n_periods(
+    product_id: int | str, coordinates: list[str], latest_n: int
+) -> VectorData:
+    """Latest N periods for one or more coordinates of a table, in one POST.
+
+    WDS takes a list of productId/coordinate pairs and answers one envelope per
+    pair, so one coordinate it cannot serve must not fail the rest (the same
+    rule as getDataFromVectorsAndLatestNPeriods). The raw reply is cached an
+    hour under the sorted coordinates, like the vector data, and the pairs are
+    sent in that sorted order, so whichever order a caller uses shares one entry.
+    A served envelope is matched to its coordinate by the coordinate it
+    echoes (padded to ten dimensions, as in every fixture recorded live), or by
+    its position when the echo is missing; a coordinate with no served envelope
+    is explained from the table's metadata (explain_missing_coordinate).
+    """
+    pid = normalize_product_id(product_id)
+    asked = check_coordinates(coordinates, latest_n)
+    ordered = sorted(asked)
+    method = "getDataFromCubePidCoordAndLatestNPeriods"
+    cache_key = f"wds:{method}:{pid}:{ordered}:{latest_n}"
+
+    async def fetch() -> list[dict[str, Any]]:
+        body = [{"productId": pid, "coordinate": c, "latestN": latest_n} for c in ordered]
+        return await _post(method, body)
+
+    (items, was_cached), legend = await asyncio.gather(
+        cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch),
+        observation_legend(),
+    )
+    served: dict[str, dict[str, Any]] = {}
+    for position, item in enumerate(items):
+        try:
+            obj = _unwrap_one(item, method)
+        except (NotFound, UpstreamError):
+            continue  # explained below, from the table's cached metadata
+        echoed = str(obj.get("coordinate") or "")
+        key = _pad_coordinate(echoed) if echoed else ""
+        if key not in asked and position < len(ordered):
+            key = ordered[position]
+        served[key] = obj
+    failed: list[FailedCoordinate] = []
+    for coordinate in asked:
+        if coordinate in served:
+            continue
+        try:
+            await explain_missing_coordinate(pid, coordinate, method)
+        except (NotFound, InvalidInput) as exc:
+            if len(asked) == 1:
+                raise
+            failed.append(FailedCoordinate(product_id=pid, coordinate=coordinate, reason=str(exc)))
+    if not served:
+        raise NotFound(
+            _m(
+                f"{method}: none of the coordinates of table {pid} returned data. "
+                + "; ".join(f.reason for f in failed[:3]),
+                f"{method} : aucune coordonnée du tableau {pid} n'a de données. "
+                + " ; ".join(f.reason for f in failed[:3]),
+            )
+        )
+    series = [_series_from_json(served[c], legend) for c in asked if c in served]
+    limits = [
+        _m(
+            f"{len(failed)} coordinate(s) returned no data, see `failed`",
+            f"{len(failed)} coordonnée(s) sans données, voir `failed`",
+        )
+        if failed
+        else None,
+        legend_note(legend),
+    ]
+    first = series[0]
+    return VectorData(
+        product_id=first.product_id,
+        coordinate=first.coordinate,
+        vector_id=first.vector_id,
+        observations=first.observations if len(asked) == 1 else [],
+        series=series if len(asked) > 1 else None,
+        failed=failed,
+        provenance=make_provenance(
+            source="statcan-wds",
+            url=f"{constants.BASE_URL}{method}",
+            cached=was_cached,
+            schema_name="statcan.wds.VectorData",
+            limits="; ".join(n for n in limits if n) or None,
+            lang=_LANG.get(),
+        ),
+    )
+
+
 async def get_data_from_cube_pid_coord_and_latest_n_periods(
     product_id: int | str, coordinate: str, latest_n: int
 ) -> VectorData:
-    pid = normalize_product_id(product_id)
-    coordinate = _pad_coordinate(coordinate)
-    if latest_n < 1:
-        raise InvalidInput(_m("latest_n must be 1 or more.", "latest_n doit être 1 ou plus."))
-    body = [{"productId": pid, "coordinate": coordinate, "latestN": latest_n}]
-    items, legend = await asyncio.gather(
-        _post("getDataFromCubePidCoordAndLatestNPeriods", body), observation_legend()
-    )
-    try:
-        obj = _unwrap_one(items[0], "getDataFromCubePidCoordAndLatestNPeriods")
-    except (NotFound, UpstreamError):
-        await explain_missing_coordinate(
-            pid, coordinate, "getDataFromCubePidCoordAndLatestNPeriods"
-        )
-    return _vector_data_from_json(
-        obj,
-        source_url=f"{constants.BASE_URL}getDataFromCubePidCoordAndLatestNPeriods",
-        cached=False,
-        legend=legend,
+    return await get_data_from_cube_pid_coords_and_latest_n_periods(
+        product_id, [coordinate], latest_n
     )
 
 

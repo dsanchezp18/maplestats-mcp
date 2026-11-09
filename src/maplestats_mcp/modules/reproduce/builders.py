@@ -1233,12 +1233,14 @@ async def _vectors(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
 
 async def _cube_coord(args: dict[str, Any], result: dict[str, Any]) -> Spec:
-    """wds_get_data_from_cube_coord with a transform: the vector the tool read."""
+    """wds_get_data_from_cube_coord with a transform: the vectors the tool read
+    (one per coordinate, in `series` when several were asked for)."""
     request = transform_request(args)
     if request is None:
         return await _table(args, result)
     latest_n = _count(args.get("latest_n", 12), "latest_n")
-    return await _vectors_transformed([result["vector_id"]], latest_n, result, request)
+    ids = [s["vector_id"] for s in _series_payloads(result)]
+    return await _vectors_transformed(ids, latest_n, result, request)
 
 
 async def _reference_range(args: dict[str, Any], result: dict[str, Any]) -> Spec:
