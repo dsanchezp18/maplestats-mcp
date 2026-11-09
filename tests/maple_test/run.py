@@ -4,9 +4,7 @@ Every arm gets the same model, system prompt and agent loop: headless Claude Cod
 (`claude -p`) with every built-in tool off, run in an empty folder so nothing in this
 repository (the answer key included) is in reach. Only the data access changes:
 
-- maplestats: this repository's server over stdio (`--server-dir` picks the checkout;
-  `--frozen` serves its upstream HTTP from a cassette, see frozen_server.py)
-- maplestats_hosted: the hosted MapleStats server, over HTTP
+- maplestats: this repository's server over stdio (`--server-dir` picks the checkout)
 - mcp_statcan: the community mcp-statcan server's public endpoint
 - pipeworx: Pipeworx's hosted StatCan and Bank of Canada servers, together
 - arose26: arose26's statcan-mcp and bank-of-canada-mcp npm packages, together
@@ -43,8 +41,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import threading
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -74,17 +70,6 @@ ARMS = (
     "opencanada",
     "no_tools",
 )
-
-# Arms whose servers run elsewhere: several can run at once from one laptop. The others start
-# a server on this machine (stdio), and two of those at once compete for its CPU and
-# memory (OpenMCP took 3.3 GB per call), so `run-many` runs them one after another.
-HOSTED_ARMS = frozenset({"maplestats_hosted", "mcp_statcan", "pipeworx", "statcan2", "no_tools"})
-NOT_CONNECTED = "MCP tools were not available."
-# Questions at once a hosted arm tolerates from one machine. Hosted MapleStats allows 120
-# HTTP requests a minute per client (shared/security.py), and one answer makes a dozen or
-# more: three at once got "Rate limit exceeded" on 16 of 64 answers (2026-11-09).
-MAX_WORKERS = {"maplestats_hosted": 1, "maplestats_full": 1}
-CONNECT_RETRIES = 2
 
 OPENCANADA_SERVERS = (
     "statcan",
@@ -136,32 +121,6 @@ Canada the series, for a portal the dataset and portal, for any other publisher 
 
 If something is not published or you cannot check it, say so instead of guessing. Keep \
 the answer short.""",
-    # v4 mixes v1 to v3 questions, so the prompt covers figures, release dates and
-    # documentation, and asks for a closing JSON block the grader reads first (README,
-    # "Structured answers"). Every arm gets the same one.
-    "v4": """\
-You answer questions about Canadian data: figures, release dates, and the data's \
-documentation (series metadata, survey methods, definitions, classifications, open-data \
-portal datasets). Today is {today}.
-
-Use official sources: Statistics Canada, the Bank of Canada, CMHC, other federal, \
-provincial and municipal publishers and their open-data portals, and international \
-bodies where the question names them. With every answer, give its source: for \
-Statistics Canada the table number (such as 14-10-0287-01) and vector (such as \
-v2062815), for the Bank of Canada the series, for a portal the dataset and portal, for \
-any other publisher the dataset or page; and the reference period.
-
-If something is not published or you cannot check it, say so instead of estimating. \
-Keep the answer short.
-
-End the answer with a fenced JSON block (```json ... ```) holding:
-{{"values": [{{"name": "what it is", "value": <number or text>, "unit": "e.g. %, \
-persons, thousands", "period": "reference period or date"}}],
- "sources": [{{"publisher": "...", "id": "table, vector, series or dataset id"}}],
- "not_published": <true if what was asked is not published or does not exist>,
- "abstain": <true if you could not check the answer>,
- "abstain_reason": "<why, or empty>"}}
-Put every figure, date, code or fact you state in "values", numbers as plain numbers.""",
 }
 
 
@@ -170,9 +129,7 @@ def _venv_python(venv: Path) -> Path:
     return venv / "Scripts" / "python.exe" if sys.platform == "win32" else venv / "bin" / "python"
 
 
-def servers(
-    arm: str, server_dir: Path, alts: Path | None = None, frozen: Path | None = None
-) -> dict[str, Any]:
+def servers(arm: str, server_dir: Path, alts: Path | None = None) -> dict[str, Any]:
     if arm in ("openmcp", "candata_mcp", "canada_data_agent", "opencanada") and alts is None:
         raise SystemExit(f"--alts (or MAPLE_TEST_ALTS) is needed for the {arm} arm")
     if arm == "arose26":
@@ -224,25 +181,6 @@ def servers(
         }
     if arm == "statcan2":
         return {"statcan2": {"type": "http", "url": "https://statcan2.ca/api/mcp"}}
-    if arm == "maplestats" and frozen is not None:
-        # Upstream HTTP from a cassette: recorded on a miss, or FROZEN_MODE=replay for none.
-        return {
-            "maplestats": {
-                "command": "uv",
-                "args": [
-                    "run",
-                    "--directory",
-                    str(server_dir),
-                    "python",
-                    str(HERE / "frozen_server.py"),
-                    "--cassette",
-                    str(frozen.resolve()),
-                    "--mode",
-                    os.environ.get("FROZEN_MODE", "auto"),
-                ],
-                "env": {"MAPLE_TRANSPORT": "stdio"},
-            }
-        }
     if arm == "maplestats":
         return {
             "maplestats": {
@@ -384,7 +322,7 @@ def ask(
     response = result.get("result") or proc.stderr.strip() or "no result"
     error = bool(result.get("is_error", True)) or proc.returncode != 0
     if names and not all(any(t.startswith(f"mcp__{n}__") for t in tools) for n in names):
-        error, response = True, f"{NOT_CONNECTED} {response}"
+        error, response = True, "MCP tools were not available. " + response
     return Answer(
         question_id=question["id"],
         arm=arm,
@@ -404,24 +342,6 @@ def ask(
     )
 
 
-def jobs(
-    questions: list[dict[str, Any]], repeat: int, extra_passes: int
-) -> list[tuple[dict[str, Any], int]]:
-    """(question, pass) in the order asked: whole passes, then the extra ones.
-
-    `extra_passes` asks again only the questions the key marks `extra_passes` (v4: those
-    whose outcome changed between passes in earlier runs), after the full passes.
-    """
-    out = [(q, r) for r in range(repeat) for q in questions]
-    out += [
-        (q, r)
-        for r in range(repeat, repeat + extra_passes)
-        for q in questions
-        if q.get("extra_passes")
-    ]
-    return out
-
-
 def run(
     arm: str,
     model: str,
@@ -431,16 +351,8 @@ def run(
     alts: Path | None = None,
     version: str = "v1",
     repeat: int = 1,
-    extra_passes: int = 0,
-    split: str = "all",
-    workers: int = 1,
-    frozen: Path | None = None,
 ) -> Path:
-    questions = [
-        q
-        for q in load_key(version)
-        if (not only or q["id"] in only) and split in ("all", q.get("split", "all"))
-    ]
+    questions = [q for q in load_key(version) if not only or q["id"] in only]
     runs = SUITES[version].runs
     runs.mkdir(exist_ok=True)
     name = label or arm
@@ -450,107 +362,21 @@ def run(
         raise SystemExit(f"{out.name} exists; pass --label to keep both runs")
     if alts is None and os.environ.get("MAPLE_TEST_ALTS"):
         alts = Path(os.environ["MAPLE_TEST_ALTS"])
-    config_servers = servers(arm, server_dir, alts, frozen)
-    if workers > MAX_WORKERS.get(arm, workers):
-        print(f"{arm}: --workers {workers} lowered to {MAX_WORKERS[arm]}", file=sys.stderr)
-        workers = MAX_WORKERS[arm]
-    if workers > 1 and arm not in HOSTED_ARMS:
-        # Each answer starts its own server: several at once compete for this machine and,
-        # for MapleStats, for the publishers' rate limits.
-        print(
-            f"{arm} starts a local server per answer; --workers {workers} may slow it",
-            file=sys.stderr,
-        )
+    config_servers = servers(arm, server_dir, alts)
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         config = None
         if config_servers:
             config = Path(tmp) / "mcp.json"
             config.write_text(json.dumps({"mcpServers": config_servers}))
-        lock = threading.Lock()
         with out.open("w", encoding="utf-8") as fh:
-
-            def one(job: tuple[dict[str, Any], int]) -> None:
-                q, r = job
-                answer = ask(arm, model, q, config, version)
-                # A server that did not connect is not an answer: ask again, up to
-                # CONNECT_RETRIES times (the hosted server missed some starts with four
-                # sessions at once, 2026-11-09). v2 re-asked these by hand.
-                for _ in range(CONNECT_RETRIES):
-                    if not answer.response.startswith(NOT_CONNECTED):
-                        break
-                    answer = ask(arm, model, q, config, version)
-                answer.arm, answer.repeat = name, r
-                with lock:
-                    fh.write(json.dumps(asdict(answer), ensure_ascii=False) + "\n")
-                    fh.flush()
-                state = "ERROR" if answer.is_error else f"{len(answer.tool_calls)} calls"
-                print(f"{q['id']}#{r} {name}: {state}, {answer.duration_s}s", file=sys.stderr)
-
             # Whole passes, not each question three times in a row: a source that is down
             # for a minute then costs one answer per pass, not three of one question.
-            with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-                list(pool.map(one, jobs(questions, repeat, extra_passes)))
+            for r in range(repeat):
+                for q in questions:
+                    answer = ask(arm, model, q, config, version)
+                    answer.arm, answer.repeat = name, r
+                    fh.write(json.dumps(asdict(answer), ensure_ascii=False) + "\n")
+                    fh.flush()
+                    state = "ERROR" if answer.is_error else f"{len(answer.tool_calls)} calls"
+                    print(f"{q['id']}#{r} {name}: {state}, {answer.duration_s}s", file=sys.stderr)
     return out
-
-
-def run_many(arms: list[str], workers: int = 1, **kwargs: Any) -> list[Path]:
-    """Several arms at once: every hosted arm in parallel, local-server arms in one lane.
-
-    Hosted arms (HOSTED_ARMS) share nothing on this machine but the CLI, so they run side
-    by side, each with `workers` questions at a time. Arms that start a server here run
-    one after another in a lane of their own, beside the hosted ones.
-    """
-    hosted = [a for a in arms if a in HOSTED_ARMS]
-    local = [a for a in arms if a not in HOSTED_ARMS]
-
-    def lane() -> list[Path]:
-        return [run(a, workers=1, **kwargs) for a in local]
-
-    with ThreadPoolExecutor(max_workers=len(hosted) + 1) as pool:
-        futures = [pool.submit(run, a, workers=workers, **kwargs) for a in hosted]
-        lane_future = pool.submit(lane) if local else None
-        paths = [f.result() for f in futures]
-        if lane_future is not None:
-            paths += lane_future.result()
-    return paths
-
-
-def seconds_per_answer(arm: str) -> float | None:
-    """Mean seconds per answer in an arm's earlier runs (v2 to v4), errors left out."""
-    durations = []
-    for version in ("v2", "v3", "v4"):
-        for path in SUITES[version].runs.glob("*.jsonl"):
-            for line in path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                r = json.loads(line)
-                if not r["is_error"] and r["arm"].split("-")[0] == arm:
-                    durations.append(r["duration_s"])
-    return sum(durations) / len(durations) if durations else None
-
-
-def estimate(version: str, repeat: int, extra_passes: int, workers: int) -> list[str]:
-    """Markdown: expected wall time per arm, from its earlier runs' seconds per answer."""
-    questions = load_key(version)
-    answers = len(jobs(questions, repeat, extra_passes))
-    volatile = sum(bool(q.get("extra_passes")) for q in questions)
-    lines = [
-        (
-            f"{len(questions)} questions, {answers} answers ({repeat} full pass(es), "
-            f"{extra_passes} extra on the {volatile} volatile questions). Local-server arms run "
-            "one question at a time."
-        ),
-        "",
-        f"| Arm | Seconds per answer | One at a time | {workers} at a time |",
-        "| :-- | --: | --: | --: |",
-    ]
-    for arm in ARMS:
-        s = seconds_per_answer(arm)
-        if s is None:
-            lines.append(f"| {arm} | – | – | – |")
-            continue
-        w = min(workers, MAX_WORKERS.get(arm, workers)) if arm in HOSTED_ARMS else 1
-        lines.append(
-            f"| {arm} | {s:.0f} | {answers * s / 60:.0f} min | {answers * s / 60 / w:.0f} min |"
-        )
-    return lines
