@@ -504,7 +504,8 @@ RULES: tuple[FitnessRule, ...] = (
             "unreliable or based on fewer than 4 responding entities. The survey is taken in "
             "October. For rent growth use CMHC's published percent change of average rent, "
             "computed on structures common to both years; the gap between two years' "
-            "average rents also reflects new and changed units in the sample."
+            "average rents also reflects new and changed units in the sample. Definitions "
+            "and CMHC's thresholds: docs://cmhc/rms-methodology (docs_read_resource)."
         ),
         note_fr=(
             "La SCHL attribue à chaque estimation de l'Enquête sur les logements locatifs "
@@ -514,7 +515,8 @@ RULES: tuple[FitnessRule, ...] = (
             "des loyers, prenez la variation en pourcentage du loyer moyen publiée par la "
             "SCHL, calculée sur les immeubles présents les deux années; l'écart entre les "
             "loyers moyens de deux années reflète aussi les logements nouveaux ou modifiés "
-            "de l'échantillon."
+            "de l'échantillon. Définitions et seuils de la SCHL : "
+            "docs://cmhc/fr/methodologie-ell (docs_read_resource)."
         ),
         sources=(
             (

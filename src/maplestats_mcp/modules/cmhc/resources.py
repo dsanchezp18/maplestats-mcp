@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from fastmcp.resources import resource
 
+from maplestats_mcp.modules.cmhc.methodology import RMS_METHODOLOGY_DOC, RMS_METHODOLOGY_DOC_FR
+
 _WELL_KNOWN_CATEGORIES_DOC = """\
 # Well-known CMHC HMIP categories
 
@@ -96,10 +98,13 @@ _GOTCHAS_DOC = """\
   Average Rent" tables); `"n/a"` is a third, plainer not-applicable
   marker. All three surface as `value: null` with the raw marker
   preserved in `flag` - check for `null` before doing arithmetic on a
-  cell's value. **Separately, a bare `"-"` is a real, counted zero, not
-  a suppressed value** - it surfaces as `value: 0`, not `null`.
+  cell's value. **Separately, a bare `"-"` means no units exist in the
+  universe for that category (CMHC's definition), not a suppressed
+  value** - it surfaces as `value: 0`, not `null`.
 - **The reliability flag legend**: `a` = Excellent, `b` = Very good,
-  `c` = Good, `d` = Poor (use with caution). This flag is only present
+  `c` = Good, `d` = Poor (use with caution); each table result's
+  `flag_legend` explains the codes it carries, and
+  docs://cmhc/rms-methodology has CMHC's thresholds and release rules. This flag is only present
   on statistically-sampled survey tables (e.g. Rental Market Survey
   vacancy rates/rents) - a census-style administrative table (e.g.
   Starts and Completions Survey, which counts every issued permit
@@ -267,10 +272,14 @@ _GOTCHAS_DOC_FR = """\
   troisième marqueur, plus simple, de non-applicabilité. Les trois
   ressortent en `value: null`, le marqueur brut étant conservé dans
   `flag` : vérifiez si `value` est nul avant tout calcul. **À part, un
-  simple `"-"` est un vrai zéro dénombré, pas une valeur supprimée** :
+  simple `"-"` signifie qu'aucun logement n'existe dans l'univers pour
+  cette catégorie (définition de la SCHL), pas une valeur supprimée** :
   il ressort en `value: 0`, pas en `null`.
 - **Légende de l'indicateur de fiabilité** : `a` = excellente, `b` =
-  très bonne, `c` = bonne, `d` = passable (à utiliser avec prudence).
+  très bonne, `c` = bonne, `d` = faible (à utiliser avec prudence) ; le
+  `flag_legend` de chaque résultat explique les codes qu'il contient, et
+  docs://cmhc/fr/methodologie-ell donne les seuils et les règles de
+  diffusion de la SCHL.
   Cet indicateur n'existe que dans les tableaux d'enquête par sondage
   (par exemple les taux d'inoccupation et les loyers de l'Enquête sur
   les logements locatifs) ; un tableau de type recensement ou
@@ -337,3 +346,21 @@ def cmhc_gotchas_doc_fr() -> str:
     """Particularités connues du HMIP de la SCHL, faciles à manquer.
     Version française de docs://cmhc/gotchas."""
     return _GOTCHAS_DOC_FR
+
+
+@resource("docs://cmhc/rms-methodology")
+def cmhc_rms_methodology_doc() -> str:
+    """CMHC Rental Market Survey methodology: October timing, scope (private
+    structures of 3+ units, secondary rental market), vacancy and availability
+    definitions, a/b/c/d reliability codes, suppression and release rules.
+    French version: docs://cmhc/fr/methodologie-ell."""
+    return RMS_METHODOLOGY_DOC
+
+
+@resource("docs://cmhc/fr/methodologie-ell")
+def cmhc_rms_methodology_doc_fr() -> str:
+    """Méthodologie de l'Enquête sur les logements locatifs de la SCHL :
+    octobre, champ, définitions de l'inoccupation et de la disponibilité,
+    codes de fiabilité, suppression et diffusion.
+    Version française de docs://cmhc/rms-methodology."""
+    return RMS_METHODOLOGY_DOC_FR

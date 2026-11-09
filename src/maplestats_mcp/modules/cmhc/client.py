@@ -134,6 +134,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.cmhc import constants
+from maplestats_mcp.modules.cmhc.methodology import FLAG_MEANINGS
 from maplestats_mcp.modules.cmhc.schemas import (
     CategoryList,
     CategoryOption,
@@ -170,6 +171,18 @@ def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
 def _text(en: str, fr: str, lang: str) -> str:
     """The English text, or the French one with no-break spaces."""
     return french_spacing(fr) if lang == "fr" else en
+
+
+def _flag_legend(rows: list[TableDataRow], lang: str) -> dict[str, str]:
+    """The meaning of every cell flag the rows carry, in CMHC's order.
+
+    The CSV's own Notes block holds a legend only for some tables, so a
+    reader could not always tell what a "d" or "**" beside a value means.
+    """
+    present = {cell.flag for row in rows for cell in row.values.values() if cell.flag}
+    return {
+        code: _text(en, fr, lang) for code, (en, fr) in FLAG_MEANINGS.items() if code in present
+    }
 
 
 def _error(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> ValueError:
@@ -1050,6 +1063,7 @@ async def get_table_data(
         notes=parsed["notes"],
         available_filters=parsed["available_filters"],
         applied_filters=filters,
+        flag_legend=_flag_legend(parsed["rows"], lang),
         provenance=make_provenance(
             source="cmhc",
             url=export_url,
