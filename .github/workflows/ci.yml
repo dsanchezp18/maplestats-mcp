@@ -81,11 +81,14 @@ jobs:
         id: setup-r
         with:
           r-version: release
+      # The runner image stopped shipping Julia (2026-11-09), so install it.
+      - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
+        with:
+          version: "1"
       # The caches are keyed on the package lists, the R or Julia version and
       # the month, so the packages are installed afresh at least once a month
-      # and the tests do not stay on old releases. The runner image ships
-      # Julia itself; the Julia standard libraries (Dates, Downloads, Unicode)
-      # need no install.
+      # and the tests do not stay on old releases. The Julia standard
+      # libraries (Dates, Downloads, Unicode) need no install.
       - name: Cache keys
         id: keys
         run: |
@@ -186,12 +189,15 @@ jobs:
           error-on: '"warning"'
 
   # The Julia client (clients/julia/) is its own package; its tests use
-  # recorded responses and never reach the network. The runner image ships
-  # Julia.
+  # recorded responses and never reach the network.
   client-julia:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # The runner image stopped shipping Julia (2026-11-09), so install it.
+      - uses: julia-actions/setup-julia@da908477b5db94c10ffce8cfea9f2b3b9d5db687 # v3.0.3
+        with:
+          version: "1"
       - name: JuliaFormatter
         run: julia --startup-file=no -e 'using Pkg; Pkg.activate(temp=true); Pkg.add(name="JuliaFormatter", version="1"); using JuliaFormatter; format("clients/julia") || (run(`git diff`); exit(1))'
       - name: Tests
