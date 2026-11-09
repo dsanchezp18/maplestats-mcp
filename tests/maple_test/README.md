@@ -659,6 +659,216 @@ two OpenMCP answers read field types from Données Québec's copy, where every f
 On T-15, three answers recalled CMHC's code D as "Fair"; that was memory, and the key, read
 from CMHC's page, stands.
 
+## Version 4: one set, fewer reviews, faster runs (November 2026)
+
+A full v2 comparison took hours per arm and a hand review of every answer (1,647 for the
+1105 runs). v4 keeps what separates servers and spends a person's time only where the
+graders disagree.
+
+### The questions
+
+v4 asks no new questions. `build_key_v4.py` keeps 47 of the 112 asked in v1 to v3 and lists
+every one of the 112 as kept or dropped, with the reason:
+
+- **Near-duplicates go.** One question per skill and source: C-09 stands for the CPI
+  questions (M-06, C-06, C-07, C-08), C-01 for the LFS rates (M-01, C-02, C-03), X-15 for the
+  drug lookups (X-13, X-14), R-04 for the monthly release dates (R-05, R-07, R-08), and so on.
+- **Questions that separate no one go.** `item_analysis.py` reads every hand-reviewed grade
+  of v1, v2 and v3 (`overrides_v3.json`, #217), and gives each question each comparable
+  arm's share of correct answers (`v4/item_analysis.json`). A question every comparable arm
+  always got right (M-01, M-03, C-17, C-22, T-04, T-08 to T-11, T-16, T-23, ...) or always
+  got wrong (X-04, T-03, T-05, T-07, T-18, T-35) is dropped. The model alone and in-sample
+  MapleStats runs are not comparable arms; `maplestats-release` counts on the release
+  questions, which it was first to answer.
+- **v3 rests on two servers.** Only MapleStats (`maplestats-brief`, `maplestats-full`) and
+  OpenMCP ran it, so a v3 ceiling means both got it right every time. The hand review moved
+  several: T-04, T-16, T-23 and T-27 became ceilings and were dropped; T-14, T-22 and T-28
+  stopped being ceilings, or were wrongly graded, and were kept in their place.
+- **Coverage is stratified** by publisher and by kind of answer:
+
+| Source | Dev | Test | | Kind | Dev | Test |
+| :-- | --: | --: | :-- | :-- | --: | --: |
+| Statistics Canada | 11 | 11 | | Figure | 7 | 8 |
+| Bank of Canada | 2 | 3 | | Comparison | 3 | 2 |
+| CMHC | 1 | 2 | | Flag | 3 | 1 |
+| Provincial portals | 2 | 2 | | Documentation | 6 | 8 |
+| Municipal portals | 1 | 1 | | Refusal or not published | 2 | 4 |
+| Federal (ECCC, Health Canada, IRCC, open.canada.ca) | 3 | 4 | | Release date | 1 | 2 |
+| International (World Bank, BIS) | 2 | 2 | | | | |
+
+Each question is copied unchanged from its source key, so it grades exactly as before;
+`test_maple_test_v4.py` checks that, and that the committed key is what the builder makes.
+
+```bash
+uv run python -m tests.maple_test.item_analysis          # v4/item_analysis.json
+uv run python -m tests.maple_test.build_key_v4 --check   # stale key, or a missing stratum
+```
+
+The source keys are still rebuilt from the publishers by their own `--check` builders.
+
+### Dev and test, and the rotation rule
+
+The 47 are split into a public **dev** set (22) and a held-out **test** set (25). The split
+is made by a salted hash of each id, alternating within each source, with the first salt that
+puts every kind of answer in both sets (`SALT = 2`, fixed from now on): nobody chose a
+question's set, and it never reshuffles.
+
+1. Fixes are tuned on **dev** only. Read dev answers, write caveats for them, re-run dev.
+2. **Test** answers are graded by the grader and the judge. A person reads only the flagged
+   ones and records the outcome; a test answer is never the reason for a change to a server.
+3. When a test question does motivate a change anyway, it moves to dev in the next key
+   (v4.1), and a new question of the same source and kind, written and keyed before any
+   server answers it, takes its place in test. The builder's `MOVED_TO_DEV` table records
+   the move and what it motivated; no other question changes set.
+4. A server's score on test is out-of-sample only for questions not in its `in_sample_for`.
+
+**Today every v4 question is in-sample for MapleStats** (`in_sample_for: ["maplestats"]`):
+MapleStats was changed after reading v1 and v2 answers, the release history after R-06, and
+v3's `maplestats-postfix` after v3. Comparisons with other servers are fair on the questions;
+a MapleStats score is not out-of-sample until rule 3 has replaced the test set with fresh
+questions.
+
+### Structured answers
+
+The v4 prompt (`run.PROMPTS["v4"]`) covers figures, release dates and documentation, and asks
+the answer to end with a fenced JSON block: each value with its unit and reference period,
+the sources (table, vector, series or dataset id), `not_published`, and `abstain` with a
+reason. `grade.grade_v4` reads the block first and falls back to the regex grader on the
+whole answer:
+
+- the block settles an answer only in its favour (every expected value, date or fact in its
+  values, the right call for a comparison, `not_published` on a refusal question) or as a
+  plain abstention (`abstain` with no values);
+- anything else goes to the regex grader, so a block never makes an answer worse than its
+  prose. Each grade records its `basis` (`json` or `regex`).
+
+This removes the commonest false miss in v3, a refusal phrased in the source's own words
+("there's no 2024 file").
+
+### The judge, and what a person reads
+
+`judge.py` asks an LLM judge (headless Claude Code, `claude-sonnet-5-5`, no tools, a JSON
+schema) to grade each answer with the key, the rules of the v2 and v3 reviews, and a rubric
+for its kind of answer. A person reads an answer only when the judge's outcome differs from
+the deterministic grade, its confidence is below 0.7, or it failed. Flagged answers go to
+`v4/review_queue.md`, grouped by question, shuffled, arm hidden; a person settles each in
+`overrides_v4.json` as before (`"ref:<ref>"` or `"<arm>/<id>#<pass>"`). The judge never
+changes a grade by itself, and the citation checks (`grade --verify`) are unchanged.
+
+**Calibration** (`calibrate.py`) against the hand reviews of v1, v2 and v3, on the questions
+v4 keeps, each version on its own. v1 and v3 are small enough to judge every answer; v2's
+1,653 answers are sampled: 150 of the 273 whose regex grade a person changed and 150 of the
+1,380 they did not, weighted back to those sizes (estimates; the sample counts are exact).
+
+| Version | Answers | Judge agrees with the person | Regex grader agrees | Flagged for a person | Wrong and not flagged | Grader errors flagged | USD |
+| :-- | --: | --: | --: | --: | --: | --: | --: |
+| v1 | 32 | 65.6% (21 of 32) | 62.5% (20 of 32) | 53.1% (17) | 3.1% (1) | 91.7% (11 of 12) | 0.27 |
+| v2 | 1,653 | 91.4% (sample 262 of 300) | 83.5% (1,380 of 1,653) | 24.8% | 1.2% | 92.7% (139 of 150) | 2.59 |
+| v3 | 180 | 92.8% (167 of 180) | 71.1% (128 of 180) | 33.9% (61) | 0.6% (1) | 98.1% (51 of 52) | 1.81 |
+
+Judge `claude-sonnet-5-5`, flagged when it disagrees with the deterministic grade or its
+confidence is below 0.7. Read v2's row as: a person reads about a quarter of the answers
+instead of all of them, and about 1.2% of grades stay wrong without a person seeing them,
+against 16.5% for the regex grader alone. Applied to the 1,647 answers of the 1105 review,
+that is about 408 answers to read. On v3, where answers are text, the regex grader is wrong
+on 28.9% and the judge catches 51 of those 52.
+
+**v1's row is mostly key drift, not the judge.** StatCan revised August 2026 trade on
+2026-11-04 and the v1 key was re-keyed (M-09: 4,198.8 to 4,951.3 million); the v1 answers
+were reviewed on Nov. 2 against the old value. The judge, given today's key, grades six of
+them hallucinated where the review said correct. Without those six, the judge agrees on 21
+of 26 (80.8%). The frozen MapleStats arm and a key built once per comparison are the fix.
+
+On v1 and v2 together, `claude-haiku-5-5` agrees 87.3% of the time (Sonnet 91.6%), costs a
+thirteenth as much (USD 0.20 against 2.63 for 300 answers), but flags 35.1% of answers
+against Sonnet's 22.2%; a person's time is what v4 is saving, so Sonnet is the default.
+
+The remaining disagreements cluster where the review rule is finer than the key: A-03
+(another published series, all persons rather than excluding zero incomes: partial by the
+review, hallucinated by the judge), X-16 (a drug's company named without its cancelled
+status), X-12 and X-24 (one of two figures, or a rounded one). The rubric was not tuned on
+these disagreements: tuning it on the hand reviews would make the calibration in-sample,
+as the rule at the top of this file says for servers. Verdicts are cached in
+`v4/judge_cache.jsonl`; the per-version reports are `v4/calibration_*.json`.
+
+### Speed
+
+- **One pass,** plus two extra passes only for the 6 questions whose outcome changed between
+  passes for at least 40% of the arms (`extra_passes` in the key): 59 answers an arm, against
+  183 for v2's three passes of 61.
+- **Questions at once** for hosted arms (`--workers`), and **arms at once** (`run-many`):
+  hosted arms run side by side, arms that start a server on this laptop run one after
+  another beside them.
+- **Frozen upstream data** for the MapleStats arm (`--frozen CASSETTE`, `frozen_server.py`):
+  the server's HTTP is recorded once and replayed, so reruns neither drift nor hit StatCan
+  WDS again. `FROZEN_MODE=replay` fails any request not recorded. Other servers cannot be
+  frozen this way.
+- A server that did not connect is asked again, up to twice, instead of becoming a run error.
+
+Expected wall time per arm (`python -m tests.maple_test estimate`), from each arm's seconds
+per answer in its earlier runs, for 59 answers:
+
+| Arm | Seconds per answer | One at a time | Four at a time | v2's 183 answers, one at a time |
+| :-- | --: | --: | --: | --: |
+| MapleStats (local, stdio) | 21 | 21 min | 21 min (local server) | 64 min |
+| MapleStats hosted | 21 | 21 min | 21 min (capped at one: rate limit) | 64 min |
+| mcp-statcan | 14 | 14 min | 4 min | 43 min |
+| Pipeworx | 18 | 18 min | 4 min | 55 min |
+| statcan2 | 14 | 14 min | 4 min | 43 min |
+| arose26 | 13 | 13 min | 13 min (local server) | 40 min |
+| canada-data-agent | 15 | 15 min | 15 min (local server) | 46 min |
+| CanData-MCP | 32 | 31 min | 31 min (local server) | 98 min |
+| OpenCanadaPublicDataMCP | 33 | 32 min | 32 min (local server) | 101 min |
+| mcp-canada | 43 | 43 min | 43 min (local server) | 131 min |
+| OpenMCP | 89 | 88 min | 88 min (local server) | 271 min |
+| No data tool | 10 | 10 min | 2 min | 31 min |
+
+With `run-many`, the hosted arms run beside the local lane, so a full comparison of all
+twelve arms takes about as long as the local lane: roughly 4.1 hours, against about 16.5
+hours one arm after another at v2's 183 answers each. These are means from earlier runs;
+OpenMCP's depends on this laptop's memory.
+
+```bash
+uv run python -m tests.maple_test run --version v4 --arm maplestats_hosted --workers 3
+uv run python -m tests.maple_test run-many --version v4 --arms mcp_statcan statcan2 arose26 --workers 3
+uv run python -m tests.maple_test grade --version v4 --judge     # results_v4.md, v4/review_queue.md
+uv run python -m tests.maple_test.calibrate                     # judge vs the v1 and v2 reviews
+uv run pytest tests/test_maple_test_v4.py
+```
+
+### Dry run, MapleStats hosted, 2026-11-09
+
+All 47 questions through the hosted server (`maplestats_hosted`), one at a time, one pass plus
+two extra passes on the volatile questions: 61 answers (the run started under the 48-question
+key; the four questions dropped after v3's review are left out, and the three added were
+asked the same day). MapleStats is **in-sample** on every v4 question, so this checks the
+pipeline, not MapleStats' accuracy; it is not comparable with other arms or with v2.
+
+| Measure | Result |
+| :-- | --: |
+| Correct (each question once; 43.7 of 47) | 92.9% |
+| Dev (21 of 22) / test (22.7 of 25) | 95.5% / 90.7% |
+| Answers correct (57 of 61) | 93.4% |
+| USD per answer (2.96 for 61) | 0.049 |
+| USD per question (2.96 for 47) | 0.063 |
+| Seconds per answer | 19.8 |
+| Wall time (64 answers, then 5 added) | 22.7 min, then 1.5 min |
+| Answers with a JSON block | 100.0% (61 of 61) |
+| Grades decided by the JSON block | 77.0% (47 of 61) |
+| Flagged for a person | 9.8% (6 of 61) |
+| Judge cost | USD 0.58 |
+
+The first attempt asked three questions at once and is set aside in `runs_v4/paused/`: the
+hosted server's limit of 120 requests a minute per client answered "Rate limit exceeded" on
+16 of 64 answers, which then declined (70.8% correct). `MAX_WORKERS` now keeps hosted
+MapleStats to one question at a time; the run above had no rate-limited answer and no run
+error. Hosted servers of other publishers may have limits of their own; start them with
+`--workers 1` until a clean run shows they take more.
+
+One unflagged miss shows what the triage leaves: M-09's "about $5.0 billion" (key
+$4,951.3 million, ±0.5) was graded hallucinated by both the grader and the judge (confidence
+0.70, at the threshold); a person might call it partial.
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP

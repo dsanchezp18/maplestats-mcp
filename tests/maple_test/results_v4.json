@@ -1,0 +1,4784 @@
+{
+  "benchmark": "maple_test_v4",
+  "answers": [
+    {
+      "run": {
+        "question_id": "A-02",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:52:42+00:00",
+        "duration_s": 27.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.093912,
+        "input_tokens": 20,
+        "output_tokens": 2002,
+        "cache_read_tokens": 100520,
+        "cache_creation_tokens": 15950
+      },
+      "grade": {
+        "question_id": "A-02",
+        "outcome": "correct",
+        "reason": "flagged the problem",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100203",
+          "14100204"
+        ],
+        "vectors_cited": [
+          "v1742415"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.5,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            1742415
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1742415
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100064,
+            14100203,
+            14100204
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "2ed3ab6444",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.85,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives the NAICS 912 Alberta 2025 annual average of $1,702.65, which matches the key's alternative. It correctly notes that the LFS table lacks this industry. It also says that the monthly table has data to August 2026, which it did not fetch.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.00902
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "A-03",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:53:10+00:00",
+        "duration_s": 22.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.06333219999999999,
+        "input_tokens": 18,
+        "output_tokens": 1228,
+        "cache_read_tokens": 72682,
+        "cache_creation_tokens": 10937
+      },
+      "grade": {
+        "question_id": "A-03",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "11100239"
+        ],
+        "vectors_cited": [
+          "v107680657",
+          "v107680658"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            107680657,
+            107680658
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            107680657,
+            107680658
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            11100239
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "9088639a31",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives an average of $66,100 and a median of $48,100 for 2024. Both match the key within the \u00b1$100 tolerance. It also notes that the median is the typical income.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007010000000000001
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "A-05",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:53:32+00:00",
+        "duration_s": 12.0,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__plan_query"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0297716,
+        "input_tokens": 6,
+        "output_tokens": 593,
+        "cache_read_tokens": 14096,
+        "cache_creation_tokens": 5605
+      },
+      "grade": {
+        "question_id": "A-05",
+        "outcome": "correct",
+        "reason": "JSON: not_published",
+        "recall": 1.0,
+        "tables_cited": [
+          "11100090"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            11100090,
+            11100135
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": false,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "1bfe842c5d",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says Statistics Canada doesn't publish an Alberta rate for people with disabilities. It notes that 11-10-0090-01 is Canada only. It gives no Alberta figure. It offers the national rate or a custom tabulation as alternatives, which matches the key. The opening phrase \"couldn't find\" is followed by an explicit statement that no rate is published.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008856
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-01",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:53:44+00:00",
+        "duration_s": 17.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.043733900000000006,
+        "input_tokens": 10,
+        "output_tokens": 1025,
+        "cache_read_tokens": 30119,
+        "cache_creation_tokens": 7613
+      },
+      "grade": {
+        "question_id": "C-01",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [
+          "v2063762",
+          "v2063951"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            2063762,
+            2063951
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2063762,
+            2063951
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "f18e98133e",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "Ontario 60.1 and Quebec 59.9 match the key, and Ontario is correctly named as higher.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008752
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-05",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:54:02+00:00",
+        "duration_s": 19.6,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0524816,
+        "input_tokens": 12,
+        "output_tokens": 1268,
+        "cache_read_tokens": 43376,
+        "cache_creation_tokens": 8860
+      },
+      "grade": {
+        "question_id": "C-05",
+        "outcome": "partial",
+        "reason": "missing or off: vacancies",
+        "recall": 0.5,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            1212389364,
+            1212389365
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1212389364,
+            1212389365
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100371
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "e0220fd692",
+      "judge": {
+        "outcome": "hallucinated",
+        "confidence": 0.72,
+        "false_claim": "August 2026 job vacancies were about 529,415 (unadjusted, Table 14-10-0371-01), when the key's seasonally adjusted figure is 507,220.",
+        "referral": false,
+        "reason": "The vacancy count of 529,415 is about 4% above the key's 507,220, well outside the 0.1% tolerance. The answer used the unadjusted table instead of the seasonally adjusted monthly table 14-10-0432. The rate of 2.9% is within \u00b10.1 of 2.8%, but the wrong vacancy value is presented as the answer, so it is graded hallucinated rather than partial.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011582
+      },
+      "needs_review": true
+    },
+    {
+      "run": {
+        "question_id": "C-09",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:54:21+00:00",
+        "duration_s": 26.8,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.09643020000000001,
+        "input_tokens": 12,
+        "output_tokens": 2482,
+        "cache_read_tokens": 52542,
+        "cache_creation_tokens": 16583
+      },
+      "grade": {
+        "question_id": "C-09",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "18100004"
+        ],
+        "vectors_cited": [
+          "v41691379"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            41691379
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41691379
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100004
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "9413d7e986",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.8,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer names PEI as highest at 5.7%. That matches the key's rate of 5.7 within \u00b10.1. The key does not name the province, so I assumed PEI is right. The index figures (177.6 against about 168.1) are consistent with that rate. The other values are context only.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011566
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-11",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:54:48+00:00",
+        "duration_s": 12.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0302965,
+        "input_tokens": 6,
+        "output_tokens": 827,
+        "cache_read_tokens": 14265,
+        "cache_creation_tokens": 5147
+      },
+      "grade": {
+        "question_id": "C-11",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "36100104"
+        ],
+        "vectors_cited": [
+          "v62305752"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            62305752
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            62305752
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "847033f743",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 3.3% annualized for Q2 2026, which matches the key (3.3 \u00b10.1). It also gives a quarterly change of about 0.8%, which matches the reference value. Its levels are consistent: 2524127/2503604 is about 1.0082, and raised to the fourth power that is about 3.3%. The answer says it computed the figure from levels, but the value is still right.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008735999999999999
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "M-09",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:55:00+00:00",
+        "duration_s": 18.7,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0808996,
+        "input_tokens": 10,
+        "output_tokens": 1342,
+        "cache_read_tokens": 34756,
+        "cache_creation_tokens": 15996
+      },
+      "grade": {
+        "question_id": "M-09",
+        "outcome": "hallucinated",
+        "reason": "figures do not match: balance_aug_2026_millions, balance_jul_2026_millions",
+        "recall": 0.0,
+        "tables_cited": [
+          "12100011"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            12100011
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "0aa3328b9a",
+      "judge": {
+        "outcome": "hallucinated",
+        "confidence": 0.7,
+        "false_claim": "The August 2026 merchandise trade surplus was about $5.0 billion (not 4,951.3 million within \u00b10.5 million), with an original figure of $4.2 billion.",
+        "referral": false,
+        "reason": "The key requires 4951.3 million \u00b10.5. The answer gives $5.0 billion, which is rounded and outside the tolerance. It also gives an inconsistent original-release surplus of $4.2 billion and no July value. The headline is wrong at the required precision.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011859999999999999
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "R-03",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:55:19+00:00",
+        "duration_s": 20.7,
+        "tool_calls": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0408622,
+        "input_tokens": 12,
+        "output_tokens": 1498,
+        "cache_read_tokens": 35982,
+        "cache_creation_tokens": 5565
+      },
+      "grade": {
+        "question_id": "R-03",
+        "outcome": "correct",
+        "reason": "JSON: every expected date",
+        "recall": 1.0,
+        "tables_cited": [
+          "36100711"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            36100402,
+            36100434,
+            36100711
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "ddd5a6489f",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 1 May 2026 and table 36-10-0711-01, which matches the key. It does not name 36-10-0402 as the 2025 table. It only says it didn't check that table. The extra detail about 36-10-0434-03 and 1.6% growth is context and not checked against the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008468
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "R-04",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:55:39+00:00",
+        "duration_s": 12.4,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0246396,
+        "input_tokens": 8,
+        "output_tokens": 718,
+        "cache_read_tokens": 20556,
+        "cache_creation_tokens": 3847
+      },
+      "grade": {
+        "question_id": "R-04",
+        "outcome": "correct",
+        "reason": "JSON: every expected date",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "aa2504cc57",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives November 6, 2026, which matches the key's exact date. The December 4 date for the next release is context only.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008126
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-23",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:55:52+00:00",
+        "duration_s": 21.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__statcan_census_profile_search_characteristic",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0374771,
+        "input_tokens": 12,
+        "output_tokens": 1218,
+        "cache_read_tokens": 35291,
+        "cache_creation_tokens": 5436
+      },
+      "grade": {
+        "question_id": "X-23",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "10a4826787",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 48.1%, 557,970 renter households and 1,160,890 total households. All three match the key for City of Toronto CSD 3520005. The 602,925 owner count is derived from the other two and is not required by the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.00812
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-10",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:56:13+00:00",
+        "duration_s": 11.0,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.024417,
+        "input_tokens": 6,
+        "output_tokens": 496,
+        "cache_read_tokens": 14130,
+        "cache_creation_tokens": 4508
+      },
+      "grade": {
+        "question_id": "C-10",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "CPI_COMMON"
+          ],
+          "valet_supporting": [
+            "CPI_COMMON"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "boc",
+      "split": "dev",
+      "ref": "ac2c244b9f",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 2.4% for September 2026, which matches the key (2.4, tolerance \u00b10.1). It correctly describes the series as a year-over-year rate. The August and July figures are extra context and the key doesn't require them.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.0070279999999999995
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-19",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:56:24+00:00",
+        "duration_s": 11.0,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0249889,
+        "input_tokens": 8,
+        "output_tokens": 601,
+        "cache_read_tokens": 20749,
+        "cache_creation_tokens": 4222
+      },
+      "grade": {
+        "question_id": "C-19",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "V39079"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            39079
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            39079
+          ],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "V39079"
+          ],
+          "valet_supporting": [
+            "V39079"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "boc",
+      "split": "dev",
+      "ref": "a57e55625a",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.85,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 2.50% for October 30, 2026, which matches the key's 2.5. The extra detail that the rate rose from 2.25% effective October 29 is consistent with the Valet effective-date convention. I could not verify the 2.25% prior rate against the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009472
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-15",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:56:35+00:00",
+        "duration_s": 14.0,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0383776,
+        "input_tokens": 8,
+        "output_tokens": 1044,
+        "cache_read_tokens": 20736,
+        "cache_creation_tokens": 6462
+      },
+      "grade": {
+        "question_id": "T-15",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "cmhc",
+      "split": "test",
+      "ref": "fe7d9fcb4e",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives D as \"Poor (use with caution)\" and a minimum of 4 responding entities. Both match the key. The extra CV details are not contradicted by the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008976
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-20",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:56:49+00:00",
+        "duration_s": 16.3,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.047003199999999995,
+        "input_tokens": 10,
+        "output_tokens": 1357,
+        "cache_read_tokens": 28412,
+        "cache_creation_tokens": 7643
+      },
+      "grade": {
+        "question_id": "T-20",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "provincial",
+      "split": "test",
+      "ref": "8b41b192ee",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "reason": "The answer gives BC Wildfire Service and Open Government Licence - British Columbia. It says there is no CSV and the DataStore is not active. It lists the formats as KMZ, KML, WMS, Oracle SDE and a BCGW custom download, which match the key.",
+        "referral": false,
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011868
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-25",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:57:25+00:00",
+        "duration_s": 18.5,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0661163,
+        "input_tokens": 10,
+        "output_tokens": 1395,
+        "cache_read_tokens": 40983,
+        "cache_creation_tokens": 12012
+      },
+      "grade": {
+        "question_id": "T-25",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "municipal",
+      "split": "test",
+      "ref": "0e6b25d2de",
+      "judge": {
+        "outcome": "partial",
+        "confidence": 0.72,
+        "false_claim": "",
+        "referral": false,
+        "reason": "Refresh (monthly) and Min Delay type (text) are correct. The owner division (Toronto Transit Commission) is not given. The answer says it could not check and names only \"City of Toronto\" as publisher. That is two of three values with a headline value missing, so partial.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011346000000000002
+      },
+      "needs_review": true
+    },
+    {
+      "run": {
+        "question_id": "T-17",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:57:43+00:00",
+        "duration_s": 17.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0917836,
+        "input_tokens": 8,
+        "output_tokens": 1294,
+        "cache_read_tokens": 24396,
+        "cache_creation_tokens": 19097
+      },
+      "grade": {
+        "question_id": "T-17",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "federal",
+      "split": "test",
+      "ref": "9cf84156e8",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives IRCC, monthly (P1M), CSV and XLSX, and no DataStore. All of these match the key, and the 39 resources match the reference value.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.013182
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-19",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:58:00+00:00",
+        "duration_s": 15.6,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.10540450000000001,
+        "input_tokens": 10,
+        "output_tokens": 971,
+        "cache_read_tokens": 29065,
+        "cache_creation_tokens": 23192
+      },
+      "grade": {
+        "question_id": "T-19",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "federal",
+      "split": "test",
+      "ref": "ad883488cc",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.85,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives all three required facts: Open Government Licence - Canada, monthly (P1M), and a portal release date of 2014-06-27. It also names 2002-12-09 as the original publication date and does not confuse it with the portal release date. The extra claims, the is_open flag and the last-modified date, are not in the key and cannot be shown false.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.010372000000000001
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-16",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:58:16+00:00",
+        "duration_s": 70.6,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0180741,
+        "input_tokens": 6,
+        "output_tokens": 588,
+        "cache_read_tokens": 14861,
+        "cache_creation_tokens": 2674
+      },
+      "grade": {
+        "question_id": "X-16",
+        "outcome": "correct",
+        "reason": "said the figure is not published",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": false,
+      "group": "federal",
+      "split": "dev",
+      "ref": "742bd64fd6",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "States no company currently sells it; status Cancelled Post Market 2022-02-18; last holder Sanofi Consumer Health. Matches key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009536
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-08",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:59:27+00:00",
+        "duration_s": 11.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0183807,
+        "input_tokens": 6,
+        "output_tokens": 525,
+        "cache_read_tokens": 13987,
+        "cache_creation_tokens": 2930
+      },
+      "grade": {
+        "question_id": "X-08",
+        "outcome": "correct",
+        "reason": "JSON: not_published",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": false,
+      "group": "international",
+      "split": "test",
+      "ref": "19bc3cdb4c",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says the World Bank has no 2025 value. It gives 82.11 for 2024, which is clearly labelled and matches the key's 82.1. It gives no 2025 figure.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007691999999999999
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-10",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:59:38+00:00",
+        "duration_s": 14.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0325895,
+        "input_tokens": 8,
+        "output_tokens": 868,
+        "cache_read_tokens": 22095,
+        "cache_creation_tokens": 5421
+      },
+      "grade": {
+        "question_id": "X-10",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "international",
+      "split": "dev",
+      "ref": "c9130dbc69",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives -3.38% nominal YoY for 2025-Q4, which is within \u00b10.1 of the key's -3.4 and has the right sign. The extra 2026-Q2 figure is clearly labelled as the latest quarter, not a substitute for the period asked.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008058000000000001
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "A-01",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T22:59:52+00:00",
+        "duration_s": 20.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "call_tool_placeholder",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.054651899999999996,
+        "input_tokens": 14,
+        "output_tokens": 1380,
+        "cache_read_tokens": 45959,
+        "cache_creation_tokens": 9057
+      },
+      "grade": {
+        "question_id": "A-01",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "11100135"
+        ],
+        "vectors_cited": [
+          "v1792632015"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            96520326,
+            1792632015
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            96520326,
+            1792632015
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            11100135
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "809511b826",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.85,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 12.8% for Alberta children under 18 on the MBM in 2024. That matches the key. It names the MBM as the official line, and the LIM-AT figure is labelled as a separate measure. I did not check the extra figures (LIM-AT 13.9%, MBM 2022 and 2023) because the key doesn't require them.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008664
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-16",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:00:13+00:00",
+        "duration_s": 18.7,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__statcan_daily_placeholder",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.046350600000000006,
+        "input_tokens": 12,
+        "output_tokens": 1082,
+        "cache_read_tokens": 39226,
+        "cache_creation_tokens": 7896
+      },
+      "grade": {
+        "question_id": "C-16",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "34100292"
+        ],
+        "vectors_cited": [
+          "v1675119645"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            1675115467,
+            1675119645
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1675115467,
+            1675119645
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            34100292
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "e4e2202a08",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.85,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives $13.57 billion (13,571,697,000), seasonally adjusted in current dollars, for August 2026. This matches the key exactly. The extra figures (unadjusted August, July) are context and are not contradicted by the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.01696
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "M-04",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:00:31+00:00",
+        "duration_s": 30.7,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0498788,
+        "input_tokens": 12,
+        "output_tokens": 1633,
+        "cache_read_tokens": 38488,
+        "cache_creation_tokens": 7419
+      },
+      "grade": {
+        "question_id": "M-04",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "17100009"
+        ],
+        "vectors_cited": [
+          "v12",
+          "v15"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            12,
+            15
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            12,
+            15
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            17100009
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "c8b24edfd3",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "Alberta is correctly named as the faster-growing province. Its 1.52% is within \u00b10.1 of the key's 1.5, and Ontario's 0.28% is within \u00b10.1 of the key's 0.3. The rates are percentages of each province's own population, so the trap is avoided.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008726
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "M-15",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:01:02+00:00",
+        "duration_s": 33.5,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0739869,
+        "input_tokens": 16,
+        "output_tokens": 1946,
+        "cache_read_tokens": 72429,
+        "cache_creation_tokens": 11813
+      },
+      "grade": {
+        "question_id": "M-15",
+        "outcome": "hallucinated",
+        "reason": "did the misleading calculation without a flag",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100287"
+        ],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            2062815
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            2062815
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100287
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "5f3d3e229b",
+      "judge": {
+        "outcome": "partial",
+        "confidence": 0.55,
+        "false_claim": "",
+        "reason": "The answer leads with the mixed-vintage calculation (about 1.26 million). It then says the 2021 labour force makes this not the actual September 2026 count, and that the LFS publishes the count directly. So the mismatch is flagged, which meets the key's tolerance. It never gives the LFS count of 1,474.9 thousand, and the warning comes after the figure. The 6.5% rate may also be slightly off, since 1,474.9 thousand implies a rate nearer 6.6\u20136.7%, but I can't verify that. I graded it partial.",
+        "referral": false,
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.014526
+      },
+      "needs_review": true
+    },
+    {
+      "run": {
+        "question_id": "R-01",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:01:35+00:00",
+        "duration_s": 14.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0214076,
+        "input_tokens": 6,
+        "output_tokens": 658,
+        "cache_read_tokens": 14116,
+        "cache_creation_tokens": 3351
+      },
+      "grade": {
+        "question_id": "R-01",
+        "outcome": "correct",
+        "reason": "JSON: every expected date",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "0fb4fc58ae",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.72,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 2026-11-05 as the PTEA release date for 2025, which matches the key. The other dates (2025-11-06, an estimated 2027-11-04) are context. The statement that it is already out is true as of today (2026-11-09), so it doesn't contradict the key's warning in this case. The \"2024-11-07\" date is a minor context detail and is not the date asked for.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011484
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "R-06",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:01:50+00:00",
+        "duration_s": 12.0,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.021477899999999998,
+        "input_tokens": 6,
+        "output_tokens": 688,
+        "cache_read_tokens": 14019,
+        "cache_creation_tokens": 3296
+      },
+      "grade": {
+        "question_id": "R-06",
+        "outcome": "correct",
+        "reason": "JSON: not_published",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": false,
+      "group": "statcan",
+      "split": "test",
+      "ref": "2909e1baf6",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.6,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says the release covering 2026 has no announced date. It labels 4 Nov 2027 as its own estimate from the past pattern, not a scheduled date. Its 5 Nov 2026 date for the reference-year-2025 release matches the key's reference value. The \"not_published\" flag is set to true. Some risk remains because it offers a specific 2027 date and leads with a different reading of the question.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011372
+      },
+      "needs_review": true
+    },
+    {
+      "run": {
+        "question_id": "T-02",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:02:02+00:00",
+        "duration_s": 17.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0526896,
+        "input_tokens": 6,
+        "output_tokens": 877,
+        "cache_read_tokens": 15116,
+        "cache_creation_tokens": 10599
+      },
+      "grade": {
+        "question_id": "T-02",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "238441ce1c",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.95,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer states that the LFS is mandatory and the CIS is voluntary. Both match the key, and no wrong claim is made.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.00909
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-06",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:03:16+00:00",
+        "duration_s": 10.3,
+        "tool_calls": [],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0135667,
+        "input_tokens": 2,
+        "output_tokens": 562,
+        "cache_read_tokens": 3227,
+        "cache_creation_tokens": 1905
+      },
+      "grade": {
+        "question_id": "T-06",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            41690973
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [
+            18100004
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "8ffceaa7ec",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 2002=100 and the May 2007 CPI, which matches the key. It says it answered from memory, but both values are right. The table and vector IDs are extra context and don't change the grade.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007798
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-30",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:03:26+00:00",
+        "duration_s": 15.4,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0280427,
+        "input_tokens": 6,
+        "output_tokens": 949,
+        "cache_read_tokens": 14287,
+        "cache_creation_tokens": 4278
+      },
+      "grade": {
+        "question_id": "T-30",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            62305752
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            62305752
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            36100104
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "9be92233e7",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives table 36-10-0104-01, quarterly frequency, and real GDP at market prices in chained (2017) dollars, seasonally adjusted at annual rates. All of this matches the key. The extra latest values and release date are not in the key and cannot be checked against it.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.010312
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-31",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:03:41+00:00",
+        "duration_s": 12.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0291013,
+        "input_tokens": 6,
+        "output_tokens": 807,
+        "cache_read_tokens": 14193,
+        "cache_creation_tokens": 4900
+      },
+      "grade": {
+        "question_id": "T-31",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            41690973
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            41690973
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            18100004,
+            18100006
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "640c18fb6e",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says the vector is not seasonally adjusted. It identifies the series as the Canada all-items CPI in table 18-10-0004-01, with 2002=100. That matches every fact in the key. The extra details (monthly from 1914, a latest value of 170.0 for September 2026, the seasonally adjusted CPI being in table 18-10-0006) are plausible and don't contradict the key. I could not verify the latest value or release date against the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011968
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-24",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:03:53+00:00",
+        "duration_s": 11.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0183893,
+        "input_tokens": 4,
+        "output_tokens": 642,
+        "cache_read_tokens": 8333,
+        "cache_creation_tokens": 2782
+      },
+      "grade": {
+        "question_id": "X-24",
+        "outcome": "correct",
+        "reason": "flagged the problem",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "cf41a44102",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says the 2026 Census counts are not published. It gives the 2021 Edmonton CMA count of 1,418,118 and labels it as 2021. The figure matches the key exactly. The answer says the figure comes from memory and is unverified, but it is graded on its value, which is right. The expected 2027 release is hedged and not claimed as fact.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008908000000000001
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-21",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:04:05+00:00",
+        "duration_s": 17.7,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.029066,
+        "input_tokens": 10,
+        "output_tokens": 766,
+        "cache_read_tokens": 27860,
+        "cache_creation_tokens": 4650
+      },
+      "grade": {
+        "question_id": "C-21",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "M.BCPI"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            52673496
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            52673496
+          ],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "M.BCPI"
+          ],
+          "valet_supporting": [
+            "M.BCPI"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "boc",
+      "split": "test",
+      "ref": "4108e37b1d",
+      "judge": {
+        "outcome": "hallucinated",
+        "confidence": 0.45,
+        "false_claim": "The BCPI is published as an index with 2012 = 100 (the key says the base is 1972 = 100).",
+        "referral": false,
+        "reason": "The headline value of 747.71 matches the key. The answer states the base as 2012=100, but the key says 1972=100. That is a wrong basis presented as fact, which is the trap the key names.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.010579999999999999
+      },
+      "needs_review": true
+    },
+    {
+      "run": {
+        "question_id": "M-11",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:04:22+00:00",
+        "duration_s": 14.8,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.024053000000000005,
+        "input_tokens": 8,
+        "output_tokens": 568,
+        "cache_read_tokens": 20650,
+        "cache_creation_tokens": 4073
+      },
+      "grade": {
+        "question_id": "M-11",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "FXUSDCAD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "boc",
+      "split": "test",
+      "ref": "c5f796de76",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 1.3960 CAD per USD for 2026-10-30, which matches the key value of 1.396 within the tolerance. The unit is stated correctly and the answer makes no false claims.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.0066300000000000005
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-12",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:04:37+00:00",
+        "duration_s": 15.0,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0267538,
+        "input_tokens": 10,
+        "output_tokens": 717,
+        "cache_read_tokens": 26718,
+        "cache_creation_tokens": 4223
+      },
+      "grade": {
+        "question_id": "T-12",
+        "outcome": "hallucinated",
+        "reason": "gave a figure for something not published",
+        "recall": 1.0,
+        "tables_cited": [
+          "valet"
+        ],
+        "vectors_cited": [
+          "FXUSDCAD"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.5,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [
+            "FXUSDCAD"
+          ],
+          "valet_supporting": [
+            "FXUSDCAD"
+          ],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": false,
+      "group": "boc",
+      "split": "test",
+      "ref": "67d8291024",
+      "judge": {
+        "outcome": "abstained",
+        "confidence": 0.5,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 1.396 but labels it as the daily average, not a noon rate. It says only that it \"didn't find\" a noon series. It never says noon rates were discontinued in 2017, so it doesn't make the required call. It also doesn't invent a noon rate. A reviewer could instead grade it hallucinated, because it answers a noon-rate question with the average rate.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.011571999999999999
+      },
+      "needs_review": true
+    },
+    {
+      "run": {
+        "question_id": "C-24",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:04:52+00:00",
+        "duration_s": 21.8,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.045506099999999994,
+        "input_tokens": 14,
+        "output_tokens": 1568,
+        "cache_read_tokens": 46061,
+        "cache_creation_tokens": 6298
+      },
+      "grade": {
+        "question_id": "C-24",
+        "outcome": "correct",
+        "reason": "flagged the problem",
+        "recall": 1.0,
+        "tables_cited": [
+          "34100158"
+        ],
+        "vectors_cited": [
+          "v52300157"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            52300157
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            52300157
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            34100158
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "cmhc",
+      "split": "dev",
+      "ref": "0c549c14bf",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.92,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer flags up front that the figure is already a seasonally adjusted annual rate and that multiplying by 12 would overstate it twelvefold. It gives 248,896, which matches the key. The extra figures for July, August and the monthly estimate are labelled as context or as the answerer's own arithmetic, so they don't count against it.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009604
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-34",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:05:49+00:00",
+        "duration_s": 22.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.052831,
+        "input_tokens": 12,
+        "output_tokens": 1299,
+        "cache_read_tokens": 47050,
+        "cache_creation_tokens": 8778
+      },
+      "grade": {
+        "question_id": "T-34",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "provincial",
+      "split": "test",
+      "ref": "4764ba75da",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives all three fields with the right types (Year numeric, Name text, Frequency numeric). It says counts under 5 were suppressed and the names left out. The extra _id field and row count don't contradict the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.01072
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-36",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:06:11+00:00",
+        "duration_s": 26.4,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.1283502,
+        "input_tokens": 10,
+        "output_tokens": 1349,
+        "cache_read_tokens": 63722,
+        "cache_creation_tokens": 27117
+      },
+      "grade": {
+        "question_id": "T-36",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "provincial",
+      "split": "dev",
+      "ref": "799e9bc1de",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "reason": "The answer gives publication, Agriculture and Irrigation, quarterly and PDF. These match the key. The answer says the type is inferred, but it still makes the call. The extra detail on release dates and the 26 files doesn't contradict the key.",
+        "referral": false,
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.010068
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-01",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:07:09+00:00",
+        "duration_s": 27.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0494173,
+        "input_tokens": 10,
+        "output_tokens": 1191,
+        "cache_read_tokens": 31313,
+        "cache_creation_tokens": 8589
+      },
+      "grade": {
+        "question_id": "X-01",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "federal",
+      "split": "dev",
+      "ref": "470bded408",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.92,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 24.37 \u00b0C (about 24.4) and 52.3 mm for Toronto City in July 2025. Both match the key within tolerance. It also separates Toronto City from the City Centre station, which avoids the trap.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007970000000000001
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-15",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:07:36+00:00",
+        "duration_s": 13.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.020378300000000002,
+        "input_tokens": 6,
+        "output_tokens": 540,
+        "cache_read_tokens": 14263,
+        "cache_creation_tokens": 3385
+      },
+      "grade": {
+        "question_id": "X-15",
+        "outcome": "correct",
+        "reason": "all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "federal",
+      "split": "test",
+      "ref": "5dca437130",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says the status is Dormant (not marketed) with status date 2026-07-24, which matches the key. The extra details (last updated date, market date) are not contradicted by the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007726
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-17",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:07:50+00:00",
+        "duration_s": 20.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.018130800000000002,
+        "input_tokens": 6,
+        "output_tokens": 458,
+        "cache_read_tokens": 13948,
+        "cache_creation_tokens": 3036
+      },
+      "grade": {
+        "question_id": "X-17",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "federal",
+      "split": "dev",
+      "ref": "65a709188b",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.96,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 2,500 invitations and a minimum CRS of 519 for round 449. Both match the key exactly. The round type (CEC) and the date (2026-10-15) also match the key's trap note.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007082
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-20",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:08:10+00:00",
+        "duration_s": 14.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.028247500000000002,
+        "input_tokens": 8,
+        "output_tokens": 603,
+        "cache_read_tokens": 19855,
+        "cache_creation_tokens": 5054
+      },
+      "grade": {
+        "question_id": "X-20",
+        "outcome": "correct",
+        "reason": "JSON: not_published",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": false,
+      "group": "federal",
+      "split": "test",
+      "ref": "558b78acd2",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives no cut-off for round #460. It says the round hasn't happened or isn't published. It names #453 on 2026-10-28 as the latest round, with CRS 477 and 150 invitations, all matching the key. The #453 cut-off is labelled as that round's, not #460's.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007788
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-05",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:08:24+00:00",
+        "duration_s": 10.2,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0179018,
+        "input_tokens": 6,
+        "output_tokens": 426,
+        "cache_read_tokens": 14138,
+        "cache_creation_tokens": 3054
+      },
+      "grade": {
+        "question_id": "X-05",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "international",
+      "split": "test",
+      "ref": "88ebe19c62",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives US$54,848 (54,847.54) for 2023 in current US dollars. That matches the key exactly. The 2022 and 2024 comparison figures are extra context that the key does not require.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008052
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-12",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:08:34+00:00",
+        "duration_s": 13.7,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0207778,
+        "input_tokens": 6,
+        "output_tokens": 612,
+        "cache_read_tokens": 14138,
+        "cache_creation_tokens": 3308
+      },
+      "grade": {
+        "question_id": "X-12",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "international",
+      "split": "dev",
+      "ref": "a8f473bfe2",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer picks Canada as higher and gives 14 and 8 for Q4 2025 from the BIS series. Both match the key's primary values within tolerance. The answer also notes that the figures are rounded and that Statistics Canada's series differs.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009118
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "A-02",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:08:48+00:00",
+        "duration_s": 40.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__wds_search_cubes",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 1,
+        "cost_usd": 0.093747,
+        "input_tokens": 20,
+        "output_tokens": 2174,
+        "cache_read_tokens": 92430,
+        "cache_creation_tokens": 15681
+      },
+      "grade": {
+        "question_id": "A-02",
+        "outcome": "correct",
+        "reason": "flagged the problem",
+        "recall": 0.0,
+        "tables_cited": [
+          "14100203",
+          "14100204"
+        ],
+        "vectors_cited": [
+          "v1742415"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.5,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            1742415
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1742415
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100064,
+            14100203,
+            14100204
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "6382fb133d",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "reason": "The answer gives SEPH NAICS 912 Alberta average weekly earnings for the 2025 annual average, $1,702.65. That matches the key's accepted alternative from table 14-10-0204. It correctly notes that the LFS table has only whole-sector public administration. It labels its annual extrapolation as its own calculation.",
+        "referral": false,
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.010126
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "A-03",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:09:28+00:00",
+        "duration_s": 37.7,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "call_tool_placeholder",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 1,
+        "cost_usd": 0.10899810000000001,
+        "input_tokens": 22,
+        "output_tokens": 2039,
+        "cache_read_tokens": 109641,
+        "cache_creation_tokens": 19400
+      },
+      "grade": {
+        "question_id": "A-03",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "11100239"
+        ],
+        "vectors_cited": [
+          "v107680657",
+          "v107680658"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            107680657,
+            107680658
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            107680657,
+            107680658
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            11100239
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "05f21bac2c",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives an average of $66,100 and a median of $48,100 for 2024. Both match the key within the \u00b1$100 tolerance. It also explains that the median is the typical income. The extra 2023 figures are labelled as such and don't change the 2024 answer.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008036
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-05",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:10:06+00:00",
+        "duration_s": 28.4,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 1,
+        "cost_usd": 0.0755955,
+        "input_tokens": 16,
+        "output_tokens": 1823,
+        "cache_read_tokens": 69775,
+        "cache_creation_tokens": 12589
+      },
+      "grade": {
+        "question_id": "C-05",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100432"
+        ],
+        "vectors_cited": [
+          "v1481212145",
+          "v1481212147"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            1212389364,
+            1212389365,
+            1481212145,
+            1481212147
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1212389364,
+            1212389365,
+            1481212145,
+            1481212147
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100371,
+            14100432
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "cf49e9513e",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives 2.8% and 507,220 vacancies for August 2026, seasonally adjusted. Both match the key. The unadjusted figures are extra and labelled as such.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007886
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-15",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:10:34+00:00",
+        "duration_s": 20.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 1,
+        "cost_usd": 0.0499522,
+        "input_tokens": 8,
+        "output_tokens": 1199,
+        "cache_read_tokens": 23182,
+        "cache_creation_tokens": 8907
+      },
+      "grade": {
+        "question_id": "T-15",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "cmhc",
+      "split": "test",
+      "ref": "ce5b5a6e27",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "Both key facts are present: code D means Poor (use with caution), and the minimum is 4 responding entities. The extra CV details don't contradict the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.010076
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-19",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:11:20+00:00",
+        "duration_s": 19.5,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 1,
+        "cost_usd": 0.1063173,
+        "input_tokens": 10,
+        "output_tokens": 1027,
+        "cache_read_tokens": 29233,
+        "cache_creation_tokens": 23276
+      },
+      "grade": {
+        "question_id": "T-19",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "federal",
+      "split": "test",
+      "ref": "f0a5974319",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives all three required values: Open Government Licence - Canada, monthly (P1M) and 2014-06-27. It also correctly separates the 2002-12-09 start date from the portal release date. The extra claim about the is_open flag is not contradicted by the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009588
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-24",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:11:40+00:00",
+        "duration_s": 23.4,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 1,
+        "cost_usd": 0.0364128,
+        "input_tokens": 12,
+        "output_tokens": 1188,
+        "cache_read_tokens": 35728,
+        "cache_creation_tokens": 5234
+      },
+      "grade": {
+        "question_id": "X-24",
+        "outcome": "correct",
+        "reason": "flagged the problem",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "266b719a07",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says the 2026 Census counts are not published. It gives the 2021 Edmonton CMA count of 1,418,118 and labels it as 2021. This matches the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008478
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "A-02",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:12:29+00:00",
+        "duration_s": 26.4,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 2,
+        "cost_usd": 0.06496769999999999,
+        "input_tokens": 16,
+        "output_tokens": 1260,
+        "cache_read_tokens": 67037,
+        "cache_creation_tokens": 11408
+      },
+      "grade": {
+        "question_id": "A-02",
+        "outcome": "correct",
+        "reason": "flagged the problem",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100203",
+          "14100204"
+        ],
+        "vectors_cited": [
+          "v1560358"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 0.5,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            1560358
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1560358
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100203,
+            14100204
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": false
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "fce4961b4b",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.85,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives $1,883.03 for NAICS 912 in Alberta for August 2026, which matches the key. It labels the series correctly as SEPH average weekly earnings. The annualized figure of about $97,900 is flagged as the answerer's own multiplication, not a published figure, so it is not a misleading calculation.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009046
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "A-03",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:12:55+00:00",
+        "duration_s": 23.7,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 2,
+        "cost_usd": 0.0668352,
+        "input_tokens": 14,
+        "output_tokens": 1423,
+        "cache_read_tokens": 55732,
+        "cache_creation_tokens": 11751
+      },
+      "grade": {
+        "question_id": "A-03",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "11100239"
+        ],
+        "vectors_cited": [
+          "v107680657",
+          "v107680658"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            107680657,
+            107680658
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            107680657,
+            107680658
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            11100239
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "ca626800cc",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives an average of $66,100 and a median of $48,100 for 2024. Both match the key within the \u00b1$100 tolerance. The extra 2023 figure is labelled as 2023 and doesn't replace the 2024 figures.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007802
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "C-05",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:13:19+00:00",
+        "duration_s": 27.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 2,
+        "cost_usd": 0.058059700000000006,
+        "input_tokens": 14,
+        "output_tokens": 1355,
+        "cache_read_tokens": 54937,
+        "cache_creation_tokens": 9747
+      },
+      "grade": {
+        "question_id": "C-05",
+        "outcome": "correct",
+        "reason": "JSON: all values within tolerance",
+        "recall": 1.0,
+        "tables_cited": [
+          "14100432"
+        ],
+        "vectors_cited": [
+          "v1481212145",
+          "v1481212147"
+        ],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [
+            1481212145,
+            1481212147
+          ],
+          "vectors_invented": [],
+          "vectors_supporting": [
+            1481212145,
+            1481212147
+          ],
+          "vectors_off_table": [],
+          "tables": [
+            14100432
+          ],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": true,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "test",
+      "ref": "bcb0ba7625",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives a 2.8% rate and 507,220 vacancies for August 2026. Both match the key, and the answer says they are seasonally adjusted from table 14-10-0432.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.007587999999999999
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-15",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:13:47+00:00",
+        "duration_s": 17.4,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 2,
+        "cost_usd": 0.0395038,
+        "input_tokens": 8,
+        "output_tokens": 1114,
+        "cache_read_tokens": 20838,
+        "cache_creation_tokens": 6566
+      },
+      "grade": {
+        "question_id": "T-15",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "cmhc",
+      "split": "test",
+      "ref": "5b7bf34523",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.93,
+        "false_claim": "",
+        "referral": false,
+        "reason": "Answer states D = Poor (use with caution) and a minimum of 4 responding entities, matching the key. The extra CV detail doesn't conflict with the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009828
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-19",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:14:25+00:00",
+        "duration_s": 15.9,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 2,
+        "cost_usd": 0.1057985,
+        "input_tokens": 10,
+        "output_tokens": 1010,
+        "cache_read_tokens": 29065,
+        "cache_creation_tokens": 23193
+      },
+      "grade": {
+        "question_id": "T-19",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "federal",
+      "split": "test",
+      "ref": "01abd219ee",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives all three required facts: Open Government Licence - Canada, monthly (P1M), and a portal release date of 27 June 2014. It also names 2002-12-09 as the original publication date, so it avoids the trap. The extra details (last-modified date, is_open flag) are not contradicted by the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009668
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "X-24",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:14:41+00:00",
+        "duration_s": 18.5,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 2,
+        "cost_usd": 0.029451400000000003,
+        "input_tokens": 10,
+        "output_tokens": 1082,
+        "cache_read_tokens": 27794,
+        "cache_creation_tokens": 3958
+      },
+      "grade": {
+        "question_id": "X-24",
+        "outcome": "correct",
+        "reason": "flagged the problem",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 0.0,
+        "vector_coverage": 0.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "statcan",
+      "split": "dev",
+      "ref": "8b7a373732",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.8,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer says the 2026 Census counts are not published. It gives the 2021 count, labelled 2021, in the JSON as 1,418,118, and in prose as about 1,418,000. It flags the figure as unverified from memory, but the value matches the key. It expects release in early 2027, which doesn't contradict the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008838
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-22",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:15:30+00:00",
+        "duration_s": 26.5,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.0899814,
+        "input_tokens": 18,
+        "output_tokens": 1849,
+        "cache_read_tokens": 75274,
+        "cache_creation_tokens": 15982
+      },
+      "grade": {
+        "question_id": "T-22",
+        "outcome": "correct",
+        "reason": "every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "regex"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "provincial",
+      "split": "dev",
+      "ref": "17c82c61f6",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.95,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives more than $2,000 and since March 18, 2010. Both match the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008312
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-28",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:15:57+00:00",
+        "duration_s": 21.1,
+        "tool_calls": [
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__search_tools",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__call_tool"
+        ],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.057640199999999996,
+        "input_tokens": 12,
+        "output_tokens": 1045,
+        "cache_read_tokens": 39062,
+        "cache_creation_tokens": 10815
+      },
+      "grade": {
+        "question_id": "T-28",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "municipal",
+      "split": "dev",
+      "ref": "ccc9e5ae8c",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.9,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives GRAVITE as the severity field and numeric as the NB_MORTS type. Both match the key. The extra detail (text field, row count, resource ID) doesn't contradict the key.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.008644
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-14",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:16:18+00:00",
+        "duration_s": 12.4,
+        "tool_calls": [],
+        "is_error": false,
+        "repeat": 0,
+        "cost_usd": 0.015555300000000001,
+        "input_tokens": 2,
+        "output_tokens": 633,
+        "cache_read_tokens": 2893,
+        "cache_creation_tokens": 2233
+      },
+      "grade": {
+        "question_id": "T-14",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "cmhc",
+      "split": "test",
+      "ref": "300bfa0842",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives October and privately initiated structures with at least three units, which is what the key's \"correct\" grading requires. It also notes that social housing is excluded. The extra details (December publication, urban centres of 10,000 or more) are consistent with CMHC's methodology. It omits the first-two-weeks detail and the three-month market requirement, but the grading notes don't require either.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.01007
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-14",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:16:30+00:00",
+        "duration_s": 11.2,
+        "tool_calls": [],
+        "is_error": false,
+        "repeat": 1,
+        "cost_usd": 0.0135442,
+        "input_tokens": 2,
+        "output_tokens": 559,
+        "cache_read_tokens": 3222,
+        "cache_creation_tokens": 1907
+      },
+      "grade": {
+        "question_id": "T-14",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": false
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "cmhc",
+      "split": "test",
+      "ref": "bd773f0d56",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.88,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives October and privately initiated structures with at least three units. That meets the key's correct standard. It excludes social housing, which matches the trap. The extra details (urban centres of 10,000 or more, December publication) don't contradict the key. The answer flags that it was written from memory, but the values are right.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.009612
+      },
+      "needs_review": false
+    },
+    {
+      "run": {
+        "question_id": "T-14",
+        "arm": "maplestats_hosted",
+        "requested_model": "claude-sonnet-5-5",
+        "model_ids": [
+          "claude-sonnet-5-5"
+        ],
+        "tools_available": [
+          "mcp__maplestats__call_tool",
+          "mcp__maplestats__plan_query",
+          "mcp__maplestats__search_tools"
+        ],
+        "started_at": "2026-11-09T23:16:41+00:00",
+        "duration_s": 13.2,
+        "tool_calls": [],
+        "is_error": false,
+        "repeat": 2,
+        "cost_usd": 0.014390199999999999,
+        "input_tokens": 2,
+        "output_tokens": 644,
+        "cache_read_tokens": 3222,
+        "cache_creation_tokens": 1906
+      },
+      "grade": {
+        "question_id": "T-14",
+        "outcome": "correct",
+        "reason": "JSON: every expected fact",
+        "recall": 1.0,
+        "tables_cited": [],
+        "vectors_cited": [],
+        "table_coverage": 1.0,
+        "vector_coverage": 1.0,
+        "overridden": false,
+        "auto_outcome": "",
+        "citations": {
+          "vectors": [],
+          "vectors_invented": [],
+          "vectors_supporting": [],
+          "vectors_off_table": [],
+          "tables": [],
+          "tables_invented": [],
+          "valet": [],
+          "valet_supporting": [],
+          "traceable": false,
+          "release_mentioned": true
+        },
+        "basis": "json"
+      },
+      "false_claim": null,
+      "referral": false,
+      "has_figures": true,
+      "group": "cmhc",
+      "split": "test",
+      "ref": "5ef40e8747",
+      "judge": {
+        "outcome": "correct",
+        "confidence": 0.8,
+        "false_claim": "",
+        "referral": false,
+        "reason": "The answer gives October and privately initiated structures with at least three units, which matches the key. The extra claims are early-November collection and the 10,000+ population coverage. Neither contradicts the key. The answer says it was written from memory, but its values are right.",
+        "model": "claude-sonnet-5-5",
+        "cost_usd": 0.010196
+      },
+      "needs_review": false
+    }
+  ],
+  "summary": [
+    {
+      "arm": "maplestats_hosted",
+      "model_ids": [
+        "claude-sonnet-5-5"
+      ],
+      "run_date": "2026-11-09",
+      "questions": 47,
+      "repeats": 3,
+      "correct": 19,
+      "partial": 0.3,
+      "abstained": 0,
+      "hallucinated": 1,
+      "correct_worst": 7,
+      "correct_best": 43,
+      "consistency": 0.98,
+      "false_claims": 0,
+      "referrals": 0,
+      "table_coverage": 0.9,
+      "vector_coverage": 0.82,
+      "ids_cited": 39,
+      "citation_precision": 0.97,
+      "invented_ids": 0,
+      "off_table_vectors": 0,
+      "traceability": 0.42,
+      "traceability_checked": 0.96,
+      "release_mentions": 0.57,
+      "tool_calls": 4.6,
+      "seconds": 19.8,
+      "cost_usd": 0.0485,
+      "tokens_in": 42057,
+      "tokens_out": 1083,
+      "errors": 0,
+      "groups": {
+        "boc": {
+          "questions": 5,
+          "correct": 1.3
+        },
+        "cmhc": {
+          "questions": 3,
+          "correct": 2.3
+        },
+        "federal": {
+          "questions": 7,
+          "correct": 3
+        },
+        "international": {
+          "questions": 4,
+          "correct": 1.3
+        },
+        "municipal": {
+          "questions": 2,
+          "correct": 0.7
+        },
+        "provincial": {
+          "questions": 4,
+          "correct": 1.3
+        },
+        "statcan": {
+          "questions": 22,
+          "correct": 9
+        }
+      }
+    }
+  ],
+  "retired_questions": [
+    "T-04",
+    "T-16",
+    "T-23",
+    "T-27"
+  ],
+  "summary_v4": [
+    {
+      "arm": "maplestats_hosted",
+      "questions": 47,
+      "answers": 61,
+      "correct_questions": 43.667,
+      "correct_pct": 92.9,
+      "splits": {
+        "dev": {
+          "questions": 22,
+          "correct_pct": 95.5
+        },
+        "test": {
+          "questions": 25,
+          "correct_pct": 90.7
+        }
+      },
+      "sources": {
+        "boc": {
+          "questions": 5,
+          "correct_pct": 80.0
+        },
+        "cmhc": {
+          "questions": 3,
+          "correct_pct": 100.0
+        },
+        "federal": {
+          "questions": 7,
+          "correct_pct": 100.0
+        },
+        "international": {
+          "questions": 4,
+          "correct_pct": 100.0
+        },
+        "municipal": {
+          "questions": 2,
+          "correct_pct": 100.0
+        },
+        "provincial": {
+          "questions": 4,
+          "correct_pct": 100.0
+        },
+        "statcan": {
+          "questions": 22,
+          "correct_pct": 89.4
+        }
+      },
+      "usd_per_answer": 0.0485,
+      "usd_total": 2.96,
+      "seconds_per_answer": 19.8,
+      "errors": 0,
+      "json_block": 47,
+      "flagged": 6,
+      "judged": 61,
+      "judge_agrees": 56,
+      "outcomes": {
+        "correct": 57,
+        "partial": 1,
+        "abstained": 0,
+        "hallucinated": 3
+      }
+    }
+  ]
+}
