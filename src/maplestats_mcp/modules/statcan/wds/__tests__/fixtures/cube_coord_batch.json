@@ -1,0 +1,633 @@
+{
+ "_note": "cube_metadata is getCubeMetadata for 18-10-0004 trimmed from the live answer of 2026-11-03 (leaf_metadata.json), with the table's live frequencyCode (6, monthly) and a release time added. The data envelopes follow the live getDataFromCubePidCoordAndLatestNPeriods shape (coordinate echoed padded to ten dimensions; a combination with no series answers responseStatusCode 2, as live on 2026-11-02). v41690973 (Canada, all-items) carries its live values of 2026-10-27; the Ontario series' vector id and values are illustrative.",
+ "cube_metadata": {
+  "productId": "18100004",
+  "cansimId": "326-0020",
+  "cubeTitleEn": "Consumer Price Index, monthly, not seasonally adjusted",
+  "cubeTitleFr": "Indice des prix à la consommation mensuel, non désaisonnalisé",
+  "cubeStartDate": "1914-01-01",
+  "cubeEndDate": "2026-09-01",
+  "dimension": [
+   {
+    "dimensionPositionId": 1,
+    "dimensionNameEn": "Geography",
+    "dimensionNameFr": "Géographie",
+    "hasUom": false,
+    "member": [
+     {
+      "memberId": 2,
+      "parentMemberId": null,
+      "memberNameEn": "Canada",
+      "memberNameFr": "Canada",
+      "classificationCode": "11124",
+      "geoLevel": 0,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 14,
+      "parentMemberId": 2,
+      "memberNameEn": "Ontario",
+      "memberNameFr": "Ontario",
+      "classificationCode": "35",
+      "geoLevel": 2,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 15,
+      "parentMemberId": 14,
+      "memberNameEn": "Ottawa-Gatineau, Ontario part, Ontario/Quebec",
+      "memberNameFr": "Ottawa-Gatineau, partie ontarienne, Ontario/Québec",
+      "classificationCode": "35505",
+      "geoLevel": 505,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 16,
+      "parentMemberId": 14,
+      "memberNameEn": "Toronto, Ontario",
+      "memberNameFr": "Toronto, Ontario",
+      "classificationCode": "535",
+      "geoLevel": 503,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 26,
+      "parentMemberId": 2,
+      "memberNameEn": "British Columbia",
+      "memberNameFr": "Colombie-Britannique",
+      "classificationCode": "59",
+      "geoLevel": 2,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 27,
+      "parentMemberId": 26,
+      "memberNameEn": "Vancouver, British Columbia",
+      "memberNameFr": "Vancouver, Colombie-Britannique",
+      "classificationCode": "933",
+      "geoLevel": 503,
+      "terminated": 0,
+      "memberUomCode": null
+     },
+     {
+      "memberId": 29,
+      "parentMemberId": 2,
+      "memberNameEn": "Whitehorse, Yukon",
+      "memberNameFr": "Whitehorse, Yukon",
+      "classificationCode": "6001009",
+      "geoLevel": 5,
+      "terminated": 0,
+      "memberUomCode": null
+     }
+    ]
+   },
+   {
+    "dimensionPositionId": 2,
+    "dimensionNameEn": "Products and product groups",
+    "dimensionNameFr": "Produits et groupes de produits",
+    "hasUom": true,
+    "member": [
+     {
+      "memberId": 2,
+      "parentMemberId": null,
+      "memberNameEn": "All-items",
+      "memberNameFr": "Ensemble",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 3,
+      "parentMemberId": 2,
+      "memberNameEn": "Food",
+      "memberNameFr": "Aliments",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 4,
+      "parentMemberId": 3,
+      "memberNameEn": "Food purchased from stores",
+      "memberNameFr": "Aliments achetés en magasin",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 21,
+      "parentMemberId": 4,
+      "memberNameEn": "Dairy products and eggs",
+      "memberNameFr": "Produits laitiers et oeufs",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 22,
+      "parentMemberId": 21,
+      "memberNameEn": "Dairy products",
+      "memberNameFr": "Produits laitiers",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 24,
+      "parentMemberId": 22,
+      "memberNameEn": "Butter",
+      "memberNameFr": "Beurre",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 26,
+      "parentMemberId": 22,
+      "memberNameEn": "Ice cream and related products",
+      "memberNameFr": "Crème glacée et produits connexes",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 28,
+      "parentMemberId": 21,
+      "memberNameEn": "Eggs",
+      "memberNameFr": "Oeufs",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 29,
+      "parentMemberId": 4,
+      "memberNameEn": "Bakery and cereal products (excluding baby food)",
+      "memberNameFr": "Produits de boulangerie et produits céréaliers (excluant les aliments pour bébés)",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 30,
+      "parentMemberId": 29,
+      "memberNameEn": "Bakery products",
+      "memberNameFr": "Produits de boulangerie",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 31,
+      "parentMemberId": 30,
+      "memberNameEn": "Bread, rolls and buns",
+      "memberNameFr": "Pain et petits pains",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 32,
+      "parentMemberId": 30,
+      "memberNameEn": "Cookies and crackers",
+      "memberNameFr": "Biscuits et craquelins",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 328,
+      "parentMemberId": 32,
+      "memberNameEn": "Crackers and crisp breads (2013=100)",
+      "memberNameFr": "Craquelins et pains secs (2013=100)",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 1,
+      "memberUomCode": 25
+     },
+     {
+      "memberId": 284,
+      "parentMemberId": null,
+      "memberNameEn": "All-items excluding food",
+      "memberNameFr": "Ensemble excluant les aliments",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 288,
+      "parentMemberId": null,
+      "memberNameEn": "Energy",
+      "memberNameFr": "Énergie",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 273,
+      "parentMemberId": null,
+      "memberNameEn": "Goods and services",
+      "memberNameFr": "Biens et services",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 1,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 274,
+      "parentMemberId": 273,
+      "memberNameEn": "Goods",
+      "memberNameFr": "Biens",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 275,
+      "parentMemberId": 274,
+      "memberNameEn": "Durable goods",
+      "memberNameFr": "Biens durables",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 282,
+      "parentMemberId": 273,
+      "memberNameEn": "Services",
+      "memberNameFr": "Services",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 0,
+      "memberUomCode": 17
+     },
+     {
+      "memberId": 283,
+      "parentMemberId": 282,
+      "memberNameEn": "Services excluding shelter services",
+      "memberNameFr": "Services excluant les services de logement",
+      "classificationCode": null,
+      "geoLevel": null,
+      "terminated": 1,
+      "memberUomCode": 17
+     }
+    ]
+   }
+  ],
+  "frequencyCode": 6,
+  "releaseTime": "2026-10-21T08:30"
+ },
+ "series_canada": {
+  "status": "SUCCESS",
+  "object": {
+   "responseStatusCode": 0,
+   "productId": 18100004,
+   "coordinate": "2.2.0.0.0.0.0.0.0.0",
+   "vectorId": 41690973,
+   "vectorDataPoint": [
+    {
+     "refPer": "2025-07-01",
+     "value": 164.9,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-08-01",
+     "value": 164.8,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-09-01",
+     "value": 164.9,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-10-01",
+     "value": 165.3,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-11-01",
+     "value": 165.4,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-12-01",
+     "value": 165.0,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-01-01",
+     "value": 165.6,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-02-01",
+     "value": 166.6,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-03-01",
+     "value": 167.6,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-04-01",
+     "value": 168.4,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-05-01",
+     "value": 169.0,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-06-01",
+     "value": 169.3,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-07-01",
+     "value": 169.9,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-08-01",
+     "value": 169.8,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-09-01",
+     "value": 170.0,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    }
+   ]
+  }
+ },
+ "series_ontario": {
+  "status": "SUCCESS",
+  "object": {
+   "responseStatusCode": 0,
+   "productId": 18100004,
+   "coordinate": "14.2.0.0.0.0.0.0.0.0",
+   "vectorId": 41691783,
+   "vectorDataPoint": [
+    {
+     "refPer": "2025-07-01",
+     "value": 166.9,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-08-01",
+     "value": 166.8,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-09-01",
+     "value": 166.9,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-10-01",
+     "value": 167.3,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-11-01",
+     "value": 167.4,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2025-12-01",
+     "value": 167.0,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-01-01",
+     "value": 167.6,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-02-01",
+     "value": 168.6,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-03-01",
+     "value": 169.6,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-04-01",
+     "value": 170.4,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-05-01",
+     "value": 171.0,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-06-01",
+     "value": 171.3,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-07-01",
+     "value": 171.9,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-08-01",
+     "value": 171.8,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    },
+    {
+     "refPer": "2026-09-01",
+     "value": 172.0,
+     "decimals": 1,
+     "scalarFactorCode": 0,
+     "symbolCode": 0,
+     "statusCode": 0,
+     "securityLevelCode": 0,
+     "releaseTime": "2026-10-21T08:30"
+    }
+   ]
+  }
+ },
+ "missing_whitehorse_butter": {
+  "status": "SUCCESS",
+  "object": {
+   "responseStatusCode": 2,
+   "productId": 18100004,
+   "coordinate": "29.24.0.0.0.0.0.0.0.0",
+   "vectorId": 0,
+   "vectorDataPoint": []
+  }
+ }
+}

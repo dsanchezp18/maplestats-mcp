@@ -52,8 +52,8 @@ ProductId = int | str
 
 async def _described[R: (VectorData, VectorDataSet)](result: R) -> R:
     """`result` with each series' context (table, title, unit, members, notes) filled."""
-    if isinstance(result, VectorDataSet):
-        series, note = await context.describe(list(result.series))
+    if isinstance(result, VectorDataSet) or result.series is not None:
+        series, note = await context.describe(list(result.series or []))
         update: dict[str, object] = {"series": series}
     else:
         described, note = await context.describe([result])
@@ -336,10 +336,26 @@ async def wds_get_data_from_vectors(
     return await _described(data.model_copy(update={"series": series, "provenance": provenance}))
 
 
+async def _cube_frequency_ppy(pid: int, coordinate: str) -> int | None:
+    """Periods per year of a table's series, from its cached cube metadata.
+
+    getCubeMetadata (cached a day, and read anyway for the series context) carries
+    the table's frequencyCode, so a transform needs no getSeriesInfoFromCubePidCoord
+    request just to learn it. When the metadata cannot be read, that request is
+    the fallback, and it explains a coordinate the table does not have.
+    """
+    try:
+        cube, _ = await client.cube_metadata_raw(pid)
+        return transforms.FREQUENCY_PPY.get(int(cube.get("frequencyCode") or 0))
+    except (*context._SOFT_ERRORS, KeyError, ValueError, TypeError):
+        info = await client.get_series_info_from_cube_pid_coord(pid, coordinate)
+        return transforms.ppys([info])[0]
+
+
 @tool
 async def wds_get_data_from_cube_coord(
     product_id: ProductId,
-    coordinate: str,
+    coordinate: str | None = None,
     latest_n: int = 12,
     transform: Transform = "level",
     frequency: Frequency | None = None,
@@ -347,13 +363,21 @@ async def wds_get_data_from_cube_coord(
     index_base: str | None = None,
     window: int | None = None,
     lang: Lang = "en",
+    coordinates: list[str] | None = None,
 ) -> VectorData:
-    """Get the latest N observations for a table + coordinate pair,
-    optionally as a computed change, growth rate, index or aggregate.
+    """Get the latest N observations for one or more coordinates of a
+    StatCan table, optionally as a computed change, growth rate, index or
+    aggregate.
 
     Use for: fetching data when you have a productId/coordinate but not
     yet the vector ID, including year-over-year or period-to-period
-    changes. `status`, `symbol` and `security_level` decode the codes.
+    changes. For several series of one table (every province, several
+    components), pass them all at once in `coordinates` (up to 300, one
+    request) instead of one call per coordinate; each comes back in
+    `series`, in the order given, and any WDS cannot serve is listed in
+    `failed` with the reason. With one `coordinate` the series is at the
+    top level, as before.
+    `status`, `symbol` and `security_level` decode the codes.
     `latest_n` counts periods at the output frequency.
     `transform` computes a change from the published levels: diff
     (x_t - x_{t-1}), pct_change, yoy_diff, yoy_pct_change (year-over-year,
@@ -368,11 +392,12 @@ async def wds_get_data_from_cube_coord(
     history is fetched for the lag; `observations` keep the published
     values and `transformed` holds the computed ones with their formula
     and unit.
-    Keywords: statcan, coordinate, observations, latest, data, wds,
-    productId, Statistics Canada, year-over-year, percent change, growth
-    rate, quarterly average, annual average, moving average, rolling
-    average.
-    Mots-clés : Statistique Canada, coordonnée, observations, dernières
+    Keywords: statcan, coordinate, coordinates, several series, every
+    province, observations, latest, data, wds, productId, Statistics
+    Canada, year-over-year, percent change, growth rate, quarterly
+    average, annual average, moving average, rolling average.
+    Mots-clés : Statistique Canada, coordonnée, plusieurs coordonnées,
+    plusieurs séries, toutes les provinces, observations, dernières
     données, données récentes, numéro de tableau, tableau, dernières
     périodes, variation annuelle, variation en pourcentage, taux de
     croissance, moyenne trimestrielle, moyenne mobile.
@@ -380,32 +405,44 @@ async def wds_get_data_from_cube_coord(
     client.use_lang(lang)
     request = transforms.TransformRequest(transform, frequency, aggregation, index_base, window)
     request.check(lang)
+    asked = ([coordinate] if coordinate else []) + list(coordinates or [])
+    pid = client.normalize_product_id(product_id)
+    padded = client.check_coordinates(asked, latest_n)
     if not request.active:
-        return await _described(
-            await client.get_data_from_cube_pid_coord_and_latest_n_periods(
-                product_id, coordinate, latest_n
-            )
+        data, _ = await asyncio.gather(
+            client.get_data_from_cube_pid_coords_and_latest_n_periods(pid, padded, latest_n),
+            context.prefetch([], [pid]),
         )
-    if latest_n < 1:
-        raise_error(InvalidInput, "error.invalid_input", lang, detail="latest_n must be 1 or more.")
-    info = await client.get_series_info_from_cube_pid_coord(product_id, coordinate)
-    fetch_n = transforms.latest_n_to_fetch(latest_n, request, transforms.ppys([info]))
-    data = await client.get_data_from_cube_pid_coord_and_latest_n_periods(
-        product_id, coordinate, fetch_n
+        return await _described(data)
+    fetch_n = transforms.latest_n_to_fetch(
+        latest_n, request, [await _cube_frequency_ppy(pid, padded[0])]
     )
-    result = await transforms.apply(data, info, request, latest_n=latest_n)
+    data = await client.get_data_from_cube_pid_coords_and_latest_n_periods(pid, padded, fetch_n)
+    fetched = data.series if data.series is not None else [data]
+    try:
+        raw = await context.series_info_raw(sorted({s.vector_id for s in fetched}))
+    except context._SOFT_ERRORS:
+        raw = {}
+    infos = {v: client._series_info(obj, "getSeriesInfoFromVector") for v, obj in raw.items()}
+    computed = [
+        await transforms.apply(s, infos.get(s.vector_id), request, latest_n=latest_n)
+        for s in fetched
+    ]
     provenance = data.provenance.model_copy(
         update={"coverage": transforms.coverage_note(f"latestN={fetch_n}")}
     )
-    return await _described(
-        data.model_copy(
-            update={
-                "observations": result.observations,
-                "transformed": result.transformed,
-                "provenance": provenance,
-            }
-        )
-    )
+    if data.series is not None:
+        update: dict[str, object] = {
+            "series": computed,
+            "provenance": provenance,
+        }
+    else:
+        update = {
+            "observations": computed[0].observations,
+            "transformed": computed[0].transformed,
+            "provenance": provenance,
+        }
+    return await _described(data.model_copy(update=update))
 
 
 @tool

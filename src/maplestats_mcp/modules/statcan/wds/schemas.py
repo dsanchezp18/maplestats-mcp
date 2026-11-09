@@ -246,7 +246,27 @@ class VectorSeries(BaseModel):
     )
 
 
+class FailedCoordinate(BaseModel):
+    product_id: int
+    coordinate: str
+    reason: str
+
+
 class VectorData(VectorSeries):
+    """One table coordinate's series; with several coordinates, `series` holds them all."""
+
+    series: list[VectorSeries] | None = Field(
+        default=None,
+        description=(
+            "Only when several coordinates were asked for: one series per coordinate that "
+            "returned data, in the order asked. The top-level product_id, coordinate and "
+            "vector_id then name the first of them, and the top-level observations are empty."
+        ),
+    )
+    failed: list[FailedCoordinate] = Field(
+        default_factory=list,
+        description="Coordinates WDS could not serve, each with the reason; the others came back.",
+    )
     provenance: Provenance
 
 
