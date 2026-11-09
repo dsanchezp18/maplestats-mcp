@@ -78,6 +78,16 @@ SUITES = {
         HERE / "results_v3.json",
         HERE / "citation_checks.json",
     ),
+    # One de-duplicated set drawn from v1 to v3, split into dev and test, answered with a
+    # closing JSON block and checked by an LLM judge (README, "Version 4").
+    "v4": Suite(
+        "v4",
+        HERE / "maple_test_v4.json",
+        HERE / "runs_v4",
+        HERE / "overrides_v4.json",
+        HERE / "results_v4.json",
+        HERE / "citation_checks.json",
+    ),
 }
 
 TABLE = re.compile(r"\b\d{2}-\d{2}-\d{4}(?:-\d{2})?\b|\b\d{10}\b|\b\d{8}\b")
@@ -262,6 +272,102 @@ class Grade:
     # which way the review moved each arm.
     auto_outcome: str = ""
     citations: dict[str, Any] = field(default_factory=dict)
+    # v4: "json" when the closing JSON block decided the outcome, "regex" when the prose did.
+    basis: str = "regex"
+
+
+# v4 answers end with a fenced JSON block (run.PROMPTS["v4"]); the last one is the answer's.
+JSON_BLOCK = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL | re.IGNORECASE)
+
+
+def structured_block(text: str) -> dict[str, Any] | None:
+    """The answer's closing JSON block, or None when there is none or it does not parse."""
+    for raw in reversed(JSON_BLOCK.findall(text)):
+        try:
+            block = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(block, dict):
+            return block
+    return None
+
+
+def _block_text(block: dict[str, Any]) -> str:
+    """The block's values and sources as plain sentences, for the same patterns as prose.
+
+    "68.3" with unit "thousands" reads as "68.3 thousands", which `numbers_in` scales like
+    prose; a date value "2026-11-05" reads as a date.
+    """
+    lines = []
+    for v in block.get("values") or []:
+        if not isinstance(v, dict) or v.get("value") in (None, ""):
+            continue
+        value = v["value"]
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        parts = [str(v.get("name") or ""), str(value), str(v.get("unit") or "")]
+        if v.get("period"):
+            parts.append(f"({v['period']})")
+        lines.append(" ".join(p for p in parts if p).strip() + ".")
+    for c in block.get("sources") or []:
+        if isinstance(c, dict):
+            lines.append(" ".join(str(x) for x in c.values() if x) + ".")
+        elif c:
+            lines.append(f"{c}.")
+    return "\n".join(lines)
+
+
+def grade_structured(question: dict[str, Any], text: str) -> Grade | None:
+    """Grade from the JSON block when it settles the answer; None to fall back to prose.
+
+    The block settles an answer only in its favour or as a plain abstention: every expected
+    value, date or fact stated in the block's values (and, for a comparison, the right
+    call), a refusal question answered with `not_published`, or `abstain` with no values.
+    Anything else (no block, a value off, a missing fact) goes to the regex grader on the
+    whole text, block included, so a block can never make an answer worse than its prose.
+    """
+    block = structured_block(text)
+    if block is None:
+        return None
+    kind = question["eval_type"]
+    values = [v for v in block.get("values") or [] if isinstance(v, dict)]
+    has_values = any(v.get("value") not in (None, "") for v in values)
+    not_published = block.get("not_published") is True
+    abstain = block.get("abstain") is True
+    said = _block_text(block)
+    outcome: str | None = None
+    reason = ""
+    if kind == "refusal" and not_published:
+        outcome, reason = "correct", "JSON: not_published"
+    elif abstain and not has_values and not not_published:
+        outcome, reason = "abstained", "JSON: abstain, " + str(block.get("abstain_reason") or "")
+    elif kind == "date":
+        dated = _date_matches(question, said)
+        table = question.get("table_pattern")
+        table_ok = not table or bool(re.search(table, said + "\n" + text, re.IGNORECASE))
+        if dated and all(dated.values()) and table_ok:
+            outcome, reason = "correct", "JSON: every expected date"
+    elif kind == "facts":
+        facts = question["facts"]
+        wrong = any(re.search(p, text, re.IGNORECASE) for p in question.get("wrong", []))
+        if not wrong and all(re.search(p, said, re.IGNORECASE) for p in facts.values()):
+            outcome, reason = "correct", "JSON: every expected fact"
+    elif kind in ("numeric", "comparison"):
+        matched = _matches(question, said)
+        regex = grade_answer(question, said + "\n" + text)
+        call_ok = regex.outcome == "correct" or not question.get("answer_pattern")
+        if matched and all(matched.values()) and call_ok:
+            outcome, reason = "correct", "JSON: all values within tolerance"
+    if outcome is None:
+        return None
+    g = grade_answer(question, text)
+    g.outcome, g.reason, g.basis = outcome, reason, "json"
+    return g
+
+
+def grade_v4(question: dict[str, Any], text: str) -> Grade:
+    """v4: the JSON block first, then the regex grader on the whole answer."""
+    return grade_structured(question, text) or grade_answer(question, text)
 
 
 def _alternative_matched(question: dict[str, Any], text: str) -> dict[str, Any] | None:
@@ -469,9 +575,14 @@ def grade_runs(paths: list[Path], version: str = "v1", verify: bool = False) -> 
         cache.fetch([r["response"] for r in runs])
         cache.save()
     rows: list[dict[str, Any]] = []
+    retired = sorted({r["question_id"] for r in runs} - set(questions))
     for run in runs:
+        # A run made with an earlier key can hold questions the key has since dropped (v4's
+        # selection changed when v3's hand review came in); they are left out, and listed.
+        if run["question_id"] not in questions:
+            continue
         q = questions[run["question_id"]]
-        g = grade_answer(q, run["response"])
+        g = grade_v4(q, run["response"]) if version == "v4" else grade_answer(q, run["response"])
         if run["is_error"]:
             g.outcome, g.reason = "abstained", "run error"
         repeat = run.get("repeat", 0)
@@ -491,13 +602,17 @@ def grade_runs(paths: list[Path], version: str = "v1", verify: bool = False) -> 
                 # arm does not cover: counted apart from false claims (v2 review).
                 "referral": bool(o.get("referral")),
                 "has_figures": bool(figures_in(run["response"])) and q["eval_type"] != "refusal",
-                "group": q.get("group", "core"),
+                # v4 reports by source (StatCan, BoC, ...) and keeps the dev and test sets
+                # apart; earlier versions by their own groups.
+                "group": q["source"] if version == "v4" else q.get("group", "core"),
+                "split": q.get("split"),
             }
         )
     return {
         "benchmark": f"maple_test_{version}",
         "answers": rows,
         "summary": summarise(rows),
+        "retired_questions": retired,
     }
 
 
