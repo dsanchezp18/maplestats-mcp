@@ -70,7 +70,15 @@ Each language also has a client object (`Client`, `ms_client()`,
 use a default one and take an optional client.
 
 - **Search** returns a data frame with one row per tool: `name`,
-  `description`, and the input schema as JSON text.
+  `description`, `arguments` and `input_schema`. The clients ask the server
+  for `search_tools(detail="full")` by default, which gives the whole
+  description and the input schema as JSON text (`arguments` is then null).
+  `detail="brief"` gives the server's compact answer instead: a one-line
+  description and `arguments`, the input schema as a one-line signature
+  (`{series_names: str[], recent?: int, lang?: "en"|"fr"}`), with
+  `input_schema` null. Against a server older than the compact search
+  (before 2026-11-09), which rejects `detail`, the clients repeat the search
+  without it and read the full form.
 - **Raw result** is the decoded `structuredContent` (a dict, list or `Dict`).
 - **Tidy rows** apply the rule `reproduce_workbook` already uses
   (`modules/reproduce/workbook.py::rows_and_left_out`), ported line for line:
@@ -145,8 +153,8 @@ using Pkg; Pkg.add(url="https://github.com/dsanchezp18/maplestats-mcp", subdir="
 ## Tests
 
 Each client's tests run without network access against recorded responses:
-the SSE bodies of `initialize`, `search_tools`, a Bank of Canada call, a WDS
-vector call and a tool error, saved under each client's test fixtures by
+the SSE bodies of `initialize`, `search_tools` (full and brief), a Bank of
+Canada call, a WDS vector call and a tool error, saved under each client's test fixtures by
 `clients/record_fixtures.py`. One live test per client, skipped unless
 `MAPLESTATS_LIVE=1`, runs search, a small Bank of Canada call and the tidy
 conversion against the hosted server.

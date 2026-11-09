@@ -223,18 +223,37 @@ end
 as_arguments(kwargs) = Dict{String,Any}(string(k) => v for (k, v) in kwargs)
 
 """
-    search_tools(query; client = default_client()) -> DataFrame
+    search_tools(query; detail = "full", client = default_client()) -> DataFrame
 
 Tools matching a plain-language query, best first. Columns: `name`,
-`description`, `input_schema` (JSON text).
+`description`, `arguments` (the one-line signature) and `input_schema` (JSON
+text). `detail = "full"` (the default) returns the whole description and
+`input_schema`, with `arguments` missing; `detail = "brief"` returns a
+one-line description and `arguments`, with `input_schema` missing.
 """
-function search_tools(query::AbstractString; client::Client=default_client())
-    found = call_server_tool(client, "search_tools", Dict("query" => query))
+function search_tools(
+    query::AbstractString; detail::AbstractString="full", client::Client=default_client()
+)
+    found = try
+        call_server_tool(
+            client, "search_tools", Dict("query" => query, "detail" => detail)
+        )
+    catch err
+        # A server older than the compact search has no `detail` and rejects it;
+        # its answer is the full form anyway.
+        (err isa MapleStatsError && occursin("detail", err.message)) || rethrow()
+        call_server_tool(client, "search_tools", Dict("query" => query))
+    end
     tools = is_record_list(found) ? found : []
     return DataFrame(;
         name=String[string(get(t, :name, "")) for t in tools],
         description=String[string(get(t, :description, "")) for t in tools],
-        input_schema=String[JSON3.write(get(t, :inputSchema, Dict())) for t in tools],
+        arguments=Union{String,Missing}[
+            haskey(t, :arguments) ? string(t.arguments) : missing for t in tools
+        ],
+        input_schema=Union{String,Missing}[
+            haskey(t, :inputSchema) ? JSON3.write(t.inputSchema) : missing for t in tools
+        ],
     )
 end
 

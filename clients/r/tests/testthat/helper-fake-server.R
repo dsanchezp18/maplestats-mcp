@@ -107,6 +107,8 @@ local_fake_server <- function(env = parent.frame()) {
   server
 }
 
+search_columns <- c("name", "description", "arguments", "input_schema")
+
 test_client <- function() {
   ms_client(url = "https://test.invalid/mcp")
 }

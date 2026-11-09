@@ -1,3 +1,3 @@
 event: message
-data: {"jsonrpc":"2.0","id":7,"result":{"content":[{"text":"[not_found] Error calling tool 'boc_get_observations': Series NOPE_XX not found. Fix: check the identifier with the source's search or list tool (search_tools finds it), or widen the query. If the data do not exist, say so; do not estimate them.","type":"text"}],"isError":true}}
+data: {"jsonrpc":"2.0","id":8,"result":{"content":[{"text":"[not_found] Error calling tool 'boc_get_observations': Series NOPE_XX not found. Fix: check the identifier with the source's search or list tool (search_tools finds it), or widen the query. If the data do not exist, say so; do not estimate them.","type":"text"}],"isError":true}}
 

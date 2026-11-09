@@ -46,9 +46,9 @@ def default_client() -> Client:
     return _default
 
 
-def search_tools(query: str, client: Client | None = None) -> Any:
+def search_tools(query: str, client: Client | None = None, detail: str = "full") -> Any:
     """See Client.search_tools."""
-    return (client or default_client()).search_tools(query)
+    return (client or default_client()).search_tools(query, detail)
 
 
 def plan_query(question: str, lang: str = "en", client: Client | None = None) -> Any:

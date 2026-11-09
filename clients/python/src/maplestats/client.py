@@ -202,22 +202,37 @@ class Client:
 
     # Public API --------------------------------------------------------------
 
-    def search_tools(self, query: str) -> pl.DataFrame:
+    def search_tools(self, query: str, detail: str = "full") -> pl.DataFrame:
         """Tools matching a plain-language query, best first.
 
-        Columns: name, description, input_schema (JSON text).
+        Columns: name, description, arguments (the one-line signature) and
+        input_schema (JSON text). detail="full" (the default) returns the whole
+        description and input_schema, with arguments null; detail="brief"
+        returns a one-line description and arguments, with input_schema null.
         """
-        found = self._tool("search_tools", {"query": query})
+        try:
+            found = self._tool("search_tools", {"query": query, "detail": detail})
+        except MapleStatsError as error:
+            # A server older than the compact search (before PR #214) has no
+            # `detail` and rejects it; its answer is the full form anyway.
+            if "detail" not in str(error):
+                raise
+            found = self._tool("search_tools", {"query": query})
         tools = found if isinstance(found, list) else []
         return pl.DataFrame(
             {
                 "name": [t.get("name", "") for t in tools],
                 "description": [t.get("description", "") for t in tools],
-                "input_schema": [json.dumps(t.get("inputSchema", {})) for t in tools],
+                "arguments": [t.get("arguments") for t in tools],
+                "input_schema": [
+                    json.dumps(t["inputSchema"]) if "inputSchema" in t else None
+                    for t in tools
+                ],
             },
             schema={
                 "name": pl.String,
                 "description": pl.String,
+                "arguments": pl.String,
                 "input_schema": pl.String,
             },
         )

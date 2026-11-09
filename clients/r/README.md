@@ -17,7 +17,7 @@ pak::pak("dsanchezp18/maplestats-mcp/clients/r")
 ```r
 library(maplestats)
 
-# Find a tool: name, description and input schema, best match first
+# Find a tool: name, description, arguments and input schema, best match first
 ms_search_tools("bank of canada exchange rate")
 
 # Run it and get rows. Wrap a length-one vector in I() when the tool
