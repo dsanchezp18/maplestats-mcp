@@ -212,6 +212,15 @@ class LazyModuleProvider(LocalProvider):
             self._import(self._extra_files)
             self._extras_loaded = True
 
+    def load(self) -> None:
+        """Import the module's tools, resources and prompts now (see `preload`)."""
+        self._load_tools()
+        self._load_extras()
+
+    @property
+    def loaded(self) -> bool:
+        return self._tools_loaded and self._extras_loaded
+
     async def _list_tools(self) -> Sequence[Tool]:
         return list(self._listed)
 
@@ -794,6 +803,25 @@ source, a field that is null or missing, a count that does not match>
 - Say what was already tried (a retry, different arguments, `lang`).
 - One issue per report.
 """
+
+
+async def preload(server: FastMCP) -> None:
+    """Import every lazy module and build the search index, before serving.
+
+    The lazy providers import a module on the event loop the first time one of
+    its tools is called, which holds every other request meanwhile: on a laptop
+    the first StatCan call after a start took 12.7 s (7.45 s importing) against
+    0.09 s after, and the first search_tools 2.3 s against 0.05 s (2026-11-09).
+    The hosted app (asgi.py) runs this before the port opens, when
+    MAPLE_PRELOAD allows; stdio stays lazy so desktop clients start fast.
+    """
+    for provider in server.providers:
+        if isinstance(provider, LazyModuleProvider):
+            provider.load()
+    # A search builds the BM25 index over the catalogue, which later searches
+    # reuse while the catalogue is unchanged; the query itself does not matter.
+    transform = next(t for t in server.transforms if isinstance(t, AnnotatedBM25SearchTransform))
+    await transform._search(await searchable_tools(server), "preload")
 
 
 def _build_module_catalogue() -> str:
