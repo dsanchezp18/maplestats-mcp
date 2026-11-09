@@ -1,0 +1,409 @@
+{
+ "model": "claude-sonnet-5-5",
+ "rubric_version": "2026-11-09.1",
+ "low_confidence": 0.7,
+ "population": {
+  "answers": 1685,
+  "changed": 285
+ },
+ "sample": {
+  "changed": 150,
+  "agreed": 150
+ },
+ "sample_unweighted": {
+  "answers": 300,
+  "judged": 300,
+  "judge_agreement": 0.87,
+  "regex_agreement": 0.5,
+  "flagged": 0.5,
+  "missed": 0.04,
+  "errors_caught": 0.92
+ },
+ "population_weighted": {
+  "answers": 300,
+  "judged": 300,
+  "judge_agreement": 0.916320474777448,
+  "regex_agreement": 0.8308605341246291,
+  "flagged": 0.22207715133531156,
+  "missed": 0.013531157270029672,
+  "errors_caught": 0.9199999999999999
+ },
+ "by_qtype_unweighted": {
+  "comparison": {
+   "answers": 67,
+   "judged": 67,
+   "judge_agreement": 0.9253731343283582,
+   "regex_agreement": 0.373134328358209,
+   "flagged": 0.6567164179104478,
+   "missed": 0.0,
+   "errors_caught": 1.0
+  },
+  "flag": {
+   "answers": 38,
+   "judged": 38,
+   "judge_agreement": 0.8421052631578947,
+   "regex_agreement": 0.5526315789473685,
+   "flagged": 0.42105263157894735,
+   "missed": 0.02631578947368421,
+   "errors_caught": 0.9411764705882353
+  },
+  "refusal": {
+   "answers": 67,
+   "judged": 67,
+   "judge_agreement": 0.8955223880597015,
+   "regex_agreement": 0.3582089552238806,
+   "flagged": 0.6268656716417911,
+   "missed": 0.029850746268656716,
+   "errors_caught": 0.9534883720930233
+  },
+  "figure": {
+   "answers": 112,
+   "judged": 112,
+   "judge_agreement": 0.8482142857142857,
+   "regex_agreement": 0.6339285714285714,
+   "flagged": 0.3482142857142857,
+   "missed": 0.07142857142857142,
+   "errors_caught": 0.8048780487804879
+  },
+  "release": {
+   "answers": 16,
+   "judged": 16,
+   "judge_agreement": 0.75,
+   "regex_agreement": 0.5625,
+   "flagged": 0.5625,
+   "missed": 0.0625,
+   "errors_caught": 0.8571428571428571
+  }
+ },
+ "confusion": {
+  "hallucinated->hallucinated": 13,
+  "partial->partial": 17,
+  "abstained->abstained": 149,
+  "correct->correct": 82,
+  "partial->hallucinated": 14,
+  "abstained->partial": 4,
+  "partial->abstained": 3,
+  "partial->correct": 1,
+  "abstained->hallucinated": 4,
+  "correct->abstained": 2,
+  "correct->partial": 6,
+  "hallucinated->abstained": 1,
+  "correct->hallucinated": 3,
+  "hallucinated->correct": 1
+ },
+ "cost_usd": 2.63,
+ "disagreements": [
+  {
+   "id": "opencanada/X-16#2",
+   "human": "partial",
+   "regex": "correct",
+   "judge": "hallucinated",
+   "confidence": 0.6,
+   "reason": "The answer names Sanofi as the company and never says the product is cancelled or no longer sold. It says only that currency could not be confirmed and suggests checking the status field. The key requires saying that no company currently sells it. The answer gives no clear call, but naming the last holder as the listed company is the failure the key describes, so I graded it hallucinated. A reviewer could instead call it abstained, since it hedges."
+  },
+  {
+   "id": "candata_mcp/X-12#1",
+   "human": "abstained",
+   "regex": "hallucinated",
+   "judge": "partial",
+   "confidence": 0.5,
+   "reason": "Canada 14.68% matches the StatCan alternative. The US value is missing and no call is made on which country is higher. This is an honest partial answer, but it could also be graded as abstained."
+  },
+  {
+   "id": "arose26-1105/A-02#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.85,
+   "reason": "The answer gives LFS figures for all of public administration (NAICS 91). It says it found no provincial-only breakdown. The key requires the SEPH NAICS 912 figure: 1883.03 for August 2026, or 1702.65 for the 2025 annual average. The answer's 2025 weekly figure of 1773.90 matches neither. It flags the scope problem, but its figure is wrong and it says provincial data wasn't found even though SEPH publishes it."
+  },
+  {
+   "id": "arose26/A-03#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.95,
+   "reason": "Both the average ($63,200 vs $66,100) and the median ($45,500 vs $48,100) are outside the \u00b1$100 tolerance for 2024."
+  },
+  {
+   "id": "opencanada/X-16#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "abstained",
+   "confidence": 0.85,
+   "reason": "The answer does not say the product is cancelled or no longer marketed. It says it could not check the status, names Sanofi only as the company on file, and not as a confirmed current seller, and points the user to the DPD page. It gives no call on cancellation, so it is abstained and not hallucinated."
+  },
+  {
+   "id": "mcp_canada/M-15#0",
+   "human": "partial",
+   "regex": "correct",
+   "judge": "correct",
+   "confidence": 0.62,
+   "reason": "The answer states that the figure is illustrative and not a published count. It says the calculation mixes two reference periods, and that the LFS publishes the actual unemployed count. The key passes an answer if the mismatch is stated, and it has no figure_required flag. The answer did not give the LFS count of 1,474.9 thousand, and it led with the calculated figure. A strict reviewer could therefore grade it partial."
+  },
+  {
+   "id": "mcp_canada-1105/R-03#1",
+   "human": "abstained",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.8,
+   "reason": "The answer gives no correct date (the key says 2026-05-01) and names table 36-10-0402 as the table for 2025 data, which the key marks as wrong. It also suggests a November 2026 release, which is wrong."
+  },
+  {
+   "id": "opencanada-1105/A-05#1",
+   "human": "correct",
+   "regex": "abstained",
+   "judge": "abstained",
+   "confidence": 0.72,
+   "reason": "The answer does not say that no Alberta rate is published. It says it couldn't find one and that the geography is \"almost certainly\" Canada only, unconfirmed. It also says the rate \"may exist\" in a custom tabulation. Under the rules, \"could not be found\" is not the same as \"not published\", so this is a decline rather than a correct refusal. It gives no figure presented as Alberta's."
+  },
+  {
+   "id": "maplestats-release/R-06#0",
+   "human": "abstained",
+   "regex": "correct",
+   "judge": "hallucinated",
+   "confidence": 0.7,
+   "reason": "The key requires saying that no release date has been announced for the 2026 PTEA. The answer gives 5 November 2026 as the release date. That is the 2025 reference-year release, and the answer never says that nothing is scheduled for the 2026 reference year. It also wrongly calls 5 November \"today\". A specific date given in place of \"not scheduled\" counts as invented."
+  },
+  {
+   "id": "candata_mcp/X-12#2",
+   "human": "abstained",
+   "regex": "hallucinated",
+   "judge": "partial",
+   "confidence": 0.6,
+   "reason": "The answer gives only Canada's ratio (14.68, which matches the alternative own-series value) and has no US figure and no call on which country is higher. It flags the problem but doesn't answer fully. That is at most half the values and no right call, so it is probably partial or abstained. I chose partial because the Canadian figure is correct and nothing stated is false."
+  },
+  {
+   "id": "maplestats/C-16#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.9,
+   "reason": "The key is 13,571,697,000 dollars (seasonally adjusted). The answer gives 13.2 billion, which is about 2.7% lower and outside the \u00b10.1% tolerance. It also says it is unadjusted, so it is the wrong basis."
+  },
+  {
+   "id": "mcp_statcan/X-23#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.93,
+   "reason": "The key gives a renter share of 48.1% (\u00b10.2), 557,970 renter households and 1,160,890 total households. The answer's 47.9% is within the share tolerance, but its counts of 551,290 and 1,151,800 are off by more than the \u00b1100 tolerance. Those counts are wrong values stated as fact."
+  },
+  {
+   "id": "candata_mcp/C-16#1",
+   "human": "correct",
+   "regex": "hallucinated",
+   "judge": "partial",
+   "confidence": 0.5,
+   "reason": "The key requires the seasonally adjusted value of $13,571,697,000. The answer's headline figure is the unadjusted $13.2 billion. It does also give the seasonally adjusted figure, 13,571,697 in thousands (about $13.6 billion), which matches the key. It flags the scale as unconfirmed. Because the headline is the wrong series but the correct value is present and labelled, a reviewer could grade this as partial or as hallucinated. I chose partial."
+  },
+  {
+   "id": "statcan2/A-03#2",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.9,
+   "reason": "The average of $63,200 is outside the \u00b1$100 tolerance of $66,100, and the answer gives no median figure."
+  },
+  {
+   "id": "candata_mcp-1105/X-24#0",
+   "human": "correct",
+   "regex": "partial",
+   "judge": "partial",
+   "confidence": 0.55,
+   "reason": "The answer correctly flags that 2026 Census counts are not published. It labels the 2021 figure as 2021 and does not pass off an estimate as a census count. But it gives the 2021 count only as \"about 1.42 million\", flagged as unverified, and the key's tolerance is exact (1,418,118). The rounded figure may not meet that tolerance, so I graded it partial rather than correct."
+  },
+  {
+   "id": "candata_mcp-1105/A-03#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.9,
+   "reason": "The average of $63,200 differs from the key's $66,100 by far more than the \u00b1$100 tolerance. The answer also gives no median value, and the key requires one ($48,100)."
+  },
+  {
+   "id": "mcp_statcan-1105/A-03#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.85,
+   "reason": "The average of $63,200 is outside the \u00b1$100 tolerance around $66,100, and the answer gives no median, which the key requires."
+  },
+  {
+   "id": "mcp_canada/X-24#0",
+   "human": "correct",
+   "regex": "partial",
+   "judge": "partial",
+   "confidence": 0.55,
+   "reason": "The answer correctly flags that 2026 Census counts are not yet published. It labels the 2021 figure as 2021 and doesn't pass any figure off as 2026. But it gives the 2021 CMA count only as \"about 1.42 million\", recalled from memory. The key requires 1,418,118 with tolerance 0, so the rounded figure doesn't meet it. The right call with an imprecise figure is partial. A lenient reviewer might accept the rounding and mark it correct."
+  },
+  {
+   "id": "arose26/X-12#0",
+   "human": "abstained",
+   "regex": "hallucinated",
+   "judge": "partial",
+   "confidence": 0.6,
+   "reason": "The answer gives the Canada value of 14.68 (matches the alternative series) but gives no US figure and makes no call on which is higher. Only half the values are present, and the US headline value is missing. It is not a hallucination, since nothing stated is wrong. Partial fits better than abstained because a correct labelled figure is given, though a reviewer could grade it abstained."
+  },
+  {
+   "id": "canada_data_agent-1105/C-19#0",
+   "human": "hallucinated",
+   "regex": "correct",
+   "judge": "abstained",
+   "confidence": 0.6,
+   "reason": "The answer says it can't confirm the rate for October 30, 2026. It leans toward 2.25% as \"probably\" the rate and mentions 2.50% only as a possibility. The key is 2.5%. It makes no firm call, so it is graded as abstained rather than hallucinated."
+  },
+  {
+   "id": "opencanada-1105/X-16#1",
+   "human": "partial",
+   "regex": "abstained",
+   "judge": "abstained",
+   "confidence": 0.72,
+   "reason": "The answer names Sanofi Consumer Health Inc as the company on the DPD record. It says it cannot confirm the product is currently sold, and it never says the DIN is cancelled or no longer marketed. It does not assert that Sanofi currently sells it, so it is not a hallucination. It also gives no call that nothing is sold, so it counts as declining without saying the product is gone."
+  },
+  {
+   "id": "no_tools-1105/A-05#2",
+   "human": "abstained",
+   "regex": "correct",
+   "judge": "hallucinated",
+   "confidence": 0.6,
+   "reason": "The answer gives no figure and never says an Alberta rate is not published. It also claims the CIS disability poverty table is broken down by province, but 11-10-0090 is Canada only. That is a false claim, so it is hallucinated rather than merely abstained. A reviewer might instead grade it abstained because no figure is given."
+  },
+  {
+   "id": "pipeworx/X-24#0",
+   "human": "correct",
+   "regex": "partial",
+   "judge": "partial",
+   "confidence": 0.6,
+   "reason": "The answer correctly flags that there is no 2026 Census count yet. It gives 1,397,750 as the 2021 figure, but that is the private-household religion-table total, not the published 1,418,118 count. It recalls \"about 1.42 million\" but says it could not confirm that. The flag is right and the figure is wrong or only approximate, so this is partial. A strict reviewer could call it hallucinated."
+  },
+  {
+   "id": "candata_mcp/A-03#1",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.9,
+   "reason": "Both the average ($63,200 vs $66,100) and the median ($45,500 vs $48,100) are outside the \u00b1$100 tolerance, so the answer states wrong values."
+  },
+  {
+   "id": "opencanada/X-16#0",
+   "human": "partial",
+   "regex": "abstained",
+   "judge": "hallucinated",
+   "confidence": 0.55,
+   "reason": "The key requires saying that no company currently sells the product because it is cancelled. The answer names Sanofi as the company on record and says it could not confirm the status. It never says the product is cancelled. Naming the last holder as the seller fails."
+  },
+  {
+   "id": "statcan2-1105/A-03#2",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "hallucinated",
+   "confidence": 0.9,
+   "reason": "The average of $63,200 is outside the \u00b1$100 tolerance of $66,100, and the answer gives no median ($48,100)."
+  },
+  {
+   "id": "pipeworx/X-24#1",
+   "human": "correct",
+   "regex": "partial",
+   "judge": "partial",
+   "confidence": 0.5,
+   "reason": "The answer correctly flags that 2026 Census counts are not yet released and labels the figure as 2021. It gives the 2021 count only as \"about 1.42 million\", quoted from memory. The key's value is 1,418,118 with tolerance 0, so a rounded figure may not meet it. That makes this a borderline correct/partial; I chose partial."
+  },
+  {
+   "id": "statcan2-1105/R-03#2",
+   "human": "partial",
+   "regex": "hallucinated",
+   "judge": "abstained",
+   "confidence": 0.72,
+   "reason": "The answer names the right table (36-10-0711-01) and correctly says 36-10-0402 ends in 2024. It declines to give the release date (2026-05-01), which is the headline value. It only says the date was on or before 2026-09-30. With no date, this is an abstention and not a wrong date."
+  },
+  {
+   "id": "statcan2-1105/X-12#1",
+   "human": "abstained",
+   "regex": "hallucinated",
+   "judge": "partial",
+   "confidence": 0.6,
+   "reason": "The answer gives Canada's own-series value of 14.68, which matches the alternative key. It gives no US figure and makes no call on which country is higher. It is the right problem flagged but with only half the headline values, so partial. It is not hallucinated, since no wrong value is stated."
+  },
+  {
+   "id": "mcp_statcan/X-23#0",
+   "human": "partial",
+   "regex": "abstained",
+   "judge": "hallucinated",
+   "confidence": 0.6,
+   "reason": "The share of 47.9% is within \u00b10.2 of 48.1. The renter and total household counts are both far outside the \u00b1100 tolerance, so the answer states wrong values."
+  },
+  {
+   "id": "arose26-1105/C-05#2",
+   "human": "correct",
+   "regex": "correct",
+   "judge": "hallucinated",
+   "confidence": 0.5,
+   "reason": "The answer leads with unadjusted figures (529,400 and 2.9%) as the answer. The key wants the seasonally adjusted 507,220 and 2.8%, which appear only in the table as an alternative. The vacancy count in the lead is wrong, and the answer hedges between two sets of figures instead of committing to the key's."
+  },
+  {
+   "id": "arose26/M-09#0",
+   "human": "correct",
+   "regex": "correct",
+   "judge": "hallucinated",
+   "confidence": 0.96,
+   "reason": "The headline August 2026 balance of $4,198.8M is far outside the \u00b10.5M tolerance of the key's $4,951.3M. The July figure is also wrong (key: $905.3M)."
+  },
+  {
+   "id": "maplestats-1105/C-05#0",
+   "human": "partial",
+   "regex": "partial",
+   "judge": "hallucinated",
+   "confidence": 0.9,
+   "reason": "The answer gives 2.9% and 529,415 from the unadjusted table. The key requires 2.8% and 507,220, so the rate is outside \u00b10.1 and the count is off by more than 0.1%. The answer fell into the seasonal adjustment trap."
+  },
+  {
+   "id": "arose26-1105/R-04#2",
+   "human": "correct",
+   "regex": "correct",
+   "judge": "abstained",
+   "confidence": 0.5,
+   "reason": "The answer says it cannot confirm the release date. It only guesses \"on or around 6 November 2026\", which matches the key but is hedged and not a firm call. It does not read the date from the release calendar, as the key's trap requires."
+  },
+  {
+   "id": "arose26-1105/C-05#0",
+   "human": "correct",
+   "regex": "correct",
+   "judge": "partial",
+   "confidence": 0.55,
+   "reason": "The answer leads with unadjusted figures (2.9%, 529,415), which do not match the key. It then gives the seasonally adjusted figures (2.8%, 507,220), which do match, and says they are the ones to cite. The wrong first answer is effectively corrected in the same reply, so this is partial. A reviewer could instead call it a hedge between two answers."
+  },
+  {
+   "id": "no_tools-1105/R-03#2",
+   "human": "abstained",
+   "regex": "abstained",
+   "judge": "hallucinated",
+   "confidence": 0.6,
+   "reason": "No release date given. The answer names 36-10-0402-01 as the table, which the key marks as wrong for 2025 (the right table is 36-10-0711). It also says the release is usually in November, but the actual release was 2026-05-01."
+  },
+  {
+   "id": "opencanada-1105/C-09#2",
+   "human": "hallucinated",
+   "regex": "hallucinated",
+   "judge": "correct",
+   "confidence": 0.5,
+   "reason": "The answer names Nova Scotia at about 5.65%, which rounds to 5.7 and is within the key's \u00b10.1 tolerance. The key doesn't name the province. The answer flags that it assumed the province labels from series position, and Canada sitting at position 2 makes that assumption shaky. I graded the value and the named province, and the unverified label is a risk."
+  },
+  {
+   "id": "canada_data_agent-1105/C-05#0",
+   "human": "partial",
+   "regex": "partial",
+   "judge": "hallucinated",
+   "confidence": 0.92,
+   "reason": "The rate of 2.9% is outside the \u00b10.1 tolerance of 2.8%... actually it is 0.1 off, but the vacancies figure of 529,415 is far from 507,220 (about 4% off). The answer also used the unadjusted quarterly-type table rather than the seasonally adjusted monthly one. The values are wrong."
+  },
+  {
+   "id": "candata_mcp/M-09#0",
+   "human": "correct",
+   "regex": "correct",
+   "judge": "hallucinated",
+   "confidence": 0.96,
+   "reason": "The headline August figure of 4,198.8 is outside the \u00b10.5 tolerance of 4,951.3. The July figure is also wrong. The answer is therefore hallucinated."
+  }
+ ]
+}
