@@ -49,6 +49,8 @@ _inside_call: ContextVar[bool] = ContextVar("maplestats_budget_inside_call", def
 # The argument that picks a brief or full result. No tool takes it: this middleware
 # removes it before the tool's arguments are validated.
 DETAIL_ARGUMENT = "detail"
+# Tools that read `detail` themselves, so this middleware leaves it in their arguments.
+_OWN_DETAIL = frozenset({"call_tool", "search_tools"})
 
 # Room left under the budget for the note and caveats added after trimming.
 _RESERVE = 2_000
@@ -233,7 +235,13 @@ def _take_detail(context: MiddlewareContext) -> tuple[MiddlewareContext, Detail]
     return context.copy(message=message.model_copy(update={"arguments": rest})), detail
 
 
-def apply_detail(result: ToolResult, tool: str, detail: Detail, lang: str) -> ToolResult:
+def apply_detail(
+    result: ToolResult,
+    tool: str,
+    detail: Detail,
+    lang: str,
+    arguments: Mapping[str, Any] | None = None,
+) -> ToolResult:
     """`result` shaped for `detail` (shared/brief.py); itself when nothing changes.
 
     Like apply_budget, only a result whose content is the one text block FastMCP
@@ -246,7 +254,7 @@ def apply_detail(result: ToolResult, tool: str, detail: Detail, lang: str) -> To
     if len(result.content) != 1 or not isinstance(result.content[0], TextContent):
         return result
     wrapped = bool(((result.meta or {}).get("fastmcp") or {}).get("wrap_result"))
-    shaped = shape(payload, detail, lang, wrapped=wrapped)
+    shaped = shape(payload, detail, lang, wrapped=wrapped, tool=tool, arguments=arguments)
     if shaped is None:
         return result
     body = shaped.get("result") if wrapped else shaped
@@ -268,8 +276,9 @@ class ResponseBudgetMiddleware(Middleware):
     async def on_call_tool(self, context: MiddlewareContext, call_next: CallNext) -> Any:
         # The call_tool meta-tool runs its target through this middleware again;
         # the target's own pass does the work, once. call_tool takes `detail` itself
-        # and passes it on in the target's arguments (server.py).
-        if getattr(context.message, "name", None) == "call_tool":
+        # and passes it on in the target's arguments (server.py). search_tools takes
+        # its own `detail` (a one-line or a full definition of each tool found).
+        if getattr(context.message, "name", None) in _OWN_DETAIL:
             return await call_next(context)
         context, detail = _take_detail(context)
         if _inside_call.get():
@@ -284,4 +293,4 @@ class ResponseBudgetMiddleware(Middleware):
         tool, arguments = call_arguments(context)
         budgeted = apply_budget(result, tool, arguments, self.max_bytes)
         lang = normalize_lang(str(arguments.get("lang", "en")))
-        return apply_detail(budgeted, tool, detail, lang)
+        return apply_detail(budgeted, tool, detail, lang, arguments)

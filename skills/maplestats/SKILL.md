@@ -58,8 +58,9 @@ data tool by its own name fails.
   them. It is offline and read-only.
 - **One narrow need:** `search_tools` with topic words in English or French
   ("Calgary rent index", "taux de chômage Québec"), not tool names. Then
-  `call_tool(name, arguments)`, where `arguments` matches the `inputSchema`
-  that `search_tools` returned.
+  `call_tool(name, arguments)`, where `arguments` matches the one-line
+  `arguments` signature that `search_tools` returned (`detail="full"` gives
+  the whole input schema, and so does a `call_tool` with invalid arguments).
 - A question about a few series: use the vector tools, which return every
   observation inline. A whole table or hundreds of series:
   `wds_get_full_table_download` returns a CSV link, not rows; offer the Python

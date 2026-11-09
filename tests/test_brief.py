@@ -278,3 +278,145 @@ async def test_usage_records_the_size_the_client_reads():
     assert sizes["max_chars"] > len(_text(brief))
     assert sizes["mean_tokens_est"] == (sizes["mean_chars"] + 3) // 4
     assert "rows" not in json.dumps(stats.snapshot()["result_size"])
+
+
+# ---- catalogue and metadata tools --------------------------------------------------
+
+
+def _cube_metadata(members: int = 40) -> dict[str, Any]:
+    return {
+        "product_id": 18100004,
+        "cube_title_en": "Consumer Price Index, monthly, not seasonally adjusted",
+        "cube_title_fr": "Indice des prix à la consommation mensuel, non désaisonnalisé",
+        "subject_codes": ["18"],
+        "footnotes": [
+            {
+                "footnote_id": n,
+                "text_en": "The CPI is not a cost-of-living index. " + "More text. " * 30,
+                "text_fr": "L'IPC n'est pas un indice du coût de la vie. " + "Suite. " * 30,
+                "same_text_ids": [n + 100],
+            }
+            for n in (1, 2)
+        ],
+        "dimensions": [
+            {
+                "dimension_position_id": 2,
+                "dimension_name_en": "Products and product groups",
+                "dimension_name_fr": "Produits et groupes de produits",
+                "member_count": 359,
+                "members_matched": 359,
+                "members": [
+                    {
+                        "member_id": m,
+                        "parent_member_id": 2,
+                        "member_name_en": f"Product {m}",
+                        "member_name_fr": f"Produit {m}",
+                        "terminated": False,
+                    }
+                    for m in range(3, 3 + members)
+                ],
+            }
+        ],
+        "provenance": {"source": "statcan-wds", "url": "https://x", "licence": LICENCE},
+    }
+
+
+def test_metadata_brief_keeps_one_language_and_caps_long_dimensions():
+    brief = shape(_cube_metadata(), "brief", tool="wds_get_cube_metadata")
+    assert brief is not None
+    assert brief["cube_title_en"].startswith("Consumer Price Index")
+    assert "cube_title_fr" not in brief and "subject_codes" not in brief
+    dimension = brief["dimensions"][0]
+    assert dimension["dimension_name_en"] == "Products and product groups"
+    assert "dimension_name_fr" not in dimension and "members_matched" not in dimension
+    assert dimension["member_count"] == 359
+    assert dimension["members_shown"] == 10
+    members = csv_rows(dimension["members"])
+    assert [m["member_id"] for m in members] == list(range(3, 13))
+    assert all(set(m) == {"member_id", "member_name_en"} for m in members)
+    # A value every member shares is stated once.
+    assert dimension["members_common"] == {"parent_member_id": 2}
+    # Long footnotes are cut to their first sentence, and the result says so.
+    assert [n["text_en"] for n in brief["footnotes"]] == [
+        "The CPI is not a cost-of-living index. ..."
+    ] * 2
+    assert "same_text_ids" not in brief["footnotes"][0]
+    assert "first 10" in brief["detail"] and "first sentence" in brief["detail"]
+
+
+def test_metadata_brief_in_french_keeps_the_french_twin():
+    brief = shape(_cube_metadata(), "brief", "fr", tool="wds_get_cube_metadata")
+    assert brief is not None
+    assert "cube_title_en" not in brief
+    assert brief["cube_title_fr"].startswith("Indice des prix")
+    assert "premiers" in brief["detail"]
+
+
+def test_metadata_brief_keeps_members_the_call_asked_for():
+    # A call naming a dimension or searching members gets them all, as today.
+    for arguments in ({"dimension": 2}, {"member_query": "Product"}):
+        brief = shape(_cube_metadata(), "brief", tool="wds_get_cube_metadata", arguments=arguments)
+        assert brief is not None
+        dimension = brief["dimensions"][0]
+        assert len(csv_rows(dimension["members"])) == 40
+        assert "members_shown" not in dimension
+    # A short dimension keeps its members without asking.
+    short = shape(_cube_metadata(members=30), "brief", tool="wds_get_cube_metadata")
+    assert short is not None and len(csv_rows(short["dimensions"][0]["members"])) == 30
+
+
+def test_metadata_full_is_unchanged():
+    payload = _cube_metadata()
+    full = shape(payload, "full", tool="wds_get_cube_metadata")
+    assert full is None or full["dimensions"] == payload["dimensions"]
+
+
+def test_catalogue_search_brief_drops_per_item_boilerplate():
+    packages = [
+        {
+            "id": f"id-{n}",
+            "name": f"id-{n}",
+            "title": f"Dataset {n}",
+            "organization_name": "statcan",
+            "organization_title": "Statistics Canada",
+            "notes_excerpt": f"<p>Dataset {n} counts things.</p> " + "Detail. " * 40,
+            "license_id": "ca-ogl-lgo",
+            "license_title": "Open Government Licence - Canada",
+            "tags": ["a", "b"],
+            "groups": [],
+            "resource_formats": ["PDF"] if n % 2 else ["CSV", "XML"],
+            "landing_page_url": f"https://open.canada.ca/data/en/dataset/id-{n}",
+        }
+        for n in range(8)
+    ]
+    payload = {"portal": "federal", "packages": packages, "provenance": {"source": "ckan"}}
+    brief = shape(payload, "brief", tool="ckan_search_datasets")
+    assert brief is not None
+    rows = csv_rows(brief["packages"])
+    assert rows[0] == {
+        "id": "id-0",
+        "title": "Dataset 0",
+        "notes_excerpt": "Dataset 0 counts things. ...",
+        "resource_formats": "CSV; XML",
+        "landing_page_url": "https://open.canada.ca/data/en/dataset/id-0",
+    }
+    assert brief["packages_common"] == {
+        "organization_title": "Statistics Canada",
+        "license_title": "Open Government Licence - Canada",
+    }
+    assert len(json.dumps(brief)) < 0.4 * len(json.dumps(payload))
+
+
+def test_catalogue_searches_are_shaped_other_searches_keep_their_format():
+    from maplestats_mcp.shared.brief import exempt
+
+    assert not exempt("ckan_search_datasets") and not exempt("wds_search_cubes")
+    assert exempt("boc_search_series") and exempt("search_tools")
+
+
+async def test_metadata_tools_exist():
+    from maplestats_mcp.server import mcp
+    from maplestats_mcp.shared.brief import METADATA_TOOLS
+
+    names = {tool.name for tool in await mcp._list_tools()}
+    assert METADATA_TOOLS <= names
