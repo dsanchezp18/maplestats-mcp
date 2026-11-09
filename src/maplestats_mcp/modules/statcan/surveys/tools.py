@@ -13,6 +13,7 @@ from maplestats_mcp.modules.statcan.surveys.schemas import (
     RtraSearchResult,
     SurveyListResult,
     SurveyMetadata,
+    SurveySection,
 )
 
 
@@ -41,28 +42,38 @@ async def statcan_surveys_search_surveys(
 
 @tool
 async def statcan_surveys_get_survey_metadata(
-    survey_id: int, lang: Literal["en", "fr"] = "en"
+    survey_id: int,
+    lang: Literal["en", "fr"] = "en",
+    section: SurveySection | list[SurveySection] | None = None,
 ) -> SurveyMetadata:
-    """Get a survey's IMDB metadata: status, frequency, description, and subjects.
+    """Get a survey's IMDB record: status, frequency, description, and its methodology.
 
-    Use for: the genuine "Definitions, data sources and methods"
-    content for one specific survey or statistical program -- its
-    active/inactive status, collection frequency, a plain-language
-    description, and its subject classifications -- found via
-    statcan_surveys_search_surveys. This comes from IMDB (Integrated
-    Metadata Base), a separate, older system from the Reference/
-    Analysis catalogues; its full methodology sections (target
-    population, sampling, data sources, data accuracy) are linked via
-    detail_url rather than fully parsed here, since they are long
-    prose sections better read directly than flattened into fields.
+    Use for: the "Definitions, data sources and methods" record of one
+    survey or statistical program (id from statcan_surveys_search_surveys):
+    status, frequency, description, subjects, reference and collection
+    periods, whether response is mandatory or voluntary, how data are
+    obtained (respondents, administrative files), the design (sample
+    survey or census) and sample size, and the methodology sections:
+    target_population, instrument_design, sampling, data_sources,
+    error_detection, imputation, estimation, quality_evaluation,
+    disclosure_control, revisions_and_seasonal_adjustment and
+    data_accuracy. Without `section` every section comes back shortened
+    to about 900 characters (trimmed_sections names them); pass one
+    name or a list, e.g. section=["sampling", "data_sources"], for
+    those sections in full and no others. IMDB (Integrated Metadata
+    Base) is separate from the Reference/Analysis catalogues.
     Keywords: StatCan, IMDB, survey metadata, methodology, target
-    population, data quality, survey status, survey frequency.
+    population, sampling, sample size, mandatory or voluntary survey,
+    collection method, imputation, disclosure control,
+    seasonal adjustment, data accuracy, data quality.
     Mots-clés : Statistique Canada, BMDI, métadonnées d'enquête,
-    méthodologie, population cible, statut de l'enquête, fréquence,
-    description de l'enquête.
+    méthodologie, population cible, échantillonnage, taille de
+    l'échantillon, enquête obligatoire, mode de collecte, imputation,
+    contrôle de la divulgation, désaisonnalisation, exactitude des
+    données.
     """
     use_lang(lang)
-    return await client.get_survey_metadata(survey_id, lang=lang)
+    return await client.get_survey_metadata(survey_id, lang=lang, section=section)
 
 
 @tool

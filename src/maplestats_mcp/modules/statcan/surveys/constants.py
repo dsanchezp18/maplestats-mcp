@@ -37,6 +37,34 @@ IMDB_INDEX_LETTERS = "abcdefghijklmnopqrstuvwxyz"
 IMDB_BASE_URL_EN = "https://www23.statcan.gc.ca/imdb/p2SV.pl"
 IMDB_BASE_URL_FR = "https://www23.statcan.gc.ca/imdb/p2SV_f.pl"
 
+# IMDB record headings (h4 under "Data sources and methodology", h3 "Data accuracy"),
+# folded to lower case without accents, by section name. Checked live 2026-11-09 on
+# the English and French records of LFS (3701), CPI (2301), the Census of Population
+# (3901) and the Death database (3233): each of these records carries all eleven
+# headings, with "This methodology type does not apply ..." under the ones that do
+# not apply.
+IMDB_SECTION_HEADINGS: dict[str, tuple[str, str]] = {
+    "target_population": ("target population", "population cible"),
+    "instrument_design": ("instrument design", "elaboration de l'instrument"),
+    "sampling": ("sampling", "echantillonnage"),
+    "data_sources": ("data sources", "sources des donnees"),
+    "error_detection": ("error detection", "detection des erreurs"),
+    "imputation": ("imputation", "imputation"),
+    "estimation": ("estimation", "estimation"),
+    "quality_evaluation": ("quality evaluation", "evaluation de la qualite"),
+    "disclosure_control": ("disclosure control", "controle de la divulgation"),
+    "revisions_and_seasonal_adjustment": (
+        "revisions and seasonal adjustment",
+        "revisions et desaisonnalisation",
+    ),
+    "data_accuracy": ("data accuracy", "exactitude des donnees"),
+}
+# Without a `section` argument every section is returned, each cut to about this
+# many characters at a sentence end: the eleven sections run to about 14,000
+# characters for LFS, 19,000 for CPI and 8,000 for the Death database, and a
+# shortened result to 9,000-14,000 characters of JSON.
+IMDB_SECTION_CHARS = 900
+
 RATE_LIMIT_SOURCE = "statcan-surveys"
 RATE_LIMIT_PER_SECOND = 3.0
 RATE_LIMIT_CAPACITY = 5.0

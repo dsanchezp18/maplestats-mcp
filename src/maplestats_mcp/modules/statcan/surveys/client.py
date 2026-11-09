@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import re
 import unicodedata
+from collections.abc import Sequence
 
 import httpx
 from bs4 import BeautifulSoup, Tag
@@ -36,6 +37,7 @@ from maplestats_mcp.modules.statcan.surveys.schemas import (
     SurveyListing,
     SurveyListResult,
     SurveyMetadata,
+    SurveyMethodology,
 )
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
@@ -277,24 +279,168 @@ def _section_text(soup: BeautifulSoup, heading_id: str) -> str | None:
     return sibling.get_text(strip=True) if sibling is not None else None
 
 
-def _row_value(soup: BeautifulSoup, label: str) -> str | None:
+def _row_value(soup: BeautifulSoup, *labels: str) -> str | None:
+    # The French record says "Statut :" and "Fréquence :", so each field has two labels.
+    wanted = [_fold(label) for label in labels]
     for row in soup.select("div.row"):
         cols = row.find_all("div", recursive=False)
         if len(cols) < 2:
             continue
-        if label.lower() in cols[0].get_text(strip=True).lower():
+        if any(label in _fold(cols[0].get_text(strip=True)) for label in wanted):
             return cols[1].get_text(strip=True) or None
     return None
 
 
-def _parse_survey_metadata(html: str, survey_id: int, url: str, was_cached: bool) -> SurveyMetadata:
+# --- Methodology sections of an IMDB record ----------------------------------
+#
+# Checked live 2026-11-09 (LFS 3701 in English and French, CPI 2301, Census 3901,
+# Death database 3233): under <h3 id="a2"> "Data sources and methodology" each
+# section is an <h4> followed by sibling <p> blocks (paragraphs inside one <p> are
+# separated by <br><br>), and "Data accuracy" is <h3 id="a3"> with the same shape.
+# The text is HTML-escaped character by character (&#44; for a comma).
+
+_BREAK = "\x00"
+_HEADING_KEYS = {
+    heading: key
+    for key, headings in constants.IMDB_SECTION_HEADINGS.items()
+    for heading in headings
+}
+_SENTENCE_END = re.compile(r"(?<=[.!?;:])\s+")
+# A number that is not a year: "65,000", "1 in 4", "100 000".
+_COUNT = re.compile(r"\b(?!(?:19|20)\d\d\b)\d[\d,   ]*\b")
+_SAMPLE_WORD = re.compile(r"\bsample|[ée]chantillon", re.IGNORECASE)
+_DESIGN_LINE = re.compile(r"^(This is a |This survey is a |Il s'agit d'|Cette enqu[êe]te est )")
+_METHODS_LINE = re.compile(r"^(Data are |Les donn[ée]es sont )")
+_RESPONSE_WORDS = (("mandatory", "voluntary"), ("obligatoire", "volontaire"))
+
+
+def _heading_key(tag: Tag) -> str | None:
+    text = _fold(tag.get_text(" ", strip=True)).replace("’", "'").rstrip(" :")
+    return _HEADING_KEYS.get(" ".join(text.split()))
+
+
+def _block_text(tag: Tag) -> str:
+    """One block's text, its <br> line breaks kept and other whitespace collapsed."""
+    if tag.name in ("ul", "ol"):
+        items = [_clean(li.get_text(" ", strip=True)) for li in tag.find_all("li")]
+        return "\n".join(f"- {item}" for item in items if item)
+    for br in tag.find_all("br"):
+        br.replace_with(_BREAK)
+    lines = [" ".join(line.split()) for line in tag.get_text().split(_BREAK)]
+    # Two <br> in a row mark a paragraph: keep one blank line between paragraphs.
+    text = "\n".join(lines)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def _methodology_sections(soup: BeautifulSoup) -> dict[str, str]:
+    """Every methodology section's full text, by section name (first heading wins)."""
+    sections: dict[str, str] = {}
+    for heading in soup.find_all(["h3", "h4"]):
+        if not isinstance(heading, Tag):
+            continue
+        key = _heading_key(heading)
+        if key is None or key in sections:
+            continue
+        blocks: list[str] = []
+        for sibling in heading.find_next_siblings():
+            if not isinstance(sibling, Tag) or sibling.name in ("h1", "h2", "h3", "h4"):
+                break
+            if sibling.name in ("p", "ul", "ol", "div", "table"):
+                text = _block_text(sibling)
+                if text:
+                    blocks.append(text)
+        if blocks:
+            sections[key] = "\n\n".join(blocks)
+    return sections
+
+
+def _labelled_value(soup: BeautifulSoup, *labels: str) -> str | None:
+    """The text after a <strong> label such as "Reference period:"."""
+    for strong in soup.find_all("strong"):
+        label = _fold(strong.get_text(" ", strip=True)).rstrip(" :")
+        parent = strong.parent
+        if label in labels and isinstance(parent, Tag):
+            value = _clean(parent.get_text(" ", strip=True))[len(_clean(strong.get_text())) :]
+            return value.lstrip(" :") or None
+    return None
+
+
+def _response(data_sources: str | None) -> str | None:
+    if not data_sources:
+        return None
+    text = data_sources.casefold()
+    for words in _RESPONSE_WORDS:
+        found = [word for word in words if re.search(rf"\b{word}\b", text)]
+        if len(found) == 1:
+            return found[0]
+    return None
+
+
+def _matching_lines(text: str | None, pattern: re.Pattern[str]) -> list[str]:
+    return [line for line in (text or "").splitlines() if pattern.match(line.strip())]
+
+
+def _sample_size(sampling: str | None) -> list[str]:
+    sentences = _SENTENCE_END.split(sampling or "")
+    return [
+        s.strip()
+        for s in sentences
+        if _SAMPLE_WORD.search(s) and _COUNT.search(s) and not _DESIGN_LINE.match(s.strip())
+    ][:3]
+
+
+def _shorten(text: str, limit: int) -> tuple[str, bool]:
+    """`text` cut to about `limit` characters at a sentence end, and whether it was cut."""
+    if len(text) <= limit:
+        return text, False
+    head = text[:limit]
+    ends = [m.end() for m in re.finditer(r"[.!?;:](?=\s)", head)]
+    cut = ends[-1] if ends and ends[-1] >= limit // 2 else head.rfind(" ")
+    return head[: cut if cut > 0 else limit].rstrip() + " [...]", True
+
+
+def _parse_survey_metadata(
+    html: str,
+    survey_id: int,
+    url: str,
+    was_cached: bool,
+    sections: list[str] | None = None,
+) -> SurveyMetadata:
     soup = BeautifulSoup(html, "html.parser")
     heading = soup.find("h1") or soup.find(id="wb-cont")
     name = heading.get_text(strip=True) if heading is not None else ""
 
-    status = _row_value(soup, "Status")
-    frequency = _row_value(soup, "Frequency")
+    status = _row_value(soup, "Status", "Statut")
+    frequency = _row_value(soup, "Frequency", "Fréquence")
     description = _section_text(soup, "a1")
+
+    # Parsed before the block texts below rewrite <br> tags in the tree.
+    reference_period = _labelled_value(soup, "reference period", "periode de reference")
+    collection_period = _labelled_value(soup, "collection period", "periode de collecte")
+    found = _methodology_sections(soup)
+    design = _matching_lines(found.get("sampling"), _DESIGN_LINE)
+    methods = _matching_lines(found.get("data_sources"), _METHODS_LINE)
+
+    # A `section` argument returns those sections whole; without it, every section
+    # is shortened so that one call stays a few thousand tokens.
+    trimmed: list[str] = []
+    kept: dict[str, str] = {}
+    for key, text in found.items():
+        if sections is not None:
+            if key in sections:
+                kept[key] = text
+            continue
+        kept[key], was_cut = _shorten(text, constants.IMDB_SECTION_CHARS)
+        if was_cut:
+            trimmed.append(key)
+    limits = None
+    if trimmed:
+        limits = say(
+            f"Sections shortened to about {constants.IMDB_SECTION_CHARS} characters: "
+            f"{', '.join(trimmed)}. Pass section=[...] with their names for the full text.",
+            f"Sections raccourcies à environ {constants.IMDB_SECTION_CHARS} caractères : "
+            f"{', '.join(trimmed)}. Passez section=[...] avec leurs noms pour le texte complet.",
+        )
 
     subjects: list[str] = []
     subjects_heading = None
@@ -314,24 +460,56 @@ def _parse_survey_metadata(html: str, survey_id: int, url: str, was_cached: bool
         frequency=frequency,
         description=description,
         subjects=subjects,
+        reference_period=reference_period,
+        collection_period=collection_period,
+        response=_response(found.get("data_sources")),
+        collection_methods=methods[0] if methods else None,
+        survey_design=" ".join(design) or None,
+        sample_size=_sample_size(found.get("sampling")),
+        methodology=SurveyMethodology(**kept),
+        trimmed_sections=trimmed,
         detail_url=url,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=was_cached,
             schema_name="statcan_surveys.SurveyMetadata",
+            limits=limits,
             lang=current_lang(),
         ),
     )
 
 
-async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMetadata:
-    """Fetch a survey's IMDB metadata: status, frequency, description, and subjects."""
+def _sections_argument(section: str | Sequence[str] | None) -> list[str] | None:
+    if section is None:
+        return None
+    names = [section] if isinstance(section, str) else list(section)
+    names = [name.strip().lower() for name in names if name.strip()]
+    unknown = [name for name in names if name not in constants.IMDB_SECTION_HEADINGS]
+    if unknown:
+        valid = ", ".join(constants.IMDB_SECTION_HEADINGS)
+        raise InvalidInput(
+            say(
+                f"statcan_surveys:get_survey_metadata: unknown section {unknown[0]!r}; "
+                f"use one or more of: {valid}.",
+                f"statcan_surveys:get_survey_metadata : section inconnue {unknown[0]!r} ; "
+                f"utilisez une ou plusieurs de : {valid}.",
+            )
+        )
+    return names or None
+
+
+async def get_survey_metadata(
+    survey_id: int, *, lang: str = "en", section: str | Sequence[str] | None = None
+) -> SurveyMetadata:
+    """Fetch a survey's IMDB record: status, frequency, description, subjects, and its
+    methodology sections (all of them shortened, or the named ones in full)."""
     use_lang(lang)
     if lang not in ("en", "fr"):
         raise InvalidInput(
             f"statcan_surveys:get_survey_metadata: lang must be one of ('en', 'fr'), got {lang!r}."
         )
+    sections = _sections_argument(section)
     url = f"{_imdb_url(lang)}?Function=getSurvey&SDDS={survey_id}"
 
     async def fetch() -> httpx.Response:
@@ -385,7 +563,7 @@ async def get_survey_metadata(survey_id: int, *, lang: str = "en") -> SurveyMeta
     response, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_METADATA_SECONDS, fetch
     )
-    return _parse_survey_metadata(response.text, survey_id, url, was_cached)
+    return _parse_survey_metadata(response.text, survey_id, url, was_cached, sections)
 
 
 # --- Microdata holdings: Research Data Centres (RDC) and RTRA ---------------

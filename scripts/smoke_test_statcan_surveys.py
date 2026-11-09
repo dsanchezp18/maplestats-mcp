@@ -46,11 +46,21 @@ async def main() -> int:
     ok &= metadata.frequency is not None
     ok &= bool(metadata.description)
     ok &= len(metadata.subjects) > 0
+    # A record with no methodology section parsed means IMDB's layout changed.
+    sections = metadata.methodology.model_dump()
+    missing = [name for name, text in sections.items() if not text]
+    print(f"  methodology sections: {len(sections) - len(missing)} of {len(sections)}")
+    ok &= len(missing) < len(sections)
     print("  sample:", metadata.model_dump())
+
+    sampling = await client.get_survey_metadata(survey_id, section="sampling")
+    print(f"OK: get_survey_metadata({survey_id}, section=sampling) -> {sampling.survey_design}")
+    ok &= bool(sampling.methodology.sampling) and not sampling.trimmed_sections
 
     fr = await client.get_survey_metadata(survey_id, lang="fr")
     print(f"OK: get_survey_metadata({survey_id}, lang=fr) -> {fr.name}")
     ok &= bool(fr.name)
+    ok &= fr.status is not None
 
     try:
         await client.get_survey_metadata(999999999)
