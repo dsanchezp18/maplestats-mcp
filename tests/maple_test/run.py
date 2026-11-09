@@ -102,6 +102,20 @@ reference period.
 
 If a figure does not exist or you cannot check it, say so instead of estimating. Keep \
 the answer short.""",
+    # v3 asks about the data's documentation (units, revisions, definitions, codes, dataset
+    # metadata on open-data portals), not only figures, so the prompt says so; it is
+    # otherwise the v2 prompt, and every arm gets the same one.
+    "v3": """\
+You answer questions about Canadian data and its documentation: series metadata, survey \
+methods, definitions, classifications, and open-data portal datasets. Today is {today}.
+
+Use official sources: Statistics Canada, the Bank of Canada, CMHC, and federal, \
+provincial and municipal publishers and their open-data portals. With every answer, give \
+its source: for Statistics Canada the table, vector or survey record, for the Bank of \
+Canada the series, for a portal the dataset and portal, for any other publisher the page.
+
+If something is not published or you cannot check it, say so instead of guessing. Keep \
+the answer short.""",
 }
 
 

@@ -507,6 +507,87 @@ lost grades were a previous month offered in place of the one asked, or a drug s
 only among possibilities (X-15, X-16), as on Nov. 3. MapleStats' lost grade is R-06 in one
 pass: it gave the 2025 accounts' release date without saying none is set for 2026.
 
+## Version 3: technical data and documentation (November 2026)
+
+v1 and v2 ask for figures. Before an analyst uses a figure they ask what it is: the unit,
+whether it is seasonally adjusted or revised, who is in the survey, what a code means,
+which licence a dataset carries and whether its table can be queried. v3 asks 28 of those
+questions, on the publishers' documentation and on open-data portals, and is a new,
+out-of-sample set for MapleStats.
+
+**The out-of-sample rule.** The questions were written and the key built on 2026-11-08,
+before MapleStats or any other server was asked them, and nobody has run MapleStats on
+them. Every key value is read by `build_key_v3.py`, with httpx, from the publisher's own
+API or page, never through MapleStats. The rule at the top of this file applies: a
+MapleStats change tuned on these questions makes later MapleStats runs in-sample, and
+checking such a change needs another new set.
+
+| ID | Source | Kind | Asks |
+| :-- | :-- | :-- | :-- |
+| T-01 | StatCan IMDB 3701 | facts | LFS: territories in the national estimates? Exclusions from the target population |
+| T-02 | StatCan IMDB 3701, 5200 | facts | Is the LFS mandatory? Is the Canadian Income Survey? |
+| T-03 | StatCan IMDB 3701 | facts | LFS monthly sample (households) and reference week |
+| T-04 | StatCan IMDB 2301 | refusal | Revision to the unadjusted August 2026 CPI (the unadjusted CPI is never revised) |
+| T-05 | StatCan IMDB 2301 | facts | Number of seasonally adjusted national CPI series; years revised each January |
+| T-06 | StatCan IMDB 2301 | facts | CPI time base and the month it took effect |
+| T-07 | StatCan IMDB 5200 | facts | Where the CIS gets its income data; how variance is estimated |
+| T-08 | StatCan RDaaS | facts | NAICS Canada 2022 code for software publishers, and its 2017 code |
+| T-09 | StatCan RDaaS | facts | NOC 2021 code for economists and its broad category |
+| T-10 | Bank of Canada Valet | facts | What V39079 and V122530 are, and their frequency |
+| T-11 | Bank of Canada Valet | facts | Valet codes, frequency and unit of CPI-trim and CPI-median |
+| T-12 | Bank of Canada Valet | refusal | The noon USD/CAD rate on October 30, 2026 (noon rates ended in April 2017) |
+| T-13 | CMHC | facts | Definition of a housing start |
+| T-14 | CMHC | facts | When the Rental Market Survey is run and what it covers |
+| T-15 | CMHC | facts | Rental Market Survey reliability code D; minimum responding entities |
+| T-16 | CMHC | refusal | Toronto vacancy rate in an April 2026 survey (the survey is October only) |
+| T-17 | open.canada.ca | facts | Express Entry monthly dataset: publisher, frequency, formats, DataStore (none) |
+| T-18 | open.canada.ca | facts | Express Entry Reports: number of resources, format, frequency |
+| T-19 | open.canada.ca | facts | Drug Product Database files: licence, frequency, portal release date |
+| T-20 | BC Data Catalogue | facts | Historical fire perimeters: publisher, licence, CSV or DataStore (neither) |
+| T-21 | BC Data Catalogue | facts | Popular girl names: publisher, resources, format, last modified |
+| T-22 | Données Québec | facts | SAAQ accident reports: property-damage threshold and its start date |
+| T-23 | Données Québec | refusal | A 2024 file of SAAQ accident reports (the latest is 2022) |
+| T-24 | Données Québec | facts | DataStore value: girls named Alice in 2025; how counts under five are shown |
+| T-25 | Toronto | facts | TTC subway delays: owner, refresh rate, type of the 'Min Delay' field (text) |
+| T-26 | Toronto | facts | DataStore value: what delay code MUSAN means |
+| T-27 | Montréal | facts | Road collisions: are highways included (no); who records collisions |
+| T-28 | Montréal | facts | Road collisions DataStore: the severity field; NB_MORTS's type |
+
+By source: Statistics Canada 9 of 28 (32.1%), the Bank of Canada 3 (10.7%), CMHC 4 (14.3%),
+and CKAN portals 12 (42.9%): federal 3 (10.7%), provincial 5 (17.9%), municipal 4 (14.3%).
+Four questions (14.3%) have no answer to give (refusals). Results are reported for each
+source group (`group` in the key), as v2 reports its halves.
+
+**Grading.** Most answers are text, so v3 adds one grading kind, `facts`: each question
+lists the facts an answer must state, one pattern each (`facts`), the ones it cannot do
+without (`headline`), and statements the key shows are false (`wrong`). All facts is
+correct; half or more with every headline fact is partial; a false statement, or wrong
+facts with a code or figure of their own, is hallucinated; a decline with none is
+abstained. Refusal questions are graded as in v1 and v2. Every question also carries a
+written `grading` rule (what is correct, what is partial, what counts as a referral) for
+the hand review, which, as for v2, reads every answer.
+
+**Sources and how the key is read.** StatCan's IMDB survey pages (www23) for survey
+documentation, StatCan's RDaaS API for NAICS and NOC, Valet series and group metadata,
+CMHC's methodology pages, and each portal's CKAN Action API (`package_show`,
+`datastore_search`). Documentation answers are read by pattern from the page, so a
+reworded passage stops the build with the phrase it could not find. Facts were preferred
+to figures so the key holds: licences, codes, definitions, field types. Where a value can
+change (Alice's count, which Retraite Québec revises each year; the latest SAAQ year;
+resource counts), `--check` reports it. Three things were left out because the source
+refused this machine while the key was built (2026-11-08): StatCan's WDS (HTTP 403 for
+every request; so no questions on a vector's unit, scalar factor or release date),
+Ontario's catalogue (HTTP 429 for every request) and Alberta's (a Cloudflare challenge).
+
+```bash
+uv run python -m tests.maple_test.build_key_v3 --check     # has any source changed?
+uv run python -m tests.maple_test run --version v3 --repeat 3 --arm maplestats
+uv run python -m tests.maple_test grade --version v3
+uv run pytest tests/test_maple_test_v3.py                 # offline checks of the key
+```
+
+Not run yet on any arm.
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP

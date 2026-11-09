@@ -1,0 +1,1243 @@
+{
+  "benchmark": "maple_test_v3",
+  "built_at": "2026-11-09T00:03:07+00:00",
+  "sources": "Publishers' own APIs and documentation, read directly: StatCan IMDB and RDaaS, Bank of Canada Valet, CMHC methodology pages, CKAN Action APIs (open.canada.ca, BC Data Catalogue, Données Québec, Toronto, Montréal)",
+  "questions": [
+    {
+      "id": "T-01",
+      "category": "Survey documentation",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "Do Statistics Canada's national Labour Force Survey estimates include the three territories, and which populations does the LFS target population exclude?",
+      "expected": {
+        "territories": "Territorial LFS results are not included in the national estimates, but are published separately",
+        "excluded": "those living on reserves, full-time members of the regular Armed Forces and persons living in institutions (including inmates of penal institutions and patients in hospitals and nursing homes)"
+      },
+      "facts": {
+        "territories": "territor[^.]{0,160}((?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)|exclud|separately)|((?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)|exclud)[^.]{0,120}territor",
+        "reserves": "reserve",
+        "armed_forces": "armed forces|military",
+        "institutions": "institution"
+      },
+      "headline": [
+        "territories",
+        "reserves"
+      ],
+      "tolerance": "Must say the territories are not in the national estimates (published separately) and name the exclusions: reserves, full-time regular Armed Forces, institutions.",
+      "grading": {
+        "correct": "Territories excluded from the national figure and all three excluded populations.",
+        "partial": "Territories right and at least one exclusion, or all exclusions with the territories wrong or missing.",
+        "referral": "No answer, only a link to the LFS guide or IMDB page."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 3701",
+          "series_title": "Labour Force Survey: target population",
+          "reference_period": null,
+          "value": "those living on reserves, full-time members of the regular Armed Forces and persons living in institutions (including inmates of penal institutions and patients in hospitals and nursing homes)",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3701"
+        }
+      ],
+      "traps": [
+        "The national LFS figures cover the ten provinces; the territories are surveyed with a different method and published separately.",
+        "Non-permanent residents are included in the target population; only reserves, the regular Armed Forces and institutions are excluded."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-02",
+      "category": "Survey documentation",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "Is answering Statistics Canada's Labour Force Survey mandatory? And is answering the Canadian Income Survey mandatory?",
+      "expected": {
+        "lfs": "Mandatory",
+        "cis": "Voluntary"
+      },
+      "facts": {
+        "lfs": "(LFS|Labour Force Survey)[^.]{0,160}mandatory|mandatory[^.]{0,80}(LFS|Labour Force Survey)",
+        "cis": "(CIS|Canadian Income Survey|Income Survey)[^.]{0,160}voluntary|voluntary[^.]{0,80}(CIS|Income Survey)"
+      },
+      "wrong": [
+        "(CIS|Canadian Income Survey)[^.]{0,40}\\b(is|also|likewise) mandatory"
+      ],
+      "headline": [
+        "lfs",
+        "cis"
+      ],
+      "tolerance": "LFS mandatory, CIS voluntary; both are needed.",
+      "grading": {
+        "correct": "LFS mandatory and CIS voluntary.",
+        "partial": "One of the two right, the other missing (not stated wrong).",
+        "referral": "No answer, only a link to the IMDB pages."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 3701",
+          "series_title": "Labour Force Survey: data sources",
+          "reference_period": null,
+          "value": "Participation in the survey is mandatory",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3701"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 5200",
+          "series_title": "Canadian Income Survey: data sources",
+          "reference_period": null,
+          "value": "Responding to this survey is voluntary",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=5200"
+        }
+      ],
+      "traps": [
+        "The CIS is asked of a sub-sample of LFS respondents, but unlike the LFS it is voluntary."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-03",
+      "category": "Survey documentation",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "About how many households are in the Labour Force Survey's monthly sample, and which week of the month is the survey's reference week?",
+      "expected": {
+        "households": 65000,
+        "reference_week": "Usually the week containing the 15th day of the month"
+      },
+      "facts": {
+        "households": "\\b65[,  ]?000\\b|\\b65 thousand|\\b65k\\b",
+        "reference_week": "15th|fifteenth|\\b15\\b"
+      },
+      "headline": [
+        "households"
+      ],
+      "tolerance": "About 65,000 households; the week containing the 15th.",
+      "grading": {
+        "correct": "About 65,000 households and the week containing the 15th.",
+        "partial": "One of the two.",
+        "referral": "No figure, only a link to the LFS guide."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 3701",
+          "series_title": "Labour Force Survey: sampling",
+          "reference_period": null,
+          "value": 65000,
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3701"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 3701",
+          "series_title": "Labour Force Survey: reference period",
+          "reference_period": null,
+          "value": "Usually the week containing the 15th day of the month",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=3701"
+        }
+      ],
+      "traps": [
+        "About 100,000 is the number of individuals, not households."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-04",
+      "category": "Revisions",
+      "group": "statcan",
+      "eval_type": "refusal",
+      "question": "By how much did Statistics Canada revise the not seasonally adjusted all-items CPI for August 2026 when it released the September 2026 CPI?",
+      "expected": {
+        "behaviour": "Say there was no revision: the CPI's non-seasonally adjusted series are never revised; only the seasonally adjusted series are."
+      },
+      "reference": {
+        "policy": "The non-seasonally adjusted series of the CPI are never revised"
+      },
+      "absent_pattern": "never revised|(is|are|was|were)(n't|n’t| not) revised|not subject to revision|no revision|not revised|unrevised|zero revision|revised by (0|zero)",
+      "tolerance": "Correct only if the answer says the unadjusted CPI is not revised; a revision amount is invented.",
+      "grading": {
+        "correct": "No revision, because the unadjusted CPI is never revised.",
+        "partial": "Not used.",
+        "referral": "No answer, only a link to the CPI page."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 2301",
+          "series_title": "Consumer Price Index: revisions",
+          "reference_period": null,
+          "value": "The non-seasonally adjusted series of the CPI are never revised",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2301"
+        }
+      ],
+      "traps": [
+        "Only the seasonally adjusted CPI is revised; a figure for a revision of the unadjusted index does not exist."
+      ],
+      "tolerances": {},
+      "headline": []
+    },
+    {
+      "id": "T-05",
+      "category": "Seasonal adjustment",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "How many Consumer Price Index series does Statistics Canada produce on a seasonally adjusted basis at the national level, and how many years of seasonally adjusted values are revised with each January release?",
+      "expected": {
+        "series": 15,
+        "years_revised": "three"
+      },
+      "facts": {
+        "series": "\\b15\\b|fifteen",
+        "years_revised": "\\b(three|3)[- ]years?|last (three|3)\\b"
+      },
+      "headline": [
+        "series"
+      ],
+      "tolerance": "15 series; the last three years revised each January.",
+      "grading": {
+        "correct": "15 series and three years.",
+        "partial": "One of the two.",
+        "referral": "No answer, only a link to the CPI guide."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 2301",
+          "series_title": "Consumer Price Index: seasonal adjustment",
+          "reference_period": null,
+          "value": 15,
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2301"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 2301",
+          "series_title": "Consumer Price Index: revisions",
+          "reference_period": null,
+          "value": "three",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2301"
+        }
+      ],
+      "traps": [
+        "The CPI is not seasonally adjusted by default: 15 national series are, and each is adjusted directly, not aggregated from adjusted components."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-06",
+      "category": "Units",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "What is the official time base of Canada's Consumer Price Index, and starting with which month's CPI did it replace 1992=100?",
+      "expected": {
+        "base": "2002=100",
+        "since": "May 2007"
+      },
+      "facts": {
+        "base": "2002\\s*=\\s*100",
+        "since": "May,? 2007"
+      },
+      "headline": [
+        "base"
+      ],
+      "tolerance": "2002=100, from the May 2007 CPI.",
+      "grading": {
+        "correct": "2002=100 and May 2007.",
+        "partial": "2002=100 without the month, or a wrong month.",
+        "referral": "No answer, only a link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 2301",
+          "series_title": "Consumer Price Index: time base",
+          "reference_period": null,
+          "value": "The official time base was changed from 1992=100 to 2002=100 starting with the CPI for May 2007",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2301"
+        }
+      ],
+      "traps": [
+        "The basket is updated often; the index's time base is not the basket year."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-07",
+      "category": "Survey documentation",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "Where does the Canadian Income Survey get its income figures, and how does Statistics Canada estimate the survey's sampling variance?",
+      "expected": {
+        "income_source": "Tax data for income and income sources are also combined with the survey data",
+        "variance": "Bootstrap",
+        "bootstrap_weights": 1000
+      },
+      "facts": {
+        "income_source": "\\btax",
+        "variance": "bootstrap",
+        "bootstrap_weights": "\\b1[,  ]?000\\b|one thousand"
+      },
+      "headline": [
+        "income_source",
+        "variance"
+      ],
+      "tolerance": "Tax data combined with the survey; bootstrap with 1,000 weights.",
+      "grading": {
+        "correct": "Tax data and the bootstrap (1,000 weights).",
+        "partial": "Tax data and the bootstrap without the number of weights, or one of tax data and the bootstrap.",
+        "referral": "No answer, only a link to the IMDB page."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 5200",
+          "series_title": "Canadian Income Survey: description",
+          "reference_period": null,
+          "value": "Tax data for income and income sources are also combined with the survey data",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=5200"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "IMDB 5200",
+          "series_title": "Canadian Income Survey: estimation",
+          "reference_period": null,
+          "value": "A set of 1,000 bootstrap weights is produced",
+          "release_or_revision_date": null,
+          "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=5200"
+        }
+      ],
+      "traps": [
+        "Income and income sources come from tax data combined with the survey, not only from answers to the questionnaire."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-08",
+      "category": "Classification",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "What is the NAICS Canada 2022 Version 1.0 code for the five-digit industry 'Software publishers', and what was its code in NAICS Canada 2017?",
+      "expected": {
+        "naics_2022": "51321",
+        "naics_2017": "51121"
+      },
+      "facts": {
+        "naics_2022": "\\b51321\\b",
+        "naics_2017": "\\b51121\\b"
+      },
+      "headline": [
+        "naics_2022"
+      ],
+      "tolerance": "51321 now, 51121 in NAICS 2017.",
+      "grading": {
+        "correct": "Both codes.",
+        "partial": "The 2022 code alone.",
+        "referral": "No code, only a link to the classification."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "OlV9cHfGKaiKJjFH",
+          "series_title": "NAICS Canada 2017 V3.0 to 2022 V1.0 concordance: Software publishers",
+          "reference_period": null,
+          "value": "VC1 - 51121 continues as 51321.",
+          "release_or_revision_date": null,
+          "url": "https://api.statcan.gc.ca/rdaas/concordance/Huvk6p7Uf7oXKB0S/maps"
+        }
+      ],
+      "traps": [
+        "NAICS 2022 moved publishing to subsector 513; the 2017 code 51121 is the one most sources still show.",
+        "Six-digit US codes (511210, 513210) are not NAICS Canada codes."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-09",
+      "category": "Classification",
+      "group": "statcan",
+      "eval_type": "facts",
+      "question": "What is the NOC 2021 unit group code for 'Economists and economic policy researchers and analysts', and which broad occupational category is it in?",
+      "expected": {
+        "noc_2021": "41401",
+        "broad_category": "Occupations in education, law and social, community and government services"
+      },
+      "facts": {
+        "noc_2021": "\\b41401\\b",
+        "broad_category": "education, law and social, community and government"
+      },
+      "headline": [
+        "noc_2021"
+      ],
+      "tolerance": "41401, in broad category 4.",
+      "grading": {
+        "correct": "41401 and broad category 4 (education, law and social, community and government services).",
+        "partial": "41401 alone.",
+        "referral": "No code, only a link to the NOC."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "GUzKLp56Jy1SLc5X",
+          "series_title": "Economists and economic policy researchers and analysts",
+          "reference_period": null,
+          "value": "41401",
+          "release_or_revision_date": null,
+          "url": "https://api.statcan.gc.ca/rdaas/classification/m874eprgjBBVsPzP/categories"
+        }
+      ],
+      "traps": [
+        "NOC 2021 codes have five digits; a four-digit code is from NOC 2016."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-10",
+      "category": "Series metadata",
+      "group": "boc",
+      "eval_type": "facts",
+      "question": "In the Bank of Canada's Valet API, what do series V39079 and V122530 measure, and how often is each published?",
+      "expected": {
+        "V39079": "Target for the overnight rate (business daily)",
+        "V39079_frequency": "Business daily",
+        "V122530": "Bank Rate",
+        "V122530_frequency": "Monthly"
+      },
+      "facts": {
+        "V39079": "overnight",
+        "V39079_frequency": "daily",
+        "V122530": "bank rate",
+        "V122530_frequency": "monthly"
+      },
+      "headline": [
+        "V39079",
+        "V122530"
+      ],
+      "tolerance": "Target for the overnight rate, business daily; Bank Rate, monthly.",
+      "grading": {
+        "correct": "Both series named with their frequencies.",
+        "partial": "Both series named, a frequency missing or wrong.",
+        "referral": "No answer, only a link to Valet."
+      },
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "V39079",
+          "series_title": "Target for the overnight rate (business daily)",
+          "reference_period": null,
+          "value": "Business daily",
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/series/V39079/json"
+        },
+        {
+          "table_id": "Valet",
+          "vector_id": "V122530",
+          "series_title": "Bank Rate",
+          "reference_period": null,
+          "value": "Monthly",
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/series/V122530/json"
+        }
+      ],
+      "traps": [
+        "The Bank Rate is not the policy rate: Valet describes it as the rate the Bank charges on one-day loans to financial institutions."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-11",
+      "category": "Series metadata",
+      "group": "boc",
+      "eval_type": "facts",
+      "question": "Which Bank of Canada Valet series codes hold CPI-trim and CPI-median, how often are they published, and in what unit?",
+      "expected": {
+        "trim": "CPI_TRIM",
+        "median": "CPI_MEDIAN",
+        "frequency": "Monthly",
+        "unit": "Percent"
+      },
+      "facts": {
+        "trim": "CPI_TRIM",
+        "median": "CPI_MEDIAN",
+        "frequency": "monthly",
+        "unit": "percent|%"
+      },
+      "headline": [
+        "trim",
+        "median"
+      ],
+      "tolerance": "CPI_TRIM and CPI_MEDIAN, monthly, percent.",
+      "grading": {
+        "correct": "Both codes, monthly, percent.",
+        "partial": "Both codes without frequency or unit.",
+        "referral": "No codes, only a link to the core inflation page."
+      },
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "CPI_TRIM",
+          "series_title": "CPI-trim",
+          "reference_period": null,
+          "value": "Percent",
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/series/CPI_TRIM/json"
+        },
+        {
+          "table_id": "Valet",
+          "vector_id": "CPI_MEDIAN",
+          "series_title": "CPI-median",
+          "reference_period": null,
+          "value": "Percent",
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/series/CPI_MEDIAN/json"
+        }
+      ],
+      "traps": [
+        "The Valet codes are names (CPI_TRIM), not StatCan vector numbers."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-12",
+      "category": "Discontinued series",
+      "group": "boc",
+      "eval_type": "refusal",
+      "question": "What was the Bank of Canada's noon USD/CAD exchange rate on October 30, 2026?",
+      "expected": {
+        "behaviour": "Say the Bank no longer publishes noon rates (the last was on April 28, 2017); it publishes one daily average rate, by 16:30 ET."
+      },
+      "reference": {
+        "last_noon_date": "2017-04-28",
+        "fxusdcad_2026_10_30": 1.396
+      },
+      "absent_pattern": "noon[^.]{0,160}(discontinu|no longer|ceased|stopped|ended|retired|legacy|replaced|last (published|updated))|(discontinu|no longer|ceased|stopped|ended|retired|replaced)[^.]{0,160}noon",
+      "tolerance": "Correct when the answer says the noon rate was discontinued (giving the daily average rate beside it is fine); a noon rate for 2026 is invented.",
+      "grading": {
+        "correct": "Noon rates discontinued in 2017, with or without the daily average rate (1.396 on October 30, 2026) beside it.",
+        "partial": "Not used: the daily average given as the noon rate is hallucinated.",
+        "referral": "No answer, only a link to the exchange rates page."
+      },
+      "citations": [
+        {
+          "table_id": "Valet",
+          "vector_id": "IEXE0101",
+          "series_title": "USD_NOON (legacy noon rate)",
+          "reference_period": "2017-04-28",
+          "value": 1.3665,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/IEXE0101/json"
+        },
+        {
+          "table_id": "Valet",
+          "vector_id": "FXUSDCAD",
+          "series_title": "USD/CAD daily average",
+          "reference_period": "2026-10-30",
+          "value": 1.396,
+          "release_or_revision_date": null,
+          "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json"
+        }
+      ],
+      "traps": [
+        "Valet's LEGACY_NOON_RATES group was last updated on 28 April 2017; the current FXUSDCAD is a daily average published by 16:30 ET, not a noon rate."
+      ],
+      "tolerances": {},
+      "headline": []
+    },
+    {
+      "id": "T-13",
+      "category": "Definitions",
+      "group": "cmhc",
+      "eval_type": "facts",
+      "question": "How does CMHC's Starts and Completions Survey define a housing start?",
+      "expected": {
+        "definition": "the beginning of construction work on a building. This is usually when the concrete has been poured for the whole of the footing around the structure or an equivalent stage where a basement will not be part of the structure"
+      },
+      "facts": {
+        "footing": "footing",
+        "concrete": "concrete|poured"
+      },
+      "headline": [
+        "footing"
+      ],
+      "tolerance": "The beginning of construction, usually when the concrete is poured for the whole footing.",
+      "grading": {
+        "correct": "The footing poured (or the equivalent stage without a basement).",
+        "partial": "Beginning of construction without the footing stage.",
+        "referral": "No definition, only a link to CMHC."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "CMHC Starts and Completions Survey",
+          "series_title": "Start",
+          "reference_period": null,
+          "value": "the beginning of construction work on a building. This is usually when the concrete has been poured for the whole of the footing around the structure or an equivalent stage where a basement will not be part of the structure",
+          "release_or_revision_date": null,
+          "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey"
+        }
+      ],
+      "traps": [
+        "A building permit is not a start; permits come from StatCan's survey."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-14",
+      "category": "Survey documentation",
+      "group": "cmhc",
+      "eval_type": "facts",
+      "question": "When in the year does CMHC conduct its Rental Market Survey, and which rental structures does the survey cover?",
+      "expected": {
+        "timing": "The survey is conducted during the first 2 weeks of October",
+        "scope": "It targets only privately initiated structures with at least 3 rental units, which have been on the market for at least 3 months"
+      },
+      "facts": {
+        "october": "October",
+        "units": "\\b(three|3)\\b[^.]{0,40}units|at least (three|3)",
+        "private": "private"
+      },
+      "headline": [
+        "october",
+        "units"
+      ],
+      "tolerance": "October (first two weeks); privately initiated structures with at least three rental units.",
+      "grading": {
+        "correct": "October and privately initiated structures with 3 or more rental units.",
+        "partial": "October alone, or the scope alone.",
+        "referral": "No answer, only a link to CMHC."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "CMHC Rental Market Survey",
+          "series_title": "Timing",
+          "reference_period": null,
+          "value": "The survey is conducted during the first 2 weeks of October",
+          "release_or_revision_date": null,
+          "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "CMHC Rental Market Survey",
+          "series_title": "Scope",
+          "reference_period": null,
+          "value": "It targets only privately initiated structures with at least 3 rental units, which have been on the market for at least 3 months",
+          "release_or_revision_date": null,
+          "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+        }
+      ],
+      "traps": [
+        "Social and affordable housing is outside the survey frame."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-15",
+      "category": "Quality flags",
+      "group": "cmhc",
+      "eval_type": "facts",
+      "question": "In CMHC's Rental Market Survey results, what does reliability code D mean, and how many responding entities must an estimate rest on before CMHC releases it?",
+      "expected": {
+        "code_d": "D — Poor (use with caution)",
+        "minimum_entities": 4
+      },
+      "facts": {
+        "poor": "\\bpoor\\b",
+        "caution": "caution",
+        "minimum": "\\b4\\b|\\bfour\\b"
+      },
+      "headline": [
+        "poor",
+        "minimum"
+      ],
+      "tolerance": "D: poor, use with caution; at least 4 responding entities.",
+      "grading": {
+        "correct": "Poor (use with caution) and 4.",
+        "partial": "One of the two.",
+        "referral": "No answer, only a link to CMHC."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "CMHC Rental Market Survey",
+          "series_title": "Reliability codes",
+          "reference_period": null,
+          "value": "D — Poor (use with caution)",
+          "release_or_revision_date": null,
+          "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "CMHC Rental Market Survey",
+          "series_title": "Release rule",
+          "reference_period": null,
+          "value": "released only if a given estimate is based on 4 or more responding entities",
+          "release_or_revision_date": null,
+          "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+        }
+      ],
+      "traps": [
+        "Code D estimates are published but flagged; they are not suppressed."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-16",
+      "category": "Not published",
+      "group": "cmhc",
+      "eval_type": "refusal",
+      "question": "What was the vacancy rate for the Toronto CMA in CMHC's April 2026 Rental Market Survey?",
+      "expected": {
+        "behaviour": "Say there is no April survey: the Rental Market Survey is run once a year, in October."
+      },
+      "absent_pattern": "(only|once a year|annual\\w*|each year|every year|yearly)[^.]{0,160}October|October[^.]{0,120}(only|each year|every year|annual\\w*|once)|no (spring|April)[^.]{0,40}(survey|edition|results|rate)|(isn't|is not|wasn't|was not|not) (conducted|run|held|surveyed|collected|published|released)[^.]{0,30}(in|for) April",
+      "tolerance": "Correct when the answer says the survey is October only; an April rate is invented. Giving the October 2025 rate labelled as October is fine.",
+      "grading": {
+        "correct": "No April survey (October only), with or without the October rate.",
+        "partial": "Not used: the October rate presented as April is hallucinated.",
+        "referral": "No answer, only a link to the HMIP portal."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "CMHC Rental Market Survey",
+          "series_title": "Survey month",
+          "reference_period": null,
+          "value": "CMHC conducts the annual Rental Market Survey in October",
+          "release_or_revision_date": null,
+          "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+        }
+      ],
+      "traps": [
+        "There is one Rental Market Survey a year, in October; an April vacancy rate does not exist."
+      ],
+      "tolerances": {},
+      "headline": []
+    },
+    {
+      "id": "T-17",
+      "category": "Dataset metadata",
+      "group": "federal",
+      "eval_type": "facts",
+      "question": "On open.canada.ca, which organization publishes the dataset 'Express Entry-Invited Candidates – Monthly IRCC Updates', how often is it updated, in which file formats, and can its tables be queried through the portal's CKAN DataStore API?",
+      "expected": {
+        "organization": "Immigration, Refugees and Citizenship Canada",
+        "frequency": "P1M",
+        "formats": [
+          "CSV",
+          "XLSX"
+        ],
+        "datastore_resources": 0
+      },
+      "reference": {
+        "resources": 39
+      },
+      "facts": {
+        "organization": "Immigration, Refugees and Citizenship Canada|\\bIRCC\\b",
+        "frequency": "monthly|P1M",
+        "xlsx": "XLSX|Excel",
+        "csv": "\\bCSV\\b",
+        "datastore": "(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)[^.]{0,100}datastore|datastore[^.]{0,100}(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)"
+      },
+      "headline": [
+        "organization",
+        "datastore"
+      ],
+      "tolerance": "IRCC; monthly; XLSX and CSV; no resource in the DataStore.",
+      "grading": {
+        "correct": "IRCC, monthly, XLSX and CSV, and no DataStore.",
+        "partial": "IRCC and no DataStore with frequency or formats missing; or every fact but the DataStore.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "593e9165-c6ce-4f9b-b519-03d315f92cd4",
+          "series_title": "Express Entry-Invited Candidates – Monthly IRCC Updates",
+          "reference_period": null,
+          "value": "P1M",
+          "release_or_revision_date": null,
+          "url": "https://open.canada.ca/data/api/3/action/package_show?id=593e9165-c6ce-4f9b-b519-03d315f92cd4"
+        }
+      ],
+      "traps": [
+        "The record's 'org_title_at_publication' still says Citizenship and Immigration Canada; the publishing organization is IRCC.",
+        "The files are on IRCC's own server; none is loaded into the DataStore, so datastore_search has nothing to query."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-18",
+      "category": "Dataset metadata",
+      "group": "federal",
+      "eval_type": "facts",
+      "question": "How many resources does open.canada.ca list for IRCC's 'Express Entry Reports' dataset, in what format, and how often is the dataset updated?",
+      "expected": {
+        "resources": 10,
+        "formats": [
+          "HTML"
+        ],
+        "frequency": "as_needed"
+      },
+      "facts": {
+        "resources": "\\b10\\b|\\bten\\b",
+        "formats": "HTML|web pages?",
+        "frequency": "as[ _]needed|irregular|no (fixed|regular) schedule"
+      },
+      "headline": [
+        "resources",
+        "frequency"
+      ],
+      "tolerance": "10 HTML resources (5 reports, English and French); updated as needed.",
+      "grading": {
+        "correct": "10, HTML, as needed.",
+        "partial": "Two of the three.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "5d2253ed-26ef-4e84-9675-3d4f794bee1a",
+          "series_title": "Express Entry Reports",
+          "reference_period": null,
+          "value": 10,
+          "release_or_revision_date": "2024-11-22T21:02:13.194129",
+          "url": "https://open.canada.ca/data/api/3/action/package_show?id=5d2253ed-26ef-4e84-9675-3d4f794bee1a"
+        }
+      ],
+      "traps": [
+        "Five reports, each listed in English and in French: ten resources."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-19",
+      "category": "Dataset metadata",
+      "group": "federal",
+      "eval_type": "facts",
+      "question": "Under what licence does Health Canada publish the 'Drug Product Database - All Files' dataset on open.canada.ca, how often is it updated, and on what date was it released on the portal?",
+      "expected": {
+        "licence": "Open Government Licence - Canada",
+        "frequency": "P1M",
+        "portal_release_date": "2014-06-27"
+      },
+      "facts": {
+        "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*Canada|OGL[- ]Canada",
+        "frequency": "monthly|P1M",
+        "portal_release_date": "2014-06-27|June 27,? 2014|27 June,? 2014"
+      },
+      "headline": [
+        "licence",
+        "frequency"
+      ],
+      "tolerance": "Open Government Licence - Canada; monthly; 2014-06-27.",
+      "grading": {
+        "correct": "All three.",
+        "partial": "Licence and frequency without the date.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "bf55e42a-63cb-4556-bfd8-44f26e5a36fe",
+          "series_title": "Drug Product Database - All Files",
+          "reference_period": null,
+          "value": "Open Government Licence - Canada",
+          "release_or_revision_date": null,
+          "url": "https://open.canada.ca/data/api/3/action/package_show?id=bf55e42a-63cb-4556-bfd8-44f26e5a36fe"
+        }
+      ],
+      "traps": [
+        "The dataset's 'date_published' (2002-12-09) is the database's start, not the portal release date."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-20",
+      "category": "Dataset metadata",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "In the BC Data Catalogue, which organization publishes 'BC Wildfire Fire Perimeters - Historical', under which licence, and can it be downloaded as a CSV or queried through the CKAN DataStore?",
+      "expected": {
+        "organization": "BC Wildfire Service",
+        "licence": "Open Government Licence - British Columbia",
+        "formats": [
+          "kml",
+          "kmz",
+          "multiple",
+          "oracle_sde",
+          "wms"
+        ],
+        "csv_or_datastore": "No"
+      },
+      "facts": {
+        "organization": "BC Wildfire Service|British Columbia Wildfire Service",
+        "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*(British Columbia|BC)|OGL[- ]BC",
+        "no_table": "(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)[^.]{0,120}(datastore|csv)|(datastore|csv)[^.]{0,120}(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)",
+        "spatial": "\\bKML|\\bKMZ|\\bWMS|Geographic Warehouse|BCGW"
+      },
+      "headline": [
+        "organization",
+        "no_table"
+      ],
+      "tolerance": "BC Wildfire Service; Open Government Licence - British Columbia; no CSV or DataStore (KMZ, KML, WMS, BCGW custom download).",
+      "grading": {
+        "correct": "Publisher, licence, and no CSV or DataStore (spatial formats).",
+        "partial": "Publisher and no CSV/DataStore with the licence missing.",
+        "referral": "No answer, only the record's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "bc-wildfire-fire-perimeters-historical",
+          "series_title": "BC Wildfire Fire Perimeters - Historical",
+          "reference_period": null,
+          "value": "Open Government Licence - British Columbia",
+          "release_or_revision_date": null,
+          "url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=bc-wildfire-fire-perimeters-historical"
+        }
+      ],
+      "traps": [
+        "Geospatial records in the BC catalogue are served from the BC Geographic Warehouse, not the DataStore."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-21",
+      "category": "Dataset metadata",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "Which organization publishes the 'Most Popular Girl Names for the Past 100 Years' dataset in the BC Data Catalogue, how many resources does it have and in what format, and when was the record last modified?",
+      "expected": {
+        "organization": "British Columbia Vital Statistics Agency",
+        "resources": 1,
+        "format": "CSV",
+        "last_modified": "2022-04-06"
+      },
+      "facts": {
+        "organization": "Vital Statistics",
+        "format": "\\bCSV\\b",
+        "resources": "\\b(one|1|single|a)\\b[^.]{0,30}(resource|file|CSV)",
+        "last_modified": "2022-04-06|April 6,? 2022|6 April,? 2022"
+      },
+      "headline": [
+        "organization",
+        "format"
+      ],
+      "tolerance": "BC Vital Statistics Agency; one CSV; last modified 2022-04-06.",
+      "grading": {
+        "correct": "Publisher, one CSV, and the date.",
+        "partial": "Publisher and format, date missing or wrong.",
+        "referral": "No answer, only the record's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "most-popular-girl-names-for-the-past-100-years",
+          "series_title": "Most Popular Girl Names for the Past 100 Years",
+          "reference_period": null,
+          "value": 1,
+          "release_or_revision_date": "2022-04-06T22:06:26.031394",
+          "url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=most-popular-girl-names-for-the-past-100-years"
+        }
+      ],
+      "traps": [
+        "Not BC Stats: the Vital Statistics Agency publishes it."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-22",
+      "category": "Survey documentation",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "According to the SAAQ's 'Rapports d'accident' dataset on Données Québec, how much property damage must a collision without injuries exceed to be counted, and since when?",
+      "expected": {
+        "threshold": "2 000 $",
+        "since": "18 mars 2010"
+      },
+      "facts": {
+        "threshold": "2[,   ]?000\\s*\\$|\\$\\s*2[,   ]?000",
+        "since": "March 18,? 2010|18 March,? 2010|18 mars 2010|2010-03-18"
+      },
+      "headline": [
+        "threshold"
+      ],
+      "tolerance": "More than $2,000, since March 18, 2010.",
+      "grading": {
+        "correct": "$2,000 and March 18, 2010.",
+        "partial": "$2,000 without the date (or a wrong date).",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "rapports-d-accident",
+          "series_title": "Rapports d'accident: méthodologie",
+          "reference_period": null,
+          "value": "Ce seuil est estimé à plus de 2 000 $ depuis le 18 mars 2010",
+          "release_or_revision_date": null,
+          "url": "https://www.donneesquebec.ca/recherche/api/3/action/package_show?id=rapports-d-accident"
+        }
+      ],
+      "traps": [
+        "Accidents with property damage below the threshold and no injuries are not in the file."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-23",
+      "category": "Not published",
+      "group": "provincial",
+      "eval_type": "refusal",
+      "question": "Does the SAAQ's 'Rapports d'accident' dataset on Données Québec include a file for 2024 collisions? If it does, how many accidents does it list?",
+      "expected": {
+        "behaviour": "Say there is no 2024 file: the latest year is 2022."
+      },
+      "reference": {
+        "latest_year": 2022,
+        "first_year": 2011
+      },
+      "absent_pattern": "(latest|most recent|last|newest)[^.]{0,100}2022|2022[^.]{0,100}(latest|most recent|last|newest)|no (file|resource|data)[^.]{0,40}(2024|2023)|(does|do)(n't|n’t| not) (include|contain|have|list)[^.]{0,80}2024|not (yet )?(been )?(published|available|included|added)",
+      "tolerance": "Correct only when the answer says there is no 2024 file (the latest is 2022); a 2024 count is invented.",
+      "grading": {
+        "correct": "No 2024 file; latest year 2022.",
+        "partial": "Not used.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "rapports-d-accident",
+          "series_title": "Rapports d'accident: resources",
+          "reference_period": null,
+          "value": 2022,
+          "release_or_revision_date": "2023-12-19T02:52:44.537047",
+          "url": "https://www.donneesquebec.ca/recherche/api/3/action/package_show?id=rapports-d-accident"
+        }
+      ],
+      "traps": [
+        "The methodology says a year is added annually, but none has been since 2022."
+      ],
+      "tolerances": {},
+      "headline": []
+    },
+    {
+      "id": "T-24",
+      "category": "DataStore value",
+      "group": "provincial",
+      "eval_type": "facts",
+      "question": "In Retraite Québec's 'Banque de prénoms - Filles' on Données Québec, how many girls born in 2025 were named Alice, and how does the table show counts below five?",
+      "expected": {
+        "alice_2025": 394,
+        "small_counts": "<5"
+      },
+      "facts": {
+        "alice_2025": "\\b394\\b",
+        "small_counts": "<\\s*5|fewer than (5|five)|less than (5|five)"
+      },
+      "headline": [
+        "alice_2025"
+      ],
+      "tolerance": "394 (as of the key's date; prior years are revised each year); '<5'.",
+      "grading": {
+        "correct": "The count and '<5'.",
+        "partial": "The count alone.",
+        "referral": "No count, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "banque-de-prenoms-filles",
+          "series_title": "Banque de prénoms - Filles: ALICE, A_2025",
+          "reference_period": "2025",
+          "value": 394,
+          "release_or_revision_date": "2026-11-04T21:05:34.900219",
+          "url": "https://www.donneesquebec.ca/recherche/api/3/action/datastore_search?resource_id=bf77b504-54b9-4db8-be53-b92156175c12"
+        }
+      ],
+      "traps": [
+        "Retraite Québec publishes it (from family-benefit records), not the ISQ; counts for earlier years are revised each year.",
+        "The year columns are text in the DataStore because of the '<5' entries."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-25",
+      "category": "DataStore fields",
+      "group": "municipal",
+      "eval_type": "facts",
+      "question": "On Toronto's open data portal (CKAN), which City division owns the 'TTC Subway Delay Data' dataset, how often is it refreshed, and what data type does the DataStore give the 'Min Delay' field of the table of delays since 2025?",
+      "expected": {
+        "owner": "Toronto Transit Commission",
+        "refresh": "Monthly",
+        "min_delay_type": "text"
+      },
+      "facts": {
+        "owner": "Toronto Transit Commission|\\bTTC\\b",
+        "refresh": "monthly",
+        "min_delay_type": "\\btext\\b|\\bstring\\b"
+      },
+      "headline": [
+        "owner",
+        "min_delay_type"
+      ],
+      "tolerance": "Toronto Transit Commission; monthly; text.",
+      "grading": {
+        "correct": "TTC, monthly, text.",
+        "partial": "Two of the three, with the type not stated as numeric.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "ttc-subway-delay-data",
+          "series_title": "TTC Subway Delay Data",
+          "reference_period": null,
+          "value": "Monthly",
+          "release_or_revision_date": null,
+          "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show?id=ttc-subway-delay-data"
+        },
+        {
+          "table_id": "Other",
+          "vector_id": "6088e14f-e46e-4f5c-9daa-dea1359ad396",
+          "series_title": "TTC Subway Delay Data since 2025: Min Delay",
+          "reference_period": null,
+          "value": "text",
+          "release_or_revision_date": null,
+          "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=6088e14f-e46e-4f5c-9daa-dea1359ad396"
+        }
+      ],
+      "traps": [
+        "'Min Delay' holds minutes but is typed text: summing it needs a cast."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-26",
+      "category": "DataStore value",
+      "group": "municipal",
+      "eval_type": "facts",
+      "question": "In the TTC subway delay code table on Toronto's open data portal, what does delay code MUSAN mean?",
+      "expected": {
+        "MUSAN": "UNSANITARY VEHICLE"
+      },
+      "facts": {
+        "MUSAN": "unsanitary"
+      },
+      "headline": [
+        "MUSAN"
+      ],
+      "tolerance": "Unsanitary vehicle.",
+      "grading": {
+        "correct": "Unsanitary vehicle.",
+        "partial": "Not used.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "9e9efbb6-3a2f-4934-ac94-9150ecaeb548",
+          "series_title": "TTC delay codes: MUSAN",
+          "reference_period": null,
+          "value": "UNSANITARY VEHICLE",
+          "release_or_revision_date": null,
+          "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=9e9efbb6-3a2f-4934-ac94-9150ecaeb548"
+        }
+      ],
+      "traps": [
+        "The codes are in a separate 'Code Descriptions' table, not in the delay rows."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-27",
+      "category": "Dataset documentation",
+      "group": "municipal",
+      "eval_type": "facts",
+      "question": "Does the City of Montréal's 'Collisions routières' open dataset include collisions on the highway (autoroute) network, and who originally records the collisions?",
+      "expected": {
+        "highways": "No: collisions on the autoroute network are excluded",
+        "recorded_by": "SPVM police accident reports, structured by the SAAQ"
+      },
+      "facts": {
+        "highways": "((?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)|exclu)[^.]{0,140}(autorout|highway|expressway|freeway)|(autorout|highway|expressway|freeway)[^.]{0,140}((?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)|exclu)",
+        "recorded_by": "SPVM|Service de police|police"
+      },
+      "headline": [
+        "highways"
+      ],
+      "tolerance": "Highways excluded; recorded by the SPVM (police reports), structured by the SAAQ.",
+      "grading": {
+        "correct": "Highways excluded and the SPVM (or police reports).",
+        "partial": "Highways excluded without who records them.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "collisions-routieres",
+          "series_title": "Collisions routières: méthodologie",
+          "reference_period": null,
+          "value": "exclusion des collisions survenues sur le réseau autoroutier",
+          "release_or_revision_date": null,
+          "url": "https://donnees.montreal.ca/api/3/action/package_show?id=collisions-routieres"
+        }
+      ],
+      "traps": [
+        "Island-wide totals from this file undercount collisions: highway collisions are left out."
+      ],
+      "tolerances": {}
+    },
+    {
+      "id": "T-28",
+      "category": "DataStore fields",
+      "group": "municipal",
+      "eval_type": "facts",
+      "question": "In the DataStore table of Montréal's 'Collisions routières' dataset, which field holds a collision's severity, and what is the data type of the NB_MORTS field?",
+      "expected": {
+        "severity_field": "GRAVITE",
+        "NB_MORTS_type": "numeric"
+      },
+      "facts": {
+        "severity_field": "GRAVIT[EÉ]",
+        "NB_MORTS_type": "numeric|numérique"
+      },
+      "headline": [
+        "severity_field"
+      ],
+      "tolerance": "GRAVITE; numeric.",
+      "grading": {
+        "correct": "GRAVITE and numeric.",
+        "partial": "GRAVITE alone, or numeric alone.",
+        "referral": "No answer, only the dataset's link."
+      },
+      "citations": [
+        {
+          "table_id": "Other",
+          "vector_id": "05deae93-d9fc-4acb-9779-e0942b5e962f",
+          "series_title": "Collisions routières: DataStore fields",
+          "reference_period": null,
+          "value": {
+            "GRAVITE": "text",
+            "NB_MORTS": "numeric"
+          },
+          "release_or_revision_date": null,
+          "url": "https://donnees.montreal.ca/api/3/action/datastore_search?resource_id=05deae93-d9fc-4acb-9779-e0942b5e962f"
+        }
+      ],
+      "traps": [
+        "Severity is a text label (GRAVITE), not a code; the counts are numeric."
+      ],
+      "tolerances": {}
+    }
+  ]
+}
