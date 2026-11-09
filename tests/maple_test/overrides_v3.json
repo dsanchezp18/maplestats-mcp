@@ -1,0 +1,433 @@
+{
+  "maplestats-full/T-02#2": {
+    "outcome": "partial",
+    "reason": "Review: LFS stated as mandatory; CIS status left unanswered, not stated wrong."
+  },
+  "maplestats-full/T-02#1": {
+    "outcome": "partial",
+    "reason": "Review: LFS stated as mandatory; CIS status left unanswered, not stated wrong."
+  },
+  "maplestats-full/T-02#0": {
+    "outcome": "partial",
+    "reason": "Review: LFS stated as mandatory; CIS status left unanswered, not stated wrong."
+  },
+  "openmcp-1109/T-02#2": {
+    "outcome": "partial",
+    "reason": "Review: LFS stated as mandatory; CIS status left unanswered, not stated wrong."
+  },
+  "openmcp-1109/T-02#0": {
+    "outcome": "partial",
+    "reason": "Review: LFS stated as mandatory; CIS status left unanswered, not stated wrong. The regex matched the word voluntary in a field name."
+  },
+  "openmcp-1109/T-02#1": {
+    "outcome": "correct",
+    "reason": "Review: states LFS mandatory and CIS voluntary from flagged memory; graded on value."
+  },
+  "maplestats-postfix/T-04#1": {
+    "outcome": "correct",
+    "reason": "Review: says the unadjusted CPI is not revised and only the seasonally adjusted series are, so there was no revision."
+  },
+  "openmcp-1109/T-04#0": {
+    "outcome": "correct",
+    "reason": "Review: says the unadjusted CPI is not revised and only the seasonally adjusted series are, so there was no revision."
+  },
+  "maplestats-brief/T-04#2": {
+    "false_claim": "Says seasonally adjusted CPI revisions affect the previous three months; the policy is the previous month monthly and the last three years each January."
+  },
+  "openmcp-1109/T-05#2": {
+    "outcome": "abstained",
+    "reason": "Review: gives no figure for either part after 403 errors; no wrong fact stated.",
+    "referral": true
+  },
+  "openmcp-1109/T-05#1": {
+    "outcome": "abstained",
+    "reason": "Review: gives no figure for either part after 403 errors; no wrong fact stated.",
+    "referral": true
+  },
+  "openmcp-1109/T-05#0": {
+    "referral": true
+  },
+  "openmcp-1109/T-07#2": {
+    "false_claim": "Gives the CIS survey record number as 3252; the CIS IMDB record is 5200."
+  },
+  "maplestats-full/T-07#2": {
+    "outcome": "partial",
+    "reason": "Review: tax data stated as the income source; variance method declined, not stated wrong."
+  },
+  "maplestats-postfix/T-09#2": {
+    "false_claim": "Says the TEER category is the fourth digit of the NOC 2021 code; it is the second digit."
+  },
+  "maplestats-full/T-12#2": {
+    "outcome": "correct",
+    "reason": "Review: says the noon rate is no longer published and gives the daily average labelled as such, not as a noon rate."
+  },
+  "maplestats-postfix/T-12#0": {
+    "outcome": "correct",
+    "reason": "Review: says the noon rate is no longer published and gives the daily average labelled as such, not as a noon rate."
+  },
+  "maplestats-full/T-14#0": {
+    "false_claim": "States the Rental Market Survey currently runs twice a year (April and October); CMHC methodology says it runs in the first two weeks of October and the April survey was last run in 2015."
+  },
+  "maplestats-brief/T-14#1": {
+    "outcome": "partial",
+    "reason": "Review: scope right, but the timing is given as a current twice-yearly April and October survey, which is wrong (October only since 2015).",
+    "false_claim": "States the Rental Market Survey currently runs twice a year (April and October); CMHC methodology says it runs in the first two weeks of October and the April survey was last run in 2015."
+  },
+  "maplestats-brief/T-14#2": {
+    "outcome": "partial",
+    "reason": "Review: scope right, but the timing is given as a current twice-yearly April and October survey, which is wrong (October only since 2015).",
+    "false_claim": "States the Rental Market Survey currently runs twice a year (April and October); CMHC methodology says it runs in the first two weeks of October and the April survey was last run in 2015."
+  },
+  "maplestats-full/T-15#1": {
+    "outcome": "partial",
+    "reason": "Review: gives D = Poor (use with caution) but declines the 4-entity minimum."
+  },
+  "maplestats-full/T-15#2": {
+    "outcome": "partial",
+    "reason": "Review: gives D = Poor (use with caution) but declines the 4-entity minimum."
+  },
+  "openmcp-1109/T-15#2": {
+    "referral": true
+  },
+  "openmcp-1109/T-15#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: states from memory that D means 'fair' (key: Poor) and gives no minimum."
+  },
+  "openmcp-1109/T-15#1": {
+    "outcome": "abstained",
+    "reason": "Review: declines both parts after failed searches; no wrong fact stated."
+  },
+  "maplestats-brief/T-15#2": {
+    "referral": true
+  },
+  "maplestats-full/T-16#1": {
+    "outcome": "correct",
+    "reason": "Review: says the April series ended in 2015 and the survey is now October only, and labels the 3.0% figure as October 2025."
+  },
+  "maplestats-postfix/T-16#1": {
+    "outcome": "correct",
+    "reason": "Review: says the April series ended in 2015 so there is no April 2026 figure, and labels the 3.0% figure as October 2025."
+  },
+  "maplestats-postfix/T-16#2": {
+    "outcome": "correct",
+    "reason": "Review: says the April series ended in 2015 and the survey is now October only, and labels the 3.0% figure as October 2025."
+  },
+  "maplestats-full/T-16#0": {
+    "outcome": "correct",
+    "reason": "Review: says the April series ended in 2015 and the survey is now October only, and labels the 3.0% figure as October 2025."
+  },
+  "maplestats-brief/T-16#0": {
+    "outcome": "correct",
+    "reason": "Review: says the April series ended in 2015 and the survey is now October only, and labels the 3.0% figure as October 2025."
+  },
+  "openmcp-1109/T-30#2": {
+    "outcome": "abstained",
+    "reason": "Review: tool errors (403/500) only; no answer."
+  },
+  "openmcp-1109/T-30#1": {
+    "outcome": "abstained",
+    "reason": "Review: tool errors (403/500) only; no answer."
+  },
+  "openmcp-1109/T-30#0": {
+    "outcome": "abstained",
+    "reason": "Review: tool errors (403/500) only; no answer."
+  },
+  "openmcp-1109/T-31#2": {
+    "outcome": "abstained",
+    "reason": "Review: tool errors (403/500) only; no answer."
+  },
+  "openmcp-1109/T-31#1": {
+    "outcome": "abstained",
+    "reason": "Review: tool errors (403/500) only; no answer."
+  },
+  "maplestats-full/T-32#1": {
+    "outcome": "partial",
+    "reason": "Review: release date and annual given, but the answer does not commit to July 1, 2026 as the latest reference date."
+  },
+  "maplestats-postfix/T-35#0": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "maplestats-full/T-35#2": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "maplestats-full/T-35#0": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "maplestats-postfix/T-35#1": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "maplestats-full/T-35#1": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "maplestats-brief/T-35#2": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "maplestats-brief/T-35#1": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "maplestats-postfix/T-35#2": {
+    "outcome": "partial",
+    "reason": "Review: ministry, licence, annual and XLSX given, but the answer does not say the totals differ from the Financial Statement and Annual Report (only that it could not confirm)."
+  },
+  "openmcp-1109/T-35#2": {
+    "outcome": "partial",
+    "reason": "Review: XLSX confirmed, ministry and licence only inferred, frequency not stated, and no statement that the totals differ from the Financial Statement and Annual Report."
+  },
+  "openmcp-1109/T-35#1": {
+    "outcome": "partial",
+    "reason": "Review: XLSX confirmed, ministry and licence only inferred, frequency not stated, and no statement that the totals differ from the Financial Statement and Annual Report."
+  },
+  "openmcp-1109/T-35#0": {
+    "outcome": "partial",
+    "reason": "Review: XLSX confirmed, ministry and licence only inferred, frequency not stated, and no statement that the totals differ from the Financial Statement and Annual Report."
+  },
+  "maplestats-brief/T-35#0": {
+    "outcome": "abstained",
+    "reason": "Review: tool errors (403/500) only; no answer."
+  },
+  "maplestats-brief/T-05#0": {
+    "outcome": "partial",
+    "reason": "Review: 11 series, as table 18-10-0006-01 holds them (n_series 11, checked 2026-11-09), cited to the table; the key reads 15 from the CPI IMDB record. A real published figure, so not hallucinated; three years is right, so partial (one of the two)."
+  },
+  "maplestats-full/T-05#0": {
+    "outcome": "partial",
+    "reason": "Review: 11 series, as table 18-10-0006-01 holds them (n_series 11, checked 2026-11-09), cited to the table; the key reads 15 from the CPI IMDB record. A real published figure, so not hallucinated; three years is right, so partial (one of the two)."
+  },
+  "maplestats-brief/T-05#2": {
+    "outcome": "partial",
+    "reason": "Review: 11 series, as table 18-10-0006-01 holds them (n_series 11, checked 2026-11-09), cited to the table; the key reads 15 from the CPI IMDB record. A real published figure, so not hallucinated; three years is right, so partial (one of the two)."
+  },
+  "maplestats-full/T-05#2": {
+    "outcome": "partial",
+    "reason": "Review: 11 series, as table 18-10-0006-01 holds them (n_series 11, checked 2026-11-09), cited to the table; the key reads 15 from the CPI IMDB record. A real published figure, so not hallucinated; three years is right, so partial (one of the two)."
+  },
+  "maplestats-full/T-05#1": {
+    "outcome": "partial",
+    "reason": "Review: 11 series, as table 18-10-0006-01 holds them (n_series 11, checked 2026-11-09), cited to the table; the key reads 15 from the CPI IMDB record. A real published figure, so not hallucinated; three years is right, so partial (one of the two)."
+  },
+  "maplestats-postfix/T-05#0": {
+    "outcome": "partial",
+    "reason": "Review: 11 series, as table 18-10-0006-01 holds them (n_series 11, checked 2026-11-09), cited to the table; the key reads 15 from the CPI IMDB record. A real published figure, so not hallucinated; three years is right, so partial (one of the two)."
+  },
+  "maplestats-brief/T-05#1": {
+    "outcome": "partial",
+    "reason": "Review: 11 series, as table 18-10-0006-01 holds them (n_series 11, checked 2026-11-09), cited to the table; the key reads 15 from the CPI IMDB record. A real published figure, so not hallucinated; three years is right, so partial (one of the two)."
+  },
+  "maplestats-brief/T-17#0": {
+    "outcome": "partial",
+    "reason": "Review: frequency only inferred from the title and not stated as the answer (hedged); IRCC, CSV/XLSX and no DataStore given, so partial."
+  },
+  "maplestats-full/T-17#2": {
+    "outcome": "partial",
+    "reason": "Review: frequency only inferred from the title and not stated as the answer (hedged); IRCC, CSV/XLSX and no DataStore given, so partial."
+  },
+  "openmcp-1109/T-17#1": {
+    "outcome": "partial",
+    "reason": "Review: frequency only inferred from the title and not stated as the answer (hedged); IRCC, CSV/XLSX and no DataStore given, so partial."
+  },
+  "openmcp-1109/T-17#0": {
+    "outcome": "partial",
+    "reason": "Review: frequency only inferred from the title and not stated as the answer (hedged); IRCC, CSV/XLSX and no DataStore given, so partial."
+  },
+  "openmcp-1109/T-17#2": {
+    "outcome": "partial",
+    "reason": "Review: frequency only inferred from the title and not stated as the answer (hedged); IRCC, CSV/XLSX and no DataStore given, so partial."
+  },
+  "maplestats-brief/T-17#2": {
+    "outcome": "partial",
+    "reason": "Review: frequency only inferred from the title and not stated as the answer (hedged); IRCC, CSV/XLSX and no DataStore given, so partial."
+  },
+  "maplestats-brief/T-17#1": {
+    "outcome": "partial",
+    "reason": "Review: monthly stated, but IRCC and no DataStore are given only as likely and XLSX is not confirmed, so partial."
+  },
+  "maplestats-full/T-18#1": {
+    "outcome": "partial",
+    "reason": "Review: 10 HTML resources but no frequency (says the record has none), so two of three."
+  },
+  "maplestats-full/T-18#2": {
+    "outcome": "partial",
+    "reason": "Review: 10 HTML resources but no frequency (says the record has none), so two of three."
+  },
+  "maplestats-brief/T-18#2": {
+    "outcome": "partial",
+    "reason": "Review: 10 HTML resources but no frequency (says the record has none), so two of three."
+  },
+  "maplestats-brief/T-18#0": {
+    "outcome": "partial",
+    "reason": "Review: 10 HTML resources but no frequency (says the record has none), so two of three."
+  },
+  "maplestats-full/T-18#0": {
+    "outcome": "partial",
+    "reason": "Review: 10 HTML resources but no frequency (says the record has none), so two of three."
+  },
+  "maplestats-brief/T-18#1": {
+    "outcome": "partial",
+    "reason": "Review: 10 HTML resources but no frequency (says the record has none), so two of three."
+  },
+  "openmcp-1109/T-18#0": {
+    "outcome": "abstained",
+    "reason": "Review: only the resource count is given; format and frequency declined, which is below the partial bar (two of three)."
+  },
+  "openmcp-1109/T-18#1": {
+    "outcome": "abstained",
+    "reason": "Review: only the resource count is given; format and frequency declined, which is below the partial bar (two of three)."
+  },
+  "openmcp-1109/T-18#2": {
+    "outcome": "abstained",
+    "reason": "Review: only the resource count is given; format and frequency declined, which is below the partial bar (two of three)."
+  },
+  "openmcp-1109/T-19#1": {
+    "outcome": "hallucinated",
+    "reason": "Review: gives 2002-12-09 (date_published, the keyed trap) as the release date."
+  },
+  "openmcp-1109/T-19#0": {
+    "outcome": "hallucinated",
+    "reason": "Review: gives 2002-12-09 (date_published, the keyed trap) as the release date."
+  },
+  "maplestats-full/T-19#1": {
+    "outcome": "abstained",
+    "reason": "Review: only the licence is given; frequency and release date declined, which is below the partial bar (licence and frequency)."
+  },
+  "maplestats-brief/T-19#2": {
+    "outcome": "abstained",
+    "reason": "Review: only the licence is given; frequency and release date declined, which is below the partial bar (licence and frequency)."
+  },
+  "maplestats-full/T-19#2": {
+    "outcome": "abstained",
+    "reason": "Review: only the licence is given; frequency and release date declined, which is below the partial bar (licence and frequency)."
+  },
+  "maplestats-brief/T-19#0": {
+    "outcome": "abstained",
+    "reason": "Review: only the licence is given; frequency and release date declined, which is below the partial bar (licence and frequency)."
+  },
+  "maplestats-full/T-19#0": {
+    "outcome": "abstained",
+    "reason": "Review: only the licence is given; frequency and release date declined, which is below the partial bar (licence and frequency)."
+  },
+  "openmcp-1109/T-20#0": {
+    "outcome": "partial",
+    "reason": "Review: licence not confirmed (OGL-BC called an assumption), so publisher and no CSV/DataStore without the licence."
+  },
+  "maplestats-brief/T-23#1": {
+    "outcome": "correct",
+    "reason": "Review: says there is no 2024 file and the latest is 2022; the auto grader misread a count of files as a figure."
+  },
+  "openmcp-1109/T-23#0": {
+    "outcome": "correct",
+    "reason": "Review: says there is no 2024 file and the latest is 2022; the auto grader misread a count of files as a figure."
+  },
+  "maplestats-full/T-25#1": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-brief/T-25#1": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-full/T-25#2": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-postfix/T-25#2": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-brief/T-25#2": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-brief/T-25#0": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-postfix/T-25#0": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-full/T-25#0": {
+    "outcome": "partial",
+    "reason": "Review: refresh (monthly) and Min Delay type (text) right, but the owning division (Toronto Transit Commission) is not given; the regex matched TTC in the resource name."
+  },
+  "maplestats-postfix/T-25#1": {
+    "outcome": "abstained",
+    "reason": "Review: none of the three facts given; says its tools cannot read the fields and sends the user to the dataset page.",
+    "referral": true
+  },
+  "openmcp-1109/T-28#0": {
+    "outcome": "partial",
+    "reason": "Review: NB_MORTS read as text from the DataStore copy on Données Québec, cited as such; the question names Montréal portal, where it is numeric. A real published value, so not hallucinated; partial."
+  },
+  "openmcp-1109/T-28#2": {
+    "outcome": "partial",
+    "reason": "Review: NB_MORTS read as text from the DataStore copy on Données Québec, cited as such; the question names Montréal portal, where it is numeric. A real published value, so not hallucinated; partial."
+  },
+  "openmcp-1109/T-28#1": {
+    "outcome": "partial",
+    "reason": "Review: GRAVITE right; NB_MORTS given as integer from the CSV schema, with the DataStore type (numeric) only in a hedge."
+  },
+  "openmcp-1109/T-33#2": {
+    "outcome": "abstained",
+    "reason": "Review: data.ontario.ca returned 429; only the resource count and format given, none of the headline facts (ministry, licence).",
+    "referral": true
+  },
+  "openmcp-1109/T-33#1": {
+    "outcome": "abstained",
+    "reason": "Review: data.ontario.ca returned 429; only the resource count and format given, none of the headline facts (ministry, licence).",
+    "referral": true
+  },
+  "openmcp-1109/T-33#0": {
+    "outcome": "abstained",
+    "reason": "Review: data.ontario.ca returned 429; only the resource count and format given, none of the headline facts (ministry, licence).",
+    "referral": true
+  },
+  "maplestats-full/T-33#1": {
+    "referral": true
+  },
+  "maplestats-full/T-33#2": {
+    "referral": true
+  },
+  "maplestats-full/T-33#0": {
+    "referral": true
+  },
+  "openmcp-1109/T-34#0": {
+    "outcome": "partial",
+    "reason": "Review: suppression of counts under five right, but the portal returned 429 and no fields or types are given."
+  },
+  "openmcp-1109/T-34#2": {
+    "outcome": "partial",
+    "reason": "Review: suppression of counts under five right, but the portal returned 429 and no fields or types are given."
+  },
+  "openmcp-1109/T-34#1": {
+    "outcome": "partial",
+    "reason": "Review: suppression of counts under five right, but the portal returned 429 and no fields or types are given."
+  },
+  "maplestats-full/T-34#2": {
+    "referral": true
+  },
+  "maplestats-full/T-36#0": {
+    "outcome": "abstained",
+    "reason": "Review: open.alberta.ca returned 403; no answer given, user sent to the portal page.",
+    "referral": true
+  },
+  "openmcp-1109/T-36#1": {
+    "outcome": "abstained",
+    "reason": "Review: open.alberta.ca returned 403; no answer given, user sent to the portal page.",
+    "referral": true
+  },
+  "maplestats-full/T-36#2": {
+    "outcome": "abstained",
+    "reason": "Review: open.alberta.ca returned 403; no answer given, user sent to the portal page.",
+    "referral": true
+  },
+  "maplestats-full/T-36#1": {
+    "referral": true
+  }
+}

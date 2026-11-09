@@ -600,6 +600,65 @@ uv run pytest tests/test_maple_test_v3.py                 # offline checks of th
 
 Not run yet on any arm.
 
+### v3 results, 2026-11-09: brief and full results, and OpenMCP
+
+Three arms on all 36 v3 questions, three runs each (108 answers per arm), graded and then
+reviewed by hand, blind to the arm, under each question's written rule
+(`overrides_v3.json`). Percentages are correct answers over 108; partial counts as a miss.
+
+- `maplestats-brief`: the hosted server as users reach it (brief results, the default since
+  #203). **MapleStats' comparable v3 score.**
+- `maplestats-full`: the same hosted server through a local relay
+  ([`relay_full.py`](relay_full.py)) that sets `detail='full'` on every `call_tool`
+  request; its log (`relay_logs/`) shows all 873 logged requests carried it.
+- `openmcp-1109`: OpenMCP from its local clone, run alone.
+- `maplestats-postfix`: the hosted server after fixes chosen from the first runs' misses
+  (main c07852e). **Partly in-sample**, so not comparable with OpenMCP the way the brief
+  run is.
+
+| Arm | Correct | StatCan (39) | BoC (9) | CMHC (12) | Federal portal (9) | Provincial portals (27) | Municipal portals (12) | USD per question | Seconds | Tokens in / out |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |
+| MapleStats, brief | 75.0% | 76.9% | 100% | 75.0% | 0% | 88.9% | 75.0% | 0.063 | 14.8 | 50,639 / 967 |
+| MapleStats, full | 63.9% | 66.7% | 88.9% | 75.0% | 22.2% | 55.6% | 75.0% | 0.060 | 15.3 | 47,629 / 911 |
+| OpenMCP | 49.1% | 48.7% | 100% | 75.0% | 11.1% | 25.9% | 66.7% | 0.047 | 79.5 | 45,351 / 904 |
+| MapleStats after fixes (partly in-sample) | 90.7% | 97.4% | 100% | 91.7% | 100% | 81.5% | 75.0% | 0.048 | 17.3 | 37,380 / 884 |
+
+No arm cited an invented StatCan id. Hallucinated answers: brief 3, full 4, OpenMCP 9,
+after fixes 1. Brief results cost about as much as full ones here and answered more
+questions correctly; most of the difference is on the provincial portal questions.
+
+On v2 the brief and full arms were also run (183 answers each,
+`runs_v2/cost_only/`), for cost: USD 0.056 against 0.060 per question, 13.1 and 13.2
+seconds, 50,504 and 52,416 tokens in. MapleStats is in-sample on v2, so those runs were not
+reviewed by hand and are left out of `results_v2.md` (the grader alone: 94.5% brief, 96.2%
+full). OpenMCP was run on v3 only; its v2 reference stays the Nov. 3 score.
+
+**How the runs were done.**
+
+- **OpenMCP needs DuckDB 1.x.** Its `requirements.txt` leaves `duckdb` unpinned, and with
+  DuckDB 2.0.0 its keyword search (`match_bm25` over 81,497 datasets) does not return for a
+  query of more than one word (a 3-word query ran for over 25 minutes; 0.1 s with 1.5.6). The
+  local clone was given `duckdb==1.5.6`; its code was not changed. The two attempts before
+  the pin (half their answers at the 10-minute cap) are in `runs_v3/paused/` and
+  `runs_v2/paused/`, and this likely explains the Nov. 8 OpenMCP timeouts too.
+- **The relay's first version wrote Windows cp1252,** so a `search_tools` result holding
+  "≤" (two CKAN tool descriptions) failed in the full arm. After the fix, the full arm's 45
+  answers on the 15 portal questions where it touched CKAN were asked again (old answers in
+  `runs_v3/invalidated/`) against a local server at 092ed42, the code the hosted server ran
+  for the first runs, since the hosted server had been updated by then. StatCan's WDS was
+  refusing this machine (HTTP 403) at the time; those 15 questions read only the portals.
+- One answer stopped on the Claude usage limit and was asked again (`runs_v3/errors/`).
+
+**Review rules applied to every arm.** A refusal after a tool error is abstained, not
+partial; a fact given only as a possibility does not count; a value from memory flagged as
+unverified is graded on its value. Two disputes went the same way: an answer that gave a real
+published value from another copy or source, cited as such, is partial, not hallucinated.
+On T-05, seven MapleStats answers gave 11 seasonally adjusted CPI series, as table
+18-10-0006-01 holds them (checked), against the key's 15 from the CPI's IMDB record. On T-28,
+two OpenMCP answers read field types from Données Québec's copy, where every field is text.
+On T-15, three answers recalled CMHC's code D as "Fair"; that was memory, and the key, read
+from CMHC's page, stands.
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP
