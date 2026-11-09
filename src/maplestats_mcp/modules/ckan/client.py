@@ -19,6 +19,7 @@ schemas, applying every portal's documented quirks from constants.py:
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import httpx
@@ -174,6 +175,33 @@ def _names(obj: dict[str, Any], key: str) -> list[str]:
     return names
 
 
+_LANG_KEYS = frozenset({"en", "fr"})
+# open.canada.ca writes date-only fields as "YYYY-MM-DD 00:00:00", and an unset
+# coverage date as year 1 (seen live on a federated dataset, 2026-11-09).
+_MIDNIGHT = re.compile(r"^(\d{4}-\d{2}-\d{2})[ T]00:00:00$")
+_NO_DATE = "0001-01-01"
+
+
+def _bilingual(value: dict[str, Any], lang: str) -> Any:
+    """`lang` from a bare {"en", "fr"} dict, English when `lang` is blank."""
+    picked = value.get(lang)
+    if isinstance(picked, str):
+        picked = _text(picked)
+    return picked if picked not in (None, []) else value.get("en")
+
+
+def _extra_value(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    text = _text(value)
+    if text is None:
+        return None
+    midnight = _MIDNIGHT.match(text.strip())
+    if midnight:
+        text = midnight.group(1)
+    return None if text.startswith(_NO_DATE) else text
+
+
 def _extras(obj: dict[str, Any], fields: tuple[str, ...], lang: str) -> dict[str, Any]:
     extras: dict[str, Any] = {}
     for name in fields:
@@ -184,11 +212,19 @@ def _extras(obj: dict[str, Any], fields: tuple[str, ...], lang: str) -> dict[str
                 value = pick_translated_list(translated, lang)
             else:
                 value = pick_translated(value, translated, lang)
-        if isinstance(value, str):
-            value = _text(value)
+        elif isinstance(value, dict) and value and set(value) <= _LANG_KEYS:
+            value = _bilingual(value, lang)
+        value = _extra_value(value)
         if value in (None, [], {}):
             continue
         extras[name] = value
+        # The federal portal's update frequency is a code ("P1M", "not_planned");
+        # the label beside it is the portal's own wording, so a reader need not
+        # know ISO 8601 durations.
+        if name == "frequency" and isinstance(value, str):
+            labels = constants.FREQUENCY_LABELS.get(value)
+            if labels:
+                extras["frequency_label"] = pick(lang, *labels)
     return extras
 
 

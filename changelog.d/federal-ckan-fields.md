@@ -1,0 +1,4 @@
+### Fixed
+
+- `ckan_get_dataset` on the `federal` portal (open.canada.ca) now returns the portal's own dataset fields in `extras`, which were all dropped before: update `frequency` with a plain-words `frequency_label` (English or French), `date_published`, `date_modified`, `portal_release_date`, `time_period_coverage_start` and `_end`, `org_title_at_publication`, `jurisdiction`, `subject`, `audience`, `collection`, `data_series_name`, `data_series_issue_identification`, `program_page_url` and `maintainer_email`, plus each resource's `date_published`. The fields are kept in brief results.
+- CKAN `extras` now read bare `{"en", "fr"}` dicts in the requested language (English when that translation is blank), shorten midnight timestamps ("2017-09-07 00:00:00") to the date, and leave out the year-1 placeholder date some records carry.
