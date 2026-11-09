@@ -8,6 +8,7 @@ callable shared/security.py's middleware was designed to wrap.
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 from maplestats_mcp import __version__, config
@@ -17,7 +18,7 @@ from maplestats_mcp import __version__, config
 # with uvicorn sets no MAPLE_TRANSPORT.
 config.mark_serving_http()
 
-from maplestats_mcp.server import mcp
+from maplestats_mcp.server import mcp, preload
 from maplestats_mcp.shared.security import (
     with_cors,
     with_health_endpoint,
@@ -109,11 +110,47 @@ def with_shutdown_save(app, save):
     return wrapped
 
 
+def with_startup_preload(app, preload):
+    """Await `preload()` when the server starts, before the wrapped app's own startup.
+
+    uvicorn runs the lifespan startup before it binds the port, so until preload
+    finishes /health does not answer and the platform's startup and readiness
+    probes keep traffic on the previous revision. A failed preload is logged and
+    the server starts anyway: the modules then load lazily on first use, as on stdio.
+    """
+
+    async def wrapped(scope, receive, send):
+        if scope["type"] != "lifespan":
+            await app(scope, receive, send)
+            return
+
+        async def receive_after_preload():
+            message = await receive()
+            if message["type"] == "lifespan.startup":
+                started = time.perf_counter()
+                try:
+                    await preload()
+                except Exception:  # never refuse to start over a warm-up
+                    logger.exception("Preloading the modules failed; they will load on first use")
+                else:
+                    logger.info(
+                        "Preloaded every module and the search index in %.1f s",
+                        time.perf_counter() - started,
+                    )
+            return message
+
+        await app(scope, receive_after_preload, send)
+
+    return wrapped
+
+
 def build_asgi_app():
     check_hosting_config()
     # Idle sessions are dropped after 5 minutes (the default is 30): a small instance
     # cannot hold the 10,000 sessions one busy caller could otherwise open.
     inner = mcp.http_app(session_idle_timeout=300)
+    if config.get_preload_enabled():
+        inner = with_startup_preload(inner, lambda: preload(mcp))
     secured = with_http_security(
         inner,
         auth_token=config.get_auth_token(),
