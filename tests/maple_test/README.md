@@ -511,13 +511,15 @@ pass: it gave the 2025 accounts' release date without saying none is set for 202
 
 v1 and v2 ask for figures. Before an analyst uses a figure they ask what it is: the unit,
 whether it is seasonally adjusted or revised, who is in the survey, what a code means,
-which licence a dataset carries and whether its table can be queried. v3 asks 28 of those
+which licence a dataset carries and whether its table can be queried. v3 asks 36 of those
 questions, on the publishers' documentation and on open-data portals, and is a new,
 out-of-sample set for MapleStats.
 
 **The out-of-sample rule.** The questions were written and the key built on 2026-11-08,
 before MapleStats or any other server was asked them, and nobody has run MapleStats on
-them. Every key value is read by `build_key_v3.py`, with httpx, from the publisher's own
+them. T-29 to T-36 were added the same day, once StatCan's WDS and the Ontario and
+Alberta catalogues answered this machine again, and were keyed before any server was
+asked them too. Every key value is read by `build_key_v3.py`, with httpx, from the publisher's own
 API or page, never through MapleStats. The rule at the top of this file applies: a
 MapleStats change tuned on these questions makes later MapleStats runs in-sample, and
 checking such a change needs another new set.
@@ -552,10 +554,18 @@ checking such a change needs another new set.
 | T-26 | Toronto | facts | DataStore value: what delay code MUSAN means |
 | T-27 | Montréal | facts | Road collisions: are highways included (no); who records collisions |
 | T-28 | Montréal | facts | Road collisions DataStore: the severity field; NB_MORTS's type |
+| T-29 | StatCan WDS | facts | Unit and scalar factor of v2062811 (employment: persons, thousands) |
+| T-30 | StatCan WDS | facts | Which table holds v62305752, and that table's frequency |
+| T-31 | StatCan WDS | facts | Is v41690973 (all-items CPI) seasonally adjusted? (no) |
+| T-32 | StatCan WDS | facts | Release date of 17-10-0005-01's latest update; frequency; latest reference date |
+| T-33 | Ontario | facts | Top baby names (female): ministry, licence, update frequency, resources |
+| T-34 | Ontario | facts | Same dataset's DataStore fields and types; how counts under five are handled |
+| T-35 | Alberta | facts | Net corporate income tax revenue: ministry, licence, frequency, format; do totals match the annual report (no) |
+| T-36 | Alberta | facts | Canada supply and disposition: open data or publication, ministry, frequency, format |
 
-By source: Statistics Canada 9 of 28 (32.1%), the Bank of Canada 3 (10.7%), CMHC 4 (14.3%),
-and CKAN portals 12 (42.9%): federal 3 (10.7%), provincial 5 (17.9%), municipal 4 (14.3%).
-Four questions (14.3%) have no answer to give (refusals). Results are reported for each
+By source: Statistics Canada 13 of 36 (36.1%), the Bank of Canada 3 (8.3%), CMHC 4 (11.1%),
+and CKAN portals 16 (44.4%): federal 3 (8.3%), provincial 9 (25.0%), municipal 4 (11.1%).
+Four questions (11.1%) have no answer to give (refusals). Results are reported for each
 source group (`group` in the key), as v2 reports its halves.
 
 **Grading.** Most answers are text, so v3 adds one grading kind, `facts`: each question
@@ -568,16 +578,18 @@ written `grading` rule (what is correct, what is partial, what counts as a refer
 the hand review, which, as for v2, reads every answer.
 
 **Sources and how the key is read.** StatCan's IMDB survey pages (www23) for survey
-documentation, StatCan's RDaaS API for NAICS and NOC, Valet series and group metadata,
+documentation, StatCan's RDaaS API for NAICS and NOC, StatCan's WDS
+(`getSeriesInfoFromVector`, `getCubeMetadata`, `getCodeSets`) for a series' unit, scalar
+factor, table, frequency and release date, Valet series and group metadata,
 CMHC's methodology pages, and each portal's CKAN Action API (`package_show`,
 `datastore_search`). Documentation answers are read by pattern from the page, so a
 reworded passage stops the build with the phrase it could not find. Facts were preferred
 to figures so the key holds: licences, codes, definitions, field types. Where a value can
 change (Alice's count, which Retraite Québec revises each year; the latest SAAQ year;
-resource counts), `--check` reports it. Three things were left out because the source
-refused this machine while the key was built (2026-11-08): StatCan's WDS (HTTP 403 for
-every request; so no questions on a vector's unit, scalar factor or release date),
-Ontario's catalogue (HTTP 429 for every request) and Alberta's (a Cloudflare challenge).
+resource counts; T-32's release date, which moves when StatCan next updates the table,
+about September 2027), `--check` reports it. Because WDS, Ontario and Alberta had blocked
+this machine after heavy use, the builder asks them for each fact once, with a pause, and
+stops on HTTP 403 or 429 instead of retrying.
 
 ```bash
 uv run python -m tests.maple_test.build_key_v3 --check     # has any source changed?
