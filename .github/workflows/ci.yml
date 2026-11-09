@@ -87,23 +87,26 @@ jobs:
           version: "1"
       # The caches are keyed on the package lists, the R or Julia version and
       # the month, so the packages are installed afresh at least once a month
-      # and the tests do not stay on old releases. The Julia standard
+      # and the tests do not stay on old releases. They are also keyed on the
+      # runner image, since packages built on one Ubuntu release do not load on
+      # the next (2026-11-09). The Julia standard
       # libraries (Dates, Downloads, Unicode) need no install.
       - name: Cache keys
         id: keys
         run: |
           echo "month=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
           echo "julia=$(julia --startup-file=no -e 'print(VERSION)')" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: r-cache
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: r-${{ runner.os }}-${{ steps.setup-r.outputs.installed-r-version }}-${{ steps.keys.outputs.month }}-${{ hashFiles('.github/ci/r-packages.txt') }}
+          key: r-${{ runner.os }}-${{ steps.keys.outputs.image }}-${{ steps.setup-r.outputs.installed-r-version }}-${{ steps.keys.outputs.month }}-${{ hashFiles('.github/ci/r-packages.txt') }}
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         id: julia-cache
         with:
           path: ~/.julia
-          key: julia-${{ runner.os }}-${{ steps.keys.outputs.julia }}-${{ steps.keys.outputs.month }}-${{ hashFiles('.github/ci/julia-packages.txt') }}
+          key: julia-${{ runner.os }}-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.julia }}-${{ steps.keys.outputs.month }}-${{ hashFiles('.github/ci/julia-packages.txt') }}
       - name: R packages for the reproduce tests
         # setup-r points R_LIBS_USER at a temp folder and serves binary
         # packages from Posit Package Manager. Two tests start R with a
@@ -111,13 +114,12 @@ jobs:
         # goes into ~/.Renviron, or those R processes would not see the
         # packages. purrr and jsonlite are loaded by the generated scripts and
         # helper tests but are not in the tests' own skip probes.
-        # install.packages only warns about a package it cannot install, so
-        # the last call fails the step, cached library or not.
-        env:
-          CACHED: ${{ steps.r-cache.outputs.cache-hit }}
+        # Only packages that do not load are installed, so a stale cache
+        # repairs itself. install.packages only warns about a package it cannot
+        # install, so the last call fails the step.
         run: |
           echo "R_LIBS_USER=$R_LIBS_USER" >> ~/.Renviron
-          Rscript -e 'pkgs <- readLines(".github/ci/r-packages.txt"); if (Sys.getenv("CACHED") != "true") install.packages(pkgs); stopifnot(all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)))'
+          Rscript -e 'pkgs <- readLines(".github/ci/r-packages.txt"); ok <- function(p) vapply(p, requireNamespace, logical(1), quietly = TRUE); missing <- pkgs[!ok(pkgs)]; if (length(missing)) install.packages(missing); stopifnot(all(ok(pkgs)))'
       - name: Julia packages for the reproduce tests
         env:
           CACHED: ${{ steps.julia-cache.outputs.cache-hit }}
