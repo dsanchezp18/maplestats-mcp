@@ -29,7 +29,7 @@ import json
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import NotFoundError
@@ -68,7 +68,7 @@ from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.private_logs import configure_private_logs
-from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware
+from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware, with_detail
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware, normalized_tool_name
 from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationErrorMiddleware
@@ -426,6 +426,11 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                 "Object matching that tool's inputSchema from search_tools. "
                 "Omit or pass {} for a tool with no required parameters.",
             ] = None,
+            detail: Annotated[
+                Literal["brief", "full"] | None,
+                "'brief' (the default): values, units, citation, caveats and limits, long "
+                "row lists as CSV. 'full': every field and the full provenance.",
+            ] = None,
             ctx: Context = None,  # type: ignore[assignment]  # fastmcp injects it
         ) -> ToolResult:
             if name in {transform._call_tool_name, transform._search_tool_name}:
@@ -439,7 +444,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
             if name not in catalog:
                 resolved = _resolve_tool_name(name, catalog)
                 if resolved is not None:
-                    return await ctx.fastmcp.call_tool(resolved, arguments)
+                    return await ctx.fastmcp.call_tool(resolved, with_detail(arguments, detail))
                 switch = TOOL_SWITCHES.get(name)
                 if switch is not None and not switch():
                     raise InvalidInput(
@@ -452,7 +457,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                 close = _close_tool_names(name, catalog)
                 hint = f" Did you mean {', '.join(close)}?" if close else ""
                 raise NotFoundError(f"Unknown tool: {shown!r}.{hint}")
-            return await ctx.fastmcp.call_tool(name, arguments)
+            return await ctx.fastmcp.call_tool(name, with_detail(arguments, detail))
 
         tool = Tool.from_function(
             fn=call_tool,
@@ -531,8 +536,12 @@ Use for: executing a tool by exact name with arguments that match the
 inputSchema search_tools returned for it. Data tools read public sources
 (StatCan, Bank of Canada, open-data portals). reproduce_workbook can save
 an Excel file on a local stdio server; hosted exports return base64. Returns that
-tool's typed result, including a provenance block (source, URL, query
-time, freshness).
+tool's result. `detail` is "brief" by default: values, periods, units and
+scale, members, the citation, status flags, caveats and limits, with a
+list of six or more rows written as CSV text ({"format": "csv", "csv": ...}),
+and provenance cut to source, URL, licence and caveats. Pass
+detail="full" for every field and the full provenance block (query time,
+freshness, schema), with rows as JSON objects.
 Errors come back as MCP tool errors, not as data: an unknown or
 misspelled name raises 'Unknown tool' (search again for the exact
 name), invalid arguments raise a validation error naming the field,
@@ -564,6 +573,9 @@ with caveats on combining them. To find one tool, call search_tools with a
 plain-language query (English or French), then run it with call_tool
 (name, arguments): the tools search_tools and plan_query name are not in
 your tool list, so calling one by its own name fails.
+Results are brief by default: values, units, the citation, caveats and
+limits, with six or more rows as CSV text. Pass detail='full' to call_tool
+for every field and the full provenance.
 For a French question, pass lang='fr' to plan_query and every tool.
 For a handful of series use the vector tools (every observation inline);
 for averages, sums or rankings over a few series, wds_query_series (where the
@@ -836,14 +848,16 @@ def build_server() -> FastMCP:
     mcp.add_middleware(ErrorHintMiddleware())
     mcp.add_middleware(ValidationErrorMiddleware())
     mcp.add_middleware(CallLanguageMiddleware())
-    # One byte budget for every tool's result, and the fitness-for-use caveats in
-    # its provenance; inside the language middleware so its notes follow lang.
-    mcp.add_middleware(ResponseBudgetMiddleware())
     # Usage counting goes outside the timeout: a timeout cancels the call
     # beneath it, which an inner counter never sees as an error, so a call
-    # that timed out would be missing from /stats.
+    # that timed out would be missing from /stats. It goes outside the budget
+    # too, so the result size it records is the one the client reads.
     if config.get_usage_stats_enabled():
         mcp.add_middleware(UsageMiddleware(STATS))
+    # One byte budget for every tool's result, the fitness-for-use caveats in its
+    # provenance, and the brief or full shape (`detail`); inside the language
+    # middleware so its notes follow lang.
+    mcp.add_middleware(ResponseBudgetMiddleware())
     mcp.add_middleware(ToolTimeoutMiddleware(config.get_tool_timeout_seconds()))
     mcp.add_transform(
         AnnotatedBM25SearchTransform(

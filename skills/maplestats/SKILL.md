@@ -15,6 +15,14 @@ the source URL, quality flags and the publisher's licence. Your job is to
 keep that trail in the answer: cite each figure, keep its flags, say when a
 figure is not published, and run `check_answer` before replying.
 
+Results through `call_tool` are brief by default: values, periods, unit and
+scale, the citation, status flags, caveats, limits, licence and source URL,
+with six or more rows as one CSV text block (`{"format": "csv", "csv":
+"header\nrow..."}`). That is enough to answer and cite. Pass
+`detail="full"` to `call_tool` only when you need every field (each
+observation's release time, decoded codes) or the whole `provenance` block
+(query time, cache, schema).
+
 ## Connect
 
 Hosted server, no account or key (60 requests a minute per client):

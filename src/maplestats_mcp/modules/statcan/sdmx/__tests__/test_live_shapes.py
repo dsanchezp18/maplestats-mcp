@@ -113,10 +113,10 @@ def test_parse_data_cap_keeps_the_newest_observations():
 
 async def test_get_data_defaults_to_latest_observations_without_fetching_structure(httpx_mock):
     # Only the data URL is mocked: a structure request would fail the test.
-    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=100", content=_DATA_XML.encode())
+    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=24", content=_DATA_XML.encode())
     result = await client.get_data(18100004, "2")
     assert result.dataflow_id == "DF_18100004"
-    assert "latest 100 observations" in (result.provenance.limits or "")
+    assert "latest 24 observations" in (result.provenance.limits or "")
 
 
 def _table_end(httpx_mock, cube_end: str) -> None:
@@ -172,7 +172,7 @@ async def test_get_data_rejects_bad_period_before_calling_upstream():
 
 async def test_get_data_key_matching_nothing_is_not_found(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}data/DF_18100004/999.999?lastNObservations=100",
+        url=f"{constants.BASE_URL}data/DF_18100004/999.999?lastNObservations=24",
         content=_NO_MATCH_XML.encode(),
     )
     with pytest.raises(NotFound, match="matched no series"):
@@ -181,7 +181,7 @@ async def test_get_data_key_matching_nothing_is_not_found(httpx_mock):
 
 async def test_get_data_406_reports_the_upstream_message(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}data/DF_14100355/1.1?lastNObservations=100",
+        url=f"{constants.BASE_URL}data/DF_14100355/1.1?lastNObservations=24",
         status_code=406,
         json={"message": "Wrong date format or value, check manual"},
     )
@@ -192,7 +192,7 @@ async def test_get_data_406_reports_the_upstream_message(httpx_mock):
 
 async def test_get_data_error_text_follows_lang(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}data/DF_14100355/1.1?lastNObservations=100",
+        url=f"{constants.BASE_URL}data/DF_14100355/1.1?lastNObservations=24",
         status_code=406,
         json={"message": "Wrong date format or value, check manual"},
     )
@@ -202,7 +202,7 @@ async def test_get_data_error_text_follows_lang(httpx_mock):
 
 async def test_get_data_404_is_not_found(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}data/DF_1/1?lastNObservations=100", status_code=404
+        url=f"{constants.BASE_URL}data/DF_1/1?lastNObservations=24", status_code=404
     )
     with pytest.raises(NotFound):
         await client.get_data(1, "1")
@@ -210,7 +210,7 @@ async def test_get_data_404_is_not_found(httpx_mock):
 
 async def test_get_data_5xx_is_unavailable_not_raw_httpx(httpx_mock):
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}data/DF_1/1?lastNObservations=100",
+        url=f"{constants.BASE_URL}data/DF_1/1?lastNObservations=24",
         status_code=503,
         is_reusable=True,
     )
@@ -225,7 +225,7 @@ async def test_get_data_5xx_is_unavailable_not_raw_httpx(httpx_mock):
 async def test_get_data_non_transient_4xx_is_not_reported_as_unavailable(httpx_mock, status, error):
     """400/401/403 are not retried, so "(already retried)" and "try again" mislead."""
     httpx_mock.add_response(
-        url=f"{constants.BASE_URL}data/DF_1/1?lastNObservations=100", status_code=status
+        url=f"{constants.BASE_URL}data/DF_1/1?lastNObservations=24", status_code=status
     )
     with pytest.raises(error, match=f"HTTP {status}") as exc_info:
         await client.get_data(1, "1")
@@ -246,7 +246,7 @@ async def test_get_data_caps_series_count(httpx_mock):
         "<generic:Series>" + one + "</generic:Series>",
         "".join(f"<generic:Series>{one}</generic:Series>" for _ in range(constants.MAX_SERIES + 3)),
     )
-    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=100", content=many.encode())
+    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=24", content=many.encode())
     result = await client.get_data(18100004, "2")
     assert len(result.series) == constants.MAX_SERIES
     assert result.series_total == constants.MAX_SERIES + 3

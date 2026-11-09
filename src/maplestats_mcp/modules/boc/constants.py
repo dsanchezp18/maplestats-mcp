@@ -51,3 +51,8 @@ SEARCH_LIMIT_MAX = 200
 LIST_LIMIT_DEFAULT = 50
 LIST_LIMIT_MAX = 1000
 OBSERVATIONS_MAX_BYTES = 200_000
+# With no date window or recent_* argument, only this many of the newest dates come
+# back (about two months of a daily series, two and a half years of a monthly one):
+# a whole history is rarely the question, and it cost a model up to 200 KB to read.
+# Changed from "as many as fit in OBSERVATIONS_MAX_BYTES" on 2026-11-08.
+NO_WINDOW_DATES = 30

@@ -230,7 +230,7 @@ async def test_missing_ckan_resource_and_valet_series_raise(monkeypatch):
 async def test_sdmx_scripts_replay_the_data_url_with_the_default_last_n():
     result = await client.reproduce("sdmx_get_data", {"product_id": 18100004, "key": "2.2"})
     base = "https://www150.statcan.gc.ca/t1/wds/sdmx/statcan/rest/data/DF_18100004/2.2"
-    assert result.source_url == f"{base}?lastNObservations=100"
+    assert result.source_url == f"{base}?lastNObservations=24"
     assert not result.method.startswith("exact: full table")
     code = _code(result)
     assert set(code) == {"r", "python", "stata", "julia", "excel"}
@@ -251,7 +251,7 @@ def test_sdmx_vector_with_periods_runs_the_tool_first():
 
 async def test_sdmx_vector_without_periods_uses_the_tools_default():
     result = await client.reproduce("sdmx_get_vector_data", {"vector_id": 41690973}, "python")
-    assert "'latestN': 100" in result.scripts[0].code
+    assert "'latestN': 24" in result.scripts[0].code
 
 
 def test_python_sdmx_reader_makes_one_row_per_observation():

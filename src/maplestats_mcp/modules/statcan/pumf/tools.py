@@ -89,7 +89,8 @@ async def statcan_pumf_get_codebook(
     use (final and bootstrap/replicate). Reads only the codebook files
     inside the ZIP; a ZIP without one but with a SAS, SPSS or Stata data
     file has that file downloaded and its own variables read. url comes
-    from statcan_pumf_list_files.
+    from statcan_pumf_list_files. At most `limit` variables come back
+    (default 25): pass `query` to find one, or a larger `limit` for more.
     Keywords: codebook, data dictionary, variables, value labels, survey
     weights, bootstrap weights, record layout, PUMF.
     Mots-clés : dictionnaire de données, variables, étiquettes de valeurs,

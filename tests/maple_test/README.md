@@ -391,7 +391,11 @@ was 2026-11-05): **91.7% correct**, 95.8% of the 24 answers right on substance.
 
 `cost_usd` is what headless Claude Code reports for each answer (`total_cost_usd`), at
 API prices for `claude-sonnet-5-5`; on a Claude subscription it is an equivalent, not a
-bill. v1 and the CanData GTA runs did not record it.
+bill. v1 and the CanData GTA runs did not record it. Runs from 2026-11-08 on also record
+the cached input tokens (`cache_read_tokens`, `cache_creation_tokens`): `input_tokens`
+alone counts only the uncached few dozen. `grade` reports tokens in and out per arm and a
+cost-per-question table; `python -m tests.maple_test costs --version v2 [runs...]` prints
+that table from run files without grading.
 
 - **v2 as published, all arms:** USD 100.19 for 1,923 answers (the 11 arms, three runs, plus
   `maplestats_after` and `maplestats-current`). MapleStats' arm cost the most (USD 18.49 for

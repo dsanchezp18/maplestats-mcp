@@ -435,9 +435,15 @@ def _url(path: str, params: dict[str, Any] | None = None, lang: str = "en") -> s
     return str(httpx.URL(f"{_base(lang)}{path}", params=params or None))
 
 
-def _keep_latest(observations: list[Observation]) -> list[Observation]:
-    """Valet lists oldest first; when the byte budget cuts, keep the newest dates."""
-    kept = fit_to_budget(observations[::-1], constants.OBSERVATIONS_MAX_BYTES)
+def _keep_latest(observations: list[Observation], windowless: bool = False) -> list[Observation]:
+    """Valet lists oldest first; when the byte budget cuts, keep the newest dates.
+
+    A call with no window keeps at most NO_WINDOW_DATES of them.
+    """
+    newest = observations[::-1]
+    if windowless:
+        newest = newest[: constants.NO_WINDOW_DATES]
+    kept = fit_to_budget(newest, constants.OBSERVATIONS_MAX_BYTES)
     return kept[::-1]
 
 
@@ -854,7 +860,7 @@ async def get_observations(
 
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     observations = _observations_from_json(list_or_empty(obj, "observations"), path, lang)
-    kept = _keep_latest(observations)
+    kept = _keep_latest(observations, windowless=not params)
     transformed: dict[str, TransformedSeries] | None = None
     coverage = [_non_numeric_note(kept, lang)]
     if request is not None and request.active:
@@ -967,7 +973,7 @@ async def get_group_observations(
     obj, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_OBSERVATIONS_SECONDS, fetch)
     group_detail = obj.get("groupDetail", {}) or {}
     observations = _observations_from_json(list_or_empty(obj, "observations"), path, lang)
-    kept = _keep_latest(observations)
+    kept = _keep_latest(observations, windowless=not params)
     return GroupObservationsResult(
         # This endpoint's "groupDetail" has no "name" field - see this
         # module's docstring and schemas.py's.

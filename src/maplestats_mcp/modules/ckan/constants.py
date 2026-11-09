@@ -368,7 +368,9 @@ ROSTER_MAX = 2000
 # download aborted (undeclared). Cached for 2 hours inside a total byte budget.
 FILE_MAX_BYTES = 40 * 1024 * 1024
 FILE_CACHE_TTL_SECONDS = 2 * 60 * 60
-FILE_ROWS_DEFAULT = 100
+# 50 since 2026-11-08 (was 100): a model reads every row it gets; `limit` (up to
+# 1000) and `offset` page for more, and filters/columns narrow first.
+FILE_ROWS_DEFAULT = 50
 FILE_ROWS_MAX = 1000
 # Two API calls (resource_show, package_show) make one read; the bucket holds
 # both, then refills at the portal's request interval.

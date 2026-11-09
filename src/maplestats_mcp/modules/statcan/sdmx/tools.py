@@ -138,7 +138,7 @@ async def sdmx_get_data(
     one per non-time dimension, in dimension-position order (empty
     segment = wildcard; use sdmx_get_key_for_dimension instead of a
     wildcard on a >30-code dimension). With no period arguments the
-    LATEST 100 observations per series are returned (not the oldest);
+    LATEST 24 observations per series are returned (not the oldest);
     pass `last_n_observations` for another count or
     `start_period`/`end_period` (e.g. 2024-01) for a range -- the two
     cannot be combined. Each series keeps at most 500 newest rows and a

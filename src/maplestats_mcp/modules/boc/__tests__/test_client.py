@@ -326,6 +326,22 @@ async def test_observations_url_reproduces_the_query_and_keeps_latest(httpx_mock
     assert "Bank of Canada" in (result.provenance.licence or "")
 
 
+async def test_observations_without_a_window_keep_the_newest_dates_only(httpx_mock):
+    """No window: the NO_WINDOW_DATES newest dates, and a limit saying how to get more."""
+    rows = [{"d": f"2025-{m:02d}-01", "V41690973": {"v": "160.0"}} for m in range(1, 13)]
+    rows += [{"d": f"2026-{m:02d}-01", "V41690973": {"v": "165.0"}} for m in range(1, 13)]
+    rows += [{"d": f"2024-{m:02d}-01", "V41690973": {"v": "155.0"}} for m in range(1, 13)]
+    rows.sort(key=lambda r: r["d"])
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}observations/V41690973/json",
+        json={"seriesDetail": {"V41690973": {"label": "CPI"}}, "observations": rows},
+    )
+    result = await client.get_observations(["V41690973"])
+    assert len(result.observations) == constants.NO_WINDOW_DATES
+    assert str(result.observations[-1].ref_date) == "2026-12-01"
+    assert "start_date" in (result.provenance.limits or "")
+
+
 # French: lang="fr" reads Valet on the Bank's French domain and writes
 # MapleStats's own errors, limits and coverage in French.
 

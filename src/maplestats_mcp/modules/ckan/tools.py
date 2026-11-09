@@ -346,7 +346,7 @@ async def ckan_read_resource(
     header and `header_rows` (1 to 5) joins several rows into the column names.
     `columns` selects columns, `filters` keeps rows whose column equals the
     value (case-insensitive), `contains` keeps rows with that text in any cell,
-    `limit` (up to 1000) and `offset` page the result; values are text as
+    `limit` (default 50, up to 1000) and `offset` page the result; values are text as
     published. Every result carries the licence, organization, landing page,
     last-modified date, source URL and a citation line, with a plain warning
     when the licence is not open (BC Access Only, Ontario terms of use, no

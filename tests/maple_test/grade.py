@@ -502,6 +502,10 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if i["grade"]["citations"]["vectors"] or i["grade"]["citations"]["valet"]
         ]
         costs = [i["run"]["cost_usd"] for i in items if i["run"].get("cost_usd") is not None]
+        tokens_in = [t for i in items if (t := tokens_read(i["run"])) is not None]
+        tokens_out = [
+            i["run"]["output_tokens"] for i in items if i["run"].get("output_tokens") is not None
+        ]
         # v2 reports the core half (StatCan, Bank of Canada) and the beyond half apart.
         groups = {}
         for g in sorted({i.get("group", "core") for i in items}):
@@ -561,6 +565,8 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "tool_calls": round(mean(len(i["run"]["tool_calls"]) for i in items), 1),
                 "seconds": round(mean(i["run"]["duration_s"] for i in items), 1),
                 "cost_usd": round(sum(costs) / len(costs), 4) if costs else None,
+                "tokens_in": round(mean(tokens_in)) if tokens_in else None,
+                "tokens_out": round(mean(tokens_out)) if tokens_out else None,
                 "errors": sum(i["run"]["is_error"] for i in items),
                 "groups": groups,
             }
@@ -568,8 +574,53 @@ def summarise(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def tokens_read(run: dict[str, Any]) -> int | None:
+    """Input tokens the model read for one answer, cached or not; None if not recorded.
+
+    Runs before 2026-11-08 kept only `input_tokens`, which with prompt caching counts
+    a few dozen tokens: without the cache counts there is no total to report.
+    """
+    cached = run.get("cache_read_tokens")
+    if cached is None:
+        return None
+    return (run.get("input_tokens") or 0) + cached + (run.get("cache_creation_tokens") or 0)
+
+
 def _pct(value: float | None) -> str:
     return "–" if value is None else f"{value:.0%}"
+
+
+def _thousands(value: float | None) -> str:
+    return "–" if value is None else f"{value / 1000:.1f}k"
+
+
+def cost_per_question(answers: list[dict[str, Any]], version: str = "v1") -> list[str]:
+    """Markdown: mean cost (USD) and input tokens of each question's answers, by arm.
+
+    `answers` are run records (an Answer as written to a run file), or graded rows
+    holding one under "run".
+    """
+    runs = [a.get("run", a) for a in answers]
+    arms = sorted({r["arm"] for r in runs})
+    cells: dict[tuple[str, str], tuple[list[float], list[int]]] = {}
+    for r in runs:
+        costs, tokens = cells.setdefault((r["arm"], r["question_id"]), ([], []))
+        if r.get("cost_usd") is not None:
+            costs.append(r["cost_usd"])
+        if (read := tokens_read(r)) is not None:
+            tokens.append(read)
+    lines = [
+        "| Question | " + " | ".join(arms) + " |",
+        "| :-- |" + " --: |" * len(arms),
+    ]
+    for q in load_key(version):
+        row = []
+        for arm in arms:
+            costs, tokens = cells.get((arm, q["id"]), ([], []))
+            cost = f"{mean(costs):.3f}" if costs else "–"
+            row.append(cost + (f" ({_thousands(mean(tokens))})" if tokens else ""))
+        lines.append(f"| {q['id']} | " + " | ".join(row) + " |")
+    return lines
 
 
 # MapleStats arms that ran code changed after the Nov. 3 runs, with these questions in view
@@ -663,12 +714,18 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
             "them count as untraceable in the first share. **Release:** answers that mention "
             "a release date."
         ),
+        (
+            "- **Cost** is per answer (headless Claude Code's `total_cost_usd`). **Tokens in** "
+            "is the input the model read per answer, cached or not (runs before 2026-11-08 did "
+            "not record the cached share, so they show a dash); **out** is what it wrote."
+        ),
         "",
         (
             "| Arm | Table cov. | Vector cov. | IDs cited | Precision | Invented | Off-table "
-            "| Traceable | Checked | Release | Tool calls | Seconds | Cost (USD) |"
+            "| Traceable | Checked | Release | Tool calls | Seconds | Cost (USD) "
+            "| Tokens in | Tokens out |"
         ),
-        "| :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |",
+        "| :-- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |",
     ]
     for s in summary:
         cost = "–" if s["cost_usd"] is None else f"{s['cost_usd']:.3f}"
@@ -677,7 +734,8 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
             f"| {s['ids_cited']} | {_pct(s['citation_precision'])} | {s['invented_ids']} "
             f"| {s['off_table_vectors']} | {_pct(s['traceability'])} "
             f"| {_pct(s.get('traceability_checked'))} "
-            f"| {_pct(s['release_mentions'])} | {s['tool_calls']} | {s['seconds']} | {cost} |"
+            f"| {_pct(s['release_mentions'])} | {s['tool_calls']} | {s['seconds']} | {cost} "
+            f"| {_thousands(s.get('tokens_in'))} | {_thousands(s.get('tokens_out'))} |"
         )
     arms = [s["arm"] for s in summary]
     outcomes: dict[tuple[str, str], list[str]] = {}
@@ -695,6 +753,14 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         cells = [" / ".join(outcomes.get((arm, q["id"]), ["–"])) for arm in arms]
         lines.append(f"| {q['id']} {q['category']} | " + " | ".join(cells) + " |")
     lines += ["", "`*` re-graded by hand (see the overrides file)."]
+    lines += [
+        "",
+        "## Cost per question",
+        "",
+        "Mean USD per answer, with the input tokens read in brackets where the run recorded them.",
+        "",
+        *cost_per_question(report["answers"], version),
+    ]
     claims = [r for r in report["answers"] if r["false_claim"]]
     if claims:
         lines += ["", "## False claims", ""]
