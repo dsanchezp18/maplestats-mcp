@@ -139,17 +139,19 @@ def test_frozen_server_records_then_replays_offline(tmp_path, monkeypatch):
         async with httpx.AsyncClient(transport=transport) as client:
             return (await client.get("https://example.test/series")).json()
 
+    # install() patches httpx.AsyncClient.send for the whole process. Register the
+    # unpatched method with monkeypatch first, so teardown restores it: an earlier version
+    # registered the patched one, and the cassette stayed installed for every later test
+    # in the same worker (CI, #218: "mocked but not requested" in unrelated modules).
     original = httpx.AsyncClient.send
+    monkeypatch.setattr(httpx.AsyncClient, "send", original)
     path = tmp_path / "cassette.jsonl.gz"
-    try:
-        frozen_server.install(frozen_server.Cassette(path, "auto"))
-        assert asyncio.run(fetch()) == {"value": 2.5}
-        monkeypatch.setattr(httpx.AsyncClient, "send", original)
-        frozen_server.install(frozen_server.Cassette(path, "replay"))
-        assert asyncio.run(fetch()) == {"value": 2.5}
-        assert len(calls) == 1  # the replay never reached the upstream
-    finally:
-        httpx.AsyncClient.send = original
+    frozen_server.install(frozen_server.Cassette(path, "auto"))
+    assert asyncio.run(fetch()) == {"value": 2.5}
+    httpx.AsyncClient.send = original  # type: ignore[method-assign]
+    frozen_server.install(frozen_server.Cassette(path, "replay"))
+    assert asyncio.run(fetch()) == {"value": 2.5}
+    assert len(calls) == 1  # the replay never reached the upstream
 
 
 @pytest.mark.parametrize(
@@ -171,3 +173,10 @@ def test_judge_prompt_has_the_key_but_not_the_patterns_or_split():
     assert "flag_pattern" not in text and '"split"' not in text and "why_kept" not in text
     assert q["question"] in text and judge.RUBRICS["flag"] in text
     assert all(judge.qtype_of(q) in judge.RUBRICS for q in V4.values())
+
+
+def test_no_httpx_patch_outlives_the_frozen_server_test():
+    """Runs after the frozen-server test (file order): the global send must be httpx's own."""
+    import httpx
+
+    assert httpx.AsyncClient.send.__module__.startswith("httpx")
