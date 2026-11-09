@@ -7,7 +7,9 @@ recorded here as data rather than as ten copies of the client:
 
 - federal: bilingual `_translated` dicts and `_fra` license fields; no
   tags or groups at all (tag_list/group_list return `[]`); subject
-  terms live in the bilingual `keywords` field instead.
+  terms live in the bilingual `keywords` field instead. Its own schema
+  fields (update frequency, publication and coverage dates, publisher
+  at publication, subject) are bare {"en", "fr"} dicts or codes.
 - on: bilingual `_translated` dicts; Ontario-specific metadata
   (access level, current-as-of date, geographic coverage).
 - bc: English-only; `organization_list(all_fields=True)` returns 25 per
@@ -95,6 +97,27 @@ PORTALS: dict[str, Portal] = {
         content_language="bilingual",
         groups="none",
         has_tags=False,
+        # open.canada.ca's own schema fields (ckanext-canada), confirmed live in
+        # package_show on 2026-11-09. Several are bare {"en", "fr"} dicts with no
+        # `_translated` twin; `frequency` is an ISO 8601 code (FREQUENCY_LABELS).
+        extra_fields=(
+            "frequency",
+            "date_published",
+            "date_modified",
+            "portal_release_date",
+            "time_period_coverage_start",
+            "time_period_coverage_end",
+            "org_title_at_publication",
+            "jurisdiction",
+            "subject",
+            "audience",
+            "collection",
+            "data_series_name",
+            "data_series_issue_identification",
+            "program_page_url",
+            "maintainer_email",
+        ),
+        resource_extra_fields=("date_published",),
         note=(
             "~48,000 federal datasets, including CRA, OSFI, Health Canada, ESDC, "
             "CRTC and Elections Canada data. No tags or groups; subject terms are "
@@ -336,6 +359,34 @@ PORTALS: dict[str, Portal] = {
         ),
         file_hosts=("niagaraopendata.ca",),
     ),
+}
+
+# Update-frequency codes (ISO 8601 durations plus a few words) with their English
+# and French labels, as open.canada.ca's dataset schema lists them
+# (scheming_dataset_schema_show, `frequency` choices, read 2026-11-09). A dataset's
+# `frequency` extra gets a `frequency_label` beside it from this table.
+FREQUENCY_LABELS: dict[str, tuple[str, str]] = {
+    "as_needed": ("As needed", "Au besoin"),
+    "continual": ("Continual", "Continue"),
+    "P1D": ("Daily", "Quotidien"),
+    "P0.33W": ("Three times per week", "Trois fois par semaine"),
+    "P0.5W": ("Two times per week", "Deux fois par semaine"),
+    "P1W": ("Weekly", "Hebdomadaire"),
+    "P2W": ("Every two weeks", "Quinzomadaire"),
+    "P0.5M": ("Twice monthly", "Bimensuel"),
+    "P1M": ("Monthly", "Mensuel"),
+    "P2M": ("Every two months", "Bimestriel"),
+    "P3M": ("Quarterly", "Trimestriel"),
+    "P4M": ("Every four months", "Trois fois par année"),
+    "P6M": ("Twice a year", "Semestriel"),
+    "P1Y": ("Annually", "Annuel"),
+    "P2Y": ("Every two years", "Biennal"),
+    "P3Y": ("Every three years", "Triennal"),
+    "P4Y": ("Every four years", "Quadriennal"),
+    "P5Y": ("Every five years", "Quinquennal"),
+    "irregular": ("Irregular", "Irrégulier"),
+    "not_planned": ("Not planned (no further updates)", "Non planifié (aucune mise à jour prévue)"),
+    "unknown": ("Unknown", "Inconnu"),
 }
 
 CACHE_TTL_SEARCH_SECONDS = 10 * 60

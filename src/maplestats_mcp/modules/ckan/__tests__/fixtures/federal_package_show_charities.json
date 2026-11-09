@@ -1,0 +1,204 @@
+{
+ "success": true,
+ "result": {
+  "association_type": [],
+  "audience": [],
+  "author": null,
+  "author_email": null,
+  "collection": "primary",
+  "contributor": {
+   "en": "",
+   "fr": ""
+  },
+  "creator": "",
+  "creator_user_id": "2dc5a12f-2a6f-4822-8514-165ea6bb05d9",
+  "data_series_issue_identification": {
+   "en": "",
+   "fr": ""
+  },
+  "data_series_name": {
+   "en": "",
+   "fr": ""
+  },
+  "date_published": "2017-09-07 00:00:00",
+  "digital_object_identifier": "",
+  "display_flags": [],
+  "frequency": "not_planned",
+  "geographic_region": [],
+  "id": "7ddc811f-aa0e-41b2-acd9-ff1dcc86d807",
+  "imso_approval": "true",
+  "isopen": false,
+  "jurisdiction": "federal",
+  "keywords": {
+   "en": [
+    "Registered charities",
+    "T3010",
+    "registered charity information return",
+    "charities",
+    "financial information",
+    "contact information",
+    "receipt",
+    "tax",
+    "activities",
+    "directors",
+    "donation",
+    "Canada Revenue Agency"
+   ],
+   "fr": [
+    "Organismes de bienfaisance enregistrés",
+    "T3010",
+    "Déclaration de renseignements des organismes de bienfaisance enregistrés",
+    "organismes de bienfaisance",
+    "renseignements financiers",
+    "coordonnées",
+    "reçu",
+    "impôt",
+    "activités",
+    "administrateurs",
+    "don",
+    "Agence du revenu du Canada"
+   ]
+  },
+  "license_id": "ca-ogl-lgo",
+  "license_title": "Open Government Licence - Canada",
+  "license_url": "https://open.canada.ca/en/open-government-licence-canada",
+  "maintainer": null,
+  "maintainer_contact_form": {},
+  "maintainer_email": "siopendatag@cra-arc.gc.ca",
+  "metadata_contact": {},
+  "metadata_created": "2026-02-20T14:53:15.050018",
+  "metadata_modified": "2026-02-26T19:02:08.839515",
+  "name": "7ddc811f-aa0e-41b2-acd9-ff1dcc86d807",
+  "notes": "The List of charities presents data on Canadian charities that are registered under the Income Tax Act and are eligible to issue official donation receipts. The data includes details on a charity’s financial information, activities, and directors/like officials. This data is compiled from the annual return each charity must fill out and submit to the Canada Revenue Agency. The dataset reflects data as provided by the organizations.\r\n\r\nIndividuals requiring supporting documentation, such as the following: \r\n\r\n* **T3010 Registered Charity Information Return:** Used annually by registered charities to report their activities, sources of revenue, and expenditures to the Canada Revenue Agency (CRA).\r\n\r\nare invited to consult the homepage through the provided link, where the CRA forms are available.\r\n\r\n> **Please note:** The **“Date Published”** on the left hand side, refers to the date the charity dataset was last refreshed.  \r\n",
+  "notes_translated": {
+   "en": "The List of charities presents data on Canadian charities that are registered under the Income Tax Act and are eligible to issue official donation receipts. The data includes details on a charity’s financial information, activities, and directors/like officials. This data is compiled from the annual return each charity must fill out and submit to the Canada Revenue Agency. The dataset reflects data as provided by the organizations.\r\n\r\nIndividuals requiring supporting documentation, such as the following: \r\n\r\n* **T3010 Registered Charity Information Return:** Used annually by registered charities to report their activities, sources of revenue, and expenditures to the Canada Revenue Agency (CRA).\r\n\r\nare invited to consult the homepage through the provided link, where the CRA forms are available.\r\n\r\n> **Please note:** The **“Date Published”** on the left hand side, refers to the date the charity dataset was last refreshed.  \r\n",
+   "fr": "La Liste des organismes de bienfaisance contient des données sur les organismes de bienfaisance canadiens qui ont obtenu leur enregistrement selon la Loi de l’impôt sur le revenu. Ces organismes peuvent remettre des reçus officiels de dons. Les données comprennent des renseignements financiers, des renseignements sur les activités, et les administrateurs et autres responsables d’un organisme de bienfaisance. Ces données sont compilées à partir de la déclaration annuelle que chaque organisme de bienfaisance est tenu de remplir et de transmettre à l’Agence du revenu du Canada. L'ensemble des données reflète les informations fournies par les organismes.\r\n\r\nLes personnes qui souhaitent obtenir de la documentation justificative, notamment le formulaire suivant :  \r\n\r\n* **T3010 – Déclaration de renseignements des organismes de bienfaisance enregistrés : **  \r\n  Utilisé annuellement par les organismes de bienfaisance enregistrés pour déclarer leurs activités, leurs sources de revenus et leurs dépenses à l’Agence du revenu du Canada.\r\n\r\nsont invitées à consulter la page d’accueil au lien fourni, où elles trouveront les formulaires de l’Agence. \r\n"
+  },
+  "num_resources": 7,
+  "num_tags": 0,
+  "org_section": {
+   "en": "",
+   "fr": ""
+  },
+  "org_title_at_publication": {
+   "en": "Canada Revenue Agency",
+   "fr": "Agence du revenu du Canada"
+  },
+  "organization": {
+   "id": "88B6EE4B-AA19-475B-B92A-2A80260806C2",
+   "name": "cra-arc",
+   "title": "Canada Revenue Agency | Agence du revenu du Canada",
+   "type": "organization",
+   "description": "",
+   "image_url": "",
+   "created": "2016-09-23T17:25:15.266093",
+   "is_organization": true,
+   "approval_status": "approved",
+   "state": "active"
+  },
+  "owner_org": "88B6EE4B-AA19-475B-B92A-2A80260806C2",
+  "place_of_publication": [],
+  "portal_release_date": "2026-02-20",
+  "position_name": {},
+  "private": false,
+  "program_page_url": {
+   "en": "https://www.canada.ca/en/revenue-agency/services/forms-publications/forms/t3010.html",
+   "fr": "https://www.canada.ca/fr/agence-revenu/services/formulaires-publications/formulaires/t3010.html"
+  },
+  "ready_to_publish": "true",
+  "restrictions": "unrestricted",
+  "spatial": "",
+  "spatial_representation_type": [],
+  "state": "active",
+  "subject": [
+   "economics_and_industry"
+  ],
+  "time_period_coverage_end": "1997-12-31 00:00:00",
+  "time_period_coverage_start": "1997-01-01 00:00:00",
+  "title": "1997 List of charities",
+  "title_translated": {
+   "en": "1997 List of charities",
+   "fr": "Liste des organismes de bienfaisance 1997"
+  },
+  "topic_category": [],
+  "type": "dataset",
+  "url": null,
+  "version": null,
+  "resources": [
+   {
+    "cache_last_updated": null,
+    "cache_url": null,
+    "character_set": "",
+    "created": "2026-02-26T19:02:08.872317",
+    "data_quality": [],
+    "datastore_active": false,
+    "datastore_contains_all_records_of_source_file": false,
+    "date_published": "",
+    "description": null,
+    "format": "PDF",
+    "hash": "",
+    "id": "c3864d06-eecf-4186-b61c-884267615cb4",
+    "language": [
+     "en"
+    ],
+    "last_modified": "2026-02-26T18:57:25.647901",
+    "metadata_modified": "2026-02-26T19:02:08.829981",
+    "mimetype": null,
+    "mimetype_inner": null,
+    "name": "Codes Lists",
+    "name_translated": {
+     "en": "Codes Lists",
+     "fr": "Listes de codes"
+    },
+    "package_id": "7ddc811f-aa0e-41b2-acd9-ff1dcc86d807",
+    "position": 0,
+    "resource_type": "guide",
+    "state": "active",
+    "unique_identifier": "",
+    "url": "https://open.canada.ca/data/dataset/7ddc811f-aa0e-41b2-acd9-ff1dcc86d807/resource/c3864d06-eecf-4186-b61c-884267615cb4/download/codes_en.pdf",
+    "url_type": "upload",
+    "validation_status": "",
+    "validation_timestamp": ""
+   },
+   {
+    "cache_last_updated": null,
+    "cache_url": null,
+    "character_set": "",
+    "created": "2026-02-26T19:02:08.873351",
+    "data_quality": [],
+    "datastore_active": false,
+    "datastore_contains_all_records_of_source_file": false,
+    "date_published": "",
+    "description": null,
+    "format": "PDF",
+    "hash": "",
+    "id": "ac88733e-0f87-4bcb-859b-05950cce34e3",
+    "language": [
+     "fr"
+    ],
+    "last_modified": "2026-02-26T18:58:11.922959",
+    "metadata_modified": "2026-02-26T19:02:08.832754",
+    "mimetype": null,
+    "mimetype_inner": null,
+    "name": "Codes Lists",
+    "name_translated": {
+     "en": "Codes Lists",
+     "fr": "Listes de codes"
+    },
+    "package_id": "7ddc811f-aa0e-41b2-acd9-ff1dcc86d807",
+    "position": 1,
+    "resource_type": "guide",
+    "state": "active",
+    "unique_identifier": "",
+    "url": "https://open.canada.ca/data/dataset/7ddc811f-aa0e-41b2-acd9-ff1dcc86d807/resource/ac88733e-0f87-4bcb-859b-05950cce34e3/download/codes_fr.pdf",
+    "url_type": "upload",
+    "validation_status": "",
+    "validation_timestamp": ""
+   }
+  ],
+  "tags": [],
+  "groups": [],
+  "relationships_as_subject": [],
+  "relationships_as_object": []
+ }
+}

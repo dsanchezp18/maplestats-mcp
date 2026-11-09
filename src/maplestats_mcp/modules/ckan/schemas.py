@@ -125,7 +125,10 @@ class PackageDetail(BaseModel):
     resources: list[ResourceInfo]
     extras: dict[str, Any] = Field(
         default_factory=dict,
-        description="Portal-specific metadata keyed by upstream field name.",
+        description=(
+            "Portal-specific metadata keyed by upstream field name; a coded "
+            "`frequency` comes with `frequency_label` in plain words."
+        ),
     )
     landing_page_url: str
     provenance: Provenance
