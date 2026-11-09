@@ -4,17 +4,23 @@
 \alias{ms_search_tools}
 \title{Search the server's tools}
 \usage{
-ms_search_tools(query, client = ms_default_client())
+ms_search_tools(query, client = ms_default_client(), detail = "full")
 }
 \arguments{
 \item{query}{What you need, in plain English or French, e.g.
 `"Calgary rent index"`.}
 
 \item{client}{A client from [ms_client()].}
+
+\item{detail}{`"full"` (the default) for each tool's whole description
+and input schema, or `"brief"` for a one-line description and the
+one-line argument signature.}
 }
 \value{
 A tibble with one row per tool, best match first: `name`,
-  `description` and `input_schema` (JSON text).
+  `description`, `arguments` (the one-line signature, `NA` with
+  `detail = "full"`) and `input_schema` (JSON text, `NA` with
+  `detail = "brief"`).
 }
 \description{
 Search the server's tools

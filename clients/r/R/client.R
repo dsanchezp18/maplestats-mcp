@@ -240,17 +240,42 @@ call_server_tool <- function(client, name, arguments) {
 #' @param query What you need, in plain English or French, e.g.
 #'   `"Calgary rent index"`.
 #' @param client A client from [ms_client()].
+#' @param detail `"full"` (the default) for each tool's whole description
+#'   and input schema, or `"brief"` for a one-line description and the
+#'   one-line argument signature.
 #' @return A tibble with one row per tool, best match first: `name`,
-#'   `description` and `input_schema` (JSON text).
+#'   `description`, `arguments` (the one-line signature, `NA` with
+#'   `detail = "full"`) and `input_schema` (JSON text, `NA` with
+#'   `detail = "brief"`).
 #' @export
-ms_search_tools <- function(query, client = ms_default_client()) {
-  found <- call_server_tool(client, "search_tools", list(query = query))
+ms_search_tools <- function(query,
+                            client = ms_default_client(),
+                            detail = "full") {
+  found <- tryCatch(
+    call_server_tool(
+      client,
+      "search_tools",
+      list(query = query, detail = detail)
+    ),
+    maplestats_error = function(error) {
+      # A server older than the compact search has no `detail` and rejects
+      # it; its answer is the full form anyway.
+      if (!grepl("detail", conditionMessage(error), fixed = TRUE)) {
+        stop(error)
+      }
+      call_server_tool(client, "search_tools", list(query = query))
+    }
+  )
   tools <- if (is_record_list(found)) found else list()
 
   tibble::tibble(
     name = purrr::map_chr(tools, \(t) t$name %||% ""),
     description = purrr::map_chr(tools, \(t) t$description %||% ""),
+    arguments = purrr::map_chr(tools, \(t) t$arguments %||% NA_character_),
     input_schema = purrr::map_chr(tools, \(t) {
+      if (is.null(t$inputSchema)) {
+        return(NA_character_)
+      }
       as.character(jsonlite::toJSON(t$inputSchema, auto_unbox = TRUE))
     })
   )
