@@ -25,19 +25,43 @@ found and are modelled explicitly rather than smoothed over:
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.transform import TransformedSeries
 
+SeriesStatus = Literal["active", "discontinued"]
+
+# Descriptions of the status fields SeriesSummary, SeriesDetail and SeriesInfoBrief
+# share (client.status_fields fills them).
+_STATUS = (
+    "discontinued when the newest observation is far older than the series' frequency "
+    "allows (Valet keeps legacy series, e.g. the noon rate IEXE0101, last value "
+    "2017-04-28); active otherwise; null when not checked or the frequency is unknown."
+)
+_LAST = "Date of the series' newest observation, when checked."
+_SUCCESSOR = (
+    "The series that replaced a discontinued one, where the Bank's replacement is known "
+    "(e.g. FXUSDCAD, the daily average rate, for the USD noon rate IEXE0101)."
+)
+_NOTE = (
+    "MapleStats' note: why the series is marked discontinued, and for the FX* exchange "
+    "rates that they are indicative daily averages, not transactional rates."
+)
+
 
 class SeriesSummary(BaseModel):
-    """One entry from /lists/series/json."""
+    """One entry from /lists/series/json, with its status when checked."""
 
     name: str
     label: str
     description: str
+    status: SeriesStatus | None = Field(default=None, description=_STATUS)
+    last_observation: date | None = Field(default=None, description=_LAST)
+    successor: str | None = Field(default=None, description=_SUCCESSOR)
+    note: str | None = Field(default=None, description=_NOTE)
 
 
 class SeriesList(BaseModel):
@@ -61,11 +85,18 @@ class GroupList(BaseModel):
 
 
 class SeriesDetail(BaseModel):
-    """From /series/{name}/json's "seriesDetails" object."""
+    """From /series/{name}/json's "seriesDetails" object, with its status."""
 
     name: str
     label: str
     description: str
+    frequency: str | None = Field(
+        default=None, description="Publication frequency as Valet states it, e.g. daily."
+    )
+    status: SeriesStatus | None = Field(default=None, description=_STATUS)
+    last_observation: date | None = Field(default=None, description=_LAST)
+    successor: str | None = Field(default=None, description=_SUCCESSOR)
+    note: str | None = Field(default=None, description=_NOTE)
     provenance: Provenance
 
 
@@ -110,6 +141,10 @@ class SeriesInfoBrief(BaseModel):
     description: str
     unit: str | None = None
     frequency: str | None = None
+    status: SeriesStatus | None = Field(default=None, description=_STATUS)
+    last_observation: date | None = Field(default=None, description=_LAST)
+    successor: str | None = Field(default=None, description=_SUCCESSOR)
+    note: str | None = Field(default=None, description=_NOTE)
 
 
 class Observation(BaseModel):

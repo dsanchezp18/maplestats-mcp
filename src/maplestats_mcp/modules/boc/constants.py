@@ -56,3 +56,10 @@ OBSERVATIONS_MAX_BYTES = 200_000
 # a whole history is rarely the question, and it cost a model up to 200 KB to read.
 # Changed from "as many as fit in OBSERVATIONS_MAX_BYTES" on 2026-11-08.
 NO_WINDOW_DATES = 30
+
+# Series status (active or discontinued) needs each series' newest date: one
+# observations?recent=1 request per STATUS_CHUNK names (Valet takes comma-joined
+# names; 50 keeps the URL under about 2,000 characters), and at most
+# STATUS_CHECK_MAX series per listing, so a search costs at most four requests.
+STATUS_CHUNK = 50
+STATUS_CHECK_MAX = 200
