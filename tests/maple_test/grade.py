@@ -335,7 +335,8 @@ def grade_structured(question: dict[str, Any], text: str) -> Grade | None:
     not_published = block.get("not_published") is True
     abstain = block.get("abstain") is True
     said = _block_text(block)
-    outcome = reason = None
+    outcome: str | None = None
+    reason = ""
     if kind == "refusal" and not_published:
         outcome, reason = "correct", "JSON: not_published"
     elif abstain and not has_values and not not_published:
