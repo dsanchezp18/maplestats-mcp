@@ -40,7 +40,9 @@ ENV MAPLE_REQUIRE_AUTH=1
 # MAPLE_SSL_CERTFILE set, uvicorn terminates TLS and plain http fails.
 # Certificate verification is skipped because this only checks liveness
 # of the local process, whose cert need not name "localhost".
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD python -c "import os, ssl, urllib.request; scheme = 'https' if os.environ.get('MAPLE_SSL_CERTFILE') else 'http'; urllib.request.urlopen(scheme + '://localhost:' + os.environ.get('MAPLE_PORT', '8000') + '/health', context=ssl._create_unverified_context(), timeout=5)"
+# The start period covers MAPLE_PRELOAD (on over HTTP): /health answers only once
+# every module is imported, 8-14 s on a laptop and slower on a small instance.
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=120s CMD python -c "import os, ssl, urllib.request; scheme = 'https' if os.environ.get('MAPLE_SSL_CERTFILE') else 'http'; urllib.request.urlopen(scheme + '://localhost:' + os.environ.get('MAPLE_PORT', '8000') + '/health', context=ssl._create_unverified_context(), timeout=5)"
 
 # Run the synced virtualenv directly: `uv run` would re-check (and could
 # try to re-sync) the environment on every container start.

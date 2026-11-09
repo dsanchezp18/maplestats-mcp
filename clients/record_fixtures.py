@@ -28,9 +28,12 @@ FIXTURE_DIRS = [
 # Each case is one tools/call: the fixture name, the tool the server runs,
 # and its arguments. Tools other than search_tools and plan_query go through
 # the call_tool proxy, as the clients send them.
+# The clients search with detail="full" (input schemas); search_brief is the
+# server's default, compact answer (one-line `arguments` signatures).
 CASES = [
-    ("search_tools", "search_tools", {"query": "bank of canada exchange rate"}),
-    ("search_none", "search_tools", {"query": "zzqx"}),
+    ("search_tools", "search_tools", {"query": "bank of canada exchange rate", "detail": "full"}),
+    ("search_brief", "search_tools", {"query": "bank of canada exchange rate", "detail": "brief"}),
+    ("search_none", "search_tools", {"query": "zzqx", "detail": "full"}),
     ("plan_query", "plan_query", {"question": "Unemployment rate in Alberta"}),
     ("boc", "boc_get_observations", {"series_names": ["FXUSDCAD"], "recent": 3}),
     ("wds", "wds_get_data_from_vectors", {"vector_ids": [2062815], "latest_n": 3}),

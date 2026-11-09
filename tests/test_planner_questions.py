@@ -283,6 +283,8 @@ NOT_SOURCES = {
     "calc_rank",
     "calc_cagr",
     "calc_count_changes",
+    "docs_list_resources",
+    "docs_read_resource",
 }
 
 

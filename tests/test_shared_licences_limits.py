@@ -25,7 +25,13 @@ from maplestats_mcp.shared.licences import (
 from maplestats_mcp.shared.limits import fit_to_budget, join_limits, truncation_note
 
 MODULES = Path(__file__).resolve().parents[1] / "src" / "maplestats_mcp" / "modules"
-NO_UPSTREAM = {"example", "maplestats-planner", "maplestats-reproduce", "maplestats-workbook"}
+NO_UPSTREAM = {
+    "example",
+    "maplestats-docs",
+    "maplestats-planner",
+    "maplestats-reproduce",
+    "maplestats-workbook",
+}
 
 
 def _literal_sources() -> set[str]:

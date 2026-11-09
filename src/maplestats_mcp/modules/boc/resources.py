@@ -28,6 +28,17 @@ not an exhaustive list of the ~16,000 series Valet carries.
 - `FXEURCAD` - EUR/CAD daily average exchange rate.
 - Group `FX_RATES_DAILY` - daily average exchange rates for ~27
   currencies against CAD (published once per business day, ~16:30 ET).
+- `FXMUSDCAD`, `FXAUSDCAD` - monthly and annual averages of the daily
+  rate (`FXM{ccy}CAD`, `FXA{ccy}CAD` for the other currencies).
+- These are indicative rates: a single daily average per currency, not
+  the rate a bank or dealer transacts at.
+- Legacy: `IEXE0101` is the old noon USD/CAD rate, last value
+  2017-04-28. The Bank stopped its noon and closing rates then and has
+  published the single daily average since 2017-05-01; `FXUSDCAD`
+  replaces it (and `FX{ccy}CAD` the other `{CCY}_NOON` series). Valet
+  still serves the legacy series for their history; boc_search_series
+  and boc_get_series mark them `status: discontinued` with their
+  `last_observation` and `successor`.
 - Group `CEER` family - Canadian effective exchange rate indexes
   (trade-weighted, not a single bilateral rate).
 
@@ -76,6 +87,15 @@ _GOTCHAS_DOC = """\
   unmerged rows - each row's `values` only has the series that
   actually has data for that date. Check each row's keys rather than
   assuming every requested series appears in every row.
+- **Legacy series are still listed and served, with no end date.**
+  Valet keeps discontinued series (the noon exchange rates, last value
+  2017-04-28; 3-month bankers' acceptances, last 2018-12-31) beside the
+  current ones, and its metadata has no status or end date. MapleStats
+  marks a series `discontinued` when its newest observation is far
+  older than its frequency allows (about 90 days for a daily series,
+  400 for monthly, 2 years for quarterly, 4 for annual), and names a
+  `successor` only for the Bank's known replacement (the noon and
+  closing rates by the `FX*` daily averages).
 - **Observation values are JSON strings, not numbers**, even for a
   purely numeric series - already parsed to `float | None` in this
   module's ObservationsResult, but worth knowing if comparing against
@@ -109,6 +129,19 @@ en anglais et en français ; seuls les libellés changent.
 - Groupe `FX_RATES_DAILY` : taux de change moyens quotidiens d'environ
   27 devises par rapport au dollar canadien (publiés chaque jour
   ouvrable, vers 16 h 30, heure de l'Est).
+- `FXMUSDCAD`, `FXAUSDCAD` : moyennes mensuelle et annuelle du taux
+  quotidien (`FXM{devise}CAD`, `FXA{devise}CAD` pour les autres devises).
+- Ce sont des taux indicatifs : une seule moyenne quotidienne par
+  devise, pas le taux auquel une banque ou un courtier effectue une
+  transaction.
+- Ancienne série : `IEXE0101` est l'ancien taux à midi USD/CAD, dernière
+  valeur le 28 avril 2017. La Banque a alors cessé de publier ses taux à
+  midi et de clôture et publie le taux moyen quotidien depuis le 1er mai
+  2017 ; `FXUSDCAD` le remplace (et `FX{devise}CAD` les autres séries
+  `{DEVISE}_NOON`). Valet sert toujours les anciennes séries pour leur
+  historique ; boc_search_series et boc_get_series les marquent
+  `status: discontinued` avec leur `last_observation` et leur
+  `successor`.
 - Famille de groupes `CEER` : indices du taux de change effectif du
   dollar canadien (pondérés selon les échanges commerciaux, donc pas un
   taux bilatéral).
@@ -161,6 +194,17 @@ _GOTCHAS_DOC_FR = """\
   le `values` de chaque ligne ne contient que la série qui a une donnée
   à cette date. Vérifiez les clés de chaque ligne au lieu de supposer
   que chaque série demandée y figure.
+- **Les anciennes séries restent listées et servies, sans date de fin.**
+  Valet conserve des séries abandonnées (les taux de change à midi,
+  dernière valeur le 28 avril 2017 ; les acceptations bancaires à
+  3 mois, dernière valeur le 31 décembre 2018) à côté des séries
+  courantes, et ses métadonnées n'ont ni statut ni date de fin.
+  MapleStats marque une série `discontinued` quand sa plus récente
+  observation est bien plus ancienne que sa fréquence ne le permet
+  (environ 90 jours pour une série quotidienne, 400 pour une série
+  mensuelle, 2 ans pour une trimestrielle, 4 pour une annuelle), et ne
+  nomme un `successor` que pour le remplacement connu de la Banque (les
+  taux à midi et de clôture par les moyennes quotidiennes `FX*`).
 - **Les valeurs d'observation sont des chaînes JSON, pas des nombres**,
   même pour une série purement numérique. L'objet ObservationsResult de ce
   module les convertit déjà en `float | None`, mais il faut le savoir si

@@ -200,6 +200,11 @@ async def test_get_table_data_resolves_table_id_and_parses_csv(httpx_mock):
     # dimensions (season, dwelling type) beyond column_field/row_field.
     assert {f.key for f in result.available_filters} == {"dwelling_type_desc_en", "season"}
     assert result.applied_filters == {}
+    # Every flag the rows carry is explained, and only those.
+    flags = {cell.flag for row in result.rows for cell in row.values.values() if cell.flag}
+    assert set(result.flag_legend) == flags
+    assert result.flag_legend["**"].startswith("Suppressed")
+    assert "4 responding entities" in result.flag_legend["**"]
 
 
 async def test_get_table_data_parses_unflagged_columns_and_special_values(httpx_mock):
@@ -234,6 +239,8 @@ async def test_get_table_data_parses_unflagged_columns_and_special_values(httpx_
     assert kamloops.values["Row"].value == 0.0  # bare "-" is a real zero
     assert kamloops.values["All"].value == 3.0
     assert result.available_filters == []
+    # A census-style table carries no reliability flags, so nothing to explain.
+    assert result.flag_legend == {}
 
 
 async def test_get_table_data_applies_and_validates_filters(httpx_mock):
@@ -488,6 +495,21 @@ async def test_get_table_data_french_export_reads_comma_as_decimal(httpx_mock):
     )
     values = {name: cell.value for name, cell in result.rows[0].values.items()}
     assert values == {"Unifamilial": 1.5, "Total": 1013.5}
+
+
+def test_flag_legend_follows_lang():
+    rows = [
+        client.TableDataRow(
+            period="2025",
+            values={
+                "Total": client.TableCell(value=2.1, flag="d"),
+                "x": client.TableCell(value=None, flag="++"),
+            },
+        )
+    ]
+    assert set(client._flag_legend(rows, "en")) == {"d", "++"}
+    assert "use with caution" in client._flag_legend(rows, "en")["d"]
+    assert "prudence" in client._flag_legend(rows, "fr")["d"]
 
 
 # Live 2026-11-03 (/Navigation/MetsByProvince/35): one anchor per metropolitan major area,

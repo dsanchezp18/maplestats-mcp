@@ -285,7 +285,7 @@ by a person
 
 ## What it covers
 
-457 tools in 89 modules. Run `docs://catalogue` for the full, bilingual list.
+459 tools in 90 modules. Read `docs://catalogue` (or `docs_read_resource` through `call_tool`) for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -380,6 +380,7 @@ error that says when to retry, instead of waiting for another timeout. The
 | `MAPLE_BREAKER_FAILURES` / `MAPLE_BREAKER_WINDOW_SECONDS` / `MAPLE_BREAKER_COOLDOWN_SECONDS` | `5` / `300` / `60` | Failures in a row, within the window, that pause a host, and how long before one probe request is sent |
 | `MAPLE_PUMF_TABULATE` | `1` | `0` hides `statcan_pumf_tabulate` (it downloads whole PUMF ZIPs); search, listings and codebooks stay |
 | `MAPLE_QUERY_SERIES` | `1` locally, `0` over HTTP | `0` hides `wds_query_series` (server-side SQL): off by default when serving HTTP, since one query could use more memory than a small instance has |
+| `MAPLE_PRELOAD` | `0` locally, `1` over HTTP | `1` imports every module and builds the search index at startup, before the port opens, so the first calls after a start are not slow; off locally so desktop clients start fast |
 | `MAPLE_PUMF_CACHE_DIR`, `MAPLE_PUMF_CACHE_MAX_GB` | system temp, `5` | Downloaded microdata cache; use a persistent volume when hosted |
 | `MAPLE_CLIENT_IP_HEADER` | unset | Header the outermost proxy sets to the caller's own address (Cloudflare's `CF-Connecting-IP`), used for the per-client rate limit when `MAPLE_TRUST_PROXY_HEADERS` is on; set it only when every request passes through that proxy |
 | `MAPLE_DUCKDB_MEMORY_LIMIT` | unset | Memory limit for DuckDB queries over downloaded files (patents, open databases, microdata), such as `256MB`; beyond it DuckDB spills to the temporary folder. Set it on a small hosted instance |

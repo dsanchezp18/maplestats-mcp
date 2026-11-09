@@ -31,19 +31,67 @@ def test_opens_one_session_and_proxies_through_call_tool(
     assert server.seen[0].headers["user-agent"].startswith("maplestats-python/")
 
 
+SEARCH_COLUMNS = ["name", "description", "arguments", "input_schema"]
+
+
 def test_search_tools_returns_a_frame(client: Client, server: FakeServer) -> None:
     found = client.search_tools("bank of canada exchange rate")
-    assert found.columns == ["name", "description", "input_schema"]
+    assert found.columns == SEARCH_COLUMNS
     assert found.height > 0
     assert found["name"].str.starts_with("boc_").any()
-    json.loads(found["input_schema"][0])
-    assert server.bodies()[2]["params"]["name"] == "search_tools"
+    assert json.loads(found["input_schema"][0])["properties"]
+    assert found["arguments"].is_null().all()
+    call = server.bodies()[2]["params"]
+    assert call["name"] == "search_tools"
+    assert call["arguments"]["detail"] == "full"
+
+
+def test_brief_search_keeps_the_signature(client: Client, server: FakeServer) -> None:
+    found = client.search_tools("bank of canada exchange rate", detail="brief")
+    assert found.columns == SEARCH_COLUMNS
+    assert found.height > 0
+    assert found["arguments"][0].startswith("{")
+    assert found["input_schema"].is_null().all()
+
+
+def test_search_falls_back_on_a_server_without_detail(
+    client: Client, server: FakeServer
+) -> None:
+    # A server before the compact search rejects `detail` and answers the full form.
+    def old_server(request: httpx.Request) -> httpx.Response | None:
+        body = json.loads(request.content)
+        if body["method"] != "tools/call":
+            return None
+        sse = {"content-type": "text/event-stream"}
+        if "detail" in body["params"]["arguments"]:
+            error = {
+                "jsonrpc": "2.0",
+                "id": body["id"],
+                "result": {
+                    "content": [
+                        {"type": "text", "text": "Unexpected argument: detail"}
+                    ],
+                    "isError": True,
+                },
+            }
+            return httpx.Response(
+                200, headers=sse, text=f"data: {json.dumps(error)}\n\n"
+            )
+        return httpx.Response(
+            200, headers=sse, text=recorded("search_tools", body["id"])
+        )
+
+    server.override = old_server
+    found = client.search_tools("bank of canada exchange rate")
+    assert found.height > 0
+    assert json.loads(found["input_schema"][0])["properties"]
+    assert "detail" not in server.bodies()[-1]["params"]["arguments"]
 
 
 def test_search_with_no_match_is_an_empty_frame(client: Client) -> None:
     found = client.search_tools("zzqx")
     assert found.height == 0
-    assert found.columns == ["name", "description", "input_schema"]
+    assert found.columns == SEARCH_COLUMNS
 
 
 def test_plan_query_is_called_directly(client: Client, server: FakeServer) -> None:
@@ -56,7 +104,7 @@ def test_get_data_tidies_boc_observations(client: Client) -> None:
     result = client.get_data(
         "boc_get_observations", series_names=["FXUSDCAD"], recent=3
     )
-    assert result.data.columns == ["ref_date", "values_fxusdcad", "non_numeric"]
+    assert result.data.columns == ["ref_date", "values_fxusdcad"]
     assert result.data.height == 3
     assert result.data["values_fxusdcad"].dtype == pl.Float64
     assert result.provenance["source"] == "boc"

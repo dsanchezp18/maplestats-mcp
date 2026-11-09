@@ -71,7 +71,11 @@ from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware, with_detail
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
 from maplestats_mcp.shared.usage import STATS, UsageMiddleware, normalized_tool_name
-from maplestats_mcp.shared.validation import CallLanguageMiddleware, ValidationErrorMiddleware
+from maplestats_mcp.shared.validation import (
+    CallLanguageMiddleware,
+    InvalidArguments,
+    ValidationErrorMiddleware,
+)
 
 # Data tools read public sources. The workbook export can save a local file;
 # its own annotations and the call_tool wrapper describe that exception. Modules in
@@ -212,6 +216,15 @@ class LazyModuleProvider(LocalProvider):
             self._import(self._extra_files)
             self._extras_loaded = True
 
+    def load(self) -> None:
+        """Import the module's tools, resources and prompts now (see `preload`)."""
+        self._load_tools()
+        self._load_extras()
+
+    @property
+    def loaded(self) -> bool:
+        return self._tools_loaded and self._extras_loaded
+
     async def _list_tools(self) -> Sequence[Tool]:
         return list(self._listed)
 
@@ -287,6 +300,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
         search_tool_name: str = "search_tools",
         call_tool_name: str = "call_tool",
         search_result_serializer: SearchResultSerializer | None = None,
+        full_result_serializer: SearchResultSerializer | None = None,
         mode: str | None = None,
     ) -> None:
         # The base's own settings are never read; ours are set below.
@@ -297,6 +311,10 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
         self._call_tool_name = call_tool_name
         self._serializer: SearchResultSerializer = (
             search_result_serializer or serialize_tools_for_output_json
+        )
+        # search_tools(detail="full"): every description and input schema.
+        self._full_serializer: SearchResultSerializer = (
+            full_result_serializer or search_result_serializer or serialize_tools_for_output_json
         )
         self._index = search.ScoredBM25Index()
         self._indexed: list[Tool] = []
@@ -386,6 +404,11 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                 "index' or 'taux de chômage Québec'. Topic words work better "
                 "than tool names.",
             ],
+            detail: Annotated[
+                Literal["brief", "full"] | None,
+                "'brief' (the default): each tool's name, one-line description and "
+                "argument signature. 'full': the whole description and input schema.",
+            ] = None,
             ctx: Context = None,  # type: ignore[assignment]  # fastmcp injects it
         ) -> str | list[dict[str, Any]]:
             # A query is a few words; a long one is cut rather than scored in full.
@@ -399,7 +422,8 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                     "'taux de chômage Québec') rather than tool names, or call plan_query "
                     "with the question."
                 )
-            rendered = transform._serializer(results)
+            serializer = transform._full_serializer if detail == "full" else transform._serializer
+            rendered = serializer(results)
             return await rendered if inspect.isawaitable(rendered) else rendered
 
         tool = Tool.from_function(
@@ -423,7 +447,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
             ],
             arguments: Annotated[
                 dict[str, Any] | None,
-                "Object matching that tool's inputSchema from search_tools. "
+                "Object matching that tool's arguments from search_tools. "
                 "Omit or pass {} for a tool with no required parameters.",
             ] = None,
             detail: Annotated[
@@ -440,11 +464,12 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                 )
             # As fastmcp's proxy does: the name comes from the model, so it may
             # reach only what the model could have found through search_tools.
-            catalog = [t.name for t in await transform.get_tool_catalog(ctx)]
+            tools = {t.name: t for t in await transform.get_tool_catalog(ctx)}
+            catalog = list(tools)
             if name not in catalog:
                 resolved = _resolve_tool_name(name, catalog)
                 if resolved is not None:
-                    return await ctx.fastmcp.call_tool(resolved, with_detail(arguments, detail))
+                    return await _call_with_schema(ctx, tools[resolved], arguments, detail)
                 switch = TOOL_SWITCHES.get(name)
                 if switch is not None and not switch():
                     raise InvalidInput(
@@ -457,7 +482,7 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
                 close = _close_tool_names(name, catalog)
                 hint = f" Did you mean {', '.join(close)}?" if close else ""
                 raise NotFoundError(f"Unknown tool: {shown!r}.{hint}")
-            return await ctx.fastmcp.call_tool(name, with_detail(arguments, detail))
+            return await _call_with_schema(ctx, tools[name], arguments, detail)
 
         tool = Tool.from_function(
             fn=call_tool,
@@ -468,6 +493,33 @@ class AnnotatedBM25SearchTransform(BM25SearchTransform):
         )
         _title_annotations(tool)
         return tool
+
+
+async def _call_with_schema(
+    ctx: Context, tool: Tool, arguments: dict[str, Any] | None, detail: str | None
+) -> ToolResult:
+    """Run `tool` through the server; on invalid arguments, say its full input schema.
+
+    search_tools answers with a one-line signature per tool (long enums cut to a
+    count), so a call can miss a value it did not show. The schema in the error
+    lets the next call be right without another search.
+    """
+    try:
+        return await ctx.fastmcp.call_tool(tool.name, with_detail(arguments, detail))
+    except InvalidArguments as exc:
+        message = str(exc)
+    schema = search.serialize_tools_compact([tool])[0].get("inputSchema") or {}
+    lang = str((arguments or {}).get("lang", "en"))
+    label = (
+        f"Schéma d'entrée complet de {tool.name} : "
+        if lang == "fr"
+        else f"Full input schema of {tool.name}: "
+    )
+    text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+    # Raised outside the except block, so the new error has no __context__: the
+    # validation middleware around call_tool would find the pydantic error there and
+    # write its own message again, without the schema.
+    raise InvalidArguments(f"{message} {label}{text}")
 
 
 def _resolve_tool_name(name: str, catalog: list[str]) -> str | None:
@@ -515,9 +567,13 @@ web search or memory, since these tools return the official values
 with citations. Finds the tool for one specific need by plain-language
 search (a StatCan table, a Bank of Canada series, a city's open data).
 Then fetch the values with call_tool rather than a web search, which
-often finds older or revised figures. Returns up to five tool definitions,
-best match first, each with its name, description and full input schema
-(annotations only for a tool that is not read-only). These tools are not
+often finds older or revised figures. Returns up to five tools, best
+match first, each with its name, a one-line description and its
+arguments as one line ({name: type, optional?: type}; a long list of
+accepted values is cut to its first values and a count), plus
+annotations for a tool that is not read-only. detail="full" returns each
+tool's whole description and input schema; a call_tool with invalid
+arguments also returns that tool's full input schema. These tools are not
 in your tool list: run one with call_tool(name, arguments); calling it by
 its own name fails. Read-only; it searches this server's catalogue only
 and calls no external API.
@@ -533,7 +589,7 @@ Run one Canadian data tool (Statistics Canada, Bank of Canada, CMHC,
 provincial and city sources) found through search_tools or plan_query.
 
 Use for: executing a tool by exact name with arguments that match the
-inputSchema search_tools returned for it. Data tools read public sources
+arguments search_tools returned for it. Data tools read public sources
 (StatCan, Bank of Canada, open-data portals). reproduce_workbook can save
 an Excel file on a local stdio server; hosted exports return base64. Returns that
 tool's result. `detail` is "brief" by default: values, periods, units and
@@ -544,8 +600,8 @@ detail="full" for every field and the full provenance block (query time,
 freshness, schema), with rows as JSON objects.
 Errors come back as MCP tool errors, not as data: an unknown or
 misspelled name raises 'Unknown tool' (search again for the exact
-name), invalid arguments raise a validation error naming the field,
-and upstream outages or empty matches raise a typed error explaining
+name), invalid arguments raise a validation error naming the field
+and giving the tool's full input schema, and upstream outages or empty matches raise a typed error explaining
 what to change. search_tools, call_tool and plan_query cannot be called
 through it; call them directly. Tool calls are subject to the server's
 timeout (MAPLE_TOOL_TIMEOUT_SECONDS, default 120).
@@ -600,6 +656,8 @@ changes (rate moves) across StatCan and Bank of Canada series, use calc_
 Not published? Say so, give the closest published figure labelled, then public
 microdata (statcan_pumf_, own estimate), else a custom tabulation, RTRA or an
 RDC (approval or fee; MapleStats cannot run them).
+MapleStats returns official data for information only: when an answer touches
+investing, tax, legal or financial decisions, say it is not advice.
 
 Sources, by tool-name prefix:
 - Statistics Canada: wds_ (tables/cubes, vectors), sdmx_ (filtered
@@ -715,7 +773,8 @@ Language: every tool accepts lang "en"|"fr"; on single-language or
 already-bilingual sources it is a documented no-op. Read
 docs://statcan/addressing and docs://statcan/gotchas before StatCan work,
 and the docs://boc/, docs://eccc/ and docs://cmhc/ resources for those
-sources.
+sources. No resources in your client? docs_ tools read any docs:// page
+through call_tool (docs_read_resource with its uri).
 
 Every result carries a provenance block (source URL, query time,
 freshness, limits, caveats). Cite the source it names and follow its
@@ -796,6 +855,25 @@ source, a field that is null or missing, a count that does not match>
 """
 
 
+async def preload(server: FastMCP) -> None:
+    """Import every lazy module and build the search index, before serving.
+
+    The lazy providers import a module on the event loop the first time one of
+    its tools is called, which holds every other request meanwhile: on a laptop
+    the first StatCan call after a start took 12.7 s (7.45 s importing) against
+    0.09 s after, and the first search_tools 2.3 s against 0.05 s (2026-11-09).
+    The hosted app (asgi.py) runs this before the port opens, when
+    MAPLE_PRELOAD allows; stdio stays lazy so desktop clients start fast.
+    """
+    for provider in server.providers:
+        if isinstance(provider, LazyModuleProvider):
+            provider.load()
+    # A search builds the BM25 index over the catalogue, which later searches
+    # reuse while the catalogue is unchanged; the query itself does not matter.
+    transform = next(t for t in server.transforms if isinstance(t, AnnotatedBM25SearchTransform))
+    await transform._search(await searchable_tools(server), "preload")
+
+
 def _build_module_catalogue() -> str:
     """Render every module's MODULE_DESCRIPTION/MODULE_DESCRIPTION_FR pair
     as one bilingual reference doc — the only place those constants are
@@ -865,7 +943,8 @@ def build_server() -> FastMCP:
             always_visible=list(SEARCH_ALWAYS_VISIBLE),
             search_tool_name="search_tools",
             call_tool_name="call_tool",
-            search_result_serializer=search.serialize_tools_compact,
+            search_result_serializer=search.serialize_tools_brief,
+            full_result_serializer=search.serialize_tools_compact,
         )
     )
 

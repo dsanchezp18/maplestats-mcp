@@ -1,0 +1,196 @@
+{
+ "success": true,
+ "result": {
+  "association_type": [],
+  "audience": [],
+  "author": null,
+  "author_email": null,
+  "collection": "primary",
+  "contributor": {
+   "en": "",
+   "fr": ""
+  },
+  "creator": "",
+  "creator_user_id": "aa584ab4-544c-4c5c-81da-d1cff9bd96fa",
+  "data_series_issue_identification": {
+   "en": "",
+   "fr": ""
+  },
+  "data_series_name": {
+   "en": "The Registry of Lobbyists",
+   "fr": "Le Registre des lobbyistes"
+  },
+  "date_modified": "2026-11-09 00:00:00",
+  "date_published": "2026-11-09 00:00:00",
+  "digital_object_identifier": "",
+  "display_flags": [],
+  "frequency": "P1W",
+  "geographic_region": [],
+  "id": "a34eb330-7136-4f5e-9f5f-3ba41df58b06",
+  "imso_approval": "true",
+  "isopen": false,
+  "jurisdiction": "federal",
+  "keywords": {
+   "en": [
+    "Lobbying",
+    "Lobbyists",
+    "Lobby",
+    "Registry",
+    "Lobbying Act",
+    "Designated Public Office Holders",
+    "DPOH",
+    "Communications"
+   ],
+   "fr": [
+    "Lobbying",
+    "Lobbyistes",
+    "Registre",
+    "Loi sur le lobbying",
+    "Titulaires d'une charge publique designee",
+    "TCPD",
+    "Communications"
+   ]
+  },
+  "license_id": "ca-odla-aldg",
+  "license_title": "Open Data Licence Agreement - Office of the Commissioner of Lobbying",
+  "license_url": "https://lobbycanada.gc.ca/en/open-data/open-data-licence-agreement/",
+  "maintainer": null,
+  "maintainer_email": "info@lobbycanada.gc.ca",
+  "metadata_created": "2016-09-25T03:45:04.689488",
+  "metadata_modified": "2026-11-09T11:12:33.488696",
+  "name": "a34eb330-7136-4f5e-9f5f-3ba41df58b06",
+  "notes": "Monthly communication reports disclose prescribed details regarding \"oral and arranged\" communications between lobbyists and Designated Public Office Holders (DPOH). This dataset contains all monthly communication reports filed with the Office of the Commissioner of Lobbying. These monthly communication reports were disclosed by registrants under the Lobbying Act, which came into force on July 2, 2008. The dataset provides a primary file as well as secondary files in CSV format allowing for one to many relationships for some data elements collected within a monthly communication report. Also available is a data dictionary file which provides a definition for all data elements contained within the dataset. Note that any content entered manually within a monthly communication report is in the language of choice of the user.",
+  "notes_translated": {
+   "en": "Monthly communication reports disclose prescribed details regarding \"oral and arranged\" communications between lobbyists and Designated Public Office Holders (DPOH). This dataset contains all monthly communication reports filed with the Office of the Commissioner of Lobbying. These monthly communication reports were disclosed by registrants under the Lobbying Act, which came into force on July 2, 2008. The dataset provides a primary file as well as secondary files in CSV format allowing for one to many relationships for some data elements collected within a monthly communication report. Also available is a data dictionary file which provides a definition for all data elements contained within the dataset. Note that any content entered manually within a monthly communication report is in the language of choice of the user.",
+   "fr": "Les rapports mensuels de communications divulguent les renseignements prescrits concernant les communications \"orales et organisées\" entre les lobbyistes et les titulaires d’une charge publique désignée (TCPD). Cet ensemble de données contient tous les rapports mensuels de communications déposés auprès du Commissariat au lobbying. Ces rapports mensuels de communications ont été soumis par les déclarants en vertu de la Loi sur le lobbying, qui est entrée en vigueur le 2 juillet 2008. L'ensemble de données fournit un fichier primaire ainsi que des fichiers secondaires en format CSV permettant des relations un à plusieurs de certains éléments de données recueillis dans un rapport mensuel de communication. Un fichier de dictionnaire de données fournissant une définition de tous les éléments de données contenus dans l’ensemble de données est également disponible. Notez que tout contenu entré manuellement dans un rapport mensuel de communication est dans la langue de choix de l'utilisateur."
+  },
+  "num_resources": 2,
+  "num_tags": 0,
+  "org_section": {
+   "en": "",
+   "fr": ""
+  },
+  "org_title_at_publication": {
+   "en": "Office of the Commissioner of Lobbying of Canada",
+   "fr": "Commissariat au lobbying du Canada"
+  },
+  "organization": {
+   "id": "6B85304C-C856-463D-A6DB-463091FEE549",
+   "name": "ocl-cal",
+   "title": "Office of the Commissioner of Lobbying of Canada | Commissariat au lobbying du Canada",
+   "type": "organization",
+   "description": "",
+   "image_url": "",
+   "created": "2016-09-23T17:25:49.283510",
+   "is_organization": true,
+   "approval_status": "approved",
+   "state": "active"
+  },
+  "owner_org": "6B85304C-C856-463D-A6DB-463091FEE549",
+  "place_of_publication": [],
+  "portal_release_date": "2014-03-12",
+  "private": false,
+  "program_page_url": {
+   "en": "",
+   "fr": ""
+  },
+  "ready_to_publish": "true",
+  "restrictions": "unrestricted",
+  "spatial": "",
+  "spatial_representation_type": [],
+  "state": "active",
+  "subject": [
+   "government_and_politics",
+   "processes"
+  ],
+  "time_period_coverage_end": "2026-11-09 00:00:00",
+  "time_period_coverage_start": "2008-07-02 00:00:00",
+  "title": "Monthly Communication Reports",
+  "title_translated": {
+   "en": "Monthly Communication Reports",
+   "fr": "Rapports mensuels de communications"
+  },
+  "topic_category": [],
+  "type": "dataset",
+  "url": null,
+  "version": null,
+  "resources": [
+   {
+    "cache_last_updated": null,
+    "cache_url": null,
+    "character_set": "",
+    "created": "2016-11-02T11:50:18.321180",
+    "data_quality": [],
+    "datastore_active": false,
+    "datastore_contains_all_records_of_source_file": false,
+    "date_published": "2022-09-26",
+    "description": null,
+    "format": "CSV",
+    "hash": "",
+    "id": "fb2843fb-f5a7-4e4c-92ea-004e65313fe9",
+    "language": [
+     "en",
+     "fr"
+    ],
+    "last_modified": null,
+    "metadata_modified": "2026-08-10T10:11:00.932512",
+    "mimetype": null,
+    "mimetype_inner": null,
+    "name": "Monthly Communication Reports",
+    "name_translated": {
+     "fr": "Rapports mensuels de communications",
+     "en": "Monthly Communication Reports"
+    },
+    "package_id": "a34eb330-7136-4f5e-9f5f-3ba41df58b06",
+    "position": 0,
+    "resource_type": "dataset",
+    "state": "active",
+    "unique_identifier": "",
+    "url": "https://lobbycanada.gc.ca/media/mqbbmaqk/communications_ocl_cal.zip",
+    "url_type": "",
+    "validation_status": "",
+    "validation_timestamp": ""
+   },
+   {
+    "cache_last_updated": null,
+    "cache_url": null,
+    "character_set": "",
+    "created": "2016-11-02T11:50:18.321225",
+    "data_quality": [],
+    "datastore_active": false,
+    "datastore_contains_all_records_of_source_file": false,
+    "date_published": "2024-10-01",
+    "description": null,
+    "format": "XLS",
+    "hash": "",
+    "id": "4c698020-ba76-4609-a020-28d87db5c487",
+    "language": [
+     "en",
+     "fr"
+    ],
+    "last_modified": null,
+    "metadata_modified": "2026-08-10T10:11:00.932625",
+    "mimetype": null,
+    "mimetype_inner": null,
+    "name": "Data Dictionary for Monthly Communication Reports",
+    "name_translated": {
+     "en": "Data Dictionary for Monthly Communication Reports",
+     "fr": "Dictionnaire de données pour les rapports mensuels de communications"
+    },
+    "package_id": "a34eb330-7136-4f5e-9f5f-3ba41df58b06",
+    "position": 1,
+    "resource_type": "guide",
+    "state": "active",
+    "unique_identifier": "",
+    "url": "https://lobbycanada.gc.ca/media/ilifarxv/communications_dictionary_dictionnaire_communication.xlsx",
+    "url_type": "",
+    "validation_status": "",
+    "validation_timestamp": ""
+   }
+  ],
+  "tags": [],
+  "groups": [],
+  "relationships_as_subject": [],
+  "relationships_as_object": []
+ }
+}

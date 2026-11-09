@@ -167,11 +167,14 @@ async def cmhc_get_table_data(
     series (one row per period) or a province/centre-breakdown field
     from cmhc_get_table_options for a current cross-tabulation (one row
     per province/centre). Each returned cell carries CMHC's own
-    reliability flag (a/b/c/d = Excellent/Very good/Good/Poor) alongside
-    the value, `value: 0` for a real, counted zero (flagged "-" by
-    CMHC), or `value: null` with the raw marker in `flag` when data were
-    suppressed ("**"/"n/a") or not applicable ("++") - see
-    docs://cmhc/gotchas for the full legend. `category_level_1`/
+    reliability flag (a/b/c/d = Excellent/Very good/Good/Poor, use with
+    caution) alongside the value, `value: 0` where CMHC prints "-" (no
+    units in the universe), or `value: null` with the raw marker in
+    `flag` when data were suppressed ("**"), not applicable ("n/a") or a
+    rent change was not significant ("++"). `flag_legend` explains every
+    flag the result carries; docs://cmhc/rms-methodology has the survey's
+    timing, scope, definitions and CMHC's release rules (read it with
+    docs_read_resource when resources are not offered). `category_level_1`/
     `category_level_2`/`column_field`/`row_field` must come from
     cmhc_list_categories/cmhc_get_table_options first - an unrecognized
     combination raises a clear error rather than guessing. The result's

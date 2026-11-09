@@ -52,27 +52,34 @@ async def boc_search_series(
     `limit` matches, default 25, max 200). Omit `query` to page through
     the catalogue in name order (`limit` default 50, max 1000);
     `total_count` is the full number and provenance.limits says what was
-    cut.
+    cut. Legacy series are listed too, each with `status`
+    (active/discontinued, from its newest observation against its
+    frequency), `last_observation` and, where known, `successor`: e.g.
+    the noon rate IEXE0101 ended 2017-04-28, replaced by the daily
+    average FXUSDCAD. FX* rates carry a `note`: indicative daily
+    averages published by about 16:30 ET, not transactional rates.
     Keywords: bank of canada, boc, valet, series, search, find, exchange
     rate, interest rate, policy rate, prime rate, five-year mortgage
     rate, bond yield, cpi, inflation, commodity price, discover, list,
-    inventory, all series, catalogue, full list.
+    inventory, all series, catalogue, full list, discontinued series,
+    legacy series, noon rate.
     Mots-clés : Banque du Canada, valet, série, recherche, trouver, taux
     de change, taux d'intérêt, taux directeur, taux préférentiel, taux
     hypothécaire, rendement des obligations, IPC, inflation, prix des
     matières premières, découvrir, liste, inventaire, toutes les séries,
-    catalogue, liste complète, parcourir.
+    catalogue, liste complète, parcourir, série abandonnée, taux à midi.
     """
     if query is not None:
         return await client.search_series(
             query, limit=constants.SEARCH_LIMIT_DEFAULT if limit is None else limit, lang=lang
         )
     # page_series copies, so the cached full list is not trimmed in place.
-    return client.page_series(
+    page = client.page_series(
         await client.list_series(lang),
         constants.LIST_LIMIT_DEFAULT if limit is None else limit,
         lang,
     )
+    return await client.annotate_series(page, lang)
 
 
 @tool
@@ -108,16 +115,22 @@ async def boc_search_groups(
 
 @tool
 async def boc_get_series(name: str, lang: Lang = "en") -> SeriesDetail:
-    """Get the label and description for one Bank of Canada Valet series.
+    """Get the label, description and status of one Bank of Canada Valet series.
 
     Use for: confirming what a series code actually measures before
     requesting its observations, e.g. FXUSDCAD (USD/CAD daily exchange
     rate), V39079 (target for the overnight rate / policy rate),
-    V80691311 (prime rate), V41690973 (Total CPI).
+    V80691311 (prime rate), V41690973 (Total CPI). Also says whether it
+    is still updated: `status` discontinued when its newest observation
+    (`last_observation`) is far older than its frequency allows, with the
+    `successor` where the Bank replaced it (the noon rate IEXE0101, last
+    2017-04-28, by the daily average FXUSDCAD), and a `note` on FX* rates
+    (indicative daily averages by about 16:30 ET, not transactional).
     Keywords: bank of canada, boc, valet, series, detail, metadata,
-    description, label, lookup.
+    description, label, lookup, discontinued, last observation, successor.
     Mots-clés : Banque du Canada, valet, série, détail, métadonnées,
-    description, libellé, recherche par code, consulter, code de série.
+    description, libellé, recherche par code, consulter, code de série,
+    série abandonnée, dernière observation.
     """
     return await client.get_series(name, lang=lang)
 
@@ -175,7 +188,10 @@ async def boc_get_observations(
     most recent dates come back (pass start_date or recent_* for more);
     provenance.limits says how many dates were left out. A value Valet
     sends as text that is not a number is null in `values`, with the
-    text in the row's `non_numeric`.
+    text in the row's `non_numeric`. Each entry in `series` carries
+    `status` (discontinued for a legacy series such as the noon rate
+    IEXE0101, ended 2017-04-28), `last_observation` and `successor`; FX*
+    rates add a caveat: indicative daily averages, not transactional rates.
     `transform` (diff, pct_change, yoy_diff, yoy_pct_change,
     annualized_pct_change, index, moving_average: trailing average over
     `window` periods; `window` with a change averages the change) and
@@ -188,7 +204,8 @@ async def boc_get_observations(
     rate, interest rate, policy rate, prime rate, cpi, inflation,
     commodity price, time series, history, recent, date range,
     year-over-year, percent change, monthly average, annual average,
-    moving average, rolling average, several series in one call.
+    moving average, rolling average, several series at once, multiple
+    series in one call.
     Mots-clés : Banque du Canada, valet, observations, données, taux de
     change, taux d'intérêt, taux directeur, taux préférentiel, IPC,
     inflation, prix des matières premières, série chronologique,

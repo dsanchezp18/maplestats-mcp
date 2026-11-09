@@ -313,6 +313,21 @@ def get_query_series_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def get_preload_enabled() -> bool:
+    """Whether the server imports every module and builds the search index at startup.
+
+    On by default when serving HTTP: the hosted server otherwise imported a module
+    on the event loop during its first call, which held every other request (the
+    first StatCan call after a start took 12.7 s against 0.09 s after, measured
+    2026-11-09). Preloading runs before the port opens, so the platform's probes
+    keep traffic away until it is done. Off by default on stdio, where a desktop
+    client waits for the server to start.
+    """
+    default = "1" if get_transport() == "http" else "0"
+    raw = os.environ.get("MAPLE_PRELOAD", default).strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def get_pumf_cache_max_bytes() -> int:
     """Cap on the PUMF cache; the least recently used files are removed past it."""
     value = _env_float("MAPLE_PUMF_CACHE_MAX_GB", 5.0)

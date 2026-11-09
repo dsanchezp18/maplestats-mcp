@@ -2,9 +2,27 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
+
+# The methodology sections of an IMDB survey record; the field names of
+# SurveyMethodology and the values of get_survey_metadata's `section` argument.
+SurveySection = Literal[
+    "target_population",
+    "instrument_design",
+    "sampling",
+    "data_sources",
+    "error_detection",
+    "imputation",
+    "estimation",
+    "quality_evaluation",
+    "disclosure_control",
+    "revisions_and_seasonal_adjustment",
+    "data_accuracy",
+]
 
 
 class SurveyListing(BaseModel):
@@ -20,6 +38,24 @@ class SurveyListResult(BaseModel):
     provenance: Provenance
 
 
+class SurveyMethodology(BaseModel):
+    """The "Data sources and methodology" and "Data accuracy" sections of an IMDB
+    record, as text (paragraphs separated by blank lines). A section the record does
+    not have, or one left out by the `section` argument, is None."""
+
+    target_population: str | None = None
+    instrument_design: str | None = None
+    sampling: str | None = None
+    data_sources: str | None = None
+    error_detection: str | None = None
+    imputation: str | None = None
+    estimation: str | None = None
+    quality_evaluation: str | None = None
+    disclosure_control: str | None = None
+    revisions_and_seasonal_adjustment: str | None = None
+    data_accuracy: str | None = None
+
+
 class SurveyMetadata(BaseModel):
     survey_id: int
     name: str
@@ -27,6 +63,51 @@ class SurveyMetadata(BaseModel):
     frequency: str | None = None
     description: str | None = None
     subjects: list[str] = Field(default_factory=list)
+    reference_period: str | None = Field(
+        default=None, description="The record's 'Reference period', as IMDB states it."
+    )
+    collection_period: str | None = Field(
+        default=None, description="The record's 'Collection period', as IMDB states it."
+    )
+    response: str | None = Field(
+        default=None,
+        description=(
+            "Whether responding is mandatory or voluntary ('mandatory', 'voluntary'; "
+            "'obligatoire', 'volontaire' in French), read from the Data sources section; "
+            "None when the record does not say, or says both."
+        ),
+    )
+    collection_methods: str | None = Field(
+        default=None,
+        description=(
+            "IMDB's standard line on how data are obtained, e.g. 'Data are collected "
+            "directly from survey respondents.' or 'Data are extracted from administrative "
+            "files.'"
+        ),
+    )
+    survey_design: str | None = Field(
+        default=None,
+        description=(
+            "IMDB's standard line on the design, e.g. 'This is a sample survey with a "
+            "cross-sectional design.' or 'This survey is a census ...'."
+        ),
+    )
+    sample_size: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Sentences of the Sampling section that give a number for the sample (e.g. "
+            "households per month, 1 in 4 dwellings). Picked by a text rule: read "
+            "methodology.sampling for the context."
+        ),
+    )
+    methodology: SurveyMethodology = Field(default_factory=SurveyMethodology)
+    trimmed_sections: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Sections shortened to keep the result small (they end with '[...]'); ask for "
+            "them with section=[...] to get their full text."
+        ),
+    )
     detail_url: str
     provenance: Provenance
 

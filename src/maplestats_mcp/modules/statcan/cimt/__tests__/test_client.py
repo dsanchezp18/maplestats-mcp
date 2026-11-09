@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+
+import httpx
 import pytest
 
 from maplestats_mcp.modules.statcan.cimt import client, constants
@@ -204,6 +207,8 @@ async def test_missing_referer_404_names_the_api_change_risk(httpx_mock):
 async def test_french_periods_provenance_and_errors(httpx_mock):
     use_lang("fr")
     _mock_periods(httpx_mock)
+    # The code lists start loading alongside the period check.
+    _mock_codes(httpx_mock)
     result = await client.get_periods()
     assert (result.provenance.coverage or "").startswith("API non documentée")
     assert result.provenance.freshness == "mensuel, depuis 1988-01"
@@ -397,8 +402,11 @@ async def test_get_trade_keeps_the_data_when_the_description_list_is_down(httpx_
 async def test_get_trade_future_month_is_rejected_before_any_report_call(httpx_mock):
     # The service answers HTTP 500 for a month it has not published (confirmed live).
     _mock_periods(httpx_mock)
+    # The code lists start loading alongside the period check.
+    _mock_codes(httpx_mock)
     with pytest.raises(InvalidInput, match="outside the published range"):
         await client.get_trade("exports", "2026-07", "2030-01")
+    assert not [r for r in httpx_mock.get_requests() if "/getReport/" in str(r.url)]
 
 
 @pytest.mark.parametrize(
@@ -625,3 +633,134 @@ async def test_search_partners_puts_an_exact_code_before_name_matches(httpx_mock
     result = await client.search_partners("AB", kind="province")
     assert result.partners[0].code == 48
     assert result.total_matched > 1
+
+
+# --- speed: code lists on their own limit, alongside the data, read as JSON ---
+
+_JULY_REPORT = f"{_REST}/getReport/(1)/1000/100/0/1/500/0/0/2026-07-01/2026-07-01"
+
+
+def test_code_lists_have_their_own_limit_and_the_api_limit_is_unchanged():
+    # The REST service keeps one request every two seconds; StatCan has banned
+    # this project's address before, so neither limit may rise past these.
+    assert (constants.RATE_LIMIT_PER_SECOND, constants.RATE_LIMIT_CAPACITY) == (0.5, 1.0)
+    assert constants.CODES_RATE_LIMIT_PER_SECOND == 1.0
+    assert constants.CODES_RATE_LIMIT_CAPACITY == 1.0
+    assert constants.CODES_RATE_LIMIT_SOURCE != constants.RATE_LIMIT_SOURCE
+    assert client._CODES_LIMITER is not client._LIMITER
+
+
+async def test_code_lists_count_against_their_own_limit_not_the_apis(httpx_mock, monkeypatch):
+    _mock_codes(httpx_mock)
+    _mock_periods(httpx_mock)
+    httpx_mock.add_response(url=_JULY_REPORT, json={"count": 1, "trade": [_report_row()]})
+    counts = {"api": 0, "codes": 0}
+
+    async def api() -> None:
+        counts["api"] += 1
+
+    async def codes() -> None:
+        counts["codes"] += 1
+
+    monkeypatch.setattr(client._LIMITER, "acquire", api)
+    monkeypatch.setattr(client._CODES_LIMITER, "acquire", codes)
+    await client.get_trade("exports", "2026-07", "2026-07")
+    # getPeriods and getReport; HS6, countries, states, provinces and units.
+    assert counts == {"api": 2, "codes": 5}
+
+
+async def test_code_lists_load_while_the_trade_request_waits(httpx_mock):
+    # getReport answers only once a code list has been asked for. Fetched one
+    # after the other, as before, the report would time out waiting.
+    asked = asyncio.Event()
+    for name, text in _CODE_FILES.items():
+
+        async def code_file(request: httpx.Request, body: bytes = text.encode()) -> httpx.Response:
+            asked.set()
+            return httpx.Response(200, content=body)
+
+        httpx_mock.add_callback(
+            code_file, url=f"{_CODES}/{name}.js", is_reusable=True, is_optional=True
+        )
+    _mock_periods(httpx_mock)
+
+    async def report(request: httpx.Request) -> httpx.Response:
+        await asyncio.wait_for(asked.wait(), timeout=5)
+        return httpx.Response(200, json={"count": 1, "trade": [_report_row()]})
+
+    httpx_mock.add_callback(report, url=_JULY_REPORT)
+    result = await client.get_trade("exports", "2026-07", "2026-07")
+    assert result.rows[0].partner == "United States of America"
+    assert result.rows[0].hs_description == "Petroleum oils, crude"
+
+
+async def test_a_failed_trade_request_cancels_the_code_lists_still_loading(httpx_mock):
+    _mock_periods(httpx_mock)
+    httpx_mock.add_response(url=_JULY_REPORT, status_code=406)
+    started: list[str] = []
+    cancelled: list[str] = []
+    for name in _CODE_FILES:
+
+        async def code_file(request: httpx.Request, name: str = name) -> httpx.Response:
+            started.append(name)
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.append(name)
+                raise
+            return httpx.Response(200, content=b"[]")
+
+        httpx_mock.add_callback(
+            code_file, url=f"{_CODES}/{name}.js", is_reusable=True, is_optional=True
+        )
+    with pytest.raises(InvalidInput, match="406"):
+        await client.get_trade("exports", "2026-07", "2026-07")
+    assert started
+    assert sorted(cancelled) == sorted(started)
+
+
+def test_code_list_json_reader_matches_the_regex_reader():
+    for name, text in _CODE_FILES.items():
+        body = text.removeprefix("﻿")
+        assert client._parse_objects_json(body) == client._parse_objects_regex(body), name
+
+
+def test_code_list_reader_leaves_commas_inside_values_alone():
+    text = 'var HS2 = [\r\n{\r\n   "HS": "03",\r\n   "EN": "Fish, }fresh, ]chilled",\r\n}\r\n]'
+    assert client._parse_objects(text) == [{"HS": "03", "EN": "Fish, }fresh, ]chilled"}]
+
+
+def test_code_list_reader_falls_back_to_the_regex_when_the_file_is_not_json():
+    # A trailing comma with no line break after it stays, so the JSON reader
+    # gives up and the regex reader still reads every entry.
+    text = 'var x = [{"id": 1, "en": "A",}, {"id": 2, "en": "B"}]'
+    assert client._parse_objects_json(text) is None
+    assert client._parse_objects(text) == [{"id": 1, "en": "A"}, {"id": 2, "en": "B"}]
+
+
+async def test_large_code_list_is_parsed_off_the_event_loop(httpx_mock, monkeypatch):
+    _mock_codes(httpx_mock, skip=("hs10F",))
+    others = [
+        _hs_entry(f"0101{i:06d}", "NMB", "Horses", "Chevaux", "200201", "999912") for i in range(20)
+    ]
+    condensate = _HS10_IMPORTS.removeprefix("var HS10 = [\r\n").removesuffix("\r\n]")
+    hs10 = "var HS10 = [\r\n" + ",\r\n".join([*others, condensate]) + "\r\n]"
+    httpx_mock.add_response(url=f"{_CODES}/hs10F.js", content=hs10.encode())
+    # Lowered from 1 MB so the test needs no 16 MB file: hs10F.js is over it,
+    # uom.js under it.
+    threshold = 1_000
+    assert len(_UOM.encode()) < threshold < len(hs10.encode())
+    monkeypatch.setattr(constants, "CODES_THREAD_PARSE_BYTES", threshold)
+    threaded: list[object] = []
+    real_to_thread = asyncio.to_thread
+
+    async def to_thread(func, /, *args, **kwargs):
+        threaded.append(func)
+        return await real_to_thread(func, *args, **kwargs)
+
+    monkeypatch.setattr(client.asyncio, "to_thread", to_thread)
+    result = await client.search_commodities("2709", direction="imports", level="national")
+    assert result.commodities[0].code == "2709000041"
+    assert result.commodities[0].unit == "Volume in cubic metres"
+    # hs10F.js reaches the threshold; uom.js is parsed inline.
+    assert len(threaded) == 1

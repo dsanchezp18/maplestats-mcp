@@ -297,19 +297,29 @@ def _context_for(
     )
 
 
-async def prefetch(vector_ids: list[int]) -> None:
+async def prefetch(vector_ids: list[int], product_ids: list[int] | None = None) -> None:
     """Fill the caches describe() reads (series info, then each table's metadata).
 
     Run beside the data request, so a cold wds_get_data_from_vectors waits for the
     slower of the two chains instead of every request in turn (6.4 s median on the
-    hosted server, 2026-11-06). A failure here is ignored: describe() asks again
-    and reports what it could not read.
+    hosted server, 2026-11-06). A caller that knows its tables already
+    (wds_get_data_from_cube_coord) passes `product_ids`, and their metadata is
+    fetched at once, beside the data; with no `vector_ids` the series info is left
+    for describe(), which learns the vector ids from the data. A failure here is
+    ignored: describe() asks again and reports what it could not read.
     """
+    known = sorted(set(product_ids or []))
     try:
+        if not vector_ids:
+            await asyncio.gather(
+                *(client.cube_metadata_raw(pid) for pid in known), return_exceptions=True
+            )
+            return
         infos = await _series_info_raw(sorted(set(vector_ids)))
-        product_ids = {int(obj["productId"]) for obj in infos.values() if obj.get("productId")}
+        found = {int(obj["productId"]) for obj in infos.values() if obj.get("productId")}
         await asyncio.gather(
-            *(client.cube_metadata_raw(pid) for pid in product_ids), return_exceptions=True
+            *(client.cube_metadata_raw(pid) for pid in sorted(found | set(known))),
+            return_exceptions=True,
         )
     except (*_SOFT_ERRORS, KeyError, ValueError, TypeError):  # describe() asks again
         return

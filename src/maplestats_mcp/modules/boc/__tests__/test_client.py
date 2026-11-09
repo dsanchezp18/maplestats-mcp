@@ -10,6 +10,8 @@ httpx.HTTPStatusError.
 
 from __future__ import annotations
 
+from datetime import date
+
 import httpx
 import pytest
 
@@ -34,6 +36,26 @@ def _reset_shared_cache():
     """
     cache_module._caches.clear()
     yield
+
+
+@pytest.fixture(autouse=True)
+def _today(monkeypatch):
+    """Statuses compare a series' newest date with today: fix today."""
+    monkeypatch.setattr(client, "today", lambda: date(2026, 11, 9))
+
+
+def _latest(httpx_mock, names: str, newest: dict[str, str], *, lang: str = "en", **detail):
+    """The observations?recent=1 response a status check reads: each series' newest row."""
+    base = constants.BASE_URL_FR if lang == "fr" else constants.BASE_URL
+    httpx_mock.add_response(
+        url=f"{base}observations/{names}/json?recent=1",
+        json={
+            "seriesDetail": {
+                n: {"label": n, "dateFormat": "daily", **detail} for n in names.split(",")
+            },
+            "observations": [{"d": d, n: {"v": "1"}} for n, d in newest.items()],
+        },
+    )
 
 
 async def test_list_series_parses_series_dict(httpx_mock):
@@ -67,9 +89,13 @@ async def test_search_series_filters_client_side(httpx_mock):
             }
         },
     )
+    _latest(httpx_mock, "FXUSDCAD", {"FXUSDCAD": "2026-11-06"})
     result = await client.search_series("exchange", limit=10)
     assert result.total_count == 1
     assert result.series[0].name == "FXUSDCAD"
+    assert result.series[0].status == "active"
+    assert result.series[0].last_observation == date(2026, 11, 6)
+    assert "not a transactional rate" in (result.series[0].note or "")
 
 
 async def test_get_series_parses_plural_seriesdetails_key(httpx_mock):
@@ -86,9 +112,11 @@ async def test_get_series_parses_plural_seriesdetails_key(httpx_mock):
             }
         },
     )
+    _latest(httpx_mock, "FXUSDCAD", {"FXUSDCAD": "2026-11-06"})
     result = await client.get_series("FXUSDCAD")
     assert result.name == "FXUSDCAD"
     assert result.label == "USD/CAD"
+    assert (result.status, result.successor) == ("active", None)
 
 
 async def test_get_series_raises_not_found_on_404_with_real_message(httpx_mock):
@@ -357,6 +385,7 @@ async def test_french_series_comes_from_the_french_domain(httpx_mock):
             }
         },
     )
+    _latest(httpx_mock, "V39079", {"V39079": "2026-11-06"}, lang="fr")
     result = await client.get_series("V39079", lang="fr")
     assert result.label.startswith("Taux cible")
     assert result.provenance.url == f"{constants.BASE_URL_FR}series/V39079/json"
@@ -401,13 +430,16 @@ async def test_french_search_limits_and_coverage(httpx_mock):
             }
         },
     )
+    _latest(httpx_mock, "V0,V1", {}, lang="fr")
     result = await client.search_series("taux directeur", limit=2, lang="fr")
     assert result.total_count == 3
     assert result.provenance.limits == (
         "Seules les 2 premières séries correspondantes sur 3 sont renvoyées ; "
         "précisez la requête ou augmentez limit (max. 200)."
     )
-    assert (result.provenance.coverage or "").startswith("recherche de sous-chaîne parmi 3 séries")
+    assert (result.provenance.coverage or "").startswith(
+        "recherche de sous-chaîne ou de tous les mots parmi 3 séries"
+    )
 
 
 async def test_french_observation_limits(httpx_mock, monkeypatch):
@@ -440,6 +472,7 @@ async def test_get_series_without_series_details_raises_upstream_error(httpx_moc
         await client.get_series("FXUSDCAD")
     # The bad payload was not cached: the next call reaches Valet again.
     httpx_mock.add_response(url=url, json={"seriesDetails": {"name": "FXUSDCAD", "label": "x"}})
+    _latest(httpx_mock, "FXUSDCAD", {"FXUSDCAD": "2026-11-06"})
     assert (await client.get_series("FXUSDCAD")).name == "FXUSDCAD"
 
 

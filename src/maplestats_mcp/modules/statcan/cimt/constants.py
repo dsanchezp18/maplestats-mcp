@@ -51,10 +51,19 @@ REFERER_BY_DIRECTION = {
     "imports": f"{CODES_BASE_URL}/imp-eng.htm",
 }
 
-# One request every two seconds.
+# One request every two seconds to the REST service.
 RATE_LIMIT_SOURCE = "statcan-cimt"
 RATE_LIMIT_PER_SECOND = 0.5
 RATE_LIMIT_CAPACITY = 1.0
+
+# The static code-list files have their own bucket: about one request a
+# second. They are plain files next to the application page, cached here
+# for a week, and a browser opening the page loads several of them at once.
+# Sharing the REST bucket queued them behind the trade request two seconds
+# apiece, so a cold call took about 10 s.
+CODES_RATE_LIMIT_SOURCE = "statcan-cimt-codes"
+CODES_RATE_LIMIT_PER_SECOND = 1.0
+CODES_RATE_LIMIT_CAPACITY = 1.0
 
 CACHE_TTL_PERIODS_SECONDS = 60 * 60
 CACHE_TTL_DATA_SECONDS = 60 * 60
@@ -72,6 +81,9 @@ ALL_STATES_ID = 100
 
 # The large code lists are 2.5 MB (HS6), 3.3 MB (HS8) and 16 MB (HS10).
 CODES_TIMEOUT_SECONDS = 120.0
+# Code lists larger than this are parsed in a worker thread, so parsing the
+# HS10 list does not hold up the server's other requests.
+CODES_THREAD_PARSE_BYTES = 1_000_000
 
 ROWS_DEFAULT = 500
 ROWS_MAX = 5000

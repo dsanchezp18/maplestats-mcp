@@ -2,13 +2,22 @@
   "search_tools": {
     "tool": "search_tools",
     "arguments": {
-      "query": "bank of canada exchange rate"
+      "query": "bank of canada exchange rate",
+      "detail": "full"
+    }
+  },
+  "search_brief": {
+    "tool": "search_tools",
+    "arguments": {
+      "query": "bank of canada exchange rate",
+      "detail": "brief"
     }
   },
   "search_none": {
     "tool": "search_tools",
     "arguments": {
-      "query": "zzqx"
+      "query": "zzqx",
+      "detail": "full"
     }
   },
   "plan_query": {

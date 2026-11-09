@@ -1,0 +1,3 @@
+### Changed
+
+- A server serving HTTP now imports every module and builds the search index at startup, before it opens its port, so the platform's probes keep traffic away until it is ready. Before, a module was imported on the event loop the first time one of its tools was called, which held every other request: the first StatCan call after a start took 12.7 s against 0.09 s afterwards. Startup takes longer instead (on a laptop, `/health` answered after 12-18 s against 4 s). `MAPLE_PRELOAD=0` turns it off, and `MAPLE_PRELOAD=1` turns it on for stdio, where it stays off by default so desktop clients start fast. The Docker image's health check now allows a 120 s start period.

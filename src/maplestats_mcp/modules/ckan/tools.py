@@ -104,15 +104,18 @@ async def ckan_get_dataset(portal: PortalKey, dataset_id: str, lang: Lang = "en"
     """Get one CKAN dataset's full metadata and every downloadable resource.
 
     Use for: resource URLs/formats, license, keywords/tags, publisher,
-    update dates, and portal-specific metadata (in `extras`) for a
+    update dates, and portal-specific metadata (in `extras`: on the
+    federal portal, update frequency in plain words, publication and
+    modification dates, time-period coverage and subject) for a
     dataset found with ckan_search_datasets. `dataset_id` is the id or
     name (slug). Check each resource's `datastore_active` before
     querying rows with ckan_datastore_search.
     Keywords: CKAN, dataset detail, package_show, resources, download,
-    metadata, license, open data.
+    metadata, license, update frequency, coverage period, open data.
     Mots-clés : CKAN, détail du jeu de données, fiche du jeu de données,
     ressources, liens de téléchargement, télécharger les données,
-    métadonnées, licence, éditeur, date de mise à jour, données ouvertes.
+    métadonnées, licence, éditeur, date de mise à jour, fréquence de mise
+    à jour, période couverte, données ouvertes.
     """
     return await client.get_dataset(portal, dataset_id, lang)
 

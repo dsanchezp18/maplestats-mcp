@@ -22,7 +22,11 @@
     "label": "USD/CAD",
     "description": "Daily average exchange rate of the US dollar in Canadian dollars.",
     "unit": "Canadian dollars per US dollar",
-    "frequency": "Business daily"
+    "frequency": "Business daily",
+    "status": "active",
+    "last_observation": "2026-11-06",
+    "successor": null,
+    "note": null
    }
   },
   "observations": [
@@ -54,7 +58,9 @@
    "schema_name": "boc.ObservationsResult",
    "licence": "Bank of Canada Terms of Use (https://www.bankofcanada.ca/terms/): attribute the Bank of Canada as the source and indicate if changes were made, without implying the Bank endorses the use; content passed on through paid services must be identified as obtained from the Bank's website.",
    "commercial_use": "allowed",
-   "caveats": [],
+   "caveats": [
+    "Indicative rate: one Bank of Canada daily average per currency, published by about 16:30 ET each business day. It is not a transactional rate; banks and dealers trade at their own rates."
+   ],
    "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
   }
  }

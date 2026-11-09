@@ -6,6 +6,7 @@ these."""
 
 from __future__ import annotations
 
+import asyncio
 import copy
 
 import httpx
@@ -19,6 +20,7 @@ from maplestats_mcp.modules.statcan.sdmx.__tests__.test_client import (
 )
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import (
+    DataLocked,
     InvalidInput,
     NotFound,
     UpstreamError,
@@ -357,3 +359,94 @@ async def test_structure_from_wds_reads_every_page_of_a_large_dimension(httpx_mo
 
     wds_requests = [r for r in httpx_mock.get_requests() if str(r.url) == _WDS_METADATA_URL]
     assert len(wds_requests) == 1  # the later pages come from the cached metadata
+
+
+# --- the data document is cached, and its context fetched alongside it ---------
+
+
+def _data_requests(httpx_mock) -> list[httpx.Request]:
+    return [r for r in httpx_mock.get_requests() if "/sdmx/statcan/rest/data/" in str(r.url)]
+
+
+async def test_get_data_caches_the_data_document(httpx_mock):
+    # One response, not reusable: a second request would fail the test.
+    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=24", content=_DATA_XML.encode())
+    first = await client.get_data(18100004, "2")
+    second = await client.get_data(18100004, "2")
+    assert (first.provenance.cached, second.provenance.cached) == (False, True)
+    assert second.series == first.series
+    assert len(_data_requests(httpx_mock)) == 1
+
+
+async def test_data_cache_has_the_wds_observations_ttl(httpx_mock):
+    from maplestats_mcp.modules.statcan.wds import constants as wds_constants
+
+    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=24", content=_DATA_XML.encode())
+    await client.get_data(18100004, "2")
+    assert wds_constants.CACHE_TTL_OBSERVATIONS_SECONDS == 60 * 60
+    bucket = cache_module._caches[wds_constants.CACHE_TTL_OBSERVATIONS_SECONDS]
+    assert any(str(k).startswith(f"sdmx:data:{_DATA_URL}?") for k in bucket)
+
+
+async def test_get_data_caches_each_period_filter_apart(httpx_mock):
+    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=24", content=_DATA_XML.encode())
+    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=3", content=_DATA_XML.encode())
+    await client.get_data(18100004, "2")
+    await client.get_data(18100004, "2", last_n_observations=3)
+    assert len(_data_requests(httpx_mock)) == 2
+
+
+async def test_get_data_does_not_cache_a_key_matching_nothing(httpx_mock):
+    # A malformed body is an error, so the next call asks again.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}data/DF_18100004/999.999?lastNObservations=24",
+        content=_NO_MATCH_XML.encode(),
+        is_reusable=True,
+    )
+    for _ in range(2):
+        with pytest.raises(NotFound, match="matched no series"):
+            await client.get_data(18100004, "999.999")
+    assert len(_data_requests(httpx_mock)) == 2
+
+
+async def test_get_data_does_not_cache_an_upstream_error(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{_DATA_URL}?lastNObservations=24", status_code=409, json={"message": "locked"}
+    )
+    httpx_mock.add_response(url=f"{_DATA_URL}?lastNObservations=24", content=_DATA_XML.encode())
+    with pytest.raises(DataLocked):
+        await client.get_data(18100004, "2")
+    result = await client.get_data(18100004, "2")
+    assert result.provenance.cached is False
+
+
+async def test_get_data_fetches_the_table_metadata_alongside_the_data(httpx_mock):
+    # The data answers only once the metadata behind the newer-data note has
+    # been asked for. Fetched one after the other, as before, it would time out.
+    asked = asyncio.Event()
+
+    async def metadata(request: httpx.Request) -> httpx.Response:
+        asked.set()
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "status": "SUCCESS",
+                    "object": {
+                        "productId": 18100004,
+                        "cubeEndDate": "2026-09-01",
+                        "releaseTime": "2026-10-21T08:30",
+                    },
+                }
+            ],
+        )
+
+    async def data(request: httpx.Request) -> httpx.Response:
+        await asyncio.wait_for(asked.wait(), timeout=5)
+        return httpx.Response(200, content=_DATA_XML.encode())
+
+    httpx_mock.add_callback(metadata, url=_WDS_METADATA_URL)
+    httpx_mock.add_callback(data, url=f"{_DATA_URL}?startPeriod=2024-01&endPeriod=2024-12")
+    result = await client.get_data(18100004, "2", start_period="2024-01", end_period="2024-12")
+    assert (result.provenance.limits or "").startswith("Newer data exist")
+    assert result.series

@@ -43,7 +43,11 @@ def _no_series_context(monkeypatch):
     async def passthrough(series):
         return series, None
 
+    async def no_prefetch(vector_ids, product_ids=None):
+        return None
+
     monkeypatch.setattr(context, "describe", passthrough)
+    monkeypatch.setattr(context, "prefetch", no_prefetch)
 
 
 def _fn(t):

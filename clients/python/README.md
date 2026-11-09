@@ -17,7 +17,7 @@ pip install "git+https://github.com/dsanchezp18/maplestats-mcp#subdirectory=clie
 ```python
 import maplestats as ms
 
-# Find a tool: name, description and input schema, best match first
+# Find a tool: name, description, arguments and input schema, best match first
 ms.search_tools("bank of canada exchange rate")
 
 # Run it and get rows

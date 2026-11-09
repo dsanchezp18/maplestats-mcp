@@ -65,13 +65,14 @@ _HINTS: tuple[tuple[type[BaseException], str, str], ...] = (
     (
         InvalidInput,
         (
-            "Fix: correct the argument named above. search_tools returns this tool's inputSchema "
-            "with the accepted values, and plan_query suggests the arguments for a question."
+            "Fix: correct the argument named above. search_tools with detail='full' returns this "
+            "tool's input schema with the accepted values, and plan_query suggests the arguments "
+            "for a question."
         ),
         (
-            "Solution : corrigez l'argument nommé ci-dessus. search_tools renvoie l'inputSchema de "
-            "cet outil avec les valeurs acceptées, et plan_query propose les arguments d'une "
-            "question."
+            "Solution : corrigez l'argument nommé ci-dessus. search_tools avec detail='full' "
+            "renvoie le schéma d'entrée de cet outil avec les valeurs acceptées, et plan_query "
+            "propose les arguments d'une question."
         ),
     ),
     (

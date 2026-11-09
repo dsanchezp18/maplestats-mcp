@@ -90,3 +90,35 @@ async def test_upstream_model_failure_is_not_reported_as_invalid_input():
     assert "not-a-number" not in result.content[0].text  # type: ignore[union-attr]
     assert bad_args.is_error
     assert bad_args.content[0].text.startswith("Invalid input: upstream_shaped")  # type: ignore[union-attr]
+
+
+async def test_call_tool_gives_the_full_input_schema_on_bad_arguments():
+    # search_tools answers a one-line signature with long enums cut to a count, so an
+    # invalid call carries the tool's whole input schema: the next call can be right.
+    import json
+
+    text = await _error_text(
+        "ckan_search_datasets", {"portal": "atlantis", "query": "x"}, via_call_tool=True
+    )
+    assert text.startswith("[invalid_input] Invalid input: ckan_search_datasets: portal")
+    marker = "Full input schema of ckan_search_datasets: "
+    assert marker in text
+    schema = json.loads(text.split(marker, 1)[1])
+    assert "federal" in schema["properties"]["portal"]["enum"]
+    assert schema["required"] == ["portal"]
+
+
+async def test_full_input_schema_is_introduced_in_french():
+    text = await _error_text(
+        "fcac_search_credit_cards", {"province": "ZZ", "lang": "fr"}, via_call_tool=True
+    )
+    assert "Schéma d'entrée complet de fcac_search_credit_cards : {" in text
+
+
+async def test_only_argument_errors_carry_the_schema():
+    # The schema rides on call_tool's argument errors only: an unknown name has none to
+    # give, and a client calling a tool by name already listed its schema.
+    text = await _error_text("no_such_tool_anywhere", {}, via_call_tool=True)
+    assert "input schema" not in text
+    direct = await _error_text("ckan_search_datasets", {"portal": "atlantis"}, via_call_tool=False)
+    assert "Full input schema" not in direct

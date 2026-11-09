@@ -38,11 +38,70 @@ test_that("search_tools returns a tibble of tools", {
   )
 
   expect_s3_class(found, "tbl_df")
-  expect_named(found, c("name", "description", "input_schema"))
+  expect_named(found, search_columns)
   expect_gt(nrow(found), 0)
   expect_true(any(startsWith(found$name, "boc_")))
-  expect_type(jsonlite::fromJSON(found$input_schema[[1]]), "list")
-  expect_equal(server$bodies()[[3]]$params$name, "search_tools")
+  schema <- jsonlite::fromJSON(found$input_schema[[1]])
+  expect_gt(length(schema$properties), 0)
+  expect_true(all(is.na(found$arguments)))
+  call <- server$bodies()[[3]]$params
+  expect_equal(call$name, "search_tools")
+  expect_equal(call$arguments$detail, "full")
+})
+
+test_that("a brief search keeps the argument signature", {
+  local_fake_server()
+  found <- ms_search_tools(
+    "bank of canada exchange rate",
+    client = test_client(),
+    detail = "brief"
+  )
+
+  expect_named(found, search_columns)
+  expect_gt(nrow(found), 0)
+  expect_true(startsWith(found$arguments[[1]], "{"))
+  expect_true(all(is.na(found$input_schema)))
+})
+
+test_that("search falls back on a server without detail", {
+  server <- local_fake_server()
+
+  # A server before the compact search rejects `detail` and answers the
+  # full form.
+  server$override <- function(request) {
+    body <- sent_body(request)
+    if (!identical(body$method, "tools/call")) {
+      return(NULL)
+    }
+    if (is.null(body$params$arguments$detail)) {
+      return(sse_response(recorded_body("search_tools", body$id)))
+    }
+    error <- list(
+      jsonrpc = "2.0",
+      id = body$id,
+      result = list(
+        content = list(list(
+          type = "text",
+          text = "Unexpected argument: detail"
+        )),
+        isError = TRUE
+      )
+    )
+    sse_response(paste0(
+      "data: ",
+      jsonlite::toJSON(error, auto_unbox = TRUE),
+      "\n\n"
+    ))
+  }
+  found <- ms_search_tools(
+    "bank of canada exchange rate",
+    client = test_client()
+  )
+
+  expect_gt(nrow(found), 0)
+  expect_false(is.na(found$input_schema[[1]]))
+  bodies <- server$bodies()
+  expect_null(bodies[[length(bodies)]]$params$arguments$detail)
 })
 
 test_that("a search with no match is an empty tibble", {
@@ -50,7 +109,7 @@ test_that("a search with no match is an empty tibble", {
   found <- ms_search_tools("zzqx", client = test_client())
 
   expect_equal(nrow(found), 0)
-  expect_named(found, c("name", "description", "input_schema"))
+  expect_named(found, search_columns)
 })
 
 test_that("plan_query is called directly", {
@@ -70,10 +129,9 @@ test_that("get_data tidies Bank of Canada observations", {
     client = test_client()
   )
 
-  expect_named(data, c("ref_date", "values_fxusdcad", "non_numeric"))
+  expect_named(data, c("ref_date", "values_fxusdcad"))
   expect_equal(nrow(data), 3)
   expect_type(data$values_fxusdcad, "double")
-  expect_true(all(is.na(data$non_numeric)))
   expect_equal(attr(data, "provenance")$source, "boc")
   expect_match(
     attr(data, "citation"),

@@ -171,3 +171,100 @@ def test_search_results_keep_annotations_of_a_tool_that_writes():
     kept, dropped = serialize_tools_compact([writes, reads])
     assert kept["annotations"] == {"readOnlyHint": False, "destructiveHint": True}
     assert "annotations" not in dropped
+
+
+async def test_search_tools_answers_one_line_per_tool_by_default():
+    # 2026-11-09, for cost: name, one-line description, one-line argument signature,
+    # about a quarter of the compact definition; detail="full" returns that definition.
+    import json
+
+    from fastmcp import Client
+
+    from maplestats_mcp.shared.search import BRIEF_FIELDS, serialize_tools_compact
+
+    query = "consumer price index monthly"
+    async with Client(server.mcp) as client:
+        brief = await client.call_tool("search_tools", {"query": query})
+        full = await client.call_tool("search_tools", {"query": query, "detail": "full"})
+    assert brief.structured_content is not None and full.structured_content is not None
+    short, whole = brief.structured_content["result"], full.structured_content["result"]
+    assert [t["name"] for t in short] == [t["name"] for t in whole]
+    live = {tool.name: tool for tool in await server.mcp._list_tools()}
+    assert whole == serialize_tools_compact([live[t["name"]] for t in whole])
+    for tool in short:
+        assert set(tool) <= set(BRIEF_FIELDS)
+        assert "inputSchema" not in tool
+        assert "\n" not in tool["description"] and "Use for:" not in tool["description"]
+        assert tool["arguments"].startswith("{") and tool["arguments"].endswith("}")
+    assert len(json.dumps(short)) < 0.35 * len(json.dumps(whole))
+
+
+def test_signature_names_types_and_what_is_optional():
+    from maplestats_mcp.shared.search import signature
+
+    schema = {
+        "properties": {
+            "product_id": {"anyOf": [{"type": "integer"}, {"type": "string"}]},
+            "vector_ids": {"type": "array", "items": {"type": "integer"}},
+            "since": {"anyOf": [{"type": "string", "format": "date"}, {"type": "null"}]},
+            "lang": {"enum": ["en", "fr"], "type": "string", "default": "en"},
+            "year": {"enum": [2016, 2021], "type": "integer"},
+            "filters": {"$ref": "#/$defs/Filters"},
+        },
+        "required": ["product_id", "vector_ids"],
+    }
+    assert signature(schema) == (
+        '{product_id: int|str, vector_ids: int[], since?: date, lang?: "en"|"fr", '
+        "year?: 2016|2021, filters?: object}"
+    )
+    assert signature({"properties": {}}) == "{}"
+    assert signature(None) == "{}"
+
+
+def test_signature_cuts_a_long_enum_to_a_count():
+    from maplestats_mcp.shared.search import schema_type
+
+    portals = [f"portal_number_{i}" for i in range(40)]
+    text = schema_type({"enum": portals, "type": "string"})
+    assert text.startswith('"portal_number_0"|')
+    assert text.endswith("|... (40 values)")
+    assert len(text) < 120
+    # A short one stays whole.
+    assert schema_type({"enum": ["a", "b"]}) == '"a"|"b"'
+
+
+@pytest.mark.parametrize(
+    ("description", "expected"),
+    [
+        ("Get X for Y.\n\nUse for: z.\nKeywords: a.", "Get X for Y."),
+        ("Get X\nfor Y.\n\nUse for: z.", "Get X for Y."),
+        ("Get A. " + "Then b " * 50 + "\n\nUse for: z.", "Get A."),
+        (None, ""),
+    ],
+)
+def test_brief_description_is_the_first_paragraph(description, expected):
+    from maplestats_mcp.shared.search import brief_description
+
+    assert brief_description(description) == expected
+
+
+def test_brief_search_results_keep_annotations_of_a_tool_that_writes():
+    from fastmcp.tools import Tool
+    from mcp.types import ToolAnnotations
+
+    from maplestats_mcp.shared.search import serialize_tools_brief
+
+    def save_file(path: str) -> str:
+        """Save a file."""
+        return path
+
+    writes = Tool.from_function(
+        save_file, annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True)
+    )
+    [result] = serialize_tools_brief([writes])
+    assert result == {
+        "name": "save_file",
+        "description": "Save a file.",
+        "arguments": "{path: str}",
+        "annotations": {"readOnlyHint": False, "destructiveHint": True},
+    }

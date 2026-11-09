@@ -1337,6 +1337,20 @@ STEPS: list[Step] = [
         },
         lambda data: [p["check"] for p in data["problems"]] == ["not_published"],
     ),
+    # Server documentation: no upstream, but the call runs through the live
+    # server's resource providers (lazy module loading included).
+    Step(
+        "docs",
+        "docs_list_resources",
+        {},
+        lambda data: data["total_count"] > 5,
+    ),
+    Step(
+        "docs",
+        "docs_read_resource",
+        {"uri": "docs://cmhc/rms-methodology"},
+        lambda data: "4 or more responding entities" in data["text"],
+    ),
     # Calculations across series. Hand-checked on 2026-11-07 against WDS and
     # Valet directly: Alberta employment 2,608.5 over Canada's 21,009.9 thousand
     # (14-10-0287, 2025-09) is 12.4156 %; the CPI's annual averages (v41690973,

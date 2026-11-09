@@ -39,6 +39,7 @@ end
 FakeServer() = FakeServer([], nothing)
 
 const SSE = ["content-type" => "text/event-stream"]
+const SEARCH_COLUMNS = ["name", "description", "arguments", "input_schema"]
 
 function (server::FakeServer)(url, headers, body; timeout)
     push!(server.seen, (url=url, headers=Dict(headers), body=JSON3.read(body)))
@@ -79,17 +80,49 @@ end
     @testset "search_tools returns a DataFrame" begin
         server = FakeServer()
         found = search_tools("bank of canada exchange rate"; client=fake_client(server))
-        @test names(found) == ["name", "description", "input_schema"]
+        @test names(found) == SEARCH_COLUMNS
         @test size(found, 1) > 0
         @test any(startswith.(found.name, "boc_"))
-        @test JSON3.read(found.input_schema[1]) isa JSON3.Object
-        @test server.seen[3].body.params.name == "search_tools"
+        @test !isempty(JSON3.read(found.input_schema[1]).properties)
+        @test all(ismissing, found.arguments)
+        call = server.seen[3].body.params
+        @test call.name == "search_tools"
+        @test call.arguments.detail == "full"
+    end
+
+    @testset "a brief search keeps the argument signature" begin
+        found = search_tools(
+            "bank of canada exchange rate"; detail="brief", client=fake_client(FakeServer())
+        )
+        @test names(found) == SEARCH_COLUMNS
+        @test size(found, 1) > 0
+        @test startswith(found.arguments[1], "{")
+        @test all(ismissing, found.input_schema)
+    end
+
+    @testset "search falls back on a server without detail" begin
+        # A server before the compact search rejects `detail` and answers the full form.
+        server = FakeServer()
+        server.override = function (message)
+            message.method == "tools/call" || return nothing
+            if haskey(message.params.arguments, :detail)
+                block = Dict("type" => "text", "text" => "Unexpected argument: detail")
+                result = Dict("content" => [block], "isError" => true)
+                reply = Dict("jsonrpc" => "2.0", "id" => message.id, "result" => result)
+                return (200, SSE, "data: $(JSON3.write(reply))\n\n")
+            end
+            return (200, SSE, recorded("search_tools", message.id))
+        end
+        found = search_tools("bank of canada exchange rate"; client=fake_client(server))
+        @test size(found, 1) > 0
+        @test !ismissing(found.input_schema[1])
+        @test !haskey(server.seen[end].body.params.arguments, :detail)
     end
 
     @testset "a search with no match is an empty DataFrame" begin
         found = search_tools("zzqx"; client=fake_client(FakeServer()))
         @test size(found, 1) == 0
-        @test names(found) == ["name", "description", "input_schema"]
+        @test names(found) == SEARCH_COLUMNS
     end
 
     @testset "plan_query is called directly" begin
@@ -106,10 +139,9 @@ end
             series_names=["FXUSDCAD"],
             recent=3,
         )
-        @test names(df) == ["ref_date", "values_fxusdcad", "non_numeric"]
+        @test names(df) == ["ref_date", "values_fxusdcad"]
         @test size(df, 1) == 3
         @test eltype(df.values_fxusdcad) == Float64
-        @test all(ismissing, df.non_numeric)
         @test metadata(df, "provenance").source == "boc"
         @test startswith(
             only(metadata(df, "citation")), "Source: boc. https://www.bankofcanada.ca/"

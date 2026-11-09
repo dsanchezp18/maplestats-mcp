@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<!--[if lt IE 9]><html class="no-js lt-ie9" lang="fr" dir="ltr"><![endif]--><!--[if gt IE 8]><!-->
+<html class="no-js" lang="fr" dir="ltr">
+<!--<![endif]-->
+
+<head>
+<meta charset="utf-8">
+<!-- Web Experience Toolkit (WET) / BoÃ®te Ã  outils de l'expÃ©rience Web (BOEW)
+     wet-boew.github.io/wet-boew/License-en.htm / wet-boew.github.io/wet-boew/Licence-fr.htm -->
+
+<title>Enqu&#234;tes et programmes statistiques - Enqu&#234;te sur la population active &#40;EPA&#41;</title>
+<meta name="description" content="L'Enquête sur la population active (EPA) fournit des estimations de l'emploi et du chômage. Parmi les principales séries de données économiques mensuelles, les estimations de l'EPA sont les premières à être rendues publiques, les résultats de l'enquête étant diffusés 10 jours seulement après la fin de la collecte. Les données de l'EPA sont utilisées pour produire le très connu taux de chômage ainsi que d'autre indicateurs de base du marché de travail tel que le taux d'emploi et le taux d'activité." />
+<meta name="dcterms.creator" content="Gouvernement du Canada, Statistique Canada" />
+<meta name="dcterms.title" content="Enquête sur la population active (EPA)" />
+<meta name="dcterms.issued" title="W3CDTF" content="2026-11-05" />
+<meta name="dcterms.modified" title="W3CDTF" content="2026-11-05" />
+<meta name="dcterms.subject" title="gcstc" content="null" />
+<meta name="dcterms.language" title="ISO639-2" content="fra" />
+<meta name="keywords" content="Emploi et chômage, Heures de travail et conditions de travail, Industries, Professions, Salaires, traitements et autres gains, Syndicalisation et relations industrielles, Travail" />
+<meta name="STCtopic" content="Référence" />
+<meta name="STCtopicID" content="4017" />
+<meta name="STCsubtopic" content="Référence (général)" />
+<meta name="STCsubtopicID" content="4017" />
+<meta name="STCtype" content="Enquête" />
+<meta content="width=device-width,initial-scale=1" name="viewport" />
+
+<!--START css.htm -->
+
+<meta property="dcterms:service" content="StatCan"/> 
+<meta property="dcterms:accessRights" content="2"/>
+
+<link href="/wet-boew4b/assets/favicon.ico" rel="icon" type="image/x-icon">
+<link rel="stylesheet" href="/wet-boew4b/css/wet-boew.min.css">
+<script src="/wet-boew4b/js/jquery.min.js"></script>
+
+<link rel="stylesheet" href="/wet-boew4b/css/theme.min.css">
+<link rel="stylesheet" href="/wet-boew4b/css/statcan.css">
+<link rel="stylesheet" href="/wet-boew4b/invitation-manager/Overlay.css"> 
+
+<noscript><link rel="stylesheet" href="/wet-boew4b/css/noscript.min.css" /></noscript>
+<!-- Adobe Analytics RUN --><script src="//assets.adobedtm.com/be5dfd287373/0127575cd23a/launch-f7c3e6060667.min.js"></script>
+<!-- Adobe Analytics v10 --><!--script src="//assets.adobedtm.com/be5dfd287373/8f0ead8a37e7/launch-09394abc039d.min.js"></script-->
+
+<script>dataLayer1 = [];</script>
+
+<!-- CustomScriptsCSSStart -->
+<link rel="stylesheet" href="/wet-boew4b/imdb-templates/imdb-standards.css" />
+<!-- CustomScriptsCSSEnd -->
+
+<!--END css.htm -->
+
+</head>
+
+<body vocab="http://schema.org/" typeof="WebPage">
+
+<ul id="wb-tphp">
+<li class="wb-slc">
+<a class="wb-sl" href="#wb-cont">Passer au contenu principal</a>
+</li>
+<li class="wb-slc visible-sm visible-md visible-lg">
+<a class="wb-sl" href="#wb-info">Passer &#224; &#171;&#160;&#192; propos de ce site&#160;&#187;</a>
+</li>
+</ul>
+<header role="banner">
+<div id="wb-bnr" class="container">
+<section id="wb-lng" class="visible-md visible-lg text-right">
+<h2 class="wb-inv">S&#233;lection de la langue</h2>
+<div class="row">
+<div class="col-md-12">
+<ul class="list-inline margin-bottom-none">
+<li><a lang="en" href="
+/imdb/cgi-bin/change.cgi
+">English</a></li>
+</ul>
+</div>
+</div>
+</section>
+<div class="row">
+<div class="brand col-xs-9 col-sm-5 col-md-4">
+<a href="https://www.canada.ca/fr.html"><img src="/wet-boew4b/assets/sig-blk-gov-fr.svg" alt="Gouvernement du Canada"><span class="wb-inv"> / <span lang="en">Government of Canada</span></span></a>
+</div>
+<section class="wb-mb-links col-sm-offset-4 col-xs-4 col-sm-3 visible-sm visible-xs" id="wb-glb-mn">
+<h2>Recherche et menus</h2>
+<ul class="list-inline text-right chvrn">
+<li><a href="#mb-pnl" title="Recherche et menus" aria-controls="mb-pnl" class="overlay-lnk" role="button"><span class="glyphicon glyphicon-search"><span class="glyphicon glyphicon-th-list"><span class="wb-inv">Recherche et menus</span></span></span></a></li>
+</ul>
+<div id="mb-pnl"></div>
+</section>
+
+<section id="wb-srch" class="col-lg-offset-2 col-md-offset-2 col-xs-6 text-right visible-md visible-lg">
+<h2 class="wb-inv">Recherche</h2>
+<form action="https://www.statcan.gc.ca/recherche/resultats/site-recherche" method="get" name="cse-search-box" role="search" class="form-inline">
+<div class="form-group wb-srch-qry">
+<label for="wb-srch-q" class="wb-inv">Rechercher dans Statistique Canada</label>
+<input type="hidden" name="fq" value="stclac:2" />
+<input id="wb-srch-q" list="wb-srch-q-ac" class="wb-srch-q form-control" name="q" type="search" value="" size="27" maxlength="150" placeholder="Rechercher dans Statistique Canada">
+<datalist id="wb-srch-q-ac">
+</datalist>
+</div>
+<div class="form-group submit">
+<button type="submit" id="wb-srch-sub" class="btn btn-primary btn-small" name="wb-srch-sub"><span class="glyphicon-search glyphicon"></span><span class="wb-inv">Recherche</span></button>
+</div>
+</form>
+</section>
+</div>
+</div>
+
+<nav role="navigation" id="wb-sm" class="wb-menu visible-md visible-lg" data-trgt="mb-pnl" data-ajax-replace="/wet-boew4b/ajax/sitemenu-fr.html" typeof="SiteNavigationElement">
+	<h2 class="wb-inv">Menus des sujets</h2>
+	<div class="container nvbar">
+		<div class="row">
+			<ul class="list-inline menu">
+				<li><a href="https://www150.statcan.gc.ca/n1/fr/sujets?MM=1">Sujets</a></li>
+				<li><a href="https://www150.statcan.gc.ca/n1/fr/type/donnees?MM=1">Donn&eacute;es</a></li>
+				<li><a href="https://www150.statcan.gc.ca/n1/fr/type/analyses?MM=1">Analyses</a></li>
+				<li><a href="https://www.statcan.gc.ca/fr/references?MM=1">R&eacute;f&eacute;rences</a></li>
+				<li><a href="https://www.statcan.gc.ca/fr/geographie?MM=1">G&eacute;ographie</a></li>
+				<li><a href="https://www.statcan.gc.ca/fr/recensement?MM=1">Recensement</a></li>
+				<li><a href="https://www.statcan.gc.ca/fr/enquetes?MM=1">Enqu&ecirc;tes et programmes statistiques</a></li>
+				<li><a href="https://www.statcan.gc.ca/fr/apercu/statcan?MM=1">&Agrave; propos de StatCan</a></li>
+				<li><a href="https://www.canada.ca/fr.html">Canada.ca</a></li>
+			</ul>
+		</div>
+	</div>
+</nav>
+
+<nav role="navigation" id="wb-bc" class="" property="breadcrumb">
+<div class="container">
+<div class="row">
+
+<!-- Breadcrumb trail START-->
+
+<ol class="breadcrumb">
+<li><a href="http://www.statcan.gc.ca/start-debut-fra.html">Accueil</a></li>
+<li><a href="https://www.statcan.gc.ca/fra/concepts/index">Normes&#44; sources de donn&#233;es et m&#233;thodes</a></li>
+<li><a href="https://www23.statcan.gc.ca/imdb-bmdi/pub/indexth-fra.htm">Enqu&#234;tes et programmes statistiques</a></li>
+</ol>
+
+</div>
+</div>
+</nav>
+</header>
+
+<main role="main" property="mainContentOfPage" class="container">
+<!-- Breadcrumb trail END-->
+
+<h1 property="name" id="wb-cont">Enqu&#234;te sur la population active &#40;EPA&#41;</h1>
+<div class="btn-group btn-group-justified hidden-xs hidden-print" role="group">
+<a class="btn btn-default btn-primary" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurvey&amp;Id=1591279">Enqu&#234;te sur la population active &#40;EPA&#41;</a>
+
+<a class="btn btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurvVariableList&amp;Id=1591279">Variable&#40;s&#41;</a>
+
+<a class="btn btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getMainChange&amp;Id=1591279">R&#233;sum&#233; des changements</a>
+
+<a class="btn btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getInstanceList&amp;Id=1591279">Autres p&#233;riodes de r&#233;f&#233;rence</a>
+
+<a class="btn btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurveyProduct&amp;Id=1591279">Produits connexes</a>
+</div>
+<div class="visible-xs mrgn-bttm-sm row active-nav hidden-print">
+<div class="col-xs-12"><a class="btn btn-block btn-primary" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurvey&amp;Id=1591279">Enqu&#234;te sur la population active &#40;EPA&#41;</a></div>
+
+<div class="col-xs-12"><a class="btn btn-block btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurvVariableList&amp;Id=1591279">Variable&#40;s&#41;</a></div>
+
+<div class="col-xs-12"><a class="btn btn-block btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getMainChange&amp;Id=1591279">R&#233;sum&#233; des changements</a></div>
+
+<div class="col-xs-12"><a class="btn btn-block btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getInstanceList&amp;Id=1591279">Autres p&#233;riodes de r&#233;f&#233;rence</a></div>
+
+<div class="col-xs-12"><a class="btn btn-block btn-default" href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurveyProduct&amp;Id=1591279">Produits connexes</a></div>
+</div>
+
+
+<!-- Open Content panel -->
+
+<div class="panel panel-default mrgn-tp-0 mrgn-bttm-md">
+
+<!-- Open body panel -->
+
+<div class="panel-body">
+
+<h2 class="bg-lgt-h2">Information détaillée pour  octobre 2026 </h2><div class="row">
+<div class="col-md-3"><p><strong>Statut :</strong></p></div>
+<div class="col-md-9"><p>Active</p></div>
+</div>
+<div class="row">
+<div class="col-md-3"><p><strong>Fréquence :</strong></p></div>
+<div class="col-md-9"><p>Mensuelle</p></div>
+</div>
+<div class="row">
+<div class="col-md-3"><p><strong>Numéro d'enregistrement :</strong></p></div>
+<div class="col-md-9"><p>3701</p></div>
+</div>
+<p>L&#39;Enqu&#234;te sur la population active &#40;EPA&#41; fournit des estimations de l&#39;emploi et du ch&#244;mage&#46; Parmi les principales s&#233;ries de donn&#233;es &#233;conomiques mensuelles&#44; les estimations de l&#39;EPA sont les premi&#232;res &#224; &#234;tre rendues publiques&#44; les r&#233;sultats de l&#39;enqu&#234;te &#233;tant diffus&#233;s 10 jours seulement apr&#232;s la fin de la collecte&#46; Les donn&#233;es de l&#39;EPA sont utilis&#233;es pour produire le tr&#232;s connu taux de ch&#244;mage ainsi que d&#39;autre indicateurs de base du march&#233; de travail tel que le taux d&#39;emploi et le taux d&#39;activit&#233;&#46;</p>
+<p><strong>Date de la parution</strong> - 6 novembre 2026</p>
+<ul>
+<li><a href="https://www23.statcan.gc.ca/imdb/p3Instr_f.pl?Function=getInstrumentList&amp;Item_Id=1522188&amp;UL=1V&amp;">Questionnaire&#40;s&#41; et guide&#40;s&#41; de d&#233;claration</a>
+</li>
+<li><a href="#a1">Aper&#231;u</a></li>
+<li><a href="#a2">Sources de donn&#233;es et m&#233;thodologie</a></li>
+<li><a href="#a3">Exactitude des donn&#233;es</a></li>
+<li><a href="#a4">Documentation</a></li>
+</ul>
+<h3 id="a1" class="bg-lgt-h3">Aper&#231;u</h3>
+<p>Les donn&#233;es de l&#39;EPA sont utilis&#233;es pour produire le tr&#232;s connu taux de ch&#244;mage ainsi que d&#39;autre indicateurs de base du march&#233; de travail tel que le taux d&#39;emploi et le taux d&#39;activit&#233;&#46; En plus&#44; l&#39;EPA procure &#233;galement des estimations de l&#39;emploi selon l&#39;industrie&#44; la profession&#44; les secteurs publics et priv&#233;s&#44; le nombre d&#39;heures travaill&#233;es et davantage&#46; Il est possible de croiser ces s&#233;ries selon une vari&#233;t&#233; de caract&#233;ristiques d&#233;mographiques&#46; Des estimations sont diffus&#233;es pour le Canada&#44; les provinces&#44; les territoires et pour plusieurs r&#233;gions infraprovinciales&#46; Pour les employ&#233;s&#44; des donn&#233;es sur les salaires&#44; la couverture syndicale&#44; la permanence de l&#39;emploi et la taille de l&#39;&#233;tablissement sont &#233;galement disponibles&#46;<br><br>Ces donn&#233;es sont utilis&#233;es par les diff&#233;rents paliers de gouvernements pour &#233;valuer et planifier les programmes d&#39;emploi au Canada&#46; Les taux de ch&#244;mage r&#233;gionaux sont utilis&#233;s par Emploi et D&#233;veloppement social Canada pour d&#233;terminer l&#39;admissibilit&#233; au r&#233;gime d&#39;assurance&#45;emploi&#44; de m&#234;me que le niveau et la dur&#233;e des prestations pour les personnes qui vivent &#224; l&#39;int&#233;rieur d&#39;une r&#233;gion d&#39;assurance&#45;emploi donn&#233;e&#46; Les donn&#233;es sont utilis&#233;es par les analystes du march&#233; du travail&#44; les &#233;conomistes&#44; les consultants&#44; les planificateurs&#44; les pr&#233;visionnistes ainsi que les universitaires et ce&#44; autant du secteur public que priv&#233;&#46;</p> 
+<h4>Activit&#233; statistique</h4>
+<p>Ensemble&#44; quatre programmes statistiques brossent un portrait plus complet des &#233;v&#233;nements actuels li&#233;s au march&#233; du travail&#46; Il s&#39;agit de l&#39;Enqu&#234;te sur la population active &#40;EPA&#41;&#44; de l&#39;Enqu&#234;te sur l&#39;emploi&#44; la r&#233;mun&#233;ration et les heures de travail &#40;EERH&#41;&#44; des Statistiques de l&#39;assurance&#45;emploi &#40;SAE&#41; et de l&#39;Enqu&#234;te sur les postes vacants et les salaires &#40;EPVS&#41;&#46; Chaque mois&#44; l&#39;EPA fournit des donn&#233;es actuelles sur le march&#233; du travail&#44; dont le taux de ch&#244;mage&#44; et une analyse d&#233;mographique&#46; Plus tard&#44; le rapport de l&#39;EERH pr&#233;sente des donn&#233;es plus d&#233;taill&#233;es sur l&#39;emploi et la r&#233;mun&#233;ration de l&#39;industrie non agricole&#44; et l&#39;EPVS pr&#233;sente des donn&#233;es sur les indicateurs pr&#233;liminaires sur les postes vacants&#46; Les SAE fournissent beaucoup de d&#233;tails sur les prestations d&#39;assurance&#45;emploi selon la r&#233;gion g&#233;ographique&#44; les caract&#233;ristiques sociod&#233;mographiques et la profession ant&#233;rieure&#46; Chaque trimestre&#44; l&#39;EPVS fournit des renseignements d&#233;taill&#233;s sur les postes vacants selon la profession et la r&#233;gion &#233;conomique&#46; </p>
+<ul class="list-bullet">
+<li>
+<a href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurvDocument&amp;Item_Id=1545116&amp;InstaId=1591279&amp;ai=2&amp;a=1" title="Activit&#233; statistique - Documentation compl&#233;mentaire">Documentation compl&#233;mentaire</a></li>
+</ul>
+<!-- Activit&#233; statistique -->
+<p><strong>P&#233;riode de r&#233;f&#233;rence : </strong>Habituellement la semaine où tombe le 15ième jour du mois</p>
+<p><strong>P&#233;riode de collecte : </strong>Les 10 jours qui suivent la p&#233;riode de r&#233;f&#233;rence</p>
+<!-- h3 Description --> 
+<h4>Sujets</h4>
+<ul>
+<li>Emploi et ch&#244;mage</li>
+<li>Heures de travail et conditions de travail</li>
+<li>Industries</li>
+<li>Professions</li>
+<li>Salaires&#44; traitements et autres gains</li>
+<li>Syndicalisation et relations industrielles</li>
+<li>Travail</li>
+</ul><!-- Sujets -->
+<!-- Methodology --> 
+ <h3 id="a2" class="bg-lgt-h3">Sources de donn&#233;es et m&#233;thodologie</h3>
+
+<h4 >Population cible</h4>
+<p>La population cible de l&#39;Enqu&#234;te sur la population active &#40;EPA&#41; comprend toutes les personnes de 15 ans et plus dont le lieu de r&#233;sidence habituel se situe au Canada&#44; ce qui inclut les r&#233;sidents non permanents &#40;RNP&#41; &#45; c&#39;est&#45;&#224;&#45;dire les titulaires d&#39;un permis de travail ou d&#39;&#233;tudes&#44; les membres de leur famille&#44; les demandeurs d&#39;asile&#44; les personnes prot&#233;g&#233;es et les groupes apparent&#233;s &#45; aussi bien que les r&#233;sidents permanents &#40;immigrants re&#231;us&#41; et les personnes n&#233;es au Canada&#46;<br><br>Les populations exclues de la population cible de l&#39;EPA comprennent les personnes vivant dans les r&#233;serves&#44; les membres &#224; temps plein des Forces arm&#233;es r&#233;guli&#232;res et les pensionnaires d&#39;&#233;tablissements &#40;notamment les personnes d&#233;tenues dans les p&#233;nitenciers et les patients d&#39;h&#244;pitaux et d&#39;&#233;tablissements de soins infirmiers&#41;&#46;<br> <br>Les estimations de l&#39;Enqu&#234;te sur la population active pour l&#39;ensemble du pays sont &#233;tablies &#224; partir des donn&#233;es de l&#39;EPA recueillies dans les provinces&#46; Les r&#233;sultats territoriaux de l&#39;EPA ne sont pas pris en compte dans les estimations nationales&#44; mais sont publi&#233;s s&#233;par&#233;ment&#46; </p>
+ <!-- Population cible -->
+
+<h4 >&#201;laboration de l&#39;instrument</h4>
+<p>Le questionnaire de l&#39;EPA est remani&#233; p&#233;riodiquement pour s&#39;assurer qu&#39;il continue de refl&#233;ter le march&#233; du travail canadien&#46; <br><br>Tous les changements apport&#233;s &#224; l&#39;EPA sont &#233;valu&#233;s avant leur mise en oeuvre&#46; L&#39;EPA s&#39;est servi de plusieurs moyens dans le pass&#233; pour tester le questionnaire&#44; y compris des comit&#233;s d&#39;examen&#44; des groupes de discussion et des essais pilotes&#46; L&#39;onglet R&#233;sum&#233; des changements fournit des renseignements suppl&#233;mentaires sur les r&#233;visions apport&#233;es au questionnaire&#46; </p>
+ <!-- &#201;laboration de l&#39;instrument -->
+
+<h4>&#201;chantillonnage</h4>
+<p>Il s&#39;agit d&#39;une enqu&#234;te transversale par &#233;chantillon&#46;</p>
+<p>L&#39;EPA s&#39;appuie sur un &#233;chantillon al&#233;atoire fond&#233; sur un plan de sondage stratifi&#233; &#224; plusieurs degr&#233;s&#46; Chaque province est subdivis&#233;e en grandes strates g&#233;ographiques&#46; Le premier degr&#233; d&#39;&#233;chantillonnage consiste &#224; s&#233;lectionner des r&#233;gions g&#233;ographiques plus petites&#44; appel&#233;es grappes&#44; dans chacune des strates&#46; Le second degr&#233; d&#39;&#233;chantillonnage consiste &#224; choisir les logements &#224; l&#39;int&#233;rieur de chacune des grappes s&#233;lectionn&#233;es&#46;<br><br>Les logements sont s&#233;lectionn&#233;s en fonction de leur adresse r&#233;sidentielle&#46; Un logement est un ensemble de pi&#232;ces d&#39;habitation qui est structurellement s&#233;par&#233; et dispose d&#39;une entr&#233;e priv&#233;e &#224; l&#39;ext&#233;rieur du b&#226;timent&#44; ou d&#39;un couloir ou escalier commun &#224; l&#39;int&#233;rieur du b&#226;timent&#46; Les informations de l&#39;EPA sont recueillies pour chaque m&#233;nage vivant dans un logement s&#233;lectionn&#233;&#46; Un m&#233;nage d&#233;signe les r&#233;sidents du logement et peut &#234;tre compos&#233; d&#39;une personne vivant seule&#44; d&#39;une ou plusieurs familles&#44; ou d&#39;un groupe de personnes non apparent&#233;es&#46;<br><br>L&#39;EPA suit un plan d&#39;&#233;chantillonnage avec renouvellement de panel&#44; dans lequel les logements des provinces restent dans l&#39;&#233;chantillon pendant six mois cons&#233;cutifs&#46; Les m&#233;nages habitant dans les logements s&#233;lectionn&#233;s peuvent &#234;tre contact&#233;s avant cette p&#233;riode pour confirmer leurs coordonn&#233;es&#46; Chaque mois&#44; environ le sixi&#232;me des logements s&#233;lectionn&#233;s dans le cadre de l&#39;EPA en sont &#224; leur premier mois d&#39;enqu&#234;te&#44; le sixi&#232;me des logements en sont &#224; leur deuxi&#232;me mois d&#39;enqu&#234;te et ainsi de suite&#46;<br><br>On recueille des renseignements d&#233;mographiques de base sur tous les membres du m&#233;nage des logements s&#233;lectionn&#233;s&#46; Les renseignements sur la population active sont recueillis pour tous les membres civils du m&#233;nage &#226;g&#233;s de 15 ans et plus&#46;<br><br>L&#39;&#233;chantillon est r&#233;parti entre les provinces et&#44; &#224; l&#39;int&#233;rieur des provinces&#44; entre les strates&#44; de fa&#231;on &#224; r&#233;pondre le mieux possible au besoin d&#39;estimations fiables aux diff&#233;rents niveaux g&#233;ographiques&#46;<br><br>R&#233;cemment&#44; l&#39;&#233;chantillon mensuel de l&#39;EPA compte environ 65 000 m&#233;nages&#44; ce qui se traduit par la collecte de donn&#233;es sur le march&#233; du travail visant environ 100 000 personnes&#46; Il convient de noter que la taille de l&#39;&#233;chantillon de l&#39;EPA peut varier de temps en temps selon les exigences en mati&#232;re de qualit&#233; des donn&#233;es&#44; de renseignements ou les budgets disponibles&#46; </p>
+<!-- &#201;chantillonnage -->
+
+<h4>Sources des donn&#233;es</h4>
+<p>Statistique Canada recueille les renseignements de l&#39;EPA aupr&#232;s de la population en &#226;ge de travailler &#40;15 ans et plus&#41;&#46; La participation &#224; l&#39;enqu&#234;te est obligatoire pour les adultes en vertu de la Loi sur la statistique&#46;<br><br>Les donn&#233;es sont obtenues directement aupr&#232;s des r&#233;pondants&#46;<br><br>Les renseignements sur les membres du m&#233;nage sont habituellement obtenus aupr&#232;s d&#39;un membre bien inform&#233; du m&#233;nage&#46; Ces d&#233;clarations par personne interpos&#233;e repr&#233;sentent environ 65 &#37; des renseignements recueillis&#46;<br><br>Les r&#233;ponses aux questions de l&#39;enqu&#234;te sont saisies au moyen de l&#39;une des trois fa&#231;ons suivantes &#58; par interview en personne&#44; par interview t&#233;l&#233;phonique ou par un questionnaire &#233;lectronique &#224; remplir soi&#45;m&#234;me&#46; Pour les trois m&#233;thodes de collecte&#44; le questionnaire de l&#39;EPA peut &#234;tre rempli en anglais ou en fran&#231;ais&#46;<br><br>Quant aux r&#233;pondants qui participent &#224; l&#39;interview en personne&#44; l&#39;intervieweur remplira un questionnaire num&#233;rique &#224; l&#39;aide d&#39;un ordinateur portatif&#46;<br><br>Les interviews t&#233;l&#233;phoniques de l&#39;EPA sont r&#233;alis&#233;s par des interviewers travaillant &#224; partir de leur domicile ou d&#39;un centre d&#39;appels de Statistique Canada&#46;<br><br>Les donn&#233;es des r&#233;ponses recueillies par les intervieweurs sont crypt&#233;es pour en pr&#233;server le caract&#232;re confidentiel&#44; puis transmises par r&#233;seau s&#233;curis&#233; au bureau central d&#39;Ottawa pour y &#234;tre trait&#233;es davantage&#46;<br><br>Tous les intervieweurs de l&#39;EPA travaillent sous la supervision d&#39;un groupe d&#39;intervieweurs principaux&#46; Ceux&#45;ci ont pour responsabilit&#233; de s&#39;assurer que les intervieweurs connaissent bien les concepts de l&#39;EPA&#44; les proc&#233;dures qui y sont associ&#233;es et ses nombreuses enqu&#234;tes suppl&#233;mentaires&#46; Ils ont aussi pour fonction de v&#233;rifier r&#233;guli&#232;rement le d&#233;roulement des interviews&#46;<br><br>Certains participants &#224; l&#39;EPA peuvent r&#233;pondre &#224; l&#39;enqu&#234;te au moyen d&#39;un questionnaire &#233;lectronique en utilisant un code d&#39;acc&#232;s s&#233;curis&#233; fourni&#46;<br><br>Les r&#233;pondants peuvent &#234;tre invit&#233;s &#224; remplir une br&#232;ve enqu&#234;te initiale pour confirmer leurs coordonn&#233;es avant de remplir le questionnaire principal de l&#39;EPA pendant six mois&#46; </p>
+<p>Voir le&#40;s&#41; <a href="https://www23.statcan.gc.ca/imdb/p3Instr_f.pl?Function=getInstrumentList&amp;Item_Id=1522188&amp;UL=1V&amp;">Questionnaire&#40;s&#41; et guide&#40;s&#41; de d&#233;claration</a>
+.</p>
+<!-- Sources des donn&#233;es -->
+
+<h4 >D&#233;tection des erreurs</h4>
+<p>Une partie du contr&#244;le se fait au moment de l&#39;interview&#46; Lorsque les renseignements introduits sont hors&#45;limite &#40;trop &#233;lev&#233;es ou trop faibles&#41; des valeurs attendues&#44; ou encore qu&#39;ils entrent en contradiction avec des renseignements introduits auparavant&#44; l&#39;intervieweur ou le r&#233;pondant voit appara&#238;tre &#224; l&#39;&#233;cran de l&#39;ordinateur des messages lui sugg&#233;rant de modifier les renseignements&#46; L&#39;intervieweur et le r&#233;pondant ont toutefois la possibilit&#233; de passer outre les contr&#244;les ou de sauter des questions si le r&#233;pondant ne conna&#238;t pas la r&#233;ponse ou refuse de r&#233;pondre&#46; Pour cette raison&#44; on soumet les donn&#233;es des r&#233;ponses &#224; d&#39;autres processus de v&#233;rification et d&#39;imputation apr&#232;s r&#233;ception au bureau central&#46;<br><br>Les &#233;tapes de la v&#233;rification et de l&#39;imputation qui font partie du traitement consistent &#224; relever les donn&#233;es incoh&#233;rentes ou manquantes et &#224; apporter les modifications n&#233;cessaires&#46; Comme la valeur r&#233;elle de chaque inscription sur le questionnaire n&#39;est pas connue&#44; la seule fa&#231;on de discerner les erreurs consiste &#224; chercher les incoh&#233;rences &#233;videntes &#40;par exemple&#44; un r&#233;pondant de 15 ans dont le dernier emploi remonte &#224; 1940&#41;&#46; Si une valeur est suspecte mais raisonnable&#44; elle sera incluse dans les statistiques mensuelles&#46; Il faut donc insister sur l&#39;importance du contr&#244;le de la qualit&#233;&#44; la formation ad&#233;quate des intervieweurs et les documents &#224; l&#39;intention des r&#233;pondants pour s&#39;assurer que les erreurs sont les moins nombreuses possible et ne se produisent pas de fa&#231;on syst&#233;matique&#46; </p>
+ <!-- D&#233;tection des erreurs -->
+
+<h4 >Imputation</h4>
+<p>Au cours de l&#39;&#233;tape de la v&#233;rification du traitement&#44; on peut constater que tous les &#233;l&#233;ments du questionnaire des particuliers &#40;personnes&#41; au sein du m&#233;nage sont manquants&#46; C&#39;est ce qu&#39;on appelle la non&#45;r&#233;ponse compl&#232;te &#40;ou totale&#41;&#46; Il y a non&#45;r&#233;ponse partielle lorsque seulement certains &#233;l&#233;ments du questionnaire sont manquants&#46; L&#39;imputation et l&#39;ajustement de la pond&#233;ration pour la non&#45;r&#233;ponse sont les m&#233;thodes utilis&#233;es pour r&#233;gler les cas de non&#45;r&#233;ponse compl&#232;te&#46; L&#39;imputation est la m&#233;thode utilis&#233;e pour r&#233;soudre les cas de non&#45;r&#233;ponse partielle&#46;<br><br>Les m&#233;thodes d&#39;imputation utilis&#233;es dans le cadre de l&#39;EPA comprennent l&#39;imputation par report&#44; l&#39;imputation d&#233;terministe et l&#39;imputation par enregistrement donneur &#40;hot&#45;deck&#41;&#46;<br><br>Lorsque l&#39;on d&#233;c&#232;le des erreurs ou des omissions&#44; on remplace les valeurs erron&#233;es ou manquantes par l&#39;imputation de valeurs logiquement coh&#233;rentes&#46; C&#39;est ce qu&#39;on appelle l&#39;imputation d&#233;terministe &#40;l&#39;imputation par substitution&#41;&#46; Ces changements sont effectu&#233;s automatiquement au moyen du syst&#232;me de v&#233;rification et d&#39;imputation ou par des experts du domaine&#46; Ils sont fond&#233;s sur des crit&#232;res pr&#233;&#233;tablis et peuvent faire appel &#224; la logique interne du questionnaire&#44; &#224; la consultation des donn&#233;es des mois pr&#233;c&#233;dents &#40;si elles sont disponibles&#41; ou &#224; l&#39;utilisation d&#39;enregistrements semblables pour l&#39;imputation d&#39;une ou de plusieurs valeurs&#46; <br><br>Certains cas d&#39;&#233;l&#233;ments manquants sont r&#233;solus en reportant les donn&#233;es du mois pr&#233;c&#233;dent&#44; si elles sont disponibles et si la situation s&#39;y pr&#234;te&#46; D&#39;autres cas d&#39;&#233;l&#233;ments manquants peuvent n&#233;cessiter l&#39;utilisation de l&#39;imputation par enregistrement donneur &#40;hot&#45;deck&#41;&#44; qui comprend la copie des donn&#233;es d&#39;une autre personne &#40;c&#46;&#45;&#224;&#45;d&#46; un donneur&#41; ayant des caract&#233;ristiques semblables&#46; Dans tous les cas&#44; les changements apport&#233;s par suite de la v&#233;rification et de l&#39;imputation sont enregistr&#233;s et ces renseignements sont utilis&#233;s pour &#233;valuer divers aspects des r&#233;sultats de l&#39;enqu&#234;te&#46; Les relev&#233;s d&#39;erreurs servent aussi &#224; mettre en garde les intervieweurs contre les erreurs commises dans le pass&#233; afin d&#39;&#233;viter que celles&#45;ci ne se reproduisent&#46; </p>
+ <!-- Imputation -->
+
+<h4 >Estimation</h4>
+<p>Pour qu&#39;il soit possible de totaliser les estimations aux niveaux d&#39;agr&#233;gation national&#44; provincial et infraprovincial&#44; on pond&#232;re les donn&#233;es de l&#39;&#233;chantillon&#46;<br><br>Le plan d&#39;&#233;chantillonnage d&#233;termine un certain nombre de facteurs de pond&#233;ration devant servir au calcul des poids individuels&#46; La principale composante est la probabilit&#233; de s&#233;lection inverse&#44; aussi appel&#233;e &#171; poids de base &#187;&#46; Par exemple&#44; dans un secteur o&#249; 2 &#37; des m&#233;nages sont inclus dans l&#39;&#233;chantillon&#44; chaque m&#233;nage se voit attribuer un poids de base de 50 &#40;soit 1 &#247; 0&#44;02&#41;&#46; Le poids de base est ensuite ajust&#233; pour tenir compte de tout sous&#45;&#233;chantillonnage susceptible d&#39;&#234;tre observ&#233; du fait de l&#39;expansion que pourrait avoir connu le secteur&#46; Il est par la suite ajust&#233; en fonction de la non&#45;r&#233;ponse et des erreurs de couverture&#46;<br><br>Dans le cadre de l&#39;EPA&#44; une partie de la non&#45;r&#233;ponse de l&#39;enqu&#234;te est compens&#233;e au moyen de l&#39;imputation &#58; m&#233;thodes du report&#44; de remplacement ou d&#39;imputation par donneur&#46; La non&#45;r&#233;ponse r&#233;siduelle est prise en compte par correction des poids attribu&#233;s aux m&#233;nages r&#233;pondants du m&#234;me secteur&#46; Cette mani&#232;re de proc&#233;der repose sur l&#39;hypoth&#232;se selon laquelle les caract&#233;ristiques des m&#233;nages r&#233;pondants ne diff&#232;rent pas de fa&#231;on marqu&#233;e de celles des m&#233;nages non r&#233;pondants&#46;<br><br>Les poids obtenus apr&#232;s ajustement en fonction de la non&#45;r&#233;ponse portent le nom de sous&#45;poids&#46; Les poids font l&#39;objet d&#39;une correction finale qui sert &#224; tenir compte des erreurs de couverture&#46; On corrige les sous&#45;poids afin que les estimations d&#233;mographiques fond&#233;es sur les r&#233;sultats de l&#39;enqu&#234;te soient conformes aux totaux de contr&#244;le&#46; Ces poids d&#233;finitifs sont ceux qui sont employ&#233;s dans les calculs li&#233;s &#224; l&#39;EPA&#46; </p>
+ <!-- Estimation -->
+
+<h4 >&#201;valuation de la qualit&#233;</h4>
+<p>Les indicateurs recueillis chaque mois &#224; partir de l&#39;Enqu&#234;te sur la population active sont les premiers &#224; &#234;tre diffus&#233;es&#46;<br><br>Il faut &#234;tre prudent avec la validation de l&#39;EPA avec d&#39;autres sources de donn&#233;es&#46; Cependant&#44; on compare p&#233;riodiquement certaines donn&#233;es de l&#39;EPA &#224; des donn&#233;es similaires tir&#233;es de l&#39;Enqu&#234;te sur l&#39;emploi&#44; la r&#233;mun&#233;ration et les heures &#40;EERH&#41;&#44; des statistiques d&#39;assurance&#45;emploi et du recensement&#46; Les &#233;conomistes qui utilisent les donn&#233;es de l&#39;EPA comparent souvent les donn&#233;es du Produit int&#233;rieur brut &#40;PIB&#41; &#224; celles de l&#39;EPA pour d&#233;terminer si les tendances du march&#233; du travail concordent avec la performance g&#233;n&#233;rale de l&#39;&#233;conomie&#46; Parmi les autres comparaisons&#44; notons les suivantes &#58;<br><br>Donn&#233;es sur les livraisons manufacturi&#232;res et donn&#233;es de l&#39;EPA sur l&#39;emploi dans le secteur de la fabrication&#59; <br>Mises en chantier&#44; permis de construction et emploi dans le secteur de la construction&#59; <br>Ventes de d&#233;tail et de gros et emploi dans le secteur du commerce&#46;<br><br>De plus&#44; l&#39;EPA suit un processus rigoureux afin d&#39;assurer la qualit&#233; acceptable des donn&#233;es&#46; </p>
+ <!-- &#201;valuation de la qualit&#233; -->
+
+<h4 >Contr&#244;le de la divulgation</h4>
+<p>La loi interdit &#224; Statistique Canada de rendre publique toute donn&#233;e susceptible de r&#233;v&#233;ler de l&#39;information obtenue en vertu de la Loi sur la statistique et se rapportant &#224; toute personne&#44; entreprise ou organisation reconnaissable sans que cette personne&#44; entreprise ou organisation le sache ou y consente par &#233;crit&#46; Diverses r&#232;gles de confidentialit&#233; s&#39;appliquent &#224; toutes les donn&#233;es diffus&#233;es ou publi&#233;es afin d&#39;emp&#234;cher la publication ou la divulgation de toute information jug&#233;e confidentielle&#46; Au besoin&#44; des donn&#233;es sont supprim&#233;es pour emp&#234;cher la divulgation directe ou par recoupement de donn&#233;es reconnaissables&#46;<br><br>L&#39;EPA permet de produire une vaste gamme de r&#233;sultats donnant des estimations pour diverses caract&#233;ristiques de la population active&#46; La plupart de ces r&#233;sultats sont des estimations pr&#233;sent&#233;es sous la forme de tableaux de tri crois&#233;&#46; Les estimations sont arrondies &#224; la centaine la plus proche&#44; et un ensemble de r&#232;gles de suppression est appliqu&#233; pour qu&#39;aucune estimation inf&#233;rieure &#224; un seuil minimum ne soit diffus&#233;e&#46; <br><br>Les estimations de l&#39;EPA inf&#233;rieures aux seuils suivants sont supprim&#233;es &#58;<br><br>Canada &#58; 1 500<br>Terre&#45;Neuve&#45;et&#45;Labrador &#58; 500<br>&#206;le&#45;du&#45;Prince&#45;&#201;douard &#58; 200<br>Nouvelle&#45;&#201;cosse &#58; 500<br>Nouveau&#45;Brunswick &#58; 500<br>Qu&#233;bec &#58; 1 500<br>Ontario &#58; 1 500<br>Manitoba &#58; 500<br>Saskatchewan &#58; 500<br>Alberta &#58; 1 500<br>Colombie&#45;Britannique &#58; 1 500<br>Yukon &#58; 200<br>Territoires du Nord&#45;Ouest &#58; 200<br>Nunavut &#58; 200 </p>
+ <!-- Contr&#244;le de la divulgation -->
+
+<h4 >R&#233;visions et d&#233;saisonnalisation</h4>
+<p>La plupart des estimations associ&#233;es au march&#233; du travail connaissent des variations saisonni&#232;res&#44; c&#39;est&#45;&#224;&#45;dire des fluctuations qui se r&#233;p&#232;tent d&#39;ann&#233;e en ann&#233;e et qui sont attribuables au climat et &#224; des &#233;v&#233;nements p&#233;riodiques tels que les p&#233;riodes de vacances et les jours f&#233;ri&#233;s&#46; La d&#233;saisonnalisation sert &#224; &#233;liminer les variations saisonni&#232;res d&#39;environ 1 300 s&#233;ries de donn&#233;es de l&#39;EPA&#44; cela afin de faciliter l&#39;analyse des fluctuations &#224; court terme d&#39;indicateurs importants&#44; par exemple ceux ayant trait &#224; l&#39;emploi et au ch&#244;mage selon l&#39;&#226;ge et le genre&#44; &#224; l&#39;emploi selon l&#39;industrie ainsi qu&#39;&#224; l&#39;emploi selon la cat&#233;gorie de travailleurs &#40;employ&#233;s du secteur public&#44; ceux du secteur priv&#233; ou travailleurs autonomes&#41;&#46; Bon nombre de ces indicateurs font l&#39;objet d&#39;une d&#233;saisonnalisation aux &#233;chelles nationale et provinciale&#46; Les principales estimations relatives &#224; la population active sont &#233;galement d&#233;saisonnalis&#233;es selon les r&#233;gions m&#233;tropolitaines de recensement &#40;RMR&#41;&#46; On les publie sous forme de moyennes mobiles de trois mois afin d&#39;att&#233;nuer les fluctuations irr&#233;guli&#232;res attribuables &#224; la taille relativement faible des &#233;chantillons&#46; La m&#233;thode utilis&#233;e pour la d&#233;saisonnalisation est X&#45;12&#45;ARIMA&#46;<br><br>Au d&#233;but de chaque ann&#233;e&#44; l&#39;EPA r&#233;vise ses estimations d&#233;saisonnalis&#233;es des trois ann&#233;es pr&#233;c&#233;dentes&#44; en utilisant les facteurs saisonniers les plus r&#233;cents&#46;<br><br>Les donn&#233;es de l&#39;EPA sont &#233;galement ajust&#233;es tous les cinq ans &#224; la suite de la diffusion des nouvelles estimations d&#233;mographiques bas&#233;es sur le dernier recensement&#46; &#192; ce moment&#45;l&#224;&#44; toutes les donn&#233;es de l&#39;EPA remontant au recensement pr&#233;c&#233;dent sont repond&#233;r&#233;es en fonction des nouvelles estimations de la population &#40;compte tenu que ces nouvelles estimations d&#233;mographiques couvrent la p&#233;riode intercensitaire s&#233;parant les deux derniers recensements&#41;&#44; et toutes les estimations chronologiques correspondantes de l&#39;EPA sont r&#233;vis&#233;es&#46; En g&#233;n&#233;ral&#44; l&#39;introduction des derniers syst&#232;mes de classification pour les industries&#44; les professions et la g&#233;ographie&#44; ainsi que d&#39;autres changements&#44; se produisent &#224; ce stade&#45;ci&#46;<br><br>Depuis janvier 2025&#44; les estimations de l&#39;EPA ont &#233;t&#233; ajust&#233;es pour tenir compte des chiffres de population du recensement de 2021&#44; et aussi pour tenir compte du sous&#45;d&#233;nombrement net&#44; les r&#233;visions remontant &#224; 2011&#46; Pour plus d&#39;information&#44; voir &#171; R&#233;visions apport&#233;es &#224; l&#39;Enqu&#234;te sur la population active &#40;EPA&#41; en 2025 &#187; &#40;71F0031X&#41;&#46;<br><br>Parfois&#44; les donn&#233;es de l&#39;EPA sont r&#233;vis&#233;es pour int&#233;grer des am&#233;liorations m&#233;thodologiques ou des syst&#232;mes de traitement des donn&#233;es et des syst&#232;mes technologiques&#46; Ces r&#233;visions sont d&#233;crites dans l&#39;article &#171; Am&#233;liorations apport&#233;es &#224; l&#39;Enqu&#234;te sur la population active &#40;EPA&#41; &#187; &#40;71F0031X&#41;&#46; </p>
+ <!-- R&#233;visions et d&#233;saisonnalisation -->
+
+ <!-- Methodology --> 
+<h3 id="a3" class="bg-lgt-h3">Exactitude des donn&#233;es</h3>
+<p>Compte tenu que l&#39;EPA est une enqu&#234;te&#45;&#233;chantillon&#44; toutes les estimations sont sujettes &#224; la fois aux erreurs d&#39;&#233;chantillonnage et aux erreurs non dues &#224; l&#39;&#233;chantillonnage&#46;<br><br>Les erreurs non li&#233;es &#224; l&#39;&#233;chantillonnage peuvent se produire &#224; toutes les &#233;tapes de la collecte et du traitement des donn&#233;es d&#39;enqu&#234;te&#46; Il peut s&#39;agir d&#39;erreurs de couverture&#44; de non&#45;r&#233;ponse&#44; de r&#233;ponse&#44; d&#39;erreurs de l&#39;intervieweur&#44; d&#39;erreurs de codage et d&#39;autres types d&#39;erreur de traitement&#46;<br><br>Les intervieweurs ont pour consigne de faire tous les efforts raisonnables pour mener les interviews de l&#39;EPA avec les membres des m&#233;nages admissibles&#46; Chaque mois&#44; apr&#232;s qu&#39;on a d&#233;ploy&#233; tous les efforts voulus pour r&#233;aliser les interviews&#44; il reste des m&#233;nages qui n&#39;ont pas r&#233;pondu&#46; On applique une formule de pond&#233;ration pour tenir compte des m&#233;nages non&#45;r&#233;pondants&#46;<br><br>On mesure l&#39;erreur d&#39;&#233;chantillonnage associ&#233;e aux estimations d&#39;enqu&#234;te au moyen de coefficients de variation des estimations de l&#39;EPA selon l&#39;erreur&#45;type et la taille des estimations&#46; </p>
+<!-- Exactitude des donn&#233;es -->
+<h3 id="a4" class="bg-lgt-h3">Documentation</h3>
+<ul class="list-group mrgn-lft-sm">
+   <li  class="list-group-item"><strong>Guide de l&#39;Enqu&#234;te sur la population active</strong><br>Le Guide de l&#39;Enqu&#234;te sur la population active contient un dictionnaire des concepts et d&#233;finitions et traite de sujets tels que la m&#233;thodologie de l&#39;enqu&#234;te&#44; la collecte et le traitement des donn&#233;es&#44; la qualit&#233; des donn&#233;es et les produits et services d&#39;information&#46;
+
+<ul class="list-unstyled mrgn-lft-lg">
+<li>Format :
+ <a href="https://www150.statcan.gc.ca/n1/fr/catalogue/71-543-G"><span class="wb-inv">Guide de l&#39;Enqu&#234;te sur la population active - HTML</span>[HTML]</a> </li>
+</ul></li>
+   <li  class="list-group-item"><strong>M&#233;thodologie de l&#39;Enqu&#234;te sur la population active du Canada</strong><br>Cette publication est un ouvrage de r&#233;f&#233;rence sur les aspects m&#233;thodologiques de l&#39;Enqu&#234;te sur la population active&#44; y compris la stratification&#44; l&#39;&#233;chantillonnage&#44; la collecte&#44; le traitement&#44; la pond&#233;ration&#44; l&#39;estimation&#44; l&#39;estimation de la variance et la qualit&#233; des donn&#233;es&#46;
+
+<ul class="list-unstyled mrgn-lft-lg">
+<li>Format :
+ <a href="https://www150.statcan.gc.ca/n1/fr/catalogue/71-526-X"><span class="wb-inv">M&#233;thodologie de l&#39;Enqu&#234;te sur la population active du Canada - HTML</span>[HTML]</a> </li>
+</ul></li>
+   <li  class="list-group-item"><strong>Am&#233;liorations apport&#233;es &#224; l&#39;Enqu&#234;te sur la population active &#40;EPA&#41;</strong><br>Cet article est une introduction ainsi qu&#39;une discussion sur les modifications apport&#233;es aux estimations de l&#39;Enqu&#234;te sur la population active&#46;
+
+<ul class="list-unstyled mrgn-lft-lg">
+<li>Format :
+ <a href="https://www150.statcan.gc.ca/n1/fr/catalogue/71F0031X"><span class="wb-inv">Am&#233;liorations apport&#233;es &#224; l&#39;Enqu&#234;te sur la population active &#40;EPA&#41; - HTML</span>[HTML]</a> </li>
+</ul></li>
+<li class="list-group-item"><a href="https://www23.statcan.gc.ca/imdb/p2SV_f.pl?Function=getSurvDocument&amp;Item_Id=1559849&amp;InstaId=1591279">Classifications</a></li>
+   <li  class="list-group-item"><strong>Historique de l&#39;Enqu&#234;te sur la population active au Canada&#44; 1945 &#224; 2016</strong>
+<ul class="list-unstyled mrgn-lft-lg">
+<li>Format :
+ <a href="https://www150.statcan.gc.ca/n1/pub/75-005-m/75-005-m2016001-fra.htm"><span class="wb-inv">Historique de l&#39;Enqu&#234;te sur la population active au Canada&#44; 1945 &#224; 2016 - ARCHIV&#201; &#45; HTML</span>[ARCHIV&#201; &#45; HTML]</a> </li>
+</ul></li>
+   <li  class="list-group-item"><strong>Comparaison des estimations actuelles de l&#39;EPA aux estimations ant&#233;rieures &#224; 1976</strong>
+<ul class="list-unstyled mrgn-lft-lg">
+<li>Format :
+ <a href="https://www.statcan.gc.ca/fra/programmes-statistiques/document/3701_D8_T9_V1-fra.pdf"> <span class="wb-inv">Comparaison des estimations actuelles de l&#39;EPA aux estimations ant&#233;rieures &#224; 1976 - ARCHIV&#201; &#45; PDF, 17.36</span>[ARCHIV&#201; &#45; PDF, 17.36<abbr title="kilobyte"> kb</abbr>]</a> </li>
+</ul></li>
+</ul>
+<!-- Documentation -->
+ <!-- h2 Detail information -->
+
+
+</div><!-- Close panel-body -->
+
+</div><!-- Close panel -->
+
+<!-- ContentEnd -->
+
+<div class="pagedetails">
+	<dl id="wb-dtmd">
+		<dt>Date de modification&#160;:&#32;</dt>
+		<dd><time property="dateModified">
+2026-11-05
+</time></dd>
+	</dl>
+</div>
+</main>
+
+<footer id="wb-info">
+	<h2 class="wb-inv">&Agrave; propos de ce site</h2>
+	<div class="gc-contextual">
+		<div class="container">
+			<nav>
+				<h3>Statistique Canada</h3>
+				<ul class="list-unstyled colcount-sm-2 colcount-md-3">
+					<li><a href="https://www.statcan.gc.ca/fr/reference/centreref/index">Contactez StatCan</a></li>
+					<li><a href="https://www.statcan.gc.ca/fr/confiance">Centre de confiance</a></li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+	<div class="gc-main-footer">
+		<div class="container">
+			<nav>
+				<h3>Gouvernement du Canada</h3>
+				<ul class="list-unstyled colcount-sm-2 colcount-md-3">
+					<li><a href="https://www.canada.ca/fr/contact.html">Toutes les coordonn&eacute;es</a></li>
+					<li><a href="https://www.canada.ca/fr/gouvernement/min.html">Minist&egrave;res et organismes</a></li>
+					<li><a href="https://www.canada.ca/fr/gouvernement/systeme.html">&Agrave; propos du gouvernement</a></li>
+				</ul>
+				<h4><span class="wb-inv">Th&egrave;mes et sujets</span></h4>
+				<ul class="list-unstyled colcount-sm-2 colcount-md-3">
+					<li><a href="https://www.canada.ca/fr/services/emplois.html">Emplois</a></li>
+					<li><a href="https://www.canada.ca/fr/services/immigration-citoyennete.html">Immigration et citoyennet&eacute;</a></li>
+					<li><a href="https://voyage.gc.ca/">Voyage et tourisme</a></li>
+					<li><a href="https://www.canada.ca/fr/services/entreprises.html">Entreprises</a></li>
+					<li><a href="https://www.canada.ca/fr/services/prestations.html">Prestations</a></li>
+					<li><a href="https://www.canada.ca/fr/services/sante.html">Sant&eacute;</a></li>
+					<li><a href="https://www.canada.ca/fr/services/impots.html">Imp&ocirc;ts</a></li>
+					<li><a href="https://www.canada.ca/fr/services/environnement.html">Environnement et ressources naturelles</a></li>
+					<li><a href="https://www.canada.ca/fr/services/defense.html">S&eacute;curit&eacute; nationale et d&eacute;fense</a></li>
+					<li><a href="https://www.canada.ca/fr/services/culture.html">Culture, histoire et sport</a></li>
+					<li><a href="https://www.canada.ca/fr/services/police.html">Services de police, justice et urgences</a></li>
+					<li><a href="https://www.canada.ca/fr/services/transport.html">Transport et infrastructure</a></li>
+					<li><a href="https://www.international.gc.ca/world-monde/index.aspx?lang=fra">Le Canada et le monde</a></li>
+					<li><a href="https://www.canada.ca/fr/services/finance.html">Argent et finance</a></li>
+					<li><a href="https://www.canada.ca/fr/services/science.html">Science et innovation</a></li>
+					<li><a href="https://www.canada.ca/fr/services/autochtones.html">Autochtones</a></li>
+					<li><a href="https://www.canada.ca/fr/services/veterans.html">V&eacute;t&eacute;rans et militaires</a></li>
+					<li><a href="https://www.canada.ca/fr/services/jeunesse.html">Jeunesse</a></li>
+					<li><a href="https://www.canada.ca/fr/services/evenements-vie.html">G&eacute;rer les &eacute;v&eacute;nements de la vie</a></li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+	<div class="gc-sub-footer">
+		<div class="container d-flex align-items-center">
+			<nav>
+				<h3 class="wb-inv">Organisation du gouvernement du Canada</h3>
+				<ul>
+					<li><a href="https://www.canada.ca/fr/sociaux.html">M&eacute;dias sociaux</a></li>
+					<li><a href="https://www.canada.ca/fr/mobile.html">Applications mobiles</a></li>
+					<li><a href="https://www.canada.ca/fr/gouvernement/a-propos-canada-ca.html">Ã propos de Canada.ca</a></li>
+					<li><a href="https://www.statcan.gc.ca/fr/avis">Avis</a></li>
+					<li><a href="https://www.statcan.gc.ca/fr/a-propos/transparence/confidentialite">Confidentialit&eacute;</a></li>
+				</ul>
+			</nav>
+			<div class="wtrmrk align-self-end">
+				<img src="/wet-boew4b/assets/wmms-blk.svg" alt="Symbole du gouvernement du Canada" />
+			</div>
+		</div>
+	</div>
+</footer>
+
+<!--[if gte IE 9 | !IE ]><!--> 
+<script src="/wet-boew4b/js/wet-boew.min.js"></script> 
+<script src="/wet-boew4b/js/theme.min.js"></script> 
+<!--<![endif]--> 
+<!--[if lt IE 9]>
+<script src="/wet-boew4b/js/ie8-wet-boew2.min.js"></script>
+<![endif]--> 
+<!-- InvitationManager --> 
+<script src="/wet-boew4b/invitation-manager/Overlay.js"></script> 
+<script src="/wet-boew4b/invitation-manager/InvitationManager.js"></script> 
+<!-- End InvitationManager --> 
+<script type="text/javascript">_satellite.pageBottom();</script>
+<!-- CustomScriptsJSStart -->
+<!-- CustomScriptsJSEnd -->
+
+</body>
+</html>
