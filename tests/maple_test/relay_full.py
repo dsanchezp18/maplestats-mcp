@@ -11,6 +11,7 @@ usage: python -m tests.maple_test.relay_full <url>
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
@@ -102,8 +103,9 @@ def forward(message: dict[str, Any]) -> None:
 def main() -> None:
     # UTF-8 both ways: Windows defaults to cp1252, which cannot write characters such as
     # "≤" in some tool descriptions, so those results failed (2026-11-09, CKAN searches).
-    sys.stdin.reconfigure(encoding="utf-8")
-    sys.stdout.reconfigure(encoding="utf-8")
+    for stream in (sys.stdin, sys.stdout):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8")
     for line in sys.stdin:
         if not line.strip():
             continue
