@@ -392,7 +392,7 @@ async def wds_get_data_from_cube_coord(
     history is fetched for the lag; `observations` keep the published
     values and `transformed` holds the computed ones with their formula
     and unit.
-    Keywords: statcan, coordinate, coordinates, several series, every
+    Keywords: statcan, coordinate, coordinates, table series, every
     province, observations, latest, data, wds, productId, Statistics
     Canada, year-over-year, percent change, growth rate, quarterly
     average, annual average, moving average, rolling average.
