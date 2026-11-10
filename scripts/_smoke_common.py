@@ -47,6 +47,18 @@ def skip_reloading(source: str, table: str) -> None:
     print(f"SKIP: {source} is reloading ({table} has 0 rows); the remaining checks did not run")
 
 
+def skip_stale(source: str, detail: str) -> None:
+    """Report a check skipped because one publisher page lags another.
+
+    CFIA updates its yearly totals and its per-disease pages on different days, and a
+    CDN edge can serve an older copy of one of them: on 2026-11-10 GitHub's runner got a
+    CWD page last modified 2026-09-10 beside totals current to 2026-10-31. Two pages that
+    disagree because one is older is the publisher's lag, not a parser regression.
+    """
+    _skipped.append(source)
+    print(f"SKIP: {source} pages disagree because one is older ({detail})")
+
+
 def verdict(name: str, ok: bool) -> int:
     """Print the run's verdict and return its exit status.
 
