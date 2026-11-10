@@ -20,7 +20,7 @@ class DeltaDimension(BaseModel):
     name_fr: str | None = None
     member_count: int
     members: list[DeltaMember] | None = Field(
-        default=None, description="Only with detail=True and one product_id."
+        default=None, description="Only with include_members=True and one product_id."
     )
 
 
@@ -48,7 +48,7 @@ class DeltaTable(BaseModel):
     archive_status: str | None = None
     correction_count: int = 0
     corrections: list[DeltaCorrection] | None = Field(
-        default=None, description="Only with detail=True and one product_id."
+        default=None, description="Only with include_members=True and one product_id."
     )
     dimensions: list[DeltaDimension] = Field(default_factory=list)
 
