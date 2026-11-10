@@ -119,7 +119,9 @@ async def eccc_query_items(
     (e.g. `"-publication_datetime"`). `limit` is capped at 1000 per
     request and rows stop at about 1 MB (`note` gives the next offset) -
     several collections here have hundreds of thousands of rows, so page
-    with `offset`. Read docs://eccc/gotchas before relying on `datetime_filter`
+    with `offset`. An empty station query of a climate collection gets a
+    `note` (HAS_NORMALS_DATA = N: none published).
+    Read docs://eccc/gotchas before relying on `datetime_filter`
     or on `climate-stations`' LATITUDE/LONGITUDE properties.
     Keywords: environment canada, eccc, msc, geomet, weather alert,
     weather forecast, snow, rain, temperature, tomorrow, current

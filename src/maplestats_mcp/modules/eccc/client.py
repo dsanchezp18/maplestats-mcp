@@ -502,6 +502,105 @@ _DATETIME_HELP_FR = (
 )
 
 
+# Climate collections whose rows belong to one station, and the climate-stations
+# property that says whether the station has that kind of data at all.
+_STATION_COLLECTIONS: dict[str, str | None] = {
+    "climate-normals": "HAS_NORMALS_DATA",
+    "climate-monthly": "HAS_MONTHLY_SUMMARY",
+    "climate-daily": None,
+    "climate-hourly": "HAS_HOURLY_DATA",
+}
+# Filters that name a station, in the order a lookup tries them (each is a
+# climate-stations queryable, checked live 2026-11-10).
+_STATION_KEYS = ("CLIMATE_IDENTIFIER", "STN_ID", "STATION_NAME")
+_KIND = {
+    "climate-normals": ("climate normals", "normales climatiques"),
+    "climate-monthly": ("monthly summaries", "sommaires mensuels"),
+    "climate-daily": ("daily data", "données quotidiennes"),
+    "climate-hourly": ("hourly data", "données horaires"),
+}
+
+
+async def _station_note(collection_id: str, filters: dict[str, str], lang: str) -> str | None:
+    """Why a station query of a climate collection matched no row, from climate-stations.
+
+    In the Maple Test (2026-11-10) a question asked for the 1981-2010 normal of Toronto
+    City Centre (6158359), which opened in 2009 and has none: climate-normals answered
+    zero rows by climate ID, by name and by bounding box, and the answer said the
+    normal was "not in the data I could reach" instead of that ECCC publishes none.
+    climate-stations states it (HAS_NORMALS_DATA = N, FIRST_DATE 2009-12-10). A hint,
+    not the answer: a failed lookup leaves the result as it was.
+    """
+    if collection_id not in _STATION_COLLECTIONS:
+        return None
+    key = next((k for k in _STATION_KEYS if filters.get(k)), None)
+    if key is None:
+        return None
+    value = filters[key]
+    params = {"f": "json", "lang": lang, "limit": 5, key: value}
+
+    async def fetch() -> dict[str, Any]:
+        return await _get("/collections/climate-stations/items", params=params, lang=lang)
+
+    try:
+        obj, _ = await cached_fetch(
+            f"eccc:station:{key}:{value}", constants.CACHE_TTL_COLLECTION_DETAIL_SECONDS, fetch
+        )
+    except (UpstreamError, UpstreamUnavailable, NotFound, InvalidInput):
+        return None
+    stations = [f.get("properties") or {} for f in list_or_empty(obj, "features")]
+    english, french = _KIND[collection_id]
+    if not stations:
+        return _say(
+            f"No climate station has {key} = {value} in climate-stations: check the "
+            "identifier there before reading this as data not published.",
+            f"Aucune station climatologique n'a {key} = {value} dans climate-stations : "
+            "vérifiez l'identifiant avant de conclure que les données ne sont pas publiées.",
+            lang,
+        )
+    flag = _STATION_COLLECTIONS[collection_id]
+
+    # A name can belong to several stations (two TORONTO CITY CENTRE, 6158667 and
+    # 6158359, checked live 2026-11-10), so each is described with its own id.
+    def describe(station: dict[str, Any], fr: bool) -> str:
+        name = station.get("STATION_NAME") or value
+        climate_id = station.get("CLIMATE_IDENTIFIER") or "?"
+        first = str(station.get("FIRST_DATE") or "")[:10] or "?"
+        last = str(station.get("LAST_DATE") or "")[:10] or "?"
+        has = station.get(flag) if flag else None
+        tail = f", {flag} = {has}" if flag and has else ""
+        if fr:
+            return f"{name} (identifiant climatologique {climate_id}, du {first} au {last}{tail})"
+        return f"{name} (climate ID {climate_id}, records {first} to {last}{tail})"
+
+    listed_en = "; ".join(describe(s, False) for s in stations)
+    listed_fr = "; ".join(describe(s, True) for s in stations)
+    if flag and all(s.get(flag) == "N" for s in stations):
+        one = len(stations) == 1
+        who_en = "this station has no" if one else "none of these stations has"
+        who_fr = "cette station n'a pas de" if one else "aucune de ces stations n'a de"
+        return _say(
+            f"climate-stations says {who_en} {english} ({flag} = N): {listed_en}. ECCC "
+            f"publishes none for {'it' if one else 'them'}. Say so; another station's "
+            f"{english} are not this one's.",
+            f"climate-stations indique que {who_fr} {french} ({flag} = N) : {listed_fr}. "
+            f"ECCC n'en publie aucune. Dites-le ; les {french} d'une autre station ne sont "
+            "pas celles-ci.",
+            lang,
+        )
+    return _say(
+        f"Matching station(s) in climate-stations: {listed_en}. No row of {collection_id} "
+        "matched the other filters or the period asked for.",
+        f"Station(s) correspondante(s) dans climate-stations : {listed_fr}. Aucune ligne de "
+        f"{collection_id} ne correspond aux autres filtres ou à la période demandée.",
+        lang,
+    )
+
+
+def _say(english: str, french: str, lang: str) -> str:
+    return french_spacing(french) if lang == "fr" else english
+
+
 def _feature_from_json(obj: dict[str, Any]) -> Feature:
     return Feature(
         id=obj.get("id"),
@@ -593,6 +692,7 @@ async def query_items(
     features = fit_to_budget(received, constants.ITEMS_BYTES_MAX)
     number_matched = obj.get("numberMatched", len(received))
     budget_mb = constants.ITEMS_BYTES_MAX // 1_000_000
+    station = await _station_note(collection_id, filters, lang) if not received else None
     if lang == "fr":
         return _items_result_fr(
             collection_id,
@@ -603,8 +703,9 @@ async def query_items(
             offset=offset,
             url=_url(f"/collections/{segment}/items", params),
             cached=was_cached,
+            station=station,
         )
-    note = None
+    note = station
     if len(features) < len(received):
         note = (
             f"Stopped at {len(features)} of the {len(received)} rows fetched: they reach the "
@@ -656,6 +757,7 @@ def _items_result_fr(
     offset: int,
     url: str,
     cached: bool,
+    station: str | None = None,
 ) -> ItemsResult:
     """The French result: same rows, with French note and provenance text.
 
@@ -665,7 +767,7 @@ def _items_result_fr(
     `_fr` properties instead of rewriting rows.
     """
     budget_mb = constants.ITEMS_BYTES_MAX // 1_000_000
-    notes = []
+    notes = [station] if station else []
     if len(features) < received_count:
         notes.append(
             f"Arrêt à {len(features)} des {received_count} lignes reçues : elles atteignent "
