@@ -97,6 +97,20 @@ async def test_series_in_several_datasets_says_so(httpx_mock):
     assert any("also published in" in n for n in result.notes)
 
 
+async def test_default_dataset_is_the_latest_released(httpx_mock):
+    # Since 2026-11-09 ONS search ranks PGDP (last released 2018) first for IHYQ.
+    search = _json("search_ihyq.json")
+    search["items"].sort(key=lambda i: i["dataset_id"] != "PGDP")
+    httpx_mock.add_response(
+        url=re.compile(r"https://api\.beta\.ons\.gov\.uk/v1/search\?q=ihyq&.*"),
+        json=search,
+    )
+    httpx_mock.add_response(url=IHYQ, json=_json("ihyq_qna.json"))
+    result = await client.get_series("IHYQ", start_period="2026-Q1")
+    assert result.dataset == "QNA"
+    assert "PGDP" in result.other_datasets
+
+
 async def test_wrong_dataset_and_frequency(httpx_mock):
     _search(httpx_mock, "ihyq", "search_ihyq.json")
     with pytest.raises(NotFound, match="not in ONS dataset LMS"):

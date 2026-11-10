@@ -334,7 +334,10 @@ async def _locate(
             )
         chosen = matches[datasets.index(wanted)]
     else:
-        chosen = matches[0]
+        # ONS search can rank a dataset that stopped years ago first (IHYQ: PGDP,
+        # last released 2018), so take the most recently released one. ISO
+        # timestamps sort as strings; ties keep ONS's order.
+        chosen = max(matches, key=lambda i: str(i.get("release_date") or ""))
     others = [d for d in datasets if d != str(chosen.get("dataset_id") or "").upper()]
     return chosen, others
 
