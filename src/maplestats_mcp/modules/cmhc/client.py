@@ -1008,6 +1008,12 @@ def _validate_filters(
 
 
 def _is_field_code(value: str) -> bool:
+    """A code every table uses the same way, so it needs no lookup: a number or TIMESERIES.
+
+    Not every code is one of these: Core Housing Need's are words ("HouseholdType",
+    "Province"), and a province's vacancy-rate "Rent Quartiles" column is
+    "RENTQUARTILE" (live 2026-11-09). `_resolve_fields` finds those among the table's own options.
+    """
     return value.isdigit() or value.upper() == "TIMESERIES"
 
 
@@ -1024,8 +1030,11 @@ async def _resolve_fields(
     """Field codes for labels a caller copied from cmhc_get_table_options.
 
     The chat demo's model passed column_field="Bedroom Type" (live 2026-11-03), which
-    HMIP answers "Sequence contains no elements"; the code for it is "2". Codes pass
-    through untouched, so this costs a call (cached a day) only when a label is given.
+    HMIP answers "Sequence contains no elements"; the code for it is "2". Numeric codes
+    and TIMESERIES pass through untouched, so this costs a call (cached a day) only
+    for anything else. A value is looked for first among the table's own codes, then
+    among its labels: a code can be a word, and was rejected as an unknown label
+    until 2026-11-09 ('HouseholdType', which cmhc_get_table_options itself lists).
     """
     if _is_field_code(column_field) and _is_field_code(row_field):
         return column_field.upper(), row_field.upper()
@@ -1042,6 +1051,10 @@ async def _resolve_fields(
     def code(value: str, attr: str) -> str:
         if _is_field_code(value):
             return value.upper()
+        # HMIP's own spelling of the code, whatever case the caller used.
+        for option in options:
+            if getattr(option, attr).casefold() == value.strip().casefold():
+                return getattr(option, attr)
         for option in options:
             if _norm(option.label) == _norm(value):
                 return getattr(option, attr)
