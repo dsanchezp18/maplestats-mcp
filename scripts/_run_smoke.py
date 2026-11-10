@@ -39,6 +39,17 @@ class _Tee(io.TextIOBase):
     def flush(self) -> None:
         self.inner.flush()
 
+    @property
+    def encoding(self) -> str:  # pyright: ignore[reportIncompatibleVariableOverride]
+        return self.inner.encoding
+
+    def reconfigure(self, **kwargs: object) -> None:
+        # smoke_test_isq sets UTF-8 output this way.
+        self.inner.reconfigure(**kwargs)  # pyright: ignore[reportAttributeAccessIssue]
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self.inner, name)
+
 
 def _is_outage(exc: BaseException) -> bool:
     # A raw httpx 5xx or transport error that a script's own client let through.
