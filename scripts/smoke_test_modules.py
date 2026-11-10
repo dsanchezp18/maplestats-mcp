@@ -114,12 +114,13 @@ STEPS: list[Step] = [
         lambda ctx: {"table": ctx["ab_economic_list_tables"]["tables"][0]["table"], "limit": 5},
     ),
     # Alberta Energy Regulator
-    # The default (yesterday) is the latest posted list, so it carries no stale note.
+    # The default (yesterday) is the latest posted list, so it carries no stale note
+    # (brief results leave out a null field).
     Step(
         "aer",
         "aer_get_well_licences_daily",
         {},
-        lambda data: bool(data["raw_text"]) and data["note"] is None,
+        lambda data: bool(data["raw_text"]) and data.get("note") is None,
     ),
     # Sizes come back only when the HEAD asks for identity encoding.
     Step(
@@ -688,7 +689,7 @@ STEPS: list[Step] = [
         "cwfis",
         "cwfis_get_weather_stations",
         {"name": "NO SUCH STATION ZZ"},
-        lambda data: not data["stations"] and "layer currently holds" in (data["note"] or ""),
+        lambda data: not data["stations"] and "layer currently holds" in (data.get("note") or ""),
     ),
     # NBAC (the rest is in smoke_test_nrcan_nbac.py): the five largest 2023 BC
     # fires with polygons were 32.9 MB before the geometry budget.
