@@ -1,0 +1,42 @@
+{
+  "ref:cf49e9513e": {
+    "outcome": "partial",
+    "reason": "Review: Gave the unadjusted August rate and count (2.9%, 529,415), labelled as unadjusted, not the key's figures; a labelled other basis is partial, as for A-02."
+  },
+  "ref:4108e37b1d": {
+    "outcome": "correct",
+    "reason": "Review: The September 2026 value (747.71) is right. The base year it gives is wrong, but it says it is from memory and unchecked, so it is graded on the value (v2 rule)."
+  },
+  "ref:5f3d3e229b": {
+    "outcome": "partial",
+    "reason": "Review: Led with the mixed 2021/2026 calculation, then said it is illustrative and that the LFS publishes its own count, without giving it: partial, as in v1."
+  },
+  "ref:8985266d46": {
+    "outcome": "abstained",
+    "reason": "Review: Found no release of the 2025 provisional estimates and gave no date for them; the April and May items are offered as the closest finds, not as the answer."
+  },
+  "ref:173040e2b1": {
+    "outcome": "partial",
+    "reason": "Review: Recalled, not checked: sold and completed, a signed contract with a deposit, but not non-refundable or a qualified purchaser, and it adds that rental units count once leased, which the key does not support."
+  },
+  "ref:b09b41959f": {
+    "outcome": "partial",
+    "reason": "Review: Refresh rate right; the division only inferred from the description; the DataStore not checked. Not every fact stated: partial."
+  },
+  "ref:40f104931f": {
+    "outcome": "partial",
+    "reason": "Review: Says the normal is not in the data it could reach (no rows for the station), not that the station has none, and offers another station's normal, labelled: partial under the key's rule."
+  },
+  "ref:0fb4fc58ae": {
+    "outcome": "correct",
+    "reason": "Review: The expected date, 2026-11-05; 'already released' is true on the run date, and the next date is labelled an estimate."
+  },
+  "ref:67d8291024": {
+    "outcome": "correct",
+    "reason": "Review: Says the noon rate was retired in 2017 and gives the daily average rate, labelled as such: the key's refusal with the published rate beside it."
+  },
+  "ref:0e6b25d2de": {
+    "outcome": "partial",
+    "reason": "Review: Refresh and the Min Delay type right; the owner not named (the TTC only inferred): partial."
+  }
+}
