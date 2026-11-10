@@ -951,7 +951,9 @@ async def test_get_table_data_accepts_word_field_codes(httpx_mock, column_field,
 
 async def test_get_table_data_still_rejects_an_unknown_word_field(httpx_mock):
     _mock_chn_options(httpx_mock)
-    with pytest.raises(InvalidInput, match=r"'RENTQUARTILE' is not a column_field code or label.*HouseholdType"):
+    with pytest.raises(
+        InvalidInput, match=r"'RENTQUARTILE' is not a column_field code or label.*HouseholdType"
+    ):
         await client.get_table_data(*_CHN, "RENTQUARTILE", "Province")
 
 
