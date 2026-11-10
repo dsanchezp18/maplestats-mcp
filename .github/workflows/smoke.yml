@@ -68,7 +68,7 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
         run: |
-          run() { uv run python "scripts/${{ matrix.script }}.py" 2>&1 | tee smoke.log; }
+          run() { uv run python scripts/_run_smoke.py "${{ matrix.script }}" 2>&1 | tee smoke.log; }
           skipped() {
             echo "::warning::${{ matrix.script }} SKIPPED: an upstream source was unavailable"
             { echo "### SKIPPED: \`${{ matrix.script }}\`"; echo '```'; grep -E "^SKIP" smoke.log | head -n 20; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
