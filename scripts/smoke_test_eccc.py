@@ -81,6 +81,14 @@ async def main() -> int:
         client.query_items("climate-stations", bbox=[-76.5, 45.0, -75.0, 45.7], limit=5),
     )
 
+    # A station with no climate normals (Toronto City Centre opened in 2009): zero rows,
+    # and a note from climate-stations saying none are published (2026-11-10).
+    no_normals = await client.query_items(
+        "climate-normals", filters={"CLIMATE_IDENTIFIER": "6158359"}, limit=5
+    )
+    print(f"  climate-normals 6158359: {no_normals.number_matched} rows; {no_normals.note}")
+    ok &= no_normals.number_matched == 0 and "HAS_NORMALS_DATA = N" in (no_normals.note or "")
+
     ok &= await _check(
         "query_items(aqhi-observations-realtime, fields subset)",
         client.query_items(
