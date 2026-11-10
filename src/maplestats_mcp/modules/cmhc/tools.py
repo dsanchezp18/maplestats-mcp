@@ -247,12 +247,12 @@ async def cmhc_get_methodology(
     Answers from text kept in this server, read from CMHC's pages on the date
     in read_on; cite source_urls.
     Keywords: CMHC methodology, definition, reliability code, data quality,
-    coefficient of variation, suppressed, responding entities, Rental Market
-    Survey, vacancy rate definition, Market Absorption Survey, absorbed units,
+    coefficient of variation, suppressed, responding entities, RMS
+    methodology, vacancy definition, Market Absorption Survey, absorbed units,
     unabsorbed inventory, sold, housing starts definition, completions, SAAR.
     Mots-clés : méthodologie de la SCHL, définition, code de fiabilité,
     qualité des données, coefficient de variation, donnée supprimée, entités
-    répondantes, Enquête sur les logements locatifs, taux d'inoccupation,
+    répondantes, méthodologie de l'ELL, définition de l'inoccupation,
     Enquête sur l'écoulement des logements, logements écoulés, non écoulés,
     vendu, mises en chantier, achèvements, DTA.
     """
