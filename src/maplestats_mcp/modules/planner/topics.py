@@ -133,6 +133,44 @@ _DEFINITION_TERMS = (
     "guide to the labour force survey",
     "involontaire*",
 )
+# How the CPI and the national accounts are built: the guides' text answers these.
+_CPI_METHOD_TERMS = (
+    "owned accommodation",
+    "basket update",
+    "basket weight*",
+    "lowe index",
+    "logement en propriete",
+    "mise a jour du panier",
+    "ponderation du panier",
+)
+# "gross output" and "factor incomes" are the provincial allocation methods,
+# documented in 15-203-X (_PROVINCIAL_ALLOCATION_TERMS), not in these guides.
+_ACCOUNTS_METHOD_TERMS = (
+    "methodolog*",
+    "sources and methods",
+    "sources et methodes",
+)
+# The LFS supplementary unemployment rates (R1-R8): defined only in the footnotes
+# of table 14-10-0077-01, not in the Guide to the Labour Force Survey (checked
+# 2026-11-10 against every HTML edition and the 2006 PDF).
+_SUPPLEMENTARY_RATE_TERMS = (
+    "supplementary unemployment*",
+    "supplementary rate*",
+    "underutili*",
+    "taux de chomage supplementaire*",
+    "sous-utilisation",
+)
+# How national GDP by industry is split by province: 15-203-X's methodology
+# (net output, gross output and selected factor incomes approaches).
+_PROVINCIAL_ALLOCATION_TERMS = (
+    "gross output approach",
+    "factor income*",
+    "allocat*",
+    "net output",
+    "production brute",
+    "revenus de certains facteurs",
+    "repartition provinciale",
+)
 # Banking and Financial Statistics (BFS): Valet groups named by table code.
 _BFS_TERMS = (
     "banking and financial statistics",
@@ -412,6 +450,12 @@ TOPICS: tuple[Topic, ...] = (
                 "chapter)",
                 _QUALITY_CHANGE_TERMS,
             ),
+            PlanStep(
+                "statcan_reference_get_section_text",
+                "the CPI Reference Paper's own text: publication='62-553-X', query=<the "
+                "concept> (e.g. 'hedonic', 'owned accommodation', 'basket update')",
+                (*_QUALITY_CHANGE_TERMS, *_DEFINITION_TERMS, *_CPI_METHOD_TERMS),
+            ),
         ),
         ("CPI is not seasonally adjusted unless the series says so; compare year over year.",),
         # Electricity prices are the energy topic's Ontario price tool, not the CPI.
@@ -469,6 +513,20 @@ TOPICS: tuple[Topic, ...] = (
                 "LFS concepts and definitions (involuntary part-time, discouraged searchers, "
                 "class of worker...): query='Guide to the Labour Force Survey' (71-543-G)",
                 _DEFINITION_TERMS,
+            ),
+            PlanStep(
+                "statcan_reference_get_section_text",
+                "the Guide's own text for the concept: publication='71-543-G', query=<the "
+                "concept> (e.g. 'involuntary part-time')",
+                _DEFINITION_TERMS,
+            ),
+            PlanStep(
+                "wds_get_cube_metadata",
+                "the supplementary unemployment rates R1 to R8 are defined in the footnotes of "
+                "table 14-10-0077-01 (not in the LFS guide): product_id='14-10-0077-01', "
+                "footnote_limit=20",
+                _SUPPLEMENTARY_RATE_TERMS,
+                (r"\br[1-8]\b",),
             ),
         ),
         (
@@ -922,6 +980,20 @@ TOPICS: tuple[Topic, ...] = (
             PlanStep("rdaas_search_classifications", "NAICS codes for the industry"),
             PlanStep(
                 "ab_economic_list_indicators", "Alberta dashboard, when the question is Alberta"
+            ),
+            PlanStep(
+                "statcan_reference_get_section_text",
+                "how GDP and the national and provincial accounts are measured: "
+                "publication='13-017-X' (Guide to the Income and Expenditure Accounts) or "
+                "'13-607-X' (Macroeconomic Accounts methodological guide), query=<the concept>",
+                (*_DEFINITION_TERMS, *_ACCOUNTS_METHOD_TERMS),
+            ),
+            PlanStep(
+                "statcan_reference_get_section_text",
+                "how national GDP by industry is allocated to the provinces (net output, gross "
+                "output and selected factor incomes approaches): publication='15-203-X' (PDF), "
+                "query='gross output approach'",
+                _PROVINCIAL_ALLOCATION_TERMS,
             ),
         ),
     ),
@@ -2072,6 +2144,12 @@ SURVEY_METADATA = Topic(
         PlanStep(
             "statcan_reference_search_documents",
             "the survey's guide or reference paper (concepts and definitions): query=<its title>",
+            _DEFINITION_TERMS,
+        ),
+        PlanStep(
+            "statcan_reference_get_section_text",
+            "the guide's own text: publication=<its catalogue number from the step before>, "
+            "query=<the concept>",
             _DEFINITION_TERMS,
         ),
     ),

@@ -318,6 +318,17 @@ CASES = [
     ("IPPI industrial product price index survey id", "statcan_surveys_search_surveys"),
     ("Raw materials price index survey", "statcan_surveys_search_surveys"),
     ("Employment Insurance Coverage Survey", "statcan_surveys_search_surveys"),
+    # The guides' text itself (2026-11-10): the search tools above return titles and
+    # descriptions only, so these must reach the tools that read the publication.
+    ("definition of involuntary part-time", "statcan_reference_get_section_text"),
+    ("involuntary part-time definition", "statcan_reference_get_section_text"),
+    ("LFS guide", "statcan_reference_get_publication"),
+    ("CPI reference paper", "statcan_reference_get_publication"),
+    ("hedonic adjustment", "statcan_reference_get_section_text"),
+    ("hedonic adjustment in price indexes", "statcan_reference_get_section_text"),
+    ("gross output allocation method", "statcan_reference_get_section_text"),
+    ("how does the CPI treat owned accommodation", "statcan_reference_get_section_text"),
+    ("read the Guide to the Labour Force Survey", "statcan_reference_get_publication"),
 ]
 
 # Queries whose right tool must come first, not just within TOP_N.
