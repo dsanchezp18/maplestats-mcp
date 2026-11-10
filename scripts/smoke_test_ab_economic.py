@@ -27,7 +27,10 @@ from maplestats_mcp.server import mcp
 
 async def _call(client: Client, tool: str, args: dict[str, Any]) -> tuple[bool, Any]:
     result = await client.call_tool(
-        "call_tool", {"name": tool, "arguments": args}, raise_on_error=False
+        "call_tool",
+        # Full results: brief ones write six or more rows as CSV text.
+        {"name": tool, "arguments": args, "detail": "full"},
+        raise_on_error=False,
     )
     text = next((b.text for b in result.content if isinstance(b, TextContent)), "")
     if result.is_error:
