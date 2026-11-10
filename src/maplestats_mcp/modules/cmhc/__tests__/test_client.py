@@ -893,3 +893,61 @@ async def test_empty_metro_list_container_is_a_valid_answer(httpx_mock):
     )
     result = await client.list_metropolitan_areas(province_id="10")
     assert result.areas == []
+
+
+# Core Housing Need's field codes are words, not numbers: recorded 2026-11-09.
+_CHN = ("Core Housing Need", "Household Type")
+
+
+def _mock_chn_options(httpx_mock):
+    params = {
+        "GeographyType": "Country",
+        "GeographyId": "1",
+        "CategoryLevel1": _CHN[0],
+        "CategoryLevel2": _CHN[1],
+    }
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/TableMapChart/TableCategory?{httpx.QueryParams(params)}",
+        text=(_FIXTURES / "chn_household_type_table_category.html").read_text(encoding="utf-8"),
+    )
+
+
+@pytest.mark.parametrize(
+    ("column_field", "row_field"),
+    [
+        # The codes exactly as cmhc_get_table_options lists them.
+        ("HouseholdType", "Province"),
+        # Another case: sent to HMIP in its own spelling.
+        ("householdtype", "PROVINCE"),
+        # The option's label still works, as for numeric tables.
+        ("% of Households in Core Housing Need", "Province"),
+    ],
+)
+async def test_get_table_data_accepts_word_field_codes(httpx_mock, column_field, row_field):
+    """Until 2026-11-09 a code that was not a number or TIMESERIES was looked up
+    only among the labels, so the codes cmhc_get_table_options returned for this
+    table were refused as "not a field code or label of this table"."""
+    _mock_chn_options(httpx_mock)
+    _mock_export(
+        httpx_mock,
+        "en",
+        _match_params(*_CHN, "HouseholdType", "Province"),
+        (_FIXTURES / "chn_household_type_matching_criteria.html").read_text(encoding="utf-8"),
+        "chn_household_type_export.csv",
+    )
+    options = await client.get_table_options(*_CHN)
+    assert ("HouseholdType", "Province") in {
+        (o.column_field, o.row_field) for o in options.field_options
+    }
+    result = await client.get_table_data(*_CHN, column_field, row_field)
+    assert (result.column_field, result.row_field) == ("HouseholdType", "Province")
+    assert result.table_id == "7.42.1"
+    assert result.reference_period == "2021"
+    assert result.rows[0].period == "Newfoundland and Labrador"
+    assert result.rows[-1].period == "Canada"
+
+
+async def test_get_table_data_still_rejects_an_unknown_word_field(httpx_mock):
+    _mock_chn_options(httpx_mock)
+    with pytest.raises(InvalidInput, match="column_field=HouseholdType, row_field=Province"):
+        await client.get_table_data(*_CHN, "RENTQUARTILE", "Province")
