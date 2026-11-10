@@ -303,6 +303,10 @@ PORTALS: dict[str, Portal] = {
             "civic_issues",
             "topics",
             "refresh_rate",
+            "owner_division",
+            "owner_section",
+            "owner_unit",
+            "last_refreshed",
         ),
         resource_extra_fields=("record_count",),
         file_reader_off_reason=(
@@ -408,6 +412,11 @@ CACHE_TTL_DATASTORE_SECONDS = 15 * 60
 # results carry it as `update_frequency` (package_search returns the same fields as
 # package_show; checked live 2026-11-09 on federal, Québec, NWT, Montréal, Toronto).
 FREQUENCY_FIELDS = ("frequency", "update_frequency", "updatefrequency", "refresh_rate")
+# The fields in which portals name the unit inside the publisher that owns a dataset:
+# Toronto's `owner_division` (every dataset is published by "City of Toronto"; the
+# division is only here, checked live 2026-11-10 on dinesafe and ttc-subway-delay-data)
+# and Yukon's `custodian`. Search results carry the first one present as `owner_unit`.
+OWNER_FIELDS = ("owner_division", "custodian")
 
 SEARCH_ROWS_DEFAULT = 10
 SEARCH_ROWS_MAX = 100

@@ -141,6 +141,63 @@ async def test_search_results_state_update_frequency(httpx_mock, portal, fields,
     assert result.packages[0].update_frequency == expected
 
 
+@pytest.mark.parametrize(
+    ("portal", "fields", "expected"),
+    [
+        # Toronto publishes every dataset as "City of Toronto"; the division is here
+        # (Dinesafe, checked live 2026-11-10).
+        ("toronto", {"owner_division": "Toronto Public Health"}, "Toronto Public Health"),
+        ("yt", {"custodian": "Highways and Public Works"}, "Highways and Public Works"),
+        # The field means nothing on a portal that does not state it.
+        ("on", {"owner_division": "Someone"}, None),
+        ("toronto", {}, None),
+    ],
+)
+async def test_search_results_name_the_owning_division(httpx_mock, portal, fields, expected):
+    httpx_mock.add_response(json=_ok({"count": 1, "results": [_searched("d1", **fields)]}))
+    result = await client.search_datasets(portal, "names")
+    assert result.packages[0].owner_unit == expected
+
+
+async def test_get_dataset_keeps_toronto_owner_division(httpx_mock):
+    package = _searched(
+        "dinesafe",
+        owner_division="Toronto Public Health",
+        refresh_rate="Daily",
+        last_refreshed="2026-11-10 08:17:15.620381",
+        resources=[],
+    )
+    httpx_mock.add_response(json=_ok(package))
+    detail = await client.get_dataset("toronto", "dinesafe")
+    assert detail.extras["owner_division"] == "Toronto Public Health"
+    assert detail.extras["refresh_rate"] == "Daily"
+
+
+@pytest.mark.parametrize(
+    ("portal", "resources", "expected"),
+    [
+        # Dinesafe's shape: eight resources, one with an active DataStore.
+        (
+            "toronto",
+            [{"id": f"r{i}", "datastore_active": False} for i in range(7)]
+            + [{"id": "r7", "datastore_active": True}],
+            1,
+        ),
+        ("federal", [{"id": "r1", "datastore_active": "false"}], 0),
+        ("federal", [{"id": "r1"}], 0),
+        # Yukon has no DataStore extension at all.
+        ("yt", [{"id": "r1", "datastore_active": True}], None),
+        # No resources listed: unknown, not zero.
+        ("toronto", None, None),
+    ],
+)
+async def test_search_results_count_datastore_resources(httpx_mock, portal, resources, expected):
+    fields = {} if resources is None else {"resources": resources}
+    httpx_mock.add_response(json=_ok({"count": 1, "results": [_searched("d1", **fields)]}))
+    result = await client.search_datasets(portal, "names")
+    assert result.packages[0].datastore_resources == expected
+
+
 async def test_search_update_frequency_follows_the_language(httpx_mock):
     httpx_mock.add_response(json=_ok({"count": 1, "results": [_searched("d1", frequency="P1M")]}))
     result = await client.search_datasets("federal", "x", lang="fr")

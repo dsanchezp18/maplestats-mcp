@@ -75,7 +75,7 @@ async def ckan_search_datasets(
     lang: Lang = "en",
 ) -> PackageSearchResult:
     """Search one Canadian CKAN open-data catalogue for datasets, with each one's
-    publisher, licence, formats, resource count and update frequency.
+    publisher and owning division, licence, formats, update frequency and DataStore count.
 
     Use for: finding a dataset by topic on open.canada.ca (portal
     "federal", ~48,000 datasets incl. CRA, OSFI, Health Canada, ESDC,
@@ -85,6 +85,9 @@ async def ckan_search_datasets(
     "res_format:CSV". `rows` ≤ 100; page with `start`. `sort` e.g.
     "metadata_modified desc". `lang` picks French titles on bilingual
     portals (federal, on); Québec and Montréal content is French-only.
+    `owner_unit` names the division or custodian that owns a dataset where the
+    portal states one (Toronto's owner division); `datastore_resources` counts
+    the resources whose rows ckan_datastore_search can query (0: none).
     Keywords: CKAN, open data, dataset search, catalogue, government,
     federal, provincial, municipal, package_search, discover, browse,
     building permits, business licences, restaurant inspections,
@@ -107,7 +110,8 @@ async def ckan_get_dataset(portal: PortalKey, dataset_id: str, lang: Lang = "en"
 
     Use for: resource URLs/formats, license, keywords/tags, publisher,
     update dates, and portal-specific metadata (in `extras`: update
-    frequency where the portal states it; on the federal portal also
+    frequency where the portal states it; on Toronto the owner division
+    (`owner_division`) and last refresh; on the federal portal also
     publication and modification dates, time-period coverage and subject)
     for a dataset found with ckan_search_datasets. `dataset_id` is the id or
     name (slug). Check each resource's `datastore_active` before
