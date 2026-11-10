@@ -31,7 +31,7 @@ from maplestats_mcp.shared.errors import (
     UpstreamUnavailable,
 )
 from maplestats_mcp.shared.i18n import french_spacing, normalize_lang
-from maplestats_mcp.shared.validation import call_arguments
+from maplestats_mcp.shared.validation import argument_error_code, call_arguments
 
 # Already carries a next step: a module's own fix, or this middleware's on an
 # inner call (call_tool runs its target through the middleware again).
@@ -188,13 +188,20 @@ _CODES: tuple[tuple[type[BaseException], str], ...] = (
 )
 
 
+# Every code error_code can return: a fixed vocabulary, so a counter can store a
+# code without ever storing text a caller typed.
+ERROR_CODES = frozenset(code for _, code in _CODES) | {"error"}
+
+
 def error_code(exc: BaseException) -> str:
     chain = _chain(exc)
     for cls, _ in _CODES:
         if any(isinstance(item, cls) for item in chain):
             target = _effective(cls, chain)
             return next(code for c, code in _CODES if c is target)
-    return "error"
+    # A pydantic error not yet re-raised by ValidationErrorMiddleware (usage counting
+    # runs inside it): coded as that middleware will code it.
+    return argument_error_code(exc) or "error"
 
 
 def with_hint(exc: BaseException, lang: str) -> BaseException | None:
