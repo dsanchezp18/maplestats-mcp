@@ -135,11 +135,21 @@ import httpx
 from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.cmhc import constants
-from maplestats_mcp.modules.cmhc.methodology import FLAG_MEANINGS
+from maplestats_mcp.modules.cmhc.methodology import (
+    FLAG_MEANINGS,
+    RMS_METHODOLOGY_DOC,
+    RMS_METHODOLOGY_DOC_FR,
+    RMS_METHODOLOGY_URL,
+    SRMS_METHODOLOGY_URL,
+    STARTS_METHODOLOGY_DOC,
+    STARTS_METHODOLOGY_DOC_FR,
+    STARTS_METHODOLOGY_URL,
+)
 from maplestats_mcp.modules.cmhc.schemas import (
     CategoryList,
     CategoryOption,
     FilterOption,
+    MethodologyResult,
     MetroAreaList,
     MetroAreaOption,
     ProvinceList,
@@ -1586,6 +1596,74 @@ async def get_table_data(
                 f"puis POST {export_url} avec les champs de formulaire "
                 f"{urlencode(parsed.get('export_params') or {})}.",
                 lang,
+            ),
+            lang=lang,
+        ),
+    )
+
+
+# survey -> (English title, French title, English text, French text, source URLs,
+# date read, English resource, French resource). The text is kept in methodology.py,
+# read from CMHC's pages on the date given; no request is made here.
+_METHODOLOGIES: dict[str, tuple[str, str, str, str, list[str], str, str, str]] = {
+    "rental_market": (
+        "CMHC Rental Market Survey: methodology",
+        "Enquête sur les logements locatifs de la SCHL : méthodologie",
+        RMS_METHODOLOGY_DOC,
+        RMS_METHODOLOGY_DOC_FR,
+        [RMS_METHODOLOGY_URL, SRMS_METHODOLOGY_URL],
+        "2026-11-09",
+        "docs://cmhc/rms-methodology",
+        "docs://cmhc/fr/methodologie-ell",
+    ),
+    "starts_completions_absorption": (
+        "CMHC Starts and Completions Survey and Market Absorption Survey: methodology",
+        (
+            "Relevé des mises en chantier et des achèvements et Enquête sur l'écoulement "
+            "des logements de la SCHL : méthodologie"
+        ),
+        STARTS_METHODOLOGY_DOC,
+        STARTS_METHODOLOGY_DOC_FR,
+        [STARTS_METHODOLOGY_URL],
+        "2026-11-10",
+        "docs://cmhc/starts-absorption-methodology",
+        "docs://cmhc/fr/methodologie-mises-en-chantier",
+    ),
+}
+
+
+def get_methodology(survey: str, *, lang: str = "en") -> MethodologyResult:
+    """One CMHC survey's methodology, from the text kept in methodology.py."""
+    if survey not in _METHODOLOGIES:
+        valid = ", ".join(sorted(_METHODOLOGIES))
+        raise InvalidInput(
+            french_spacing(f"survey inconnue : {survey!r}. Valeurs possibles : {valid}.")
+            if lang == "fr"
+            else f"Unknown survey {survey!r}. Valid values: {valid}."
+        )
+    title_en, title_fr, text_en, text_fr, urls, read_on, uri_en, uri_fr = _METHODOLOGIES[survey]
+    french = lang == "fr"
+    return MethodologyResult(
+        survey=survey,  # type: ignore[arg-type]  # checked against _METHODOLOGIES above
+        title=title_fr if french else title_en,
+        text=text_fr if french else text_en,
+        source_urls=urls,
+        read_on=read_on,
+        resource_uri=uri_fr if french else uri_en,
+        provenance=make_provenance(
+            source="cmhc",
+            url=urls[0],
+            cached=True,
+            schema_name="cmhc.MethodologyResult",
+            as_of=datetime.fromisoformat(read_on).replace(tzinfo=UTC),
+            limits=(
+                french_spacing(
+                    f"Texte tiré des pages de la SCHL lues le {read_on} et conservé dans ce "
+                    "serveur ; la page de la SCHL fait foi si elle a changé depuis."
+                )
+                if french
+                else f"Text from CMHC's pages read on {read_on}, kept in this server; CMHC's "
+                "page governs if it has changed since."
             ),
             lang=lang,
         ),

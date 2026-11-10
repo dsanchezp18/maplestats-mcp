@@ -38,6 +38,7 @@ TWINS = {
     "docs://cmhc/well-known-categories": "docs://cmhc/fr/categories-courantes",
     "docs://cmhc/gotchas": "docs://cmhc/fr/pieges",
     "docs://cmhc/rms-methodology": "docs://cmhc/fr/methodologie-ell",
+    "docs://cmhc/starts-absorption-methodology": "docs://cmhc/fr/methodologie-mises-en-chantier",
     "docs://eccc/well-known-collections": "docs://eccc/fr/collections-courantes",
     "docs://eccc/gotchas": "docs://eccc/fr/pieges",
     "docs://statcan/addressing": "docs://statcan/fr/adressage",
