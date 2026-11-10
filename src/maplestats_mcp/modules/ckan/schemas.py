@@ -90,6 +90,13 @@ class PackageSummary(BaseModel):
     groups: list[str] = Field(default_factory=list)
     num_resources: int = 0
     resource_formats: list[str] = Field(default_factory=list)
+    update_frequency: str | None = Field(
+        default=None,
+        description=(
+            "How often the portal says the dataset is updated, where it publishes "
+            "that (a federal code in plain words)."
+        ),
+    )
     metadata_modified: datetime | None = None
     landing_page_url: str
 

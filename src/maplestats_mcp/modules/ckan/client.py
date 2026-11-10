@@ -307,9 +307,28 @@ def _package_summary(obj: dict[str, Any], portal: Portal, lang: str) -> PackageS
         groups=_names(obj, "groups"),
         num_resources=get_or(obj, "num_resources", len(list_or_empty(obj, "resources"))),
         resource_formats=_formats(obj),
+        update_frequency=_update_frequency(obj, portal, lang),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
         landing_page_url=_dataset_url(portal, obj, lang),
     )
+
+
+def _update_frequency(obj: dict[str, Any], portal: Portal, lang: str) -> str | None:
+    """The dataset's update frequency, from whichever field its portal states it in.
+
+    In the Maple Test (2026-11-09) two answers of three to "how often is it
+    updated" stopped at a search result and said the frequency was not given:
+    it was only in ckan_get_dataset's `extras`.
+    """
+    fields = tuple(f for f in constants.FREQUENCY_FIELDS if f in portal.extra_fields)
+    extras = _extras(obj, fields, lang)
+    for name in fields:
+        value = extras.get("frequency_label" if name == "frequency" else name)
+        if value is None and name == "frequency":
+            value = extras.get(name)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
 
 
 def _organization_ref(obj: dict[str, Any], lang: str) -> OrganizationRef:

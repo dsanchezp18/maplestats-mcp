@@ -407,6 +407,32 @@ def test_catalogue_search_brief_drops_per_item_boilerplate():
     assert len(json.dumps(brief)) < 0.4 * len(json.dumps(payload))
 
 
+def test_catalogue_search_brief_keeps_update_frequency():
+    # Two answers of three in the Maple Test stopped at a search result and said the
+    # update frequency was not given; a brief result must keep it per dataset.
+    packages = [
+        {
+            "id": f"id-{n}",
+            "title": f"Dataset {n}",
+            "organization_title": "Government and Consumer Services",
+            "license_title": "Open Government Licence - Ontario",
+            "num_resources": 1,
+            "resource_formats": ["CSV"],
+            "update_frequency": "yearly" if n else "monthly",
+            "landing_page_url": f"https://data.ontario.ca/en/dataset/id-{n}",
+        }
+        for n in range(7)
+    ]
+    payload = {"portal": "on", "packages": packages, "provenance": {"source": "ckan-on"}}
+    brief = shape(payload, "brief", tool="ckan_search_datasets")
+    assert brief is not None
+    rows = csv_rows(brief["packages"])
+    assert [r["update_frequency"] for r in rows] == ["monthly", *["yearly"] * 6]
+    one = shape({**payload, "packages": packages[1:3]}, "brief", tool="ckan_search_datasets")
+    assert one is not None
+    assert all(p["update_frequency"] == "yearly" for p in one["packages"])
+
+
 def test_catalogue_searches_are_shaped_other_searches_keep_their_format():
     from maplestats_mcp.shared.brief import exempt
 
