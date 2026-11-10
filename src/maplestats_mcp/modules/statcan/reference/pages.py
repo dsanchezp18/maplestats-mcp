@@ -597,6 +597,17 @@ def parse_page(html: str, url: str, scope: str) -> Page:
         if href.lower().endswith(".pdf") and "pdf" in fold(_inline(link)):
             pdf_url = normalize_url(href, url)
             break
+    if pdf_url is None:
+        # The 2008-era layout (13-017-X) links the whole edition's PDF ("PDF
+        # version", 13-017-x2008001-eng.pdf) from its side menu, outside role=main:
+        # taken when the file is named after this page.
+        own = urlparse(url).path.rsplit("/", 1)[-1].rsplit(".", 1)[0].lower()
+        for link in soup.find_all("a", href=True):
+            target = normalize_url(str(link["href"]), url).partition("#")[0]
+            name = urlparse(target).path.rsplit("/", 1)[-1].lower()
+            if own and name == f"{own}.pdf":
+                pdf_url = target
+                break
 
     # Links to the edition's other pages, in reading order: the table of contents
     # modal first (CPI reference paper), then the text (LFS appendices, 13-017-X).

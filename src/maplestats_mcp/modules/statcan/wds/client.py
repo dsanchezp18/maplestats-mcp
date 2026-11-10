@@ -449,6 +449,11 @@ async def search_cubes(
             best = max(scores, default=0)
             wanted = len(words) if best == len(words) else best
             matches = [c for c, s in zip(cubes, scores, strict=True) if wanted and s >= wanted]
+            # Active tables first, then archived ones, each in product-id order. The
+            # inventory is in product-id order, so "job vacancy" listed four inactive
+            # tables (14-10-0224 to 14-10-0326) ahead of the current monthly ones,
+            # and the seasonally adjusted 14-10-0432 ninth of 13 (live, 2026-11-10).
+            matches.sort(key=lambda cube: cube.archived)
             if wanted and wanted < len(words):
                 note = _m(
                     f"no table title contains all {len(words)} words; showing the tables "

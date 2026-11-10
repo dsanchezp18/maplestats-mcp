@@ -106,7 +106,9 @@ SECTIONS_LISTED_MAX = 150
 
 # --- PDF editions (pdf.py) -------------------------------------------------------
 # The largest StatCan PDF seen is 13-017-X2008001 at 3.3 MB (297 pages);
-# 15-203-X1999000 is 1.1 MB (277 pages, text extracted in 9 s).
+# 15-203-X1999000 is 1.1 MB (277 pages: text extracted in 9 s, 13 s since its
+# two-column bilingual pages are laid out again, see pdf.py); 13-017-X2008001 took
+# 10 to 28 s on a loaded machine (2026-11-10).
 PDF_MAX_BYTES = 25 * 1024 * 1024
 PDF_MAX_PAGES = 400
 # Extracted text past this is not read (15-203-X: 0.9 million characters).

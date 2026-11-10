@@ -293,8 +293,12 @@ async def search_archive(
     # in Toronto is still "scheduled" until its article exists.
     today = datetime.now(ZoneInfo(constants.CALENDAR_TIMEZONE)).date()
 
-    query_lower = query.strip().lower()
-    matched: list[DailyArchiveEntry] = []
+    # Every word of the query, accents and case ignored, anywhere in the title or
+    # reference period. A phrase match (before 2026-11-10) missed "gross domestic product
+    # by industry provinces" against "Gross domestic product by industry: Provinces and
+    # territories", and "provisional poverty estimates 2025", whose year is the period.
+    words = _archive_words(query)
+    scored: list[tuple[int, DailyArchiveEntry]] = []
     for item in payload:
         if not isinstance(item, dict):
             continue
@@ -307,25 +311,42 @@ async def search_archive(
             continue
         title = item.get("title") or ""
         reference_period = item.get("description") or None
-        if (
-            query_lower
-            and query_lower not in title.lower()
-            and (not reference_period or query_lower not in reference_period.lower())
-        ):
+        haystack = _fold(f"{title} {reference_period or ''}")
+        score = sum(word in haystack for word in words)
+        if words and not score:
             continue
         # Upcoming "meeting" entries carry url == "": no article yet, so no link
         # (prefixing the host would yield the bare home page).
         relative_url = item.get("url") or ""
-        matched.append(
-            DailyArchiveEntry(
-                release_date=entry_date,
-                title=title,
-                reference_period=reference_period,
-                scheduled=entry_date >= today,
-                url=f"{_ARCHIVE_HOST}{relative_url}" if relative_url else None,
+        scored.append(
+            (
+                score,
+                DailyArchiveEntry(
+                    release_date=entry_date,
+                    title=title,
+                    reference_period=reference_period,
+                    scheduled=entry_date >= today,
+                    url=f"{_ARCHIVE_HOST}{relative_url}" if relative_url else None,
+                ),
             )
         )
 
+    best = max((score for score, _ in scored), default=0)
+    note = None
+    if best == len(words):
+        matched = [entry for score, entry in scored if score == best]
+    elif best >= max(2, (len(words) + 1) // 2):
+        # No title holds every word: show the closest, and say so.
+        matched = [entry for score, entry in scored if score == best]
+        note = say(
+            f"No release title holds every word of the query; these match {best} of "
+            f"{len(words)}. Check the title is the release asked for.",
+            f"Aucun titre de diffusion ne contient tous les mots de la requête ; ceux-ci en "
+            f"contiennent {best} sur {len(words)}. Vérifiez que le titre est bien la "
+            "diffusion demandée.",
+        )
+    else:
+        matched = []
     matched.sort(key=lambda entry: entry.release_date, reverse=True)
     page = matched[:limit]
     return DailyArchiveSearchResult(
@@ -333,6 +354,7 @@ async def search_archive(
         entries=page,
         returned_count=len(page),
         total_matched=len(matched),
+        note=note,
         provenance=make_provenance(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
@@ -482,6 +504,44 @@ _PERIOD_WORDS = frozenset(
 )
 _HISTORY_SIZE = 3
 _YEAR = re.compile(r"(19|20)\d\d")
+# Words a question adds that no Daily title carries ("When did StatCan publish ...?"),
+# and short connecting words: an archive search matches the rest one by one.
+_ARCHIVE_FILLER = frozenset(
+    [
+        "did",
+        "does",
+        "was",
+        "were",
+        "publish",
+        "published",
+        "statcan",
+        "statistique",
+        "statistics",
+        "the",
+        "of",
+        "for",
+        "in",
+        "on",
+        "and",
+        "by",
+        "a",
+        "an",
+        "to",
+        "de",
+        "du",
+        "des",
+        "la",
+        "le",
+        "les",
+        "et",
+        "en",
+        "pour",
+        "au",
+        "aux",
+        "d",
+        "l",
+    ]
+)
 
 
 def _query_words(query: str) -> list[str]:
@@ -492,6 +552,11 @@ def _query_words(query: str) -> list[str]:
 def _release_words(query: str) -> list[str]:
     """The words that name the release itself: no years, months or quarters."""
     return [w for w in _query_words(query) if not _YEAR.fullmatch(w) and w not in _PERIOD_WORDS]
+
+
+def _archive_words(query: str) -> list[str]:
+    """The words an archive entry's title or reference period must hold."""
+    return [w for w in _query_words(query) if w not in _ARCHIVE_FILLER]
 
 
 def _add_years(day: date, years: int) -> date:
@@ -619,6 +684,53 @@ async def _release_history(
     )
 
 
+async def _archive_history(
+    words: list[str],
+    lang: str,
+    today: date,
+    start: date | None,
+    end: date | None,
+    seen: set[tuple[date, str]],
+) -> list[ReleaseCalendarEntry]:
+    """Past Daily releases matching every word, for the calendar's history mode.
+
+    The schedule files hold the key indicators and catalogue products only. In the
+    Maple Test (2026-11-10) "when were the provisional poverty estimates for 2025
+    released" searched this calendar's history for "poverty" and found nothing,
+    though The Daily released them on 2026-11-04: the archive has every release.
+    """
+    try:
+        payload, _, _ = await _load_archive(lang)
+    except (UpstreamError, UpstreamUnavailable):
+        return []  # the schedule files' own matches stand without it
+    entries: list[ReleaseCalendarEntry] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        when = _parse_archive_entry_date(item.get("date"))
+        title = (item.get("title") or "").strip()
+        if when is None or not title or (when, title) in seen:
+            continue
+        if (start is not None and when < start) or (end is not None and when > end):
+            continue
+        period = item.get("description") or None
+        haystack = _fold(f"{title} {period or ''}")
+        if not all(word in haystack for word in words):
+            continue
+        relative_url = item.get("url") or ""
+        entries.append(
+            ReleaseCalendarEntry(
+                release_date=when,
+                kind="daily_release",
+                title=title,
+                reference_period=period,
+                scheduled=when >= today,
+                url=f"{_ARCHIVE_HOST}{relative_url}" if relative_url else None,
+            )
+        )
+    return entries
+
+
 async def get_release_calendar(
     query: str = "",
     *,
@@ -685,6 +797,12 @@ async def get_release_calendar(
         if all(word in haystack for word in words):
             matched.append(entry)
 
+    archive_words = _archive_words(query)
+    if not upcoming_only and archive_words:
+        seen = {(e.release_date, e.title) for e in matched}
+        matched += await _archive_history(
+            archive_words, lang, today, parsed_start, parsed_end, seen
+        )
     # Soonest first when asking about the future, newest first for history.
     matched.sort(key=lambda entry: entry.release_date, reverse=not upcoming_only)
     page = matched[:limit]
