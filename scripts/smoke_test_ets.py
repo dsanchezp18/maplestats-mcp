@@ -22,10 +22,13 @@ async def main() -> int:
         failures += on_route.total_matches == 0
         # A bus finishing its last trip has no stop predictions left (route 615 on
         # 2026-11-10), so take the first of the live routes that has some.
-        for route in routes[:5]:
-            predictions = await client.get_stop_predictions(route_id=route, limit=3)
+        route = routes[0]
+        predictions = await client.get_stop_predictions(route_id=route, limit=3)
+        for candidate in routes[1:5]:
             if predictions.predictions:
                 break
+            route = candidate
+            predictions = await client.get_stop_predictions(route_id=route, limit=3)
         print(f"OK: predictions route {route} total={predictions.total_matches}")
         print(f"    first={predictions.predictions[0] if predictions.predictions else None}")
         failures += not predictions.predictions
