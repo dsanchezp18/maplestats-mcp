@@ -21,6 +21,7 @@ from datetime import date
 from pathlib import Path
 
 import httpx
+from _smoke_common import skip_stale, verdict
 from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.cfia import constants, tools
@@ -94,7 +95,17 @@ async def main() -> int:
         f"OK: all detections -> {everything.row_count} rows over {len(everything.diseases)} "
         f"pages; herds match yearly totals: {dict(herds) == expected}"
     )
-    ok &= len(everything.diseases) == 7 and dict(herds) == expected
+    ok &= len(everything.diseases) == 7
+    differing = {key for key in set(herds) | set(expected) if herds.get(key) != expected.get(key)}
+    lagging = {
+        disease
+        for disease, modified in everything.last_modified.items()
+        if yearly.current_as_of and modified < yearly.current_as_of
+    }
+    if differing and {disease for disease, _ in differing} <= lagging:
+        skip_stale("CFIA", f"{sorted(lagging)} older than totals as of {yearly.current_as_of}")
+    else:
+        ok &= not differing
 
     scrapie_fr = await tools.cfia_disease_detections("tremblante", 2019, 2019, lang="fr")
     print(
@@ -207,8 +218,7 @@ async def main() -> int:
     ok &= languages == ["julia", "python", "r", "stata"]
     ok &= (len(parsed), sum(r["herds"] for r in parsed)) == (cwd.row_count, cwd.herd_count)
 
-    print("\nCFIA SMOKE TEST PASSED" if ok else "\nCFIA SMOKE TEST FAILED")
-    return 0 if ok else 1
+    return verdict("CFIA", ok)
 
 
 if __name__ == "__main__":
