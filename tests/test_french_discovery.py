@@ -244,6 +244,11 @@ CASES = [
     # Dépenses et effectifs d'un ministère : InfoBase du GC, pas la divulgation proactive.
     ("dépenses du gouvernement fédéral par ministère", "gc_infobase_list_files"),
     ("nombre de fonctionnaires par ministère", "gc_infobase_query"),
+    # Lacunes de l'examen des économistes-statisticiens, 2026-11-09.
+    ("IPC-tronq inflation fondamentale", "boc_search_series"),
+    ("Statistiques bancaires et financières Banque du Canada", "boc_search_groups"),
+    ("définition temps partiel involontaire", "statcan_surveys_get_survey_metadata"),
+    ("Enquête sur la couverture de l'assurance-emploi", "statcan_surveys_search_surveys"),
 ]
 
 

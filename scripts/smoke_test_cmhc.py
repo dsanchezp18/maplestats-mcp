@@ -28,6 +28,72 @@ async def _check(label: str, coro) -> bool:
         return False
 
 
+async def _check_edmonton() -> bool:
+    """Annual and year-to-date starts, the default dwelling type, and one column label
+    across Average Rent ($) and % Change of Average Rent (issues from 2026-11-09)."""
+    ok = True
+    annual = await client.get_table_data(
+        "New Housing Construction",
+        "Starts (Actual)",
+        "Dwelling Types",
+        "Historical Time Periods",
+        aggregate="annual",
+        geography_type="CMA",
+        geography_id="Edmonton",
+    )
+    ytd = await client.get_table_data(
+        "New Housing Construction",
+        "Starts (Actual)",
+        "1",
+        "TIMESERIES",
+        aggregate="ytd",
+        geography_type="CMA",
+        geography_id="Edmonton",
+    )
+    print(
+        f"OK: Edmonton starts, annual -> {annual.rows[-1].period}: {annual.rows[-1].values['All']}"
+    )
+    print(f"OK: Edmonton starts, ytd -> {ytd.rows[-1].period}: {ytd.rows[-1].values['All']}")
+    ok &= bool(annual.aggregation_note and "MapleStats" in annual.aggregation_note)
+    ok &= len(annual.rows) > 30 and all(len(r.period) == 4 for r in annual.rows)
+    try:
+        await client.get_table_data(
+            "New Housing Construction",
+            "Under Construction Inventory",
+            "1",
+            "TIMESERIES",
+            aggregate="annual",
+            geography_type="CMA",
+            geography_id="Edmonton",
+        )
+        print("FAIL: an inventory (stock) was summed")
+        ok = False
+    except InvalidInput:
+        print("OK: aggregate refuses a stock (Under Construction Inventory)")
+
+    rent = await client.get_table_data(
+        "Primary Rental Market",
+        "Average Rent ($)",
+        "Bedroom Type",
+        "Survey Zones",
+        geography_type="CMA",
+        geography_id="Edmonton",
+    )
+    print(f"OK: Edmonton average rent -> applied {rent.applied_filters}: {rent.filter_notes}")
+    ok &= rent.default_filters.get("dwelling_type_desc_en") == "Row / Apartment"
+    change = await client.get_table_data(
+        "Primary Rental Market",
+        "% Change of Average Rent",
+        "Bedroom Type",
+        "TIMESERIES",
+        geography_type="CMA",
+        geography_id="Edmonton",
+    )
+    print(f"OK: % Change of Average Rent with 'Bedroom Type' -> column_field={change.column_field}")
+    ok &= change.column_field == "2" and bool(change.rows)
+    return ok
+
+
 async def main() -> int:
     ok = True
 
@@ -192,6 +258,8 @@ async def main() -> int:
         ok = False
     except InvalidInput as exc:
         print(f"OK: list_categories(unknown CMA id) raised InvalidInput: {exc}")
+
+    ok &= await _check_edmonton()
 
     print()
     print("CMHC SMOKE TEST PASSED" if ok else "CMHC SMOKE TEST FAILED")

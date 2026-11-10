@@ -1468,7 +1468,24 @@ STEPS: list[Step] = [
         "statcan/sdmx",
         "sdmx_get_data",
         {"product_id": 18100004, "key": "2.2"},
-        lambda data: data["series"][0]["observations"][-1]["period"] >= "2026",
+        # The brief result writes the default 24 observations as CSV text
+        # (six or more rows), whose last line starts with the newest period.
+        lambda data: data["series"][0]["observations"]["csv"].strip().splitlines()[-1] >= "2026",
+    ),
+    # Mortgage interest cost (85) is published for Canada (2) only: Ontario
+    # (14) must be named as missing, and Toronto (16) alone is a NotFound that
+    # says where the product is published (live 2026-11-09).
+    Step(
+        "statcan/sdmx",
+        "sdmx_get_data",
+        {"product_id": 18100004, "key": "2+14.85", "last_n_observations": 1},
+        lambda data: "14 (Ontario)" in (data["provenance"]["limits"] or ""),
+    ),
+    Step(
+        "statcan/sdmx",
+        "sdmx_get_data",
+        {"product_id": 18100004, "key": "16.85", "last_n_observations": 1},
+        expect_error="series only for: 2 (Canada)",
     ),
     Step(
         "statcan/sdmx",

@@ -249,10 +249,7 @@ async def search_surveys(
             "« Accessibilité dans les organisations du secteur public, Enquête sur l' ».",
         )
 
-    query_lower = query.strip().lower()
-    matched = (
-        [s for s in all_surveys if query_lower in s.name.lower()] if query_lower else all_surveys
-    )
+    matched = _match_surveys(all_surveys, query) if query.strip() else all_surveys
 
     page = matched[:limit]
     return SurveyListResult(
@@ -265,10 +262,125 @@ async def search_surveys(
             url=source_url,
             cached=was_cached,
             schema_name="statcan_surveys.SurveyListResult",
+            coverage=say(
+                "query matches the survey's name (whole words, accents ignored) or its "
+                "acronym, e.g. IPPI, LFS, EICS",
+                "query cherche le nom de l'enquête (mots entiers, sans tenir compte des "
+                "accents) ou son acronyme, p. ex. IPPI, EPA, ECAE",
+                lang,
+            )
+            if query.strip()
+            else None,
             limits=limits,
             lang=lang,
         ),
     )
+
+
+# Exam agents had to guess survey ids on 2026-11-09: the directory names a survey
+# in full ("Industrial Product Price Index"), so "IPPI" found only "Coastwise
+# Shipping Survey" (a substring of "shipping") and "EICS" or "LFS" found nothing.
+# Names are now matched by whole words and by the acronym built from their
+# initials, which gives StatCan's own acronyms (IPPI, RMPI, LFS, SEPH, EICS; in
+# French IPPI, IPMB, EPA, ECAE), checked against the live directory that day.
+_NAME_STOPWORDS = frozenset(
+    [
+        "of",
+        "and",
+        "the",
+        "on",
+        "for",
+        "in",
+        "to",
+        "a",
+        "an",
+        "at",
+        "by",
+        "de",
+        "des",
+        "du",
+        "la",
+        "le",
+        "les",
+        "sur",
+        "et",
+        "au",
+        "aux",
+        "en",
+        "pour",
+        "d",
+        "l",
+    ]
+)
+# Words that name the kind of thing, not which survey: dropped when nothing
+# holds every word, so "IPPI survey" still finds the Industrial Product Price Index.
+_GENERIC_WORDS = frozenset(
+    [
+        "survey",
+        "surveys",
+        "enquete",
+        "enquetes",
+        "program",
+        "programme",
+        "statistics",
+        "statistique",
+        "statistiques",
+        "statcan",
+        "canada",
+        "id",
+        "number",
+        "numero",
+        "imdb",
+        "bmdi",
+        "sdds",
+    ]
+)
+_PARENTHESES = re.compile(r"\([^)]*\)")
+_INVERTED_TAIL = re.compile(r"\b(survey|enquete|census|recensement|program|programme)\b")
+
+
+def _name_words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", _fold(text))
+
+
+def _acronyms(name: str) -> set[str]:
+    """The initials of a survey name's words, without "of", "and", "sur"...;
+    also of the name turned the right way round when IMDB's index lists it as
+    "Accessible Print Materials, Survey on"."""
+    plain = _PARENTHESES.sub(" ", name)
+    forms = [plain]
+    head, _, tail = plain.rpartition(",")
+    if head and _INVERTED_TAIL.search(_fold(tail)) and len(tail.split()) <= 4:
+        forms.append(f"{tail} {head}")
+    found = set()
+    for form in forms:
+        initials = "".join(w[0] for w in _name_words(form) if w not in _NAME_STOPWORDS)
+        if len(initials) >= 2:
+            found.add(initials)
+    return found
+
+
+def _has_words(words: list[str], name_words: list[str]) -> bool:
+    # Each query word starts a word of the name: "payroll" finds "Payrolls".
+    return all(any(n.startswith(w) for n in name_words) for w in words)
+
+
+def _match_surveys(surveys: list[SurveyListing], query: str) -> list[SurveyListing]:
+    """Acronym matches first, then the query as a phrase, then every word of it."""
+    words = _name_words(query)
+    if not words:
+        return []
+    joined = "".join(words)
+    phrase = re.compile(rf"(?<![a-z0-9]){re.escape(' '.join(words))}")
+    indexed = [(s, _name_words(s.name), _acronyms(s.name)) for s in surveys]
+    by_acronym = [s for s, _, acronyms in indexed if joined in acronyms]
+    by_phrase = [s for s, names, _ in indexed if phrase.search(" ".join(names))]
+    by_words = [s for s, names, acronyms in indexed if _has_words(words, [*names, *acronyms])]
+    if not (by_acronym or by_phrase or by_words):
+        specific = [w for w in words if w not in _GENERIC_WORDS]
+        if specific and specific != words:
+            return _match_surveys(surveys, " ".join(specific))
+    return list({id(s): s for s in [*by_acronym, *by_phrase, *by_words]}.values())
 
 
 def _section_text(soup: BeautifulSoup, heading_id: str) -> str | None:

@@ -58,15 +58,19 @@ async def boc_search_series(
     the noon rate IEXE0101 ended 2017-04-28, replaced by the daily
     average FXUSDCAD. FX* rates carry a `note`: indicative daily
     averages published by about 16:30 ET, not transactional rates.
+    Core inflation: CPI-trim, CPI-median, CPI-common, CPIX, CPI-XFET
+    (hyphens optional). With no series holding every query word, a
+    ranked partial match comes back, said in provenance.coverage.
     Keywords: bank of canada, boc, valet, series, search, find, exchange
     rate, interest rate, policy rate, prime rate, five-year mortgage
-    rate, bond yield, cpi, inflation, commodity price, discover, list,
-    inventory, all series, catalogue, full list, discontinued series,
-    legacy series, noon rate.
+    rate, bond yield, cpi, inflation, core inflation, commodity price,
+    discover, list, inventory, all series, catalogue, full list,
+    discontinued series, legacy series, noon rate.
     Mots-clés : Banque du Canada, valet, série, recherche, trouver, taux
     de change, taux d'intérêt, taux directeur, taux préférentiel, taux
-    hypothécaire, rendement des obligations, IPC, inflation, prix des
-    matières premières, découvrir, liste, inventaire, toutes les séries,
+    hypothécaire, rendement des obligations, IPC, inflation, inflation
+    fondamentale, IPC-tronq, IPC-méd, IPC-comm, prix des matières
+    premières, découvrir, liste, inventaire, toutes les séries,
     catalogue, liste complète, parcourir, série abandonnée, taux à midi.
     """
     if query is not None:
@@ -94,13 +98,19 @@ async def boc_search_groups(
     related series at once rather than one series name. Pass `query`
     for a keyword search (top `limit` matches, default 25, max 200). Omit
     `query` to page through the groups (`limit` default 50, max 1000).
+    Banking and Financial Statistics (BFS) tables are groups named by
+    table code (A4_RATES_MONTHLY chartered bank lending rates,
+    C1_MONTHLY bank assets, E1_MONTHLY monetary aggregates); a query
+    with "BFS" or "Banking and Financial Statistics" searches only them.
     Keywords: bank of canada, boc, valet, group, series group, search,
-    find, cpi, exchange rates, commodity prices, discover, list, groups,
-    inventory, catalogue, full list.
+    find, cpi, core inflation, exchange rates, commodity prices,
+    chartered banks, money supply, discover, list, groups, inventory,
+    catalogue, full list.
     Mots-clés : Banque du Canada, valet, groupe, groupe de séries,
-    recherche, trouver, IPC, taux de change, prix des produits de base,
-    IPPB, découvrir, liste, groupes, inventaire, catalogue, liste complète,
-    parcourir.
+    recherche, trouver, IPC, inflation fondamentale, taux de change, prix
+    des produits de base, IPPB, Statistiques bancaires et financières,
+    banques à charte, agrégats monétaires, masse monétaire, découvrir,
+    liste, groupes, inventaire, catalogue, liste complète, parcourir.
     """
     if query is not None:
         return await client.search_groups(

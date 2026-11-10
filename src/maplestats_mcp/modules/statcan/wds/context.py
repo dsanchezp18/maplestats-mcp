@@ -37,6 +37,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import DataLocked, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.fitness import rules_for
+from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import list_or_empty
 
 _SOFT_ERRORS = (NotFound, UpstreamError, UpstreamUnavailable, DataLocked)
@@ -204,6 +205,24 @@ def citation(series: VectorSeries, title: str | None, table_release: str | None,
     return text + (f" Released {released}." if released else "")
 
 
+def unavailable_elsewhere(
+    product_id: int, cube: dict[str, Any], coordinate: str, lang: str
+) -> str | None:
+    """Where the latest periods a series leaves ".." are published instead, when a
+    pair checked live in constants.UNAVAILABLE_ELSEWHERE covers the series."""
+    entry = constants.UNAVAILABLE_ELSEWHERE.get(product_id)
+    if entry is None:
+        return None
+    wanted, text_en, text_fr = entry
+    have = {
+        str(dim.get("dimensionNameEn") or ""): str(member.get("memberNameEn") or "")
+        for dim, member in auto_notes.series_members(cube, coordinate)
+    }
+    if any(have.get(dim) != member for dim, member in wanted.items()):
+        return None
+    return pick(lang, f"StatCan publishes {text_en}", f"Statistique Canada publie {text_fr}")
+
+
 def _context_for(
     series: VectorSeries,
     info: dict[str, Any] | None,
@@ -267,6 +286,12 @@ def _context_for(
     if flags is None:
         flags = [(o.ref_period, o.status_code, o.security_level_code) for o in series.observations]
     notes.extend(auto_notes.flag_notes(flags, frequency_code, lang))
+    if (
+        cube is not None
+        and auto_notes.trailing_unavailable(flags)
+        and (elsewhere := unavailable_elsewhere(series.product_id, cube, series.coordinate, lang))
+    ):
+        notes.append(elsewhere)
     if scale and scalar_code not in (None, 0):
         notes.append(
             client._m(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from maplestats_mcp.modules.statcan.reference import client, constants
@@ -134,6 +136,42 @@ async def test_search_documents_missing_results_container_raises(httpx_mock):
     )
     with pytest.raises(UpstreamError):
         await client.search_documents("housing")
+
+
+_FIXTURES = Path(__file__).parent / "fixtures"
+
+
+async def test_no_results_page_is_an_empty_result_not_an_error(httpx_mock):
+    # Live markup of 2026-11-09: a zero-match search has no #ndm-results, only
+    # an alert-warning in the results block. It used to raise upstream_error.
+    html = (_FIXTURES / "reference_no_results_en.html").read_text(encoding="utf-8")
+    httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")
+    httpx_mock.add_response(url=f"{_BASE_URL_EN}?count=10&text=owned+accommodation+CPI", html=html)
+    result = await client.search_documents("owned accommodation CPI")
+    assert result.documents == []
+    assert result.returned_count == 0
+    assert result.total_matched == 0
+    assert result.provenance.limits is not None
+    assert "every word" in result.provenance.limits
+
+
+async def test_no_results_page_in_french_is_an_empty_result(httpx_mock):
+    html = (_FIXTURES / "reference_no_results_fr.html").read_text(encoding="utf-8")
+    httpx_mock.add_response(url=_BASE_URL_FR, html="<html></html>")
+    httpx_mock.add_response(
+        url=f"{_BASE_URL_FR}?count=10&texte=logement+possede+IPC+zzqx", html=html
+    )
+    result = await client.search_documents("logement possede IPC zzqx", lang="fr")
+    assert result.returned_count == 0
+    assert result.provenance.limits is not None
+    assert "tous les mots" in result.provenance.limits
+
+
+async def test_matches_carry_no_empty_result_note(httpx_mock):
+    httpx_mock.add_response(url=_BASE_URL_EN, html="<html></html>")
+    httpx_mock.add_response(url=f"{_BASE_URL_EN}?count=10&text=housing", html=_RESULTS_HTML)
+    result = await client.search_documents("housing")
+    assert result.provenance.limits is None
 
 
 async def test_search_documents_upstream_5xx_becomes_upstream_error(httpx_mock, no_sleep):

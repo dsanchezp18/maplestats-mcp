@@ -64,6 +64,7 @@ https://www.bankofcanada.ca/valet/docs prose alone):
 
 from __future__ import annotations
 
+import itertools
 import math
 import re
 from collections.abc import Callable, Sequence
@@ -747,8 +748,30 @@ def _words(text: str) -> list[str]:
     return [w for w in _SEPARATORS.split(_DROPPED.sub("", text.lower())) if w]
 
 
-def _filter_inventory[Entry: _NamedEntry](items: list[Entry], query: str) -> list[Entry]:
-    """Entries holding the query as typed first, then those with every word of it."""
+def _entry_words(item: _NamedEntry) -> list[str]:
+    """An entry's words plus each adjacent pair run together, so "cpitrim" or
+    "cpixfet" typed as one word still finds the label "CPI-trim" / "CPI-XFET"."""
+    words = _words(f"{item.name} {item.label} {item.description}")
+    return words + [a + b for a, b in itertools.pairwise(words)]
+
+
+def _has_all(text: list[str], words: list[str]) -> bool:
+    # Each query word starts a word of the entry: "rate" finds "rates".
+    return all(any(t.startswith(w) for t in text) for w in words)
+
+
+def _filter_inventory[Entry: _NamedEntry](
+    items: list[Entry], query: str
+) -> tuple[list[Entry], bool]:
+    """Entries holding the query as typed first, then those with every word of it.
+
+    When no entry holds every word, the query is read again with each
+    hyphenated chunk run together ("CPI-X" as cpix), then, failing that,
+    entries are ranked by the rarer query words they hold: exam agents asked
+    for "CPI-trim inflation" and "core inflation CPI-trim" and got nothing,
+    because no Valet entry for CPI-trim says "inflation" (checked live
+    2026-11-09). The flag says the result is that ranked partial match.
+    """
     needle = query.lower()
     exact = [
         item
@@ -759,17 +782,48 @@ def _filter_inventory[Entry: _NamedEntry](items: list[Entry], query: str) -> lis
     ]
     words = _words(query)
     if not words:
-        return exact
+        return exact, False
     seen = {id(item) for item in exact}
-    by_words = []
-    for item in items:
-        if id(item) in seen:
-            continue
-        text = _words(f"{item.name} {item.label} {item.description}")
-        # Each query word starts a word of the entry: "rate" finds "rates".
-        if all(any(t.startswith(w) for t in text) for w in words):
-            by_words.append(item)
-    return exact + by_words
+    texts = [(item, _entry_words(item)) for item in items if id(item) not in seen]
+    by_words = [item for item, text in texts if _has_all(text, words)]
+    if exact or by_words:
+        return exact + by_words, False
+    joined = [w for w in ("".join(_words(chunk)) for chunk in query.split()) if w]
+    if joined != words:
+        by_joined = [item for item, text in texts if _has_all(text, joined)]
+        if by_joined:
+            return by_joined, False
+    return _ranked_partial(texts, list(dict.fromkeys(words))), True
+
+
+def _ranked_partial[Entry: _NamedEntry](
+    texts: list[tuple[Entry, list[str]]], words: list[str]
+) -> list[Entry]:
+    """Entries ranked by the squared inverse document frequency of the query
+    words they hold, kept while within half the best score.
+
+    Squaring lets a rare word ("trim", in 27 of ~16,000 series) outweigh two
+    common ones ("year", "over"), so "CPI-trim year-over-year" ranks CPI_TRIM
+    above every series that only says year-over-year.
+    """
+    if not texts:
+        return []
+    hits = {w: [any(t.startswith(w) for t in text) for _, text in texts] for w in words}
+    weight = {
+        w: math.log(len(texts) / count) ** 2
+        for w, row in hits.items()
+        if (count := sum(row)) and count < len(texts)
+    }
+    if not weight:
+        return []
+    scores = [sum(weight[w] for w in weight if hits[w][i]) for i in range(len(texts))]
+    best = max(scores)
+    if best <= 0:
+        return []
+    ranked = sorted(
+        (i for i, score in enumerate(scores) if score >= best / 2), key=lambda i: -scores[i]
+    )
+    return [texts[i][0] for i in ranked]
 
 
 def _check_limit(limit: int, maximum: int, lang: str = "en") -> None:
@@ -867,14 +921,26 @@ def _page_limits(returned: int, total: int, kind: str, lang: str) -> str | None:
     )
 
 
-def _search_coverage(count: int, kind: str, lang: str) -> str:
+def _search_coverage(count: int, kind: str, lang: str, *, partial: bool = False) -> str:
     if lang == "fr":
         what = "séries" if kind == "series" else "groupes"
-        return french_spacing(
+        text = (
             f"recherche de sous-chaîne ou de tous les mots parmi {_fr_count(count)} {what} "
             "(libellés et descriptions en français de la Banque du Canada)"
         )
-    return f"substring or all-words search over {count} {kind}"
+        if partial:
+            text += (
+                " ; aucune entrée ne contient tous les mots : correspondance partielle, "
+                "classée selon les mots les plus rares trouvés"
+            )
+        return french_spacing(text)
+    text = f"substring or all-words search over {count} {kind}"
+    if partial:
+        text += (
+            "; no entry holds every word, so this is a partial match ranked by the "
+            "rarer query words each entry holds"
+        )
+    return text
 
 
 async def list_series(lang: str = "en") -> SeriesList:
@@ -904,7 +970,7 @@ async def search_series(
     """
     _check_limit(limit, constants.SEARCH_LIMIT_MAX, lang)
     all_series = await list_series(lang)
-    matches = _filter_inventory(all_series.series, query)
+    matches, partial = _filter_inventory(all_series.series, query)
     result = SeriesList(
         series=matches[:limit],
         total_count=len(matches),
@@ -913,7 +979,7 @@ async def search_series(
             url=_url("lists/series/json", lang=lang),
             cached=all_series.provenance.cached,
             schema_name="boc.SeriesList",
-            coverage=_search_coverage(len(all_series.series), "series", lang),
+            coverage=_search_coverage(len(all_series.series), "series", lang, partial=partial),
             limits=_search_limits(min(limit, len(matches)), len(matches), "series", lang),
             lang=lang,
         ),
@@ -949,13 +1015,39 @@ async def list_groups(lang: str = "en") -> GroupList:
     )
 
 
+# The Bank's Banking and Financial Statistics tables are Valet groups named by
+# table code (A4_RATES_MONTHLY, C1_MONTHLY, E1_MONTHLY, G4_MONTHLY...; 85 groups
+# when checked live 2026-11-09), and no label names the publication, so a search
+# for it found speeches and Financial System Review charts instead.
+_BFS_QUERY = re.compile(
+    r"banking\s+and\s+financial\s+statistics|statistiques\s+bancaires\s+et\s+financi[eè]res"
+    r"|\bbfs\b|\bsbf\b",
+    re.IGNORECASE,
+)
+_BFS_GROUP = re.compile(r"^(?:[A-H]\d{1,2}|[A-H]TABLE)_")
+# Words beside the publication's name that name no table.
+_BFS_FILLER = re.compile(
+    r"\b(?:bank\s+of\s+canada|banque\s+du\s+canada|boc|valet|tables?|tableaux?|de\s+la|the)\b",
+    re.IGNORECASE,
+)
+
+
 async def search_groups(
     query: str, *, limit: int = constants.SEARCH_LIMIT_DEFAULT, lang: str = "en"
 ) -> GroupList:
-    """Client-side substring search over the cached group inventory."""
+    """Client-side substring search over the cached group inventory.
+
+    "Banking and Financial Statistics" (or BFS) narrows the search to the
+    groups named by a BFS table code, since no group's label says so.
+    """
     _check_limit(limit, constants.SEARCH_LIMIT_MAX, lang)
     all_groups = await list_groups(lang)
-    matches = _filter_inventory(all_groups.groups, query)
+    if _BFS_QUERY.search(query):
+        tables = [g for g in all_groups.groups if _BFS_GROUP.match(g.name)]
+        rest = _BFS_FILLER.sub(" ", _BFS_QUERY.sub(" ", query))
+        matches, partial = _filter_inventory(tables, rest) if _words(rest) else (tables, False)
+    else:
+        matches, partial = _filter_inventory(all_groups.groups, query)
     return GroupList(
         groups=matches[:limit],
         total_count=len(matches),
@@ -964,7 +1056,7 @@ async def search_groups(
             url=_url("lists/groups/json", lang=lang),
             cached=all_groups.provenance.cached,
             schema_name="boc.GroupList",
-            coverage=_search_coverage(len(all_groups.groups), "groups", lang),
+            coverage=_search_coverage(len(all_groups.groups), "groups", lang, partial=partial),
             limits=_search_limits(min(limit, len(matches)), len(matches), "groups", lang),
             lang=lang,
         ),

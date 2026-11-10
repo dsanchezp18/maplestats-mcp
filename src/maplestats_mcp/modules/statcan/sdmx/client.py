@@ -14,6 +14,8 @@ whose members equal the SDMX codelists.
 
 from __future__ import annotations
 
+import asyncio
+import itertools
 import math
 import re
 from datetime import date
@@ -631,6 +633,260 @@ def _parse_data(
     return series_list, any_series_truncated
 
 
+# A wildcard over a dimension with more codes than this returns a sparse
+# sample (see get_key_for_dimension; checked live 2026-11-09 on 18100004:
+# "16." gave 6 products for Toronto out of 359), so only smaller dimensions
+# are probed to say which members a combination does exist for.
+_PROBE_MAX_CODES = 30
+_PROBE_MAX_DIMENSIONS = 3
+# Members or combinations named in one note; the rest are counted.
+_LIST_MAX = 10
+
+
+def _key_segments(key: str) -> list[list[str]]:
+    """Member ids per key segment, in dimension order ([] for a wildcard)."""
+    return [[member for member in segment.split("+") if member] for segment in key.split(".")]
+
+
+async def _structure_or_none(product_id: int, lang: str) -> list[SdmxDimension] | None:
+    """The table's dimensions for naming members in a note, or None.
+
+    A note about missing members is a hint: when the structure cannot be
+    loaded the note falls back to bare member ids rather than failing.
+    """
+    try:
+        _, dimensions, _ = await _load_structure(product_id, lang)
+    except (_BadBodyError, InvalidInput, NotFound, UpstreamError, UpstreamUnavailable, DataLocked):
+        return None
+    return sorted(dimensions, key=lambda d: d.position)
+
+
+def _dimension_label(dimensions: list[SdmxDimension] | None, index: int) -> str:
+    if dimensions and index < len(dimensions):
+        return dimensions[index].dimension_id
+    return f"dimension {index + 1}"
+
+
+def _member_label(
+    dimensions: list[SdmxDimension] | None, index: int, member_id: str, lang: str
+) -> str:
+    if dimensions and index < len(dimensions):
+        code = next((c for c in dimensions[index].codes if c.id == member_id), None)
+        if code is not None:
+            return f"{member_id} ({code.name_fr if lang == 'fr' else code.name_en})"
+    return member_id
+
+
+def _listed(labels: list[str], lang: str) -> str:
+    shown = ", ".join(labels[:_LIST_MAX])
+    rest = len(labels) - _LIST_MAX
+    if rest > 0:
+        shown += _say(lang, f" and {rest} more", f" et {rest} autres")
+    return shown
+
+
+async def _missing_members_note(
+    product_id: int, key: str, series: list[SdmxSeries], lang: str
+) -> str | None:
+    """Name the requested members (or combinations) that came back with no series.
+
+    Seen live 2026-11-09 on 18100004: key "2+14.85" (Canada and Ontario,
+    mortgage interest cost) returns only the Canada series, because StatCan
+    publishes that product for Canada alone. Nothing in the response said
+    Ontario was dropped, so a caller read the Canada value as the answer.
+    """
+    segments = _key_segments(key)
+    if not series:
+        return None
+    returned = [list(s.series_key.values()) for s in series]
+    seen = [
+        {values[index] for values in returned if index < len(values)}
+        for index in range(len(segments))
+    ]
+    # Every series StatCan returns matches each constrained segment, so a
+    # dimension where none of the requested members came back means the
+    # series keys do not line up with the key's segments: say nothing rather
+    # than report every member missing.
+    if any(members and not seen[index] & set(members) for index, members in enumerate(segments)):
+        return None
+    missing = [
+        (index, member)
+        for index, members in enumerate(segments)
+        for member in members
+        if member not in seen[index]
+    ]
+    if missing:
+        dimensions = await _structure_or_none(product_id, lang)
+        labels = [
+            f"{_dimension_label(dimensions, index)} "
+            f"{_member_label(dimensions, index, member, lang)}"
+            for index, member in missing
+        ]
+        return _say(
+            lang,
+            f"no series for {_listed(labels, lang)} with the rest of the key: StatCan does "
+            f"not publish that combination in table {product_id}, so the result holds only "
+            "the other members (sdmx_get_structure lists each dimension's members)",
+            f"aucune série pour {_listed(labels, lang)} avec le reste de la clé : Statistique "
+            f"Canada ne publie pas cette combinaison dans le tableau {product_id}, le résultat "
+            "ne contient donc que les autres membres (sdmx_get_structure liste les membres de "
+            "chaque dimension)",
+        )
+
+    # Every member came back, but a cross of several members per dimension
+    # can still leave out a combination (Ontario and Toronto x all-items and
+    # mortgage interest cost: two of the four are not published).
+    if not all(segments):
+        return None
+    total = math.prod(len(members) for members in segments)
+    if total <= 1 or total > 1000:
+        return None
+    got = {tuple(values) for values in returned}
+    absent = [".".join(combo) for combo in itertools.product(*segments) if combo not in got]
+    if not absent:
+        return None
+    return _say(
+        lang,
+        f"{len(absent)} of {total} requested combinations have no series (not published "
+        f"in table {product_id}): {_listed(absent, lang)}",
+        f"{len(absent)} des {total} combinaisons demandées n'ont aucune série (non publiées "
+        f"dans le tableau {product_id}) : {_listed(absent, lang)}",
+    )
+
+
+async def _probe_members(product_id: int, segments: list[list[str]], index: int) -> set[str] | None:
+    """Members of dimension `index` with a series when the other segments stay as given.
+
+    None when the probe itself fails: it only adds a hint to an error.
+    """
+    probe_key = ".".join(
+        "" if position == index else "+".join(members) for position, members in enumerate(segments)
+    )
+    try:
+        root, _ = await _data_xml(
+            f"{constants.BASE_URL}data/DF_{product_id}/{probe_key}",
+            {"lastNObservations": 1},
+            lang="en",
+            hint="",
+        )
+    except _BadBodyError:
+        return set()
+    except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable, DataLocked):
+        return None
+    series, _ = _parse_data(root, max_rows=1)
+    return {
+        values[index]
+        for values in (list(s.series_key.values()) for s in series)
+        if index < len(values)
+    }
+
+
+async def _no_series_message(product_id: int, key: str, lang: str) -> str:
+    """The NotFound text for a key matching no series, naming what was asked.
+
+    Seen live 2026-11-09 on 18100004: key "16.85" (Toronto, mortgage
+    interest cost) matches nothing because that product is published for
+    Canada only; probing with the geography wildcarded (".85") finds Canada
+    alone, which is the hint a caller needs to pick a key that exists.
+    """
+    segments = _key_segments(key)
+    dimensions = await _structure_or_none(product_id, lang)
+    sentences: list[str] = []
+    if dimensions is not None and len(segments) != len(dimensions):
+        sentences.append(
+            _say(
+                lang,
+                f"The key has {len(segments)} segments but the table has {len(dimensions)} "
+                f"dimensions ({', '.join(d.dimension_id for d in dimensions)}): give one "
+                "segment per dimension, in order.",
+                f"La clé a {len(segments)} segments, mais le tableau a {len(dimensions)} "
+                f"dimensions ({', '.join(d.dimension_id for d in dimensions)}) : donnez un "
+                "segment par dimension, dans l'ordre.",
+            )
+        )
+        dimensions_match = False
+    else:
+        dimensions_match = dimensions is not None
+    unknown = [
+        (index, member)
+        for index, members in enumerate(segments)
+        for member in members
+        if dimensions_match
+        and dimensions is not None
+        and member not in {c.id for c in dimensions[index].codes}
+    ]
+    if unknown:
+        labels = [f"{_dimension_label(dimensions, i)} {member}" for i, member in unknown]
+        sentences.append(
+            _say(
+                lang,
+                f"Not a member of this table: {_listed(labels, lang)}.",
+                f"Pas un membre de ce tableau : {_listed(labels, lang)}.",
+            )
+        )
+    else:
+        requested = " x ".join(
+            f"{_dimension_label(dimensions, i)} "
+            + "+".join(_member_label(dimensions, i, member, lang) for member in members)
+            for i, members in enumerate(segments)
+            if members
+        )
+        if requested:
+            sentences.append(
+                _say(
+                    lang,
+                    f"StatCan does not publish this combination ({requested}).",
+                    f"Statistique Canada ne publie pas cette combinaison ({requested}).",
+                )
+            )
+        constrained = [i for i, members in enumerate(segments) if members]
+        probed = (
+            [i for i in constrained if len(dimensions[i].codes) <= _PROBE_MAX_CODES][
+                :_PROBE_MAX_DIMENSIONS
+            ]
+            if dimensions_match and dimensions is not None and len(constrained) >= 2
+            else []
+        )
+        found = await asyncio.gather(*(_probe_members(product_id, segments, i) for i in probed))
+        for index, members in zip(probed, found, strict=True):
+            if members is None:
+                continue
+            dimension = _dimension_label(dimensions, index)
+            if members:
+                labels = [
+                    _member_label(dimensions, index, member, lang)
+                    for member in sorted(members, key=lambda m: (len(m), m))
+                ]
+                sentences.append(
+                    _say(
+                        lang,
+                        f"With the other segments as given, {dimension} has series only "
+                        f"for: {_listed(labels, lang)}.",
+                        f"Avec les autres segments tels quels, {dimension} n'a de séries "
+                        f"que pour : {_listed(labels, lang)}.",
+                    )
+                )
+            else:
+                sentences.append(
+                    _say(
+                        lang,
+                        f"With the other segments as given, no {dimension} member has a series.",
+                        f"Avec les autres segments tels quels, aucun membre de {dimension} "
+                        "n'a de série.",
+                    )
+                )
+    detail = " ".join(sentences)
+    return _say(
+        lang,
+        f"Key {key!r} matched no series in table {product_id} (StatCan returned an empty "
+        f"document). {detail} Check which members exist and how they combine with "
+        "sdmx_get_structure (or wds_get_cube_metadata).",
+        f"La clé {key!r} ne correspond à aucune série du tableau {product_id} (Statistique "
+        f"Canada a renvoyé un document vide). {detail} Vérifiez quels membres existent et "
+        "comment ils se combinent avec sdmx_get_structure (ou wds_get_cube_metadata).",
+    ).replace("  ", " ")
+
+
 def _start(period: str) -> date | None:
     try:
         return parse_period(period)[0]
@@ -794,16 +1050,7 @@ async def get_data(
         except _BadBodyError as exc:
             # Confirmed live: a key matching no series answers HTTP 200 with a
             # GenericData document whose only Series tag is a stray closing one.
-            raise NotFound(
-                _say(
-                    lang,
-                    f"Key {key!r} matched no series in table {product_id} (StatCan returned a "
-                    "malformed empty document). Check each member id with sdmx_get_structure.",
-                    f"La clé {key!r} ne correspond à aucune série du tableau {product_id} "
-                    "(StatCan a renvoyé un document vide mal formé). Vérifiez chaque "
-                    "identifiant avec sdmx_get_structure.",
-                )
-            ) from exc
+            raise NotFound(await _no_series_message(product_id, key, lang)) from exc
 
     # The code legend (getCodeSets) and the table metadata behind the
     # newer-data note do not depend on the data; asked together they cost one
@@ -816,6 +1063,9 @@ async def get_data(
     series, any_series_truncated = _parse_data(
         root, max_rows=constants.MAX_ROWS, legend=legend, lang=lang
     )
+    # Before the MAX_SERIES cut, so a member is not reported missing only
+    # because its series fell past the cap.
+    missing_note = await _missing_members_note(product_id, key, series, lang)
     series_total = len(series)
     if series_total > constants.MAX_SERIES:
         series = series[: constants.MAX_SERIES]
@@ -837,6 +1087,8 @@ async def get_data(
     row_count = sum(len(s.observations) for s in series)
 
     notes: list[str] = []
+    if missing_note:
+        notes.append(missing_note)
     if default_applied:
         notes.append(
             _say(

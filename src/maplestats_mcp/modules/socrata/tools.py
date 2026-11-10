@@ -93,20 +93,30 @@ async def socrata_query_dataset_rows(
     select: str | None = None,
     where: str | None = None,
     order: str | None = None,
+    group: str | None = None,
+    having: str | None = None,
     q: str | None = None,
     limit: int = ROWS_LIMIT_DEFAULT,
     offset: int = 0,
     lang: Lang = "en",
 ) -> RowQueryResult:
-    """Query rows from one Socrata dataset with a SoQL clause.
+    """Query rows from one Socrata dataset with SoQL clauses, including GROUP BY counts and sums.
 
     Use for: reading actual data values (not just metadata) from a
     dataset found with socrata_search_datasets, filtering with a SoQL
-    $where clause, sorting, or full-text search within the dataset.
+    $where clause, sorting, full-text search within the dataset, or
+    counting and summing by category server-side. `group` is SoQL's
+    $group and `having` its $having: with an aggregate in `select`,
+    list every other selected column in `group`, e.g.
+    select="permittype, count(*) AS n", group="permittype",
+    where="issueddate between '2025-01-01' and '2025-12-31T23:59:59'",
+    order="n DESC". Column names are the field_name values from
+    socrata_get_dataset.
     Keywords: Socrata, SODA, SoQL, rows, query, filter, data, select,
-    where, order, resource API.
+    where, order, group by, count, sum, aggregate, having, resource API.
     Mots-clés : Socrata, SODA, SoQL, lignes, requête, filtrer, données,
-    sélection, tri, recherche dans les données.
+    sélection, tri, regrouper, compter, somme, agrégation, total par
+    catégorie, recherche dans les données.
     """
     return await client.query_dataset_rows(
         portal,
@@ -114,6 +124,8 @@ async def socrata_query_dataset_rows(
         select=select,
         where=where,
         order=order,
+        group=group,
+        having=having,
         q=q,
         limit=limit,
         offset=offset,

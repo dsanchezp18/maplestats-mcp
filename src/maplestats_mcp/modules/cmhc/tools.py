@@ -152,9 +152,10 @@ async def cmhc_get_table_data(
     geography_type: str = "Country",
     geography_id: str = "1",
     filters: dict[str, str] | None = None,
+    aggregate: Literal["annual", "ytd"] | None = None,
     lang: Lang = "en",
 ) -> TableDataResult:
-    """Get CMHC housing data for a category as a table (time series or cross-tab).
+    """Get CMHC housing data for a category as a table (time series, cross-tab, or annual totals).
 
     Use for: fetching actual CMHC Rental Market Survey vacancy rates/
     rents, housing starts/completions (mises en chantier, achèvements),
@@ -179,25 +180,38 @@ async def cmhc_get_table_data(
     docs_read_resource when resources are not offered). `category_level_1`/
     `category_level_2`/`column_field`/`row_field` must come from
     cmhc_list_categories/cmhc_get_table_options first - an unrecognized
-    combination raises a clear error rather than guessing. The result's
+    combination raises a clear error rather than guessing. Labels
+    ("Bedroom Type", "Historical Time Periods") are accepted for the
+    codes, and the same column label works across a category's tables
+    (Average Rent ($) and % Change of Average Rent); a wrong one is
+    refused with every valid label and code. The result's
     `available_filters` lists extra narrowing dimensions this
     particular table supports beyond column_field/row_field (e.g.
     `season`: April/October, `dwelling_type_desc_en`: Row/Apartment for
     a Rental Market Survey table) - these genuinely change the returned
     values, not just a label; pass a subset as `filters` (e.g.
-    `{"dwelling_type_desc_en": "Row"}`) on a follow-up call to narrow
-    to just that slice. An unrecognized filter key/value raises a clear
-    error rather than being silently ignored.
+    `{"dwelling_type_desc_en": "Apartment"}`) to narrow to that slice.
+    Without one, CMHC applies its own default (Rental Market Survey
+    rents and vacancy rates: "Row / Apartment", both structure types
+    combined); `applied_filters`, `default_filters` and `filter_notes`
+    say which values the figures are for. An unrecognized filter
+    key/value raises a clear error rather than being silently ignored.
+    `aggregate="annual"` (calendar-year totals) or `"ytd"` (January to
+    the latest month, every year) sums a monthly flow time series -
+    housing starts (actual), completions, absorbed units, with
+    row_field="TIMESERIES" - server-side; `aggregation_note` says the
+    sums are MapleStats', not CMHC's. Stocks, rates (SAAR), prices and
+    rental values are refused, never summed.
     Keywords: cmhc, housing, hmip, rental market, vacancy rate, rent,
     average rent, housing starts, completions, time series, historical,
     data, table, province, bedroom type, reliability flag, filter,
-    dwelling type, season.
+    dwelling type, season, annual total, year to date.
     Mots-clés : Société canadienne d'hypothèques et de logement (SCHL),
     logement, Portail de l'information sur le marché de l'habitation (PIMH),
-    marché locatif, taux d'inoccupation, loyer, loyer moyen, mises en
+    marché locatif, taux d'inoccupation, loyer, loyers, loyer moyen, mises en
     chantier, achèvements, série chronologique, historique, données,
     tableau, province, type de chambre, indicateur de fiabilité, filtre,
-    type de logement, saison.
+    type de logement, saison, total annuel, cumul annuel.
     """
     return await client.get_table_data(
         category_level_1,
@@ -207,5 +221,6 @@ async def cmhc_get_table_data(
         geography_type=geography_type,
         geography_id=geography_id,
         filters=filters,
+        aggregate=aggregate,
         lang=lang,
     )

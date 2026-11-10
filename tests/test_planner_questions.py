@@ -260,6 +260,29 @@ QUESTIONS: list[tuple[str, str, str]] = [
         "planning_applications",
         "ckan_datastore_search",
     ),
+    # Economic-statistician exam gaps, 2026-11-09: each step now leads its plan.
+    ("Latest CPI-trim and CPI-common", "prices", "boc_search_series"),
+    ("Compare price levels across Canadian cities", "prices", "wds_search_cubes"),
+    ("Inter-city index of retail price differentials", "prices", "wds_search_cubes"),
+    (
+        "How does StatCan use hedonic adjustment in price indexes?",
+        "prices",
+        "statcan_reference_search_documents",
+    ),
+    (
+        "Bank of Canada Banking and Financial Statistics chartered bank assets",
+        "rates",
+        "boc_search_groups",
+    ),
+    (
+        "Labour Force Survey definition of involuntary part-time",
+        "labour",
+        "statcan_reference_search_documents",
+    ),
+    ("IMDB survey id for the IPPI", "survey_metadata", "statcan_surveys_search_surveys"),
+    ("Inflation fondamentale IPC-tronq et IPC-méd", "prices", "boc_search_series"),
+    ("Écarts de prix entre les villes", "prices", "wds_search_cubes"),
+    ("Numéro d'enquête de l'EPA dans la BMDI", "survey_metadata", "statcan_surveys_search_surveys"),
 ]
 
 OUT_OF_SCOPE = ["US unemployment rate", "Weather in Paris next week", "Inflation en France"]
@@ -667,3 +690,24 @@ def test_dotted_province_codes_name_the_province():
     assert "New Brunswick" in _place_names("Housing starts in New Brunswick")
     assert "New Brunswick" not in _place_names("n.b. housing starts")
     assert "British Columbia" in _place_names("Rents in B.C. cities")
+
+
+def test_exam_gap_steps_name_their_tables():
+    # The step that leads must carry the table or query the exam agents lacked.
+    cases = {
+        "Compare price levels across Canadian cities": "18-10-0003-01",
+        "Bank of Canada core inflation CPI-median": "CPI_MEDIAN",
+        "IMDB survey id for the EICS": "4428 EICS",
+    }
+    for question, needle in cases.items():
+        steps = [s for t in client.plan(question).topics for s in t.steps]
+        assert any(needle in s.purpose for s in steps), (question, steps)
+
+
+@pytest.mark.parametrize(
+    "question",
+    ["What is the unemployment rate?", "Bank of Canada policy rate history"],
+)
+def test_definition_and_bfs_steps_do_not_lead_plain_questions(question: str):
+    first = client.plan(question).topics[0].steps[0]
+    assert first.tool not in ("statcan_reference_search_documents", "boc_search_groups")

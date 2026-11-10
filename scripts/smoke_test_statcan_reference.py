@@ -56,6 +56,13 @@ async def main() -> int:
         ok &= page2.returned_count > 0
         ok &= page2.documents[0].title != result.documents[0].title
 
+        # A search matching nothing is StatCan's "found no results" page (no
+        # #ndm-results): an empty result with a hint, not an upstream error.
+        none = await client.search_documents("owned accommodation CPI")
+        print(f"OK: search_documents('owned accommodation CPI') -> {none.total_matched}")
+        ok &= none.returned_count == 0
+        ok &= "every word" in (none.provenance.limits or "")
+
         try:
             await client.search_documents("housing", lang="de")
             print("FAIL: expected InvalidInput for a bogus lang")

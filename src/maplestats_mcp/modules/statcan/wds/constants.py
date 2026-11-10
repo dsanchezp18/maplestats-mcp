@@ -67,3 +67,35 @@ QUERY_MAX_CELL_CHARS = 50_000
 # under a second, but one runner took 31-70 s on every try, past the shared
 # 30 s default.
 CUBES_LIST_TIMEOUT_SECONDS = 120.0
+
+# Where a value a table leaves ".." (not available) for its latest periods is
+# published instead, by product id: the series' members that must match (dimension
+# name -> member name, English), then where the value is, in English and French,
+# as the end of a sentence starting "StatCan publishes". Only pairs
+# checked live go here. 36-10-0711's current-dollar "All industries" series is ".."
+# for 2024 and 2025 in every province and territory (2026-11-09), while 36-10-0222
+# (expenditure-based, annual) has current-price GDP for both years: Alberta 474,050
+# and 482,370 million dollars (2023: 438,874.6 at basic prices in 0711, 453,093 at
+# market prices in 0222). 36-10-0402, which 0711 replaced, is ".."
+# for Alberta from 2022, so it is no alternative.
+UNAVAILABLE_ELSEWHERE: dict[int, tuple[dict[str, str], str, str]] = {
+    36100711: (
+        {
+            "Prices": "Current dollars",
+            "North American Industry Classification System (NAICS)": "All industries",
+        },
+        (
+            "current-price GDP for these years in table 36-10-0222-01 (GDP, expenditure-based, "
+            "provincial and territorial, annual: 'Current prices', 'Gross domestic product at "
+            "market prices'). That is GDP at market prices, not basic prices, so it differs from "
+            "this table's total by taxes less subsidies on products; say which one you report."
+        ),
+        (
+            "le PIB en dollars courants pour ces années dans le tableau 36-10-0222-01 (PIB en "
+            "termes de dépenses, provinces et territoires, annuel : « Aux prix courants », « Produit "
+            "intérieur brut aux prix du marché »). C'est le PIB aux prix du marché, pas aux prix "
+            "de base : il diffère du total de ce tableau des impôts moins les subventions sur les "
+            "produits ; précisez lequel vous donnez."
+        ),
+    ),
+}

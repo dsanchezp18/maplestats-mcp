@@ -97,9 +97,26 @@ def _query_ignored(html: str, query_param: str) -> bool:
     return bool(fields) and not any(str(field.get("value") or "").strip() for field in fields)
 
 
+def _no_results(soup: BeautifulSoup) -> bool:
+    """Whether the page is StatCan's "found no results" page.
+
+    Confirmed live 2026-11-09 (reference "owned accommodation CPI", and the
+    same shape on the analysis and data catalogues and in French): a search
+    matching nothing renders no `#ndm-results` at all. Its results block,
+    `section.block-ndm-results-block`, holds only an `alert-warning` saying
+    the search "found no results in this section of the site" ("n'a donné
+    aucun résultat"). Treating that page as a changed layout made every
+    zero-match search an upstream_error; it is an empty result.
+    """
+    block = soup.select_one("section.block-ndm-results-block")
+    return block is not None and block.select_one(".alert-warning") is not None
+
+
 def _parse_results(html: str, context: str) -> tuple[list[ReferenceDocument], int]:
     soup = BeautifulSoup(html, "html.parser")
     results_container = soup.find(id="ndm-results")
+    if results_container is None and _no_results(soup):
+        return [], 0
     if results_container is None:
         raise UpstreamError(
             say(
@@ -275,6 +292,24 @@ async def _search(
     html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
     documents, total_matched = _parse_results(html, context)
 
+    # The catalogue requires every word of the keyword to match (checked live
+    # 2026-11-09: "CPI" finds 19 reference documents, "owned accommodation
+    # CPI" none), so an empty result usually means too many or too narrow
+    # words, not that StatCan has nothing on the topic.
+    limits = None
+    if not documents and query.strip():
+        limits = say(
+            f"No {catalogue} document matched every word of {query.strip()!r}: this "
+            "catalogue requires all words to match. Try fewer or broader words (e.g. one "
+            "key term), the other statcan_reference_ catalogues, or wds_search_cubes for "
+            "data tables.",
+            f"Aucun document du catalogue {catalogue} ne contient tous les mots de "
+            f"{query.strip()!r} : ce catalogue exige que tous les mots correspondent. "
+            "Essayez moins de mots ou des mots plus généraux (par exemple un seul terme "
+            "clé), les autres catalogues statcan_reference_, ou wds_search_cubes pour les "
+            "tableaux de données.",
+        )
+
     return ReferenceSearchResult(
         catalogue=catalogue,
         query=query,
@@ -285,6 +320,7 @@ async def _search(
             source=constants.RATE_LIMIT_SOURCE,
             url=url,
             cached=was_cached,
+            limits=limits,
             schema_name="statcan_reference.ReferenceSearchResult",
             lang=current_lang(),
         ),

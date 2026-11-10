@@ -128,7 +128,7 @@ import re
 import unicodedata
 from datetime import UTC, datetime
 from io import StringIO
-from typing import Any, NoReturn
+from typing import Any, Literal, NoReturn
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
@@ -423,9 +423,31 @@ def _parse_categories(body: str) -> list[CategoryOption]:
     return list(seen.values())
 
 
+def _breakdown_of(anchor: Any) -> Literal["column", "row"] | None:
+    """Which axis an option link's label names, from the list it sits in.
+
+    Confirmed live 2026-11-09 on TableCategory for Edmonton: HMIP lists the column
+    breakdowns under <h4>By:</h4> (French "Selon :") in a plain <ol>, and the row
+    breakdowns under <h4>Display Options:</h4> ("Options d'affichage :") in
+    <ol class="last-of-type">. A table with a single column breakdown has no "By:"
+    list at all (% Change of Average Rent: its column is always Bedroom Type).
+    """
+    ol = anchor.find_parent("ol")
+    if ol is None:
+        return None
+    classes = ol.get("class") or []
+    heading = ol.find_previous_sibling("h4")
+    title = _norm(heading.get_text()) if heading is not None else ""
+    if "last-of-type" in classes or "display" in title or "affichage" in title:
+        return "row"
+    if title.startswith(("by", "selon")):
+        return "column"
+    return None
+
+
 def _parse_table_options(body: str) -> list[TableFieldOption]:
     soup = BeautifulSoup(body, "html.parser")
-    seen: dict[tuple[str, str], TableFieldOption] = {}
+    seen: dict[tuple[str, str, str | None], TableFieldOption] = {}
     for anchor in soup.find_all("a", href=True):
         href = anchor.get("href")
         if not isinstance(href, str) or "TableMatchingCriteria" not in href:
@@ -436,9 +458,14 @@ def _parse_table_options(body: str) -> list[TableFieldOption]:
         if not column_field or not row_field:
             continue
         label = anchor.get_text(strip=True) or f"{column_field}/{row_field}"
+        breakdown = _breakdown_of(anchor)
+        # The default table appears in both lists, under its column label ("Bedroom
+        # Type") and its row label ("Survey Zones"); both labels are kept.
         seen.setdefault(
-            (column_field, row_field),
-            TableFieldOption(label=label, column_field=column_field, row_field=row_field),
+            (column_field, row_field, breakdown),
+            TableFieldOption(
+                label=label, column_field=column_field, row_field=row_field, breakdown=breakdown
+            ),
         )
     return list(seen.values())
 
@@ -1026,8 +1053,9 @@ async def _resolve_fields(
     geography_type: str,
     geography_id: str,
     lang: str,
-) -> tuple[str, str]:
-    """Field codes for labels a caller copied from cmhc_get_table_options.
+) -> tuple[str, str, str | None]:
+    """Field codes for labels a caller copied from cmhc_get_table_options, and the
+    column label still to check against the resolved table's name (or None).
 
     The chat demo's model passed column_field="Bedroom Type" (live 2026-11-03), which
     HMIP answers "Sequence contains no elements"; the code for it is "2". Numeric codes
@@ -1035,9 +1063,18 @@ async def _resolve_fields(
     for anything else. A value is looked for first among the table's own codes, then
     among its labels: a code can be a word, and was rejected as an unknown label
     until 2026-11-09 ('HouseholdType', which cmhc_get_table_options itself lists).
+
+    A column label is looked up in the "By:" list first and a row label in "Display
+    Options:" (see `_breakdown_of`). A table with one column breakdown has no "By:"
+    list: "% Change of Average Rent" for Edmonton lists only Survey Zones, Census
+    Subdivisions and Historical Time Periods (live 2026-11-09), so the "Bedroom Type"
+    that Average Rent ($) accepts was refused there although its column is Bedroom
+    Type ("2"). There the one column code is used, and the label is returned so the
+    caller can check it against the table's name ("% Change of Average Rents by
+    Bedroom Type by Zone") once the table is resolved.
     """
     if _is_field_code(column_field) and _is_field_code(row_field):
-        return column_field.upper(), row_field.upper()
+        return column_field.upper(), row_field.upper(), None
     options = (
         await get_table_options(
             category_level_1,
@@ -1047,29 +1084,335 @@ async def _resolve_fields(
             lang=lang,
         )
     ).field_options
+    column_codes = sorted({o.column_field for o in options})
+    has_by_list = any(o.breakdown == "column" for o in options)
 
-    def code(value: str, attr: str) -> str:
+    def listing() -> tuple[str, str]:
+        def labels(kind: str, attr: str) -> str:
+            found = {o.label: getattr(o, attr) for o in options if o.breakdown in (kind, None)}
+            return ", ".join(f"{label} ({code})" for label, code in found.items()) or "-"
+
+        columns = labels("column", "column_field")
+        if not has_by_list and len(column_codes) == 1:
+            columns = _text(
+                f"one column breakdown only, code {column_codes[0]} (named in the table's title)",
+                f"une seule répartition en colonnes, code {column_codes[0]} (nommée dans le "
+                "titre du tableau)",
+                lang,
+            )
+        return columns, labels("row", "row_field")
+
+    def code(value: str, attr: str, kind: str) -> str:
+        codes = {getattr(o, attr).upper(): getattr(o, attr) for o in options}
+        if value.upper() in codes:
+            return codes[value.upper()]
         if _is_field_code(value):
             return value.upper()
-        # HMIP's own spelling of the code, whatever case the caller used.
-        for option in options:
-            if getattr(option, attr).casefold() == value.strip().casefold():
-                return getattr(option, attr)
-        for option in options:
-            if _norm(option.label) == _norm(value):
-                return getattr(option, attr)
-        listed = "; ".join(
-            f"{o.label} (column_field={o.column_field}, row_field={o.row_field})" for o in options
-        )
+        wanted = _norm(value)
+        for preferred in (True, False):
+            for option in options:
+                if (option.breakdown == kind) == preferred and _norm(option.label) == wanted:
+                    return getattr(option, attr)
+        columns, rows = listing()
         _raise(
             InvalidInput,
-            f"{value!r} is not a field code or label of this table; the options are {listed}.",
-            f"{value!r} n'est ni un code ni un libellé de champ de ce tableau ; les options "
-            f"sont {listed}.",
+            f"{value!r} is not a {kind}_field code or label of this table. column_field "
+            f"accepts: {columns}. row_field accepts: {rows}. Labels and codes come from "
+            "cmhc_get_table_options.",
+            f"{value!r} n'est ni un code ni un libellé de {kind}_field pour ce tableau. "
+            f"column_field accepte : {columns}. row_field accepte : {rows}. Libellés et codes "
+            "viennent de cmhc_get_table_options.",
             lang,
         )
 
-    return code(column_field, "column_field"), code(row_field, "row_field")
+    row_code = code(row_field, "row_field", "row")
+    known_column = column_field.upper() in {c.upper() for c in column_codes} or any(
+        _norm(o.label) == _norm(column_field) for o in options
+    )
+    # Only a label (words with spaces, "Bedroom Type") falls back to the one column
+    # code; a code-shaped word ("RENTQUARTILE") that this table lacks is refused.
+    is_label = " " in column_field.strip()
+    if (
+        is_label
+        and not (known_column or has_by_list or _is_field_code(column_field))
+        and len(column_codes) == 1
+    ):
+        return column_codes[0], row_code, column_field
+    return code(column_field, "column_field", "column"), row_code, None
+
+
+def _check_column_label(label: str | None, table_name: str, column_field: str, lang: str) -> None:
+    """Refuse a column label the resolved table's own name does not carry."""
+    if label is None or _norm(label) in _norm(table_name):
+        return
+    _raise(
+        InvalidInput,
+        f"column_field {label!r} does not name this table's only column breakdown "
+        f"(code {column_field}): the table is {table_name.strip()!r}. Pass "
+        f"column_field={column_field!r}.",
+        f"column_field {label!r} ne nomme pas la seule répartition en colonnes de ce tableau "
+        f"(code {column_field}) : le tableau est {table_name.strip()!r}. Passez "
+        f"column_field={column_field!r}.",
+        lang,
+    )
+
+
+def _parse_default_filters(model: dict[str, Any]) -> dict[str, str]:
+    """HMIP's own default filters, from the resolved table model's "AppliedFilters".
+
+    Confirmed live 2026-11-09: [{"Key": "dwelling_type_desc_en", "Value": "Row /
+    Apartment"}, {"Key": "season", "Value": "October"}] for Edmonton's historical
+    average rents, [{"Key": "dimension-18", "Value": "All"}] for its starts. The
+    export applies these when the POST names no filter: Edmonton's 2025 total average
+    rent came back as $1,493 (row and apartment combined), not the $1,464 of
+    apartments only, and nothing in the table's name said so.
+    """
+    defaults: dict[str, str] = {}
+    for entry in model.get("AppliedFilters") or []:
+        if isinstance(entry, dict) and entry.get("Key") and entry.get("Value") is not None:
+            defaults[str(entry["Key"])] = str(entry["Value"])
+    return defaults
+
+
+def _filter_notes(
+    applied: dict[str, str], defaults: set[str], available: list[FilterOption], lang: str
+) -> list[str]:
+    """One line per filter dimension: the value applied, where it came from, the others."""
+    notes: list[str] = []
+    for option in available:
+        value = applied.get(option.key)
+        name = f"{option.label} ({option.key})" if option.label else option.key
+        other_values = [v for v in option.values if v != value]
+        others = ", ".join(other_values)
+        example = f'filters={{"{option.key}": "{(other_values or option.values)[0]}"}}'
+        if value is None:
+            notes.append(
+                _text(
+                    f"{name}: no value applied; values: {', '.join(option.values)}.",
+                    f"{name} : aucune valeur appliquée ; valeurs : {', '.join(option.values)}.",
+                    lang,
+                )
+            )
+        elif option.key in defaults:
+            notes.append(
+                _text(
+                    f"{name}: {value} (CMHC's default, as filters did not set it). Other "
+                    f"values: {others}; pass e.g. {example}.",
+                    f"{name} : {value} (valeur par défaut de la SCHL, filters ne la fixant "
+                    f"pas). Autres valeurs : {others} ; passez par ex. {example}.",
+                    lang,
+                )
+            )
+        else:
+            notes.append(
+                _text(
+                    f"{name}: {value} (from filters). Other values: {others}.",
+                    f"{name} : {value} (selon filters). Autres valeurs : {others}.",
+                    lang,
+                )
+            )
+    return notes
+
+
+# Categories whose monthly values are flows (counts during the month), which add up to
+# a year or a year to date. Compared with _norm(). Not here, and so never summed:
+# Starts (SAAR) (an annual rate), Under Construction Inventory and the inventory of
+# completed and unabsorbed units (stocks at month end), prices, lengths, percentages,
+# and every rental-market table (rates, rents, universe counts).
+_FLOW_CATEGORIES = frozenset(
+    {
+        ("new housing construction", "starts actual"),
+        ("new housing construction", "completions"),
+        ("new housing construction", "absorbed units homeowner condo"),
+        ("marche du neuf", "mises en chantier d habitations donnees reelles"),
+        ("marche du neuf", "achevements"),
+        ("marche du neuf", "logements ecoules pour proprietaires absolues ou en copropriete"),
+    }
+)
+
+# A monthly period as an HMIP time series writes it, by its _norm() month: "Jan 1990"
+# in English and "janv. 1990", "févr. 1990", "août 1990" in French (live 2026-11-09,
+# Edmonton starts 1.2.1 and completions 1.2.2).
+_MONTH_ABBREVIATIONS = {
+    **{_norm(name): number for name, number in _MONTHS.items()},
+    **{
+        name: number
+        for number, names in enumerate(
+            (
+                ("jan", "janv"),
+                ("feb", "fev", "fevr"),
+                ("mar",),
+                ("apr", "avr"),
+                ("may",),
+                ("jun",),
+                ("jul", "juil"),
+                ("aug",),
+                ("sep", "sept"),
+                ("oct",),
+                ("nov",),
+                ("dec",),
+            ),
+            start=1,
+        )
+        for name in names
+    },
+}
+_MONTHLY_PERIOD_RE = re.compile(r"^(?P<month>[a-z]+) (?P<year>\d{4})$")
+_MONTH_NAMES = {
+    "en": (
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ),
+    "fr": (
+        "janvier",
+        "février",
+        "mars",
+        "avril",
+        "mai",
+        "juin",
+        "juillet",
+        "août",
+        "septembre",
+        "octobre",
+        "novembre",
+        "décembre",
+    ),
+}
+
+
+def _monthly_period(period: str) -> tuple[int, int] | None:
+    """(year, month) of a monthly time-series period, or None."""
+    match = _MONTHLY_PERIOD_RE.match(_norm(period))
+    if match is None:
+        return None
+    month = _MONTH_ABBREVIATIONS.get(match.group("month"))
+    return (int(match.group("year")), month) if month else None
+
+
+def _sum_cells(cells: list[TableCell]) -> TableCell:
+    """The total of a column's monthly cells; unknown when any month is not a number."""
+    missing = [cell for cell in cells if cell.value is None]
+    if missing:
+        return TableCell(value=None, flag=missing[0].flag or "**")
+    return TableCell(value=sum(cell.value or 0.0 for cell in cells))
+
+
+def _aggregate_rows(
+    rows: list[TableDataRow],
+    columns: list[str],
+    aggregate: Literal["annual", "ytd"],
+    lang: str,
+) -> tuple[list[TableDataRow], str]:
+    """Sum monthly flow rows into calendar years or year-to-date windows.
+
+    Annual totals cover the years with all 12 months; "ytd" sums January to the
+    latest month in the table, for every year with those months, so years compare
+    like for like. Checked live 2026-11-09 against HMIP's own Frequency=Annual export
+    of Edmonton starts (1.2.1): the annual sums match it for every year from 1990.
+    """
+    by_year: dict[int, dict[int, TableDataRow]] = {}
+    for row in rows:
+        year, month = _monthly_period(row.period) or (0, 0)
+        by_year.setdefault(year, {})[month] = row
+    latest_year = max(by_year)
+    last_month = 12 if aggregate == "annual" else max(by_year[latest_year])
+    months = range(1, last_month + 1)
+    complete = [y for y in sorted(by_year) if all(m in by_year[y] for m in months)]
+    left_out = [y for y in sorted(by_year) if y not in complete]
+
+    names = _MONTH_NAMES["fr" if lang == "fr" else "en"]
+    window = _text(
+        f"{names[0]} to {names[last_month - 1]}",
+        f"{names[0]} à {names[last_month - 1]}",
+        lang,
+    )
+    summed: list[TableDataRow] = []
+    for year in complete:
+        label = str(year) if aggregate == "annual" else f"{window} {year}"
+        values = {
+            column: _sum_cells([by_year[year][m].values[column] for m in months])
+            for column in columns
+        }
+        summed.append(TableDataRow(period=label, values=values))
+
+    kind = _text(
+        "Annual totals" if aggregate == "annual" else f"Year-to-date totals ({window})",
+        "Totaux annuels" if aggregate == "annual" else f"Cumuls annuels ({window})",
+        lang,
+    )
+    note = _text(
+        f"{kind} summed by MapleStats from CMHC's monthly values; CMHC did not publish "
+        "these rows in this form.",
+        f"{kind} additionnés par MapleStats à partir des valeurs mensuelles de la SCHL ; la "
+        "SCHL n'a pas publié ces lignes sous cette forme.",
+        lang,
+    )
+    if left_out:
+        years = ", ".join(str(y) for y in left_out)
+        if aggregate == "annual":
+            note += _text(
+                f" Left out as incomplete: {years} (aggregate='ytd' covers the latest year).",
+                f" Années incomplètes exclues : {years} (aggregate='ytd' couvre la dernière "
+                "année).",
+                lang,
+            )
+        else:
+            note += _text(
+                f" Left out as incomplete: {years}.",
+                f" Années incomplètes exclues : {years}.",
+                lang,
+            )
+    return summed, note
+
+
+def _check_aggregate(
+    aggregate: str | None,
+    category_level_1: str,
+    category_level_2: str,
+    row_field: str,
+    lang: str,
+) -> None:
+    """Refuse an aggregation of anything but a monthly flow time series."""
+    if aggregate is None:
+        return
+    if aggregate not in ("annual", "ytd"):
+        _raise(
+            InvalidInput,
+            f"aggregate must be 'annual' or 'ytd', got {aggregate!r}.",
+            f"aggregate doit valoir 'annual' ou 'ytd' ; reçu {aggregate!r}.",
+            lang,
+        )
+    if (_norm(category_level_1), _norm(category_level_2)) not in _FLOW_CATEGORIES:
+        _raise(
+            InvalidInput,
+            "aggregate sums monthly flows only (New Housing Construction: Starts (Actual), "
+            f"Completions, Absorbed Units); {category_level_2!r} is a stock, rate, price or "
+            "survey value that must not be summed. Leave aggregate unset.",
+            "aggregate n'additionne que des flux mensuels (Marché du neuf : mises en "
+            "chantier (données réelles), achèvements, logements écoulés) ; "
+            f"{category_level_2!r} est un stock, un taux, un prix ou une valeur d'enquête "
+            "qui ne s'additionne pas. Laissez aggregate vide.",
+            lang,
+        )
+    if row_field != "TIMESERIES":
+        _raise(
+            InvalidInput,
+            "aggregate needs a monthly time series: pass row_field='TIMESERIES' "
+            "(Historical Time Periods).",
+            "aggregate demande une série chronologique mensuelle : passez "
+            "row_field='TIMESERIES' (Données chronologiques).",
+            lang,
+        )
 
 
 async def get_table_data(
@@ -1081,8 +1424,10 @@ async def get_table_data(
     geography_type: str = "Country",
     geography_id: str = "1",
     filters: dict[str, str] | None = None,
+    aggregate: Literal["annual", "ytd"] | None = None,
     lang: str = "en",
 ) -> TableDataResult:
+    """One HMIP table as rows; `aggregate` sums a monthly flow series (`_aggregate_rows`)."""
     category_level_1 = _require(category_level_1, "category_level_1", lang)
     category_level_2 = _require(category_level_2, "category_level_2", lang)
     column_field = _require(column_field, "column_field", lang)
@@ -1090,7 +1435,7 @@ async def get_table_data(
     geography_type = _require(geography_type, "geography_type", lang)
     geography_id = _require(geography_id, "geography_id", lang)
     geography_type, geography_id = await _resolve_geography(geography_type, geography_id, lang)
-    column_field, row_field = await _resolve_fields(
+    column_field, row_field, column_label = await _resolve_fields(
         category_level_1,
         category_level_2,
         column_field,
@@ -1099,6 +1444,7 @@ async def get_table_data(
         geography_id=geography_id,
         lang=lang,
     )
+    _check_aggregate(aggregate, category_level_1, category_level_2, row_field, lang)
     filters = filters or {}
     base = _base_path(lang)
 
@@ -1164,13 +1510,39 @@ async def get_table_data(
             "rows": rows,
             "notes": notes,
             "available_filters": available_filters,
+            "default_filters": _parse_default_filters(model),
             "export_params": export_params,
         }
 
     parsed, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_TABLE_DATA_SECONDS, fetch
     )
+    _check_column_label(column_label, parsed["table_name"], column_field, lang)
     reference_period, as_of = _reference_period(parsed.get("subtitle") or "")
+    available_filters: list[FilterOption] = parsed["available_filters"]
+    available_keys = {f.key for f in available_filters}
+    defaults = {
+        key: value
+        for key, value in (parsed.get("default_filters") or {}).items()
+        if key not in filters and (key in available_keys or not available_keys)
+    }
+    applied_filters = {**defaults, **filters}
+
+    rows: list[TableDataRow] = parsed["rows"]
+    aggregation_note: str | None = None
+    if aggregate is not None:
+        not_monthly = [row.period for row in rows if _monthly_period(row.period) is None]
+        if not_monthly or not rows:
+            _raise(
+                InvalidInput,
+                f"aggregate needs monthly rows; this table's periods include "
+                f"{not_monthly[:3]!r}. Leave aggregate unset.",
+                f"aggregate demande des lignes mensuelles ; les périodes de ce tableau "
+                f"comprennent {not_monthly[:3]!r}. Laissez aggregate vide.",
+                lang,
+            )
+        rows, aggregation_note = _aggregate_rows(rows, parsed["columns"], aggregate, lang)
+
     return TableDataResult(
         table_id=parsed["table_id"],
         table_name=parsed["table_name"],
@@ -1188,17 +1560,22 @@ async def get_table_data(
         column_field=column_field,
         row_field=row_field,
         columns=parsed["columns"],
-        rows=parsed["rows"],
+        rows=rows,
         notes=parsed["notes"],
-        available_filters=parsed["available_filters"],
-        applied_filters=filters,
-        flag_legend=_flag_legend(parsed["rows"], lang),
+        available_filters=available_filters,
+        applied_filters=applied_filters,
+        default_filters=defaults,
+        filter_notes=_filter_notes(applied_filters, set(defaults), available_filters, lang),
+        aggregate=aggregate,
+        aggregation_note=aggregation_note,
+        flag_legend=_flag_legend(rows, lang),
         provenance=make_provenance(
             source="cmhc",
             url=export_url,
             cached=was_cached,
             schema_name="cmhc.TableDataResult",
             as_of=as_of,
+            coverage=aggregation_note,
             # The export is a form POST, so a URL alone cannot reproduce it;
             # the table is resolved first by a GET to TableMatchingCriteria.
             limits=_text(

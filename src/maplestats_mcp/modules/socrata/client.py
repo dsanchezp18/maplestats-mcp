@@ -13,7 +13,9 @@ code differed only in the domain; they now share this client keyed by
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, NoReturn
+
+import httpx
 
 from maplestats_mcp.modules.socrata import constants
 from maplestats_mcp.modules.socrata.schemas import (
@@ -32,11 +34,14 @@ from maplestats_mcp.modules.socrata.schemas import (
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
 from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.http import api_get
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
+from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.socrata import (
     CATALOG_BASE_URL,
     SocrataConfig,
+    _raise_for_status_error,  # pyright: ignore[reportPrivateUsage]
     catalog_search,
     excerpt,
     facet_categories,
@@ -44,8 +49,8 @@ from maplestats_mcp.shared.socrata import (
     get_view,
     parse_dt,
     parse_epoch_seconds,
-    query_rows,
 )
+from maplestats_mcp.shared.upstream_text import network_error
 
 # Socrata's "four-by-four" dataset id. Checked before it goes into a URL path,
 # so a value like "../x" or "abcd-1234?$where=" cannot reach another resource.
@@ -268,6 +273,92 @@ async def get_dataset(portal: str, dataset_id: str, lang: str = "en") -> Dataset
     )
 
 
+# A rejected SoQL query, as data.calgary.ca and data.edmonton.ca answer it (seen live
+# 2026-11-09): HTTP 400 with {"message": "Query coordinator error: <code>; <reason>;
+# position: Map(... line -> \"SELECT `col1`, `col2`, ... |> SELECT ...\")",
+# "errorCode": "<code>"}. The position part echoes the dataset's whole internal column
+# list, and the generic 200-character error detail cut that list into the visible
+# text, so the reason read like a complaint about unrelated columns. Only the code
+# and the reason are kept.
+_SOQL_MESSAGE = re.compile(
+    r"^(?:Query coordinator error:\s*)?(?P<code>query\.soql\.[\w.-]+)\s*;\s*"
+    r"(?P<reason>.*?)(?:\s*;\s*position:.*)?$",
+    re.DOTALL,
+)
+
+_SOQL_HINTS: dict[str, tuple[str, str]] = {
+    "query.soql.column-not-in-group-bys": (
+        (
+            "With an aggregate such as count(*) or sum(...) in select, list every other "
+            "selected column in group (SoQL $group), e.g. select='permittype, count(*)', "
+            "group='permittype'."
+        ),
+        (
+            "Avec un agrégat comme count(*) ou sum(...) dans select, indiquez toutes les autres "
+            "colonnes choisies dans group (SoQL $group), par ex. select='permittype, count(*)', "
+            "group='permittype'."
+        ),
+    ),
+    "query.soql.no-such-column": (
+        "Use the field_name values that socrata_get_dataset lists for this dataset.",
+        "Utilisez les valeurs field_name que socrata_get_dataset donne pour ce jeu de données.",
+    ),
+}
+
+
+def _soql_error(exc: httpx.HTTPStatusError) -> tuple[str, str] | None:
+    """The (error code, reason) of a rejected SoQL query, or None for any other error."""
+    if exc.response.status_code != 400:
+        return None
+    try:
+        body = exc.response.json()
+    except ValueError:
+        return None
+    message = body.get("message") if isinstance(body, dict) else None
+    if not isinstance(message, str):
+        return None
+    match = _SOQL_MESSAGE.match(message.strip())
+    if match is None:
+        return None
+    reason = " ".join(match.group("reason").split()).rstrip(".")
+    return match.group("code"), reason
+
+
+def _raise_soql_error(code: str, reason: str, lang: str) -> NoReturn:
+    hint_en, hint_fr = _SOQL_HINTS.get(code, ("", ""))
+    raise_localized(
+        InvalidInput,
+        f"Socrata rejected the SoQL query: {reason} ({code}). {hint_en}".rstrip(),
+        f"Socrata a refusé la requête SoQL : {reason} ({code}). {hint_fr}".rstrip(),
+        lang,
+    )
+
+
+async def _fetch_rows(
+    config: SocrataConfig, dataset_id: str, params: dict[str, Any], lang: str
+) -> list[dict[str, Any]]:
+    """GET the SODA resource endpoint; a rejected SoQL query raises with Socrata's reason.
+
+    shared/socrata.py's query_rows has no $group or $having and reports a SoQL
+    rejection through its generic, truncated error detail, hence this module's own call.
+    """
+    context = f"{config.source}:query_rows:{dataset_id}"
+    url = f"https://{config.domain}/resource/{dataset_id}.json"
+    await get_limiter(
+        config.source, rate=config.rate_limit_per_second, capacity=config.rate_limit_capacity
+    ).acquire()
+    try:
+        data = await api_get(url, params=params)
+    except httpx.HTTPStatusError as exc:
+        soql = _soql_error(exc)
+        if soql is not None:
+            _raise_soql_error(*soql, lang)
+        _raise_for_status_error(exc, context, lang)
+    except httpx.HTTPError as exc:
+        raise network_error(context, exc, lang) from exc
+    return data if isinstance(data, list) else []
+
+
 async def query_dataset_rows(
     portal: str,
     dataset_id: str,
@@ -275,31 +366,52 @@ async def query_dataset_rows(
     select: str | None = None,
     where: str | None = None,
     order: str | None = None,
+    group: str | None = None,
+    having: str | None = None,
     q: str | None = None,
     limit: int = constants.ROWS_LIMIT_DEFAULT,
     offset: int = 0,
     lang: str = "en",
 ) -> RowQueryResult:
-    """Run a SoQL query against one dataset's rows; ``lang`` sets the language of messages."""
+    """Run a SoQL query against one dataset's rows; ``lang`` sets the language of messages.
+
+    ``group`` and ``having`` are SoQL's $group and $having, so counts and sums by
+    category are computed by Socrata over every matching row, not over one page.
+    """
     config = _config(portal, lang)
     dataset_id = _dataset_id(dataset_id, lang)
     _check_page(limit, offset, constants.ROWS_LIMIT_MAX, lang)
-
-    async def fetch() -> list[dict[str, Any]]:
-        return await query_rows(
-            config,
-            dataset_id,
-            select=select,
-            where=where,
-            order=order,
-            q=q,
-            limit=limit,
-            offset=offset,
-            lang=lang,
+    if having and not group:
+        raise_localized(
+            InvalidInput,
+            "having filters grouped rows, so it needs group as well (SoQL $having works "
+            "only with $group).",
+            "having filtre des lignes regroupées : il faut aussi group (le $having de SoQL "
+            "ne fonctionne qu'avec $group).",
+            lang,
         )
 
-    cache_key = f"{config.source}:rows:{dataset_id}:{select}:{where}:{order}:{q}:{limit}:{offset}"
+    clauses = {
+        "$select": select,
+        "$where": where,
+        "$group": group,
+        "$having": having,
+        "$order": order,
+        "$q": q,
+    }
+    params: dict[str, Any] = {"$limit": limit, "$offset": offset}
+    params.update({key: value for key, value in clauses.items() if value})
+
+    async def fetch() -> list[dict[str, Any]]:
+        return await _fetch_rows(config, dataset_id, params, lang)
+
+    cache_key = (
+        f"{config.source}:rows:{dataset_id}:{select}:{where}:{group}:{having}:{order}:{q}"
+        f":{limit}:{offset}"
+    )
     rows, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ROWS_SECONDS, fetch)
+    grouped_en = "; groups and aggregates computed by Socrata ($group)" if group else ""
+    grouped_fr = " ; groupes et agrégats calculés par Socrata ($group)" if group else ""
     return RowQueryResult(
         portal=portal,
         dataset_id=dataset_id,
@@ -310,6 +422,8 @@ async def query_dataset_rows(
         select=select,
         where=where,
         order=order,
+        group=group,
+        having=having,
         q=q,
         provenance=make_provenance(
             source=config.source,
@@ -318,9 +432,9 @@ async def query_dataset_rows(
             schema_name="socrata.RowQueryResult",
             limits=pick(
                 lang,
-                f"rows capped at {constants.ROWS_LIMIT_MAX} per request",
+                f"rows capped at {constants.ROWS_LIMIT_MAX} per request{grouped_en}",
                 f"lignes plafonnées à {constants.ROWS_LIMIT_MAX} par requête ; noms de "
-                "colonnes et valeurs tels que publiés par le portail",
+                f"colonnes et valeurs tels que publiés par le portail{grouped_fr}",
             ),
             lang=lang,
         ),

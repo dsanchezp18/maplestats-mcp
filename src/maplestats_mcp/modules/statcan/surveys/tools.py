@@ -23,18 +23,24 @@ async def statcan_surveys_search_surveys(
 ) -> SurveyListResult:
     """Search StatCan's A-Z directory of surveys and statistical programs (~899 confirmed live).
 
-    Use for: finding a survey's numeric ID (needed by
-    statcan_surveys_get_survey_metadata) by name -- covers both active
-    and inactive/discontinued surveys and statistical programs.
+    Use for: finding a survey's numeric IMDB ID (needed by
+    statcan_surveys_get_survey_metadata) by name or acronym, instead of
+    guessing it -- covers both active and inactive/discontinued surveys
+    and statistical programs. query matches whole words of the name
+    (accents ignored) or its acronym: 'IPPI' gives 2318, 'RMPI' 2306,
+    'LFS' 3701, 'EICS' 4428 (French ones too: EPA, IPMB, ECAE).
     Distinct from statcan_reference_search_documents/search_analysis
     (documents about surveys) and from statcan_daily_* (release
     bulletin) -- this is the master list of the surveys/programs
     themselves. An empty query returns the full directory. Keywords:
     StatCan, survey, surveys Statistics Canada runs, statistical program,
-    survey directory, survey ID, Statistics Canada, data source, survey list.
+    survey directory, survey ID, survey number, IMDB id, acronym,
+    Statistics Canada, data source, survey list, Raw Materials Price
+    Index, Employment Insurance Coverage Survey.
     Mots-clés : Statistique Canada, enquête, programme statistique,
-    répertoire des enquêtes, numéro d'enquête, source de données, liste des
-    enquêtes, enquêtes statistiques.
+    répertoire des enquêtes, numéro d'enquête, numéro BMDI, acronyme,
+    source de données, liste des enquêtes, enquêtes statistiques,
+    Enquête sur la couverture de l'assurance-emploi.
     """
     use_lang(lang)
     return await client.search_surveys(query, lang=lang, limit=limit)
@@ -61,16 +67,21 @@ async def statcan_surveys_get_survey_metadata(
     to about 900 characters (trimmed_sections names them); pass one
     name or a list, e.g. section=["sampling", "data_sources"], for
     those sections in full and no others. IMDB (Integrated Metadata
-    Base) is separate from the Reference/Analysis catalogues.
-    Keywords: StatCan, IMDB, survey metadata, methodology, target
-    population, sampling, sample size, mandatory or voluntary survey,
-    collection method, imputation, disclosure control,
+    Base) is separate from the Reference/Analysis catalogues. Concepts
+    and definitions (LFS involuntary part-time, CPI hedonic quality
+    adjustment) are in each survey's guide, not here: use
+    statcan_reference_search_documents with 'Guide to the Labour Force
+    Survey' (71-543-G) or 'Consumer Price Index Reference Paper'.
+    Keywords: StatCan, IMDB, survey metadata, definitions, methodology,
+    target population, sampling, sample size, mandatory or voluntary
+    survey, collection method, imputation, disclosure control,
     seasonal adjustment, data accuracy, data quality.
     Mots-clés : Statistique Canada, BMDI, métadonnées d'enquête,
-    méthodologie, population cible, échantillonnage, taille de
-    l'échantillon, enquête obligatoire, mode de collecte, imputation,
-    contrôle de la divulgation, désaisonnalisation, exactitude des
-    données.
+    définitions, méthodologie, population cible, échantillonnage,
+    taille de l'échantillon, enquête obligatoire, mode de collecte,
+    imputation, contrôle de la divulgation, désaisonnalisation,
+    exactitude des données, temps partiel involontaire, ajustement
+    hédonique.
     """
     use_lang(lang)
     return await client.get_survey_metadata(survey_id, lang=lang, section=section)

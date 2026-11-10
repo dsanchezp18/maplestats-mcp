@@ -177,8 +177,14 @@ async def test_get_data_key_matching_nothing_is_not_found(httpx_mock):
         url=f"{constants.BASE_URL}data/DF_18100004/999.999?lastNObservations=24",
         content=_NO_MATCH_XML.encode(),
     )
-    with pytest.raises(NotFound, match="matched no series"):
+    # The error names what was asked, from the table's structure.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}structure/Data_Structure_18100004",
+        content=_STRUCTURE_XML.encode(),
+    )
+    with pytest.raises(NotFound, match="matched no series") as exc_info:
         await client.get_data(18100004, "999.999")
+    assert "2 segments but the table has 1 dimensions (Geography)" in str(exc_info.value)
 
 
 async def test_get_data_406_reports_the_upstream_message(httpx_mock):
@@ -402,6 +408,10 @@ async def test_get_data_does_not_cache_a_key_matching_nothing(httpx_mock):
         url=f"{constants.BASE_URL}data/DF_18100004/999.999?lastNObservations=24",
         content=_NO_MATCH_XML.encode(),
         is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}structure/Data_Structure_18100004",
+        content=_STRUCTURE_XML.encode(),
     )
     for _ in range(2):
         with pytest.raises(NotFound, match="matched no series"):
