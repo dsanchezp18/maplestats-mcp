@@ -1,9 +1,11 @@
 """Aggregate usage counts for the hosted server: which tools run, not what was asked.
 
 The counters hold a tool's name, the UTC day, whether the call succeeded,
-how long it took (the last LATENCY_SAMPLES durations per tool, for its p50
-and p95) and how large its result was (characters of text, and tokens
-estimated from them: what a call costs a model to read). They never hold
+for a failure its error code (`not_found`, `invalid_input`, ... from
+shared/error_hints.py: a fixed list, never the message), how long it took
+(the last LATENCY_SAMPLES durations per tool, for its p50 and p95) and how
+large its result was (characters of text, and tokens estimated from them:
+what a call costs a model to read). They never hold
 arguments, query text, result content, client addresses or anything else a
 caller typed. `/stats` reports the period they cover, with
 the upstream hosts' error counts and breaker states from shared/breaker.py.
@@ -41,6 +43,7 @@ from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from maplestats_mcp import config
 from maplestats_mcp.shared.breaker import BREAKER
 from maplestats_mcp.shared.brief import estimated_tokens
+from maplestats_mcp.shared.error_hints import ERROR_CODES, error_code
 from maplestats_mcp.shared.goatcounter import FORWARDER, GoatCounterForwarder
 
 logger = logging.getLogger("maplestats_mcp.usage")
@@ -49,10 +52,22 @@ logger = logging.getLogger("maplestats_mcp.usage")
 MAX_DAYS = 400
 # How often counts are written to MAPLE_USAGE_STATS_FILE; a crash loses at most this much.
 SAVE_SECONDS = 60
+# Still 1 after `by_error` was added: it is optional on read, and a bump would make a
+# revision from before it move the file aside. During a rollout that old revision's
+# save rewrites the file without `by_error`, so the error codes counted by the new one
+# in those minutes are lost (the call counts are not).
 FILE_VERSION = 1
 # Durations kept per tool for its percentiles: recent enough to show a slow
 # upstream today, and at most a few hundred kilobytes for every tool together.
 LATENCY_SAMPLES = 500
+
+# What the file holds: counting since, calls by (tool, ok), calls by day, failures by (tool, code).
+_Saved = tuple[
+    datetime,
+    Counter[tuple[str, bool]],
+    dict[str, Counter[bool]],
+    Counter[tuple[str, str]],
+]
 
 
 def normalized_tool_name(name: str) -> str:
@@ -87,6 +102,8 @@ class UsageStats:
         self.since = datetime.now(UTC)
         self.tools: Counter[tuple[str, bool]] = Counter()
         self.days: dict[str, Counter[bool]] = {}
+        # Failures by (tool, error code); a failure counted before codes existed has none.
+        self.errors: Counter[tuple[str, str]] = Counter()
         self.durations: dict[str, deque[float]] = {}
         # Per tool: [results sized, characters in all of them, the largest]. The
         # size of what the client read, never its content.
@@ -94,6 +111,7 @@ class UsageStats:
         # Counted since the last save, added to the file by the next one.
         self._new_tools: Counter[tuple[str, bool]] = Counter()
         self._new_days: dict[str, Counter[bool]] = {}
+        self._new_errors: Counter[tuple[str, str]] = Counter()
         self._task: asyncio.Task[None] | None = None
         if path is not None:
             try:
@@ -104,7 +122,7 @@ class UsageStats:
                 logger.warning("Usage stats file unreadable at start: %s", exc)
                 saved = None
             if saved is not None:
-                self.since, self.tools, self.days = saved
+                self.since, self.tools, self.days, self.errors = saved
 
     def register_tools(self, names: Iterable[str]) -> None:
         """Accept names from the server registry, never from a request."""
@@ -121,10 +139,17 @@ class UsageStats:
         entry[1] += chars
         entry[2] = max(entry[2], chars)
 
-    def record(self, tool: str, ok: bool, seconds: float | None = None) -> None:
+    def record(
+        self, tool: str, ok: bool, seconds: float | None = None, code: str | None = None
+    ) -> None:
         name = self._name(tool)
         self.tools[(name, ok)] += 1
         self._new_tools[(name, ok)] += 1
+        if not ok:
+            # Only a code from the fixed list is kept, never text from the failure.
+            kind = code if code in ERROR_CODES else "error"
+            self.errors[(name, kind)] += 1
+            self._new_errors[(name, kind)] += 1
         if self.forwarder is not None:
             self.forwarder.add(name, ok)
         if seconds is not None:
@@ -138,7 +163,7 @@ class UsageStats:
 
     # ---- the file (MAPLE_USAGE_STATS_FILE)
 
-    def _read(self) -> tuple[datetime, Counter[tuple[str, bool]], dict[str, Counter[bool]]] | None:
+    def _read(self) -> _Saved | None:
         """The file's counts, or None when there is no file or it is not valid.
 
         A file that is not valid is moved aside (`.bad`) rather than overwritten, so
@@ -184,8 +209,11 @@ class UsageStats:
             # The unsaved counts stay queued for the next save.
             logger.warning("Usage stats file unreadable, not saved this time: %s", exc)
             return False
-        since, tools, days = saved if saved is not None else (self.since, Counter(), {})
+        since, tools, days, errors = (
+            saved if saved is not None else (self.since, Counter(), {}, Counter())
+        )
         tools.update(self._new_tools)
+        errors.update(self._new_errors)
         for day, counts in self._new_days.items():
             days.setdefault(day, Counter()).update(counts)
         _drop_old_days(days)
@@ -195,6 +223,7 @@ class UsageStats:
             "counting_since": since.isoformat(),
             "by_tool": _by_tool(tools),
             "by_day": _by_day(days),
+            "by_error": _by_error(errors),
         }
         temp = self.path.with_name(self.path.name + f".{os.getpid()}.tmp")
         try:
@@ -206,9 +235,10 @@ class UsageStats:
             # The unsaved counts stay queued for the next save.
             logger.warning("Usage stats not saved to %s: %s", self.path, exc)
             return False
-        self.since, self.tools, self.days = since, tools, days
+        self.since, self.tools, self.days, self.errors = since, tools, days, errors
         self._new_tools = Counter()
         self._new_days = {}
+        self._new_errors = Counter()
         return True
 
     def _start(self) -> None:
@@ -257,19 +287,30 @@ class UsageStats:
             if self.path is not None
             else "a restart starts the count again"
         )
+        failed = sum(c for (_, ok), c in self.tools.items() if not ok)
+        by_code: Counter[str] = Counter()
+        for (_, code), count in self.errors.items():
+            by_code[code] += count
+        error_codes = dict(by_code.most_common())
+        # Failures counted before codes were kept (an older file) have none.
+        if failed > sum(by_code.values()):
+            error_codes["uncoded"] = failed - sum(by_code.values())
         return {
             "counting_since": self.since.isoformat(),
             "persisted": self.path is not None,
             "note": (
-                "Tool names, outcomes, durations and result sizes (characters, and tokens "
-                "estimated at four characters each), and upstream host names with their error "
-                f"counts, only, in memory; {kept}. Where GoatCounter is configured, each "
-                "call's tool name and outcome are also counted there."
+                "Tool names, outcomes, error codes (a fixed list such as not_found or "
+                "invalid_input, never the message), durations and result sizes (characters, "
+                "and tokens estimated at four characters each), and upstream host names with "
+                f"their error counts, only, in memory; {kept}. Where GoatCounter is "
+                "configured, each call's tool name and outcome are also counted there."
             ),
             "calls": sum(self.tools.values()),
-            "errors": sum(c for (_, ok), c in self.tools.items() if not ok),
+            "errors": failed,
+            "error_codes": error_codes,
             "by_day": _by_day(self.days),
             "by_tool": dict(ordered),
+            "by_error": _by_error(self.errors, order=[name for name, _ in ordered]),
             "latency_ms": latency,
             "result_size": sizes,
         }
@@ -316,6 +357,17 @@ def _by_tool(tools: Counter[tuple[str, bool]]) -> dict[str, dict[str, int]]:
     return out
 
 
+def _by_error(
+    errors: Counter[tuple[str, str]], order: list[str] | None = None
+) -> dict[str, dict[str, int]]:
+    """Failures per tool, then per code; tools in `order` first (else by name), codes by count."""
+    out: dict[str, dict[str, int]] = {}
+    for (name, code), count in sorted(errors.items(), key=lambda item: (-item[1], item[0])):
+        out.setdefault(name, {})[code] = count
+    names = order if order is not None else sorted(out)
+    return {name: out[name] for name in names if name in out}
+
+
 def _by_day(days: dict[str, Counter[bool]]) -> dict[str, dict[str, int]]:
     return {
         day: {"ok": counts[True], "error": counts[False]} for day, counts in sorted(days.items())
@@ -328,7 +380,7 @@ def _count(value: Any) -> int:
     return value
 
 
-def _parse(body: Any) -> tuple[datetime, Counter[tuple[str, bool]], dict[str, Counter[bool]]]:
+def _parse(body: Any) -> _Saved:
     """Check and read a saved file's body; raise ValueError when it is not one."""
     if not isinstance(body, dict) or body.get("version") != FILE_VERSION:
         raise ValueError("unknown file version")
@@ -345,8 +397,17 @@ def _parse(body: Any) -> tuple[datetime, Counter[tuple[str, bool]], dict[str, Co
     for day, counts in body["by_day"].items():
         datetime.strptime(day, "%Y-%m-%d")
         days[day] = Counter({True: _count(counts["ok"]), False: _count(counts["error"])})
+    # Absent from a file written before error codes were kept.
+    errors: Counter[tuple[str, str]] = Counter()
+    for name, codes in body.get("by_error", {}).items():
+        if not isinstance(name, str):
+            raise TypeError("tool name is not text")
+        for code, count in codes.items():
+            if not isinstance(code, str):
+                raise TypeError("error code is not text")
+            errors[(name, code)] = _count(count)
     # Zero entries are dropped so a tool with no failures shows as before.
-    return since, +tools, days
+    return since, +tools, days, +errors
 
 
 # True while a counted call runs. reproduce_code and reproduce_workbook call the
@@ -387,8 +448,8 @@ class UsageMiddleware(Middleware):
         started = time.perf_counter()
         try:
             result = await call_next(context)
-        except Exception:
-            self.stats.record(str(name), False, time.perf_counter() - started)
+        except Exception as exc:
+            self.stats.record(str(name), False, time.perf_counter() - started, error_code(exc))
             raise
         finally:
             _inside_call.reset(token)
@@ -396,10 +457,24 @@ class UsageMiddleware(Middleware):
         # branch above counts; an error result only gets here when a tool returned
         # ToolResult(is_error=True) itself.
         ok = not getattr(result, "is_error", False)
-        self.stats.record(str(name), ok, time.perf_counter() - started)
+        code = None if ok else leading_code(result)
+        self.stats.record(str(name), ok, time.perf_counter() - started, code)
         if ok:
             self.stats.record_size(str(name), result_chars(result))
         return result
+
+
+_LEADING_CODE = re.compile(r"\[([a-z_]{1,40})\]")
+
+
+def leading_code(result: Any) -> str | None:
+    """The "[code]" an error result's text starts with, when it is one of ERROR_CODES."""
+    for block in getattr(result, "content", None) or []:
+        text = getattr(block, "text", None)
+        if isinstance(text, str):
+            found = _LEADING_CODE.match(text.lstrip())
+            return found.group(1) if found and found.group(1) in ERROR_CODES else None
+    return None
 
 
 def result_chars(result: Any) -> int:

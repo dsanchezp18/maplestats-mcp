@@ -9,6 +9,7 @@ from fastmcp import Client
 from fastmcp.tools import ToolResult
 
 from maplestats_mcp.server import mcp
+from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.security import with_stats_endpoint
 from maplestats_mcp.shared.usage import MAX_DAYS, STATS, UsageStats
 
@@ -279,3 +280,144 @@ def test_an_unreadable_file_is_never_overwritten(tmp_path, monkeypatch) -> None:
     assert UsageStats(path=path).snapshot()["calls"] == 5
     assert stats.save()
     assert UsageStats(path=path).snapshot()["calls"] == 6
+
+
+# ---- error codes: why calls fail, as a fixed list and never the message
+
+
+def test_failures_are_counted_by_tool_and_code() -> None:
+    stats = UsageStats(("boc_get_observations", "wds_search_cubes"))
+    stats.record("boc_get_observations", False, code="not_found")
+    stats.record("boc_get_observations", False, code="not_found")
+    stats.record("boc_get_observations", False, code="invalid_input")
+    stats.record("boc_get_observations", True)
+    stats.record("wds_search_cubes", False)
+    snap = stats.snapshot()
+    assert snap["errors"] == 4
+    assert snap["error_codes"] == {"not_found": 2, "invalid_input": 1, "error": 1}
+    assert snap["by_error"] == {
+        "boc_get_observations": {"not_found": 2, "invalid_input": 1},
+        "wds_search_cubes": {"error": 1},
+    }
+
+
+def test_a_code_outside_the_fixed_list_is_never_stored() -> None:
+    stats = UsageStats(("boc_get_observations",))
+    stats.record("boc_get_observations", False, code="what is my neighbour's income?")
+    snap = stats.snapshot()
+    assert snap["by_error"] == {"boc_get_observations": {"error": 1}}
+    assert "neighbour" not in json.dumps(snap)
+
+
+async def _failures(error: Exception) -> dict[str, int]:
+    from fastmcp import FastMCP
+
+    from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
+    from maplestats_mcp.shared.usage import UsageMiddleware
+
+    stats = UsageStats(("failing_tool",))
+    server = FastMCP("t")
+    # The order server.py uses: the hint middleware outside the counter.
+    server.add_middleware(ErrorHintMiddleware())
+    server.add_middleware(UsageMiddleware(stats))
+
+    @server.tool
+    async def failing_tool() -> str:
+        raise error
+
+    async with Client(server) as client:
+        await client.call_tool("failing_tool", {}, raise_on_error=False)
+    return stats.snapshot()["by_error"]["failing_tool"]
+
+
+async def test_a_failing_tool_is_counted_under_its_error_class() -> None:
+    assert await _failures(NotFound("no such series")) == {"not_found": 1}
+    assert await _failures(InvalidInput("bad date")) == {"invalid_input": 1}
+    assert await _failures(ValueError("odd")) == {"error": 1}
+
+
+async def test_real_server_failures_get_the_code_the_client_reads() -> None:
+    before = STATS.snapshot()["by_error"]
+    async with Client(mcp) as client:
+        # Arguments that fail the tool's schema, and a name that is no tool.
+        await client.call_tool(
+            "call_tool",
+            {"name": "boc_get_observations", "arguments": {"series_names": "not a list"}},
+            raise_on_error=False,
+        )
+        await client.call_tool(
+            "call_tool",
+            {"name": "private_identifier_in_code_test", "arguments": {}},
+            raise_on_error=False,
+        )
+    after = STATS.snapshot()["by_error"]
+    assert after["boc_get_observations"]["invalid_input"] == (
+        before.get("boc_get_observations", {}).get("invalid_input", 0) + 1
+    )
+    assert after["other"]["unknown_tool"] == before.get("other", {}).get("unknown_tool", 0) + 1
+    assert "private_identifier_in_code_test" not in json.dumps(STATS.snapshot())
+
+
+async def test_a_result_flagged_as_an_error_is_coded_from_its_leading_bracket() -> None:
+    from fastmcp import FastMCP
+
+    from maplestats_mcp.shared.usage import UsageMiddleware
+
+    stats = UsageStats(("coded_tool", "plain_tool"))
+    server = FastMCP("t")
+    server.add_middleware(UsageMiddleware(stats))
+
+    @server.tool
+    async def coded_tool() -> ToolResult:
+        return ToolResult(content="[not_found] no such table", is_error=True)
+
+    @server.tool
+    async def plain_tool() -> ToolResult:
+        return ToolResult(content="[made_up_by_a_tool] refused", is_error=True)
+
+    async with Client(server) as client:
+        await client.call_tool("coded_tool", {}, raise_on_error=False)
+        await client.call_tool("plain_tool", {}, raise_on_error=False)
+    assert stats.snapshot()["by_error"] == {
+        "coded_tool": {"not_found": 1},
+        "plain_tool": {"error": 1},
+    }
+
+
+def test_error_codes_survive_a_restart(tmp_path) -> None:
+    path = tmp_path / "stats.json"
+    first = UsageStats(("boc_get_observations",), path=path)
+    first.record("boc_get_observations", False, code="not_found")
+    assert first.save()
+    second = UsageStats(("boc_get_observations",), path=path)
+    second.record("boc_get_observations", False, code="not_found")
+    second.record("boc_get_observations", False, code="invalid_input")
+    assert second.save()
+    snap = UsageStats(path=path).snapshot()
+    assert snap["by_error"] == {"boc_get_observations": {"not_found": 2, "invalid_input": 1}}
+    assert snap["error_codes"] == {"not_found": 2, "invalid_input": 1}
+
+
+def test_a_file_from_before_error_codes_still_loads(tmp_path) -> None:
+    path = tmp_path / "stats.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "counting_since": "2026-11-07T16:39:30+00:00",
+                "by_tool": {"boc_get_observations": {"ok": 3, "error": 2}},
+                "by_day": {"2026-11-07": {"ok": 3, "error": 2}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    stats = UsageStats(("boc_get_observations",), path=path)
+    stats.record("boc_get_observations", False, code="not_found")
+    snap = stats.snapshot()
+    assert snap["errors"] == 3
+    assert snap["error_codes"] == {"not_found": 1, "uncoded": 2}
+    assert not (tmp_path / "stats.json.bad").exists()
+    assert stats.save()
+    assert UsageStats(path=path).snapshot()["by_error"] == {
+        "boc_get_observations": {"not_found": 1}
+    }

@@ -161,6 +161,19 @@ def _validation_error(exc: BaseException) -> ValidationError | None:
     return None
 
 
+def argument_error_code(exc: BaseException) -> str | None:
+    """The code of the error ValidationErrorMiddleware turns `exc` into, or None.
+
+    A counter that runs inside that middleware (usage.py) sees the raw pydantic
+    error, so it asks here to code the failure as the client will read it.
+    """
+    if _validation_error(exc) is not None:
+        return "invalid_input"
+    if _any_pydantic_error(exc):
+        return "upstream_error"
+    return None
+
+
 class ValidationErrorMiddleware(Middleware):
     """Re-raise a tool's argument ValidationError as a one-line InvalidInput."""
 
