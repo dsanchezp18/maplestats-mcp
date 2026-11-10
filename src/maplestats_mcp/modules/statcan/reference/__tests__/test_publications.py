@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import re
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 
@@ -67,9 +68,16 @@ PGDP_PAGES = [
 ]
 
 
-def _pdf(page_lines: list[list[str]], outline: list[tuple[str, int]] | None = None) -> bytes:
+Line = str | tuple[str, str]
+
+
+def _pdf(
+    page_lines: Sequence[Sequence[Line]], outline: list[tuple[str, int]] | None = None
+) -> bytes:
     """A PDF writing each line with its own text object, as Acrobat Distiller wrote
-    StatCan's; with `outline`, (title, 0-based page) bookmarks."""
+    StatCan's; a (left, right) pair is a line of two columns, as 15-203-X prints
+    English and French side by side. With `outline`, (title, 0-based page)
+    bookmarks."""
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"",  # the page tree, filled in below
@@ -77,10 +85,13 @@ def _pdf(page_lines: list[list[str]], outline: list[tuple[str, int]] | None = No
     ]
     kids = []
     for lines in page_lines:
-        text = b"".join(
-            b"BT /F1 10 Tf 40 %d Td (%s) Tj ET\n" % (760 - 14 * i, line.encode("cp1252"))
-            for i, line in enumerate(lines)
-        )
+        text = b""
+        for i, line in enumerate(lines):
+            parts = [(40, line)] if isinstance(line, str) else list(zip((40, 320), line))
+            for x, part in parts:
+                if part:
+                    encoded = part.encode("cp1252")
+                    text += b"BT /F1 10 Tf %d %d Td (%s) Tj ET\n" % (x, 760 - 14 * i, encoded)
         objects.append(b"<< /Length %d >>\nstream\n%s\nendstream" % (len(text), text))
         content = len(objects)
         objects.append(
@@ -109,6 +120,52 @@ def _pdf(page_lines: list[list[str]], outline: list[tuple[str, int]] | None = No
     out = io.BytesIO()
     writer.write(out)
     return out.getvalue()
+
+
+# 15-203-X's methodology pages: English on the left, French on the right, under a
+# running header in both languages.
+BILINGUAL_PARAGRAPHS = [
+    (
+        ("Gross Output Approach", "Méthode de la production brute"),
+        [
+            ("This approach consists in allocating the", "Cette méthode consiste à répartir la"),
+            ("national gross output and the GDP of an", "production brute et le PIB d'une"),
+            ("industry based on the provincial", "industrie donnée à l'échelle nationale"),
+            ("distribution of gross output; this is a", "d'après la distribution provinciale de"),
+            ("valid proxy for the intermediate inputs", "la production brute, qui est une"),
+            ("of the industry in question, which is", "méthode de remplacement valable pour"),
+            ("the case for most of the industries.", "la plupart des industries et des cas."),
+        ],
+    ),
+    (
+        ("Approach based on Selected Factor Incomes", "Méthode fondée sur certains revenus"),
+        [
+            ("This approach consists in allocating the", "Cette méthode consiste à répartir le"),
+            ("GDP of an industry based on the sum of", "PIB d'une industrie d'après la somme"),
+            ("selected factor incomes, such as the", "des revenus de certains facteurs, tels"),
+            ("wages and the depreciation of capital", "que les salaires et l'amortissement du"),
+            ("that are available by province for it.", "capital qui sont connus par province."),
+        ],
+    ),
+]
+OTHER_HEADINGS = [
+    ("Net Output Approach", "Méthode de la production nette"),
+    ("Other Substitute Approaches", "Autres méthodes de remplacement"),
+]
+
+
+def _bilingual_pages() -> list[list[Line]]:
+    """Three such pages: the same paragraphs under each page's own first heading."""
+    out: list[list[Line]] = []
+    for first in [BILINGUAL_PARAGRAPHS[0][0], *OTHER_HEADINGS]:
+        page: list[Line] = [
+            ("Provincial Gross Domestic Product, 1999", "Produit intérieur brut provincial, 1999"),
+            "",
+        ]
+        for index, (heading, lines) in enumerate(BILINGUAL_PARAGRAPHS):
+            page.extend([first if index == 0 else heading, "", *lines, ""])
+        out.append(page)
+    return out
 
 
 def _fixture(name: str) -> str:
@@ -433,7 +490,13 @@ async def test_pdf_query_finds_the_page(httpx_mock):
     _pgdp(httpx_mock, _pdf(PGDP_PAGES))
     result = await client.get_section_text("15-203-X", query="selected factor incomes")
     best = result.sections[0]
-    assert (result.format, best.id, best.url) == ("pdf", "page=3", f"{PGDP_PDF}#page=3")
+    # "Approach based on Selected Factor Incomes" (one word in lower case among
+    # five) is a heading of its own inside page 3.
+    assert (result.format, best.title, best.url) == (
+        "pdf",
+        "Approach based on Selected Factor Incomes",
+        f"{PGDP_PDF}#page=3",
+    )
     # The lines are one paragraph; the one-word lines run on.
     assert "selected factor incomes such as provincial wages and depreciation or only wages." in (
         best.text
@@ -496,6 +559,113 @@ def test_pdf_page_cap_reads_the_first_pages():
     document = pdf.extract(_pdf(PGDP_PAGES), PGDP_PDF, max_pages=2, max_chars=10**6, seconds=60.0)
     assert (document.page_count, document.pages_read) == (3, 2)
     assert [h.anchor for h in document.page.headings] == ["page=1", "page=2"]
+
+
+@pytest.mark.parametrize(
+    ("lang", "heading", "kept", "dropped"),
+    [
+        ("en", "Gross Output Approach", "allocating the national gross output", "répartir"),
+        ("fr", "Méthode de la production brute", "consiste à répartir la production", "allocating"),
+    ],
+)
+async def test_bilingual_two_column_pdf_keeps_the_column_in_lang(
+    lang, heading, kept, dropped, httpx_mock
+):
+    # Plain extraction reads such a page line by line across both columns; the
+    # columns are read one at a time and only the one in `lang` is kept.
+    httpx_mock.add_response(url=PGDP_PDF, content=_pdf(_bilingual_pages()))
+    result = await client.get_section_text(PGDP_PDF, section="page=1", lang=lang)
+    text = result.sections[0].text
+    assert text.startswith(f"# Page 1 - {heading}\n\n## {heading}\n")
+    assert kept in text and dropped not in text
+    # The running header's half in that column is dropped too.
+    assert "1999" not in text
+    limits = result.provenance.limits or ""
+    assert "3 pages" in limits and ("English column" in limits or "colonne française" in limits)
+
+
+def test_two_columns_in_one_language_are_read_one_after_the_other():
+    left = [f"English text line {n} of the left column" for n in range(8)]
+    right = [f"and the right column holds line {n} too" for n in range(8)]
+    layout = "\n".join(f"{a:<60}{b}" for a, b in zip(left, right, strict=True))
+    segments = pdf.columns(layout)
+    assert segments is not None
+    pieces, dropped = pdf._pick_columns(segments, "en")
+    assert not dropped
+    assert [line for piece in pieces for line in piece] == [*left, *right]
+
+
+def test_a_table_is_not_cut_into_columns():
+    rows = [f"Industry {n}        {n * 10}        {n * 7.5}        {n * 3}" for n in range(10)]
+    assert pdf.columns("\n".join(f"{row:<60}{row}" for row in rows)) is None
+
+
+def test_language_of_a_column():
+    assert (
+        pdf.language(
+            "This approach consists in allocating the output of the industry to the provinces, which is the case for most of them."
+        )
+        == "en"
+    )
+    assert (
+        pdf.language(
+            "Cette méthode consiste à répartir la production de l'industrie entre les provinces, ce qui est le cas pour la plupart des industries."
+        )
+        == "fr"
+    )
+    assert pdf.language("172 75.4 226261 37.4") is None
+
+
+def test_pdf_table_labels_are_not_headings():
+    assert not pdf.looks_like_heading("NFLD. - T.-N.")
+    assert not pdf.looks_like_heading("Table 1")
+    assert pdf.looks_like_heading("Approach based on Selected Factor Incomes")
+    # A label in a table is followed by figures, not by running text.
+    row = "E159 R3069 Gross output 1,234 2,345 3,456 4,567 5,678 6,789 7,890 8,901 9,012"
+    by_page = [["Vanity Industries", row]]
+    assert pdf._headings(by_page) == set()
+
+
+async def test_large_edition_searches_its_whole_pdf_past_the_page_cap(httpx_mock, monkeypatch):
+    # 13-017-X's 2008 edition: 146 HTML pages, more than CRAWL_MAX_PAGES, and a PDF
+    # of the whole edition linked from its side menu (outside role=main).
+    monkeypatch.setattr(constants, "CRAWL_MAX_PAGES", 2)
+    base = f"{N1}/pub/13-017-x"
+    main = f"{base}/13-017-x2008001-eng.htm"
+    whole = f"{base}/13-017-x2008001-eng.pdf"
+    chapters = [f"{base}/2008001/themes/ch0{n}/52133{n}0-eng.htm" for n in range(1, 4)]
+    links = "".join(f'<li><a href="{url}">Chapter {n}</a></li>' for n, url in enumerate(chapters))
+    httpx_mock.add_response(url=f"{N1}/en/catalogue/13-017-X", status_code=404, html="<h1/>")
+    httpx_mock.add_response(
+        url=main,
+        html=f"""<html><body><div role="main"><h1>Guide</h1><p>Overview.</p><ul>{links}</ul>
+        </div><nav><a href="/pub/13-017-x/13-017-x2008001-eng.pdf">PDF version</a></nav>
+        </body></html>""",
+    )
+    first = "Games of chance are the sales of lottery tickets net of prizes awarded."
+    httpx_mock.add_response(url=chapters[0], html=f"<main><h1>Chapter 1</h1><p>{first}</p></main>")
+    httpx_mock.add_response(url=chapters[1], is_optional=True, html="<main><h1>C</h1></main>")
+    httpx_mock.add_response(url=chapters[2], is_optional=True, html="<main><h1>C</h1></main>")
+    httpx_mock.add_response(
+        url=whole,
+        content=_pdf(
+            [
+                ["Chapter 1", first],
+                [
+                    "Chapter 3",
+                    "Lottery winnings are not income: they are transfers between",
+                    "households, and lottery sales net of prizes are output.",
+                ],
+            ]
+        ),
+    )
+    result = await client.get_section_text(main, query="lottery")
+    urls = [s.url for s in result.sections]
+    # Page 1 of the PDF is chapter 1's text, read already: the HTML page stands
+    # for it; page 2 is only in the PDF.
+    assert chapters[0] in urls and f"{whole}#page=2" in urls
+    assert f"{whole}#page=1" not in urls
+    assert "whole PDF" in (result.provenance.limits or "")
 
 
 def _lfs_appendices_missing(httpx_mock) -> None:
