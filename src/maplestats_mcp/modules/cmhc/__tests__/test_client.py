@@ -8,6 +8,8 @@ embedded data-table-model JSON rather than a hardcoded catalogue.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 import pytest
 
@@ -241,6 +243,74 @@ async def test_get_table_data_parses_unflagged_columns_and_special_values(httpx_
     assert result.available_filters == []
     # A census-style table carries no reliability flags, so nothing to explain.
     assert result.flag_legend == {}
+
+
+_FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.mark.parametrize(
+    ("fixture", "category_level_1", "category_level_2", "column_field", "row_field", "total"),
+    [
+        # Recorded 2026-11-09: a sampled survey table, one flag column per value.
+        (
+            "rms_vacancy_by_province",
+            "Primary Rental Market",
+            "Vacancy Rate (%)",
+            "2",
+            "21",
+            ("Total", 3.1, "a"),
+        ),
+        # Recorded 2026-11-09: an administrative count, no flag columns.
+        (
+            "scss_starts_by_province",
+            "New Housing Construction",
+            "Starts (Actual)",
+            "1",
+            "30",
+            ("Total", 19984.0, None),
+        ),
+    ],
+)
+async def test_get_table_data_labels_the_cross_tab_total_row(
+    httpx_mock, fixture, category_level_1, category_level_2, column_field, row_field, total
+):
+    """HMIP's cross-tab export leaves its last row, the requested
+    geography's total, without a label. That row is labelled with the
+    geography's name, like every other row is with its province's."""
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/en/TableMapChart/TableMatchingCriteria"
+            "?GeographyType=Country&GeographyId=1"
+            f"&{httpx.QueryParams({'CategoryLevel1': category_level_1})}"
+            f"&{httpx.QueryParams({'CategoryLevel2': category_level_2})}"
+            f"&ColumnField={column_field}&RowField={row_field}"
+        ),
+        text=(_FIXTURES / f"{fixture}_matching_criteria.html").read_text(encoding="utf-8"),
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/en/TableMapChart/ExportTable",
+        method="POST",
+        content=(_FIXTURES / f"{fixture}_export.csv").read_bytes(),
+        headers={"content-type": "text/csv"},
+    )
+    result = await client.get_table_data(
+        category_level_1, category_level_2, column_field, row_field
+    )
+    periods = [row.period for row in result.rows]
+    assert all(periods)
+    assert periods[0] == "Newfoundland and Labrador"
+    assert periods[-1] == "Canada" == result.geography_name
+    column, value, flag = total
+    assert result.rows[-1].values[column].value == value
+    assert result.rows[-1].values[column].flag == flag
+
+
+def test_parse_csv_export_keeps_blank_labels_without_a_total_label():
+    text = "Title\nSubtitle\n,Total,\nAlberta,4.2,a\n,3.1,a\n"
+    _, rows, _ = client._parse_csv_export(text)
+    assert [row.period for row in rows] == ["Alberta", ""]
+    _, rows, _ = client._parse_csv_export(text, total_label="Canada")
+    assert [row.period for row in rows] == ["Alberta", "Canada"]
 
 
 async def test_get_table_data_applies_and_validates_filters(httpx_mock):

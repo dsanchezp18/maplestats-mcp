@@ -166,7 +166,8 @@ async def cmhc_get_table_data(
     cmhc_list_metropolitan_areas, or its name: "Toronto"). Pass `row_field="TIMESERIES"` for a historical time
     series (one row per period) or a province/centre-breakdown field
     from cmhc_get_table_options for a current cross-tabulation (one row
-    per province/centre). Each returned cell carries CMHC's own
+    per province/centre, then a total row for the requested geography,
+    labelled with its name, e.g. "Canada"). Each returned cell carries CMHC's own
     reliability flag (a/b/c/d = Excellent/Very good/Good/Poor, use with
     caution) alongside the value, `value: 0` where CMHC prints "-" (no
     units in the universe), or `value: null` with the raw marker in

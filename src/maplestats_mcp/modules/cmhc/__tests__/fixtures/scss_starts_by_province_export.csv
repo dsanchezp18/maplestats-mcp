@@ -1,0 +1,16 @@
+" — Starts by Dwelling Type (in Census Metropolitan Areas, Census Agglomerations, and other selected municipalities with at least 10,000 people)  "
+September 2026
+,Single,Semi-Detached,Row,Apartment,Total,
+Newfoundland and Labrador,63,7,7,25,102,
+Prince Edward Island,34,27,6,90,157,
+Nova Scotia,109,9,41,336,495,
+New Brunswick,91,19,24,917,"1,051",
+Quebec,438,132,66,"3,257","3,893",
+Ontario,"1,060",155,984,"1,855","4,054",
+Manitoba,214,48,68,546,876,
+Saskatchewan,171,31,84,130,416,
+Alberta,"1,160",297,706,"2,413","4,576",
+British Columbia,328,264,352,"3,420","4,364",
+,"3,668",989,"2,338","12,989","19,984",
+
+Source,CMHC Starts and Completions Survey
