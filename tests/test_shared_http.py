@@ -194,7 +194,8 @@ async def test_get_raw_retries_429_with_retry_after(httpx_mock):
     assert len(httpx_mock.get_requests()) == 2
 
 
-async def test_every_main_path_helper_sends_connection_close_to_www150(httpx_mock):
+async def test_main_path_helpers_keep_the_www150_connection_on_a_first_try(httpx_mock):
+    # Only send_with_retry, whose caller owns the client, still closes it.
     url = "https://www150.statcan.gc.ca/n1/x"
     httpx_mock.add_response(url=url, json={}, is_reusable=True)
     await api_get(url)
@@ -205,7 +206,28 @@ async def test_every_main_path_helper_sends_connection_close_to_www150(httpx_moc
         await send_with_retry(client, "GET", url)
     sent = httpx_mock.get_requests()
     assert len(sent) == 5
-    assert all(request.headers["Connection"] == "close" for request in sent)
+    assert all(request.headers["Connection"] == "keep-alive" for request in sent[:4])
+    assert sent[4].headers["Connection"] == "close"
+
+
+async def test_a_www150_retry_goes_out_on_a_fresh_connection(httpx_mock, monkeypatch):
+    url = "https://www150.statcan.gc.ca/n1/flaky"
+    httpx_mock.add_response(url=url, status_code=503)
+    httpx_mock.add_response(url=url, json={"ok": True})
+    shared = http_module._client
+    used: list[httpx.AsyncClient] = []
+    real_get = httpx.AsyncClient.get
+
+    async def spy(self, *args, **kwargs):
+        used.append(self)
+        return await real_get(self, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", spy)
+    assert await api_get(url) == {"ok": True}
+    first, retry = httpx_mock.get_requests()
+    assert first.headers["Connection"] == "keep-alive"
+    assert retry.headers["Connection"] == "close"
+    assert used[0] is shared and used[1] is not shared
 
 
 def test_retry_after_ignores_non_ascii_digits():

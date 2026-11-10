@@ -32,8 +32,8 @@ from __future__ import annotations
 
 import functools
 import ssl
-from collections.abc import Callable, Coroutine, Iterator
-from contextlib import contextmanager
+from collections.abc import AsyncIterator, Callable, Coroutine, Iterator
+from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -246,28 +246,71 @@ def new_client(
 # and then timed out for the rest of the connection. With a new connection per
 # request, failures were independent (geo: 6 of 10 succeeded), so a retry can
 # reach a healthy backend instead of repeating the broken one.
-_FRESH_CONNECTION_HOSTS = frozenset(
-    {"geo.statcan.gc.ca", "www12.statcan.gc.ca", "www150.statcan.gc.ca"}
-)
+_FRESH_CONNECTION_HOSTS = frozenset({"geo.statcan.gc.ca", "www12.statcan.gc.ca"})
+
+# www150 (WDS, SDMX, CIMT) keeps its connection on the main helpers below and
+# opens a fresh one only for a retry, so a retry still reaches another backend.
+# Measured 2026-11-09 from the hosted container (Azure Canada Central), 20
+# sequential getCodeSets GETs each way: a new connection per request took a
+# median 109 ms (p90 124 ms), a reused one 20 ms (p90 38 ms), every answer a
+# 200 with the same 314,809-byte body. Sources with their own client
+# (send_with_retry, request_headers) still close every www150 connection,
+# since they cannot switch to a fresh client for a retry.
+_FRESH_ON_RETRY_HOSTS = frozenset({"www150.statcan.gc.ca"})
+
+# The attempt number of the main helpers' current try (tenacity's `before`
+# hook sets it), so a retry knows to leave the shared connection pool.
+_attempt: ContextVar[int] = ContextVar("maplestats_attempt", default=1)
 
 
-def _request_headers(url: str, headers: dict[str, str] | None) -> dict[str, str]:
+def _note_attempt(state: RetryCallState) -> None:
+    _attempt.set(state.attempt_number)
+
+
+def _is_fresh_retry(url: str) -> bool:
+    return _attempt.get() > 1 and httpx.URL(url).host in _FRESH_ON_RETRY_HOSTS
+
+
+def _request_headers(
+    url: str, headers: dict[str, str] | None, *, reuse: bool = False
+) -> dict[str, str]:
     """Identify this client while preserving source-specific overrides.
 
     Montreal's CKAN edge returns 403 to requests with no User-Agent but
     accepts the same request once the client identifies itself. Keeping this
     in shared HTTP plumbing fixes that portal without changing StatCan's
     required HTTP/2 transport or repeating the header in every source client.
-    StatCan hosts also get `Connection: close` (see _FRESH_CONNECTION_HOSTS).
+    StatCan hosts also get `Connection: close` (see _FRESH_CONNECTION_HOSTS),
+    except a first try to www150 from the main helpers (`reuse=True`, see
+    _FRESH_ON_RETRY_HOSTS).
     """
-    fresh = {"Connection": "close"} if httpx.URL(url).host in _FRESH_CONNECTION_HOSTS else {}
+    host = httpx.URL(url).host
+    close = host in _FRESH_CONNECTION_HOSTS or (
+        host in _FRESH_ON_RETRY_HOSTS and not (reuse and _attempt.get() == 1)
+    )
+    fresh = {"Connection": "close"} if close else {}
     return {**_DEFAULT_HEADERS, **fresh, **(headers or {})}
+
+
+@asynccontextmanager
+async def _client_for(url: str) -> AsyncIterator[httpx.AsyncClient]:
+    """The shared client, or a one-off client for a retry to www150.
+
+    `Connection: close` alone would not do for a retry: the request would
+    still go out on the pooled connection that just failed.
+    """
+    if _is_fresh_retry(url):
+        async with BreakerClient(timeout=30.0, http2=True, event_hooks=_HOOKS) as fresh:
+            yield fresh
+    else:
+        yield _client
 
 
 # Public names for sources that keep their own client and retry policy (HEAD,
 # range reads, streamed downloads) but should send the same headers and honour
 # the same Retry-After as the main HTTP path.
-request_headers = _request_headers
+def request_headers(url: str, headers: dict[str, str] | None) -> dict[str, str]:
+    return _request_headers(url, headers)
 
 
 def is_retryable(exc: BaseException) -> bool:
@@ -377,6 +420,7 @@ wait_honouring_retry_after = _wait_honouring_retry_after
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
     wait=_wait_honouring_retry_after,
+    before=_note_attempt,
     reraise=True,
 )
 async def api_get(
@@ -386,9 +430,13 @@ async def api_get(
     headers: dict[str, str] | None = None,
     timeout: float = 30.0,
 ) -> Any:
-    response = await _client.get(
-        url, params=params, headers=_request_headers(url, headers), timeout=timeout
-    )
+    async with _client_for(url) as client:
+        response = await client.get(
+            url,
+            params=params,
+            headers=_request_headers(url, headers, reuse=True),
+            timeout=timeout,
+        )
     raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return decode_json(response, url=url)
@@ -402,6 +450,7 @@ _PASSTHROUGH_STATUSES = frozenset({406, 409})
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
     wait=_wait_honouring_retry_after,
+    before=_note_attempt,
     reraise=True,
 )
 async def get_raw(
@@ -421,9 +470,13 @@ async def get_raw(
     is_retryable check still fires for genuinely transient statuses
     (429/500/502/503/504).
     """
-    response = await _client.get(
-        url, params=params, headers=_request_headers(url, headers), timeout=timeout
-    )
+    async with _client_for(url) as client:
+        response = await client.get(
+            url,
+            params=params,
+            headers=_request_headers(url, headers, reuse=True),
+            timeout=timeout,
+        )
     if response.status_code in _PASSTHROUGH_STATUSES:
         return response
     raise_if_cloudflare_challenge(response)
@@ -436,6 +489,7 @@ async def get_raw(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
     wait=_wait_honouring_retry_after,
+    before=_note_attempt,
     reraise=True,
 )
 async def post_form_raw(
@@ -451,9 +505,13 @@ async def post_form_raw(
     CSV export) rather than a JSON API result — `api_post` always
     JSON-decodes and always sends a JSON body, neither of which fits.
     """
-    response = await _client.post(
-        url, data=data, headers=_request_headers(url, headers), timeout=timeout
-    )
+    async with _client_for(url) as client:
+        response = await client.post(
+            url,
+            data=data,
+            headers=_request_headers(url, headers, reuse=True),
+            timeout=timeout,
+        )
     raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return response
@@ -464,6 +522,7 @@ async def post_form_raw(
     retry=retry_if_exception(is_retryable),
     stop=stop_after_attempt(3),
     wait=_wait_honouring_retry_after,
+    before=_note_attempt,
     reraise=True,
 )
 async def api_post(
@@ -473,9 +532,13 @@ async def api_post(
     headers: dict[str, str] | None = None,
     timeout: float = 30.0,
 ) -> Any:
-    response = await _client.post(
-        url, json=json_body, headers=_request_headers(url, headers), timeout=timeout
-    )
+    async with _client_for(url) as client:
+        response = await client.post(
+            url,
+            json=json_body,
+            headers=_request_headers(url, headers, reuse=True),
+            timeout=timeout,
+        )
     raise_if_cloudflare_challenge(response)
     response.raise_for_status()
     return decode_json(response, url=url)
