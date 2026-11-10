@@ -1,0 +1,120 @@
+{
+  "ref:cf49e9513e": {
+    "outcome": "partial",
+    "reason": "Review: Gave the unadjusted August rate and count (2.9%, 529,415), labelled as unadjusted, not the key's figures; a labelled other basis is partial, as for A-02."
+  },
+  "ref:4108e37b1d": {
+    "outcome": "correct",
+    "reason": "Review: The September 2026 value (747.71) is right. The base year it gives is wrong, but it says it is from memory and unchecked, so it is graded on the value (v2 rule)."
+  },
+  "ref:5f3d3e229b": {
+    "outcome": "partial",
+    "reason": "Review: Led with the mixed 2021/2026 calculation, then said it is illustrative and that the LFS publishes its own count, without giving it: partial, as in v1."
+  },
+  "ref:8985266d46": {
+    "outcome": "abstained",
+    "reason": "Review: Found no release of the 2025 provisional estimates and gave no date for them; the April and May items are offered as the closest finds, not as the answer."
+  },
+  "ref:173040e2b1": {
+    "outcome": "partial",
+    "reason": "Review: Recalled, not checked: sold and completed, a signed contract with a deposit, but not non-refundable or a qualified purchaser, and it adds that rental units count once leased, which the key does not support."
+  },
+  "ref:b09b41959f": {
+    "outcome": "partial",
+    "reason": "Review: Refresh rate right; the division only inferred from the description; the DataStore not checked. Not every fact stated: partial."
+  },
+  "ref:40f104931f": {
+    "outcome": "partial",
+    "reason": "Review: Says the normal is not in the data it could reach (no rows for the station), not that the station has none, and offers another station's normal, labelled: partial under the key's rule."
+  },
+  "ref:0fb4fc58ae": {
+    "outcome": "correct",
+    "reason": "Review: The expected date, 2026-11-05; 'already released' is true on the run date, and the next date is labelled an estimate."
+  },
+  "ref:67d8291024": {
+    "outcome": "correct",
+    "reason": "Review: Says the noon rate was retired in 2017 and gives the daily average rate, labelled as such: the key's refusal with the published rate beside it."
+  },
+  "ref:0e6b25d2de": {
+    "outcome": "partial",
+    "reason": "Review: Refresh and the Min Delay type right; the owner not named (the TTC only inferred): partial."
+  },
+  "ref:8818793f04": {
+    "outcome": "partial",
+    "reason": "Review: SEPH's NAICS 912 figure for Alberta, but July 2026, not the latest month (August): an older month is partial under the key."
+  },
+  "ref:aaa3d85f05": {
+    "outcome": "hallucinated",
+    "reason": "Review: Says StatCan does not publish the figure and that the series is blank; SEPH publishes NAICS 912 average weekly earnings for Alberta (14-10-0203, v1560358).",
+    "false_claim": "Says Statistics Canada does not publish average weekly earnings for Alberta's provincial and territorial public administration; table 14-10-0203-01 does (v1560358)."
+  },
+  "ref:09161f1420": {
+    "outcome": "partial",
+    "reason": "Review: Led with the mixed 2021/2026 calculation and called it an illustration, without the LFS count: partial, as in v1 and as the other arm's same answer."
+  },
+  "ref:b6248bc5da": {
+    "outcome": "partial",
+    "reason": "Review: From memory, flagged: manufacturing establishments on the Business Register, right; no industry count. Two of three: partial."
+  },
+  "ref:4d02ae01b6": {
+    "outcome": "partial",
+    "reason": "Review: Both rates right; said 'weakened' first, then corrected itself to 'strengthened' in the same reply: partial (v2 rule)."
+  },
+  "ref:607b6a4b10": {
+    "outcome": "hallucinated",
+    "reason": "Review: From memory: absorbed when sold or rented, counted when the contract is signed, even before completion. The key: sold and completed. Graded on the value: wrong."
+  },
+  "ref:ec5d027993": {
+    "outcome": "partial",
+    "reason": "Review: Publisher and CSV right; the licence not given (headline): partial."
+  },
+  "ref:7e6da96093": {
+    "outcome": "partial",
+    "reason": "Review: Ministry and years right; licence not given, frequency only inferred: partial under the key's rule."
+  },
+  "ref:6d75203a86": {
+    "outcome": "partial",
+    "reason": "Review: Toronto Public Health (inferred) and DataStore yes; the refresh rate not given: partial."
+  },
+  "ref:7bf92b9420": {
+    "outcome": "partial",
+    "reason": "Review: TBS and DataStore yes; the update frequency not given: partial."
+  },
+  "ref:157d07f46b": {
+    "outcome": "abstained",
+    "reason": "Review: Could not list the resources and makes no call that the dataset has no CSV: abstained, not a refusal."
+  },
+  "ref:8ef6fb8ff6": {
+    "outcome": "partial",
+    "reason": "Review: Opens with the 2025 accounts' date as the '2026' accounts, then says 2026 data come in autumn 2027 and no date is scheduled: a wrong first answer corrected in the same reply."
+  },
+  "ref:58a6c45855": {
+    "outcome": "hallucinated",
+    "reason": "Review: States from memory that D means 'fair' (key: Poor) and gives no minimum: hallucinated, as the v3 review graded the same answer."
+  },
+  "ref:408712ad46": {
+    "outcome": "hallucinated",
+    "reason": "Review: States from memory that D means 'fair' (key: Poor) and gives no minimum: hallucinated, as in v3."
+  },
+  "ref:80b325baa8": {
+    "outcome": "abstained",
+    "reason": "Review: None of the three facts given; reached the record, so not a referral."
+  },
+  "ref:9b3eaf2699": {
+    "outcome": "partial",
+    "reason": "Review: GRAVITE right; NB_MORTS read as text from Données Québec's copy, where every field is text: a real published value from another copy is partial (v3 rule for T-28)."
+  },
+  "ref:f2955c888f": {
+    "outcome": "hallucinated",
+    "reason": "Review: Says the record is a dataset; open.alberta.ca lists it as a publication (the headline). Ministry, frequency and format right.",
+    "false_claim": "Says open.alberta.ca lists 'Canada supply and disposition' as a dataset; it is listed as a publication."
+  },
+  "ref:5900e4abd3": {
+    "outcome": "abstained",
+    "reason": "Review: Canada's own figure only, no US figure and no call: abstained, as in the v2 review of X-12."
+  },
+  "ref:7ff93dde70": {
+    "outcome": "abstained",
+    "reason": "Review: Its queries came back empty; no status given: abstained."
+  }
+}

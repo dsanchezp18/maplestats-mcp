@@ -62,10 +62,12 @@ def attach(
     for row, verdict in zip(todo, verdicts, strict=True):
         row["judge"] = verdict
         deterministic = row["grade"].get("auto_outcome") or row["grade"]["outcome"]
-        row["needs_review"] = (
-            judge.needs_review(deterministic, verdict) and not row["grade"]["overridden"]
-        )
+        # Flagged: sent to a person by the judge. Open: flagged and not yet settled in the
+        # overrides file. The report counts the first; the queue lists the second.
+        row["flagged"] = judge.needs_review(deterministic, verdict)
+        row["needs_review"] = row["flagged"] and not row["grade"]["overridden"]
     for row in rows:
+        row.setdefault("flagged", False)
         row.setdefault("needs_review", False)
 
 
@@ -102,7 +104,8 @@ def summary(report: dict[str, Any]) -> list[dict[str, Any]]:
             "seconds_per_answer": round(sum(r["run"]["duration_s"] for r in rows) / len(rows), 1),
             "errors": sum(r["run"]["is_error"] for r in rows),
             "json_block": sum(r["grade"].get("basis") == "json" for r in rows),
-            "flagged": sum(r["needs_review"] for r in rows),
+            "flagged": sum(r.get("flagged", False) for r in rows),
+            "open": sum(r["needs_review"] for r in rows),
             "judged": sum("outcome" in r.get("judge", {}) for r in rows),
             "judge_agrees": sum(
                 r.get("judge", {}).get("outcome")
@@ -206,7 +209,7 @@ def render(report: dict[str, Any]) -> str:
         lines.append(
             f"| {r['run']['question_id']} | {r.get('split')} | {r['run']['arm']} | "
             f"{r['run']['repeat']} | {r['grade']['outcome']}{mark} | {r['grade'].get('basis')} | "
-            f"{verdict} | {'yes' if r['needs_review'] else ''} |"
+            f"{verdict} | {'open' if r['needs_review'] else 'settled' if r.get('flagged') else ''} |"
         )
     lines += ["", "`*` settled by a person (overrides_v4.json)."]
     return "\n".join(lines) + "\n"

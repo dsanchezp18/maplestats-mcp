@@ -958,6 +958,74 @@ One unflagged miss shows what the triage leaves: M-09's "about $5.0 billion" (ke
 $4,951.3 million, ±0.5) was graded hallucinated by both the grader and the judge (confidence
 0.70, at the threshold); a person might call it partial.
 
+### Results, 2026-11-10: MapleStats (hosted) and OpenMCP
+
+The first run of v4 with its fresh test set: two arms, one full pass, plus two extra passes
+on the 6 volatile dev questions (84 answers an arm). Every answer was graded by the JSON
+block and the regex grader, checked by the judge (`claude-sonnet-5-5`), and only the answers
+the judge flagged were read by a person (`overrides_v4.json`, keys `ref:<ref>`; arms
+hidden, answers shuffled; the v2 and v3 rules). Each share counts a question once (a
+question asked three times counts its share of correct passes), from exact counts.
+
+**Fresh test set (25 questions): out-of-sample for both arms, the comparable result.**
+
+| Arm | Correct | StatCan (11) | BoC (3) | CMHC (2) | Provincial (2) | Municipal (1) | Federal (4) | International (2) |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: |
+| MapleStats (hosted) | 84.0% (21 of 25) | 90.9% | 100.0% | 50.0% | 100.0% | 0.0% | 75.0% | 100.0% |
+| OpenMCP | 52.0% (13 of 25) | 63.6% | 66.7% | 50.0% | 0.0% | 0.0% | 25.0% | 100.0% |
+
+**Dev set (47 questions): in-sample for MapleStats, not comparable for it.**
+
+| Arm | Correct | StatCan (22) | BoC (5) | CMHC (3) | Provincial (4) | Municipal (2) | Federal (7) | International (4) |
+| :-- | --: | --: | --: | --: | --: | --: | --: | --: |
+| MapleStats (hosted), in-sample | 92.2% (43.3 of 47) | 89.4% | 100.0% | 88.9% | 100.0% | 50.0% | 100.0% | 100.0% |
+| OpenMCP | 68.1% (32 of 47) | 81.8% | 80.0% | 66.7% | 25.0% | 50.0% | 57.1% | 50.0% |
+
+**Cost, time and review.**
+
+| Arm | USD per answer | USD per question | Seconds per answer | Seconds per question | Wall time | Flagged for a person | False claims |
+| :-- | --: | --: | --: | --: | --: | --: | --: |
+| MapleStats (hosted) | 0.048 | 0.055 | 13.7 | 16.0 | 19.2 min | 11.9% (10 of 84) | 0 |
+| OpenMCP | 0.063 | 0.073 | 93.9 | 109.6 | 2 h 52 min | 22.6% (19 of 84) | 2 |
+
+Per question is the arm's total over its 72 questions (USD 3.99 and 5.26); per answer over
+its 84 answers. A person read 29 of the 168 answers (17.3%), against all of them in v2 and
+v3; the judge cost USD 1.67 for the 168.
+
+What it shows:
+
+- **On the fresh questions MapleStats answered 84.0% correctly, OpenMCP 52.0%.** This is
+  MapleStats' first out-of-sample v4 score. Its four misses were documentation and release
+  questions: the provisional poverty estimates' date (not found: abstained), CMHC's
+  absorption definition recalled from memory, Toronto's Dinesafe owner only inferred and its
+  DataStore not checked, and a station's climate normal reported as "not in the data I could
+  reach" instead of "none published" (three partial).
+- **OpenMCP lost most on portal metadata and federal sources.** Four of its 12 test misses
+  were portal questions answered without the licence or the update frequency (partial), and
+  a fifth (N-23) made no call; two were release dates it did not find; N-04's travel counts
+  did not match the key.
+- **Partial answers drive the gap more than wrong ones.** On the test set MapleStats had no
+  hallucinated answer, OpenMCP two (CMHC's absorption, from memory; N-04's counts).
+- **Sample sizes are small.** One question is 4.0 points of the test score; a source with one
+  or two questions (municipal, CMHC, provincial) swings by 50 to 100 points on one answer.
+  Read the by-source columns as where the misses were, not as a ranking of sources.
+
+**Setup.** MapleStats: the hosted server at `main` 58f6f42 (deployed 2026-11-10 03:36 UTC,
+before the run started; no merge to `main` during the run), one question at a time
+(`MAX_WORKERS`). OpenMCP: local clone at 0756934 with DuckDB pinned to 1.5.6 (a DuckDB 2.0
+regression hangs its search). Model `claude-sonnet-5-5` for both. One OpenMCP answer (N-04)
+hit the 10-minute cap and was asked again with the same settings; the failed answer is in
+`runs_v4/errors/`. A first start at 03:27 UTC began before the deploy finished; it was
+stopped, its answers (82 of them run errors) are set aside in `runs_v4/paused/` and not
+graded. The pipeline dry run of 2026-11-09 (48-question key, older prompt) is not graded
+here either.
+
+```bash
+uv run python -m tests.maple_test grade --version v4 --judge \
+    tests/maple_test/runs_v4/2026-11-10_maplestats_hosted_claude-sonnet-5-5.jsonl \
+    tests/maple_test/runs_v4/2026-11-10_openmcp_claude-sonnet-5-5.jsonl
+```
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP
