@@ -8,6 +8,7 @@ embedded data-table-model JSON rather than a hardcoded catalogue.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -15,6 +16,7 @@ import pytest
 
 from maplestats_mcp.modules.cmhc import client, constants
 from maplestats_mcp.shared import cache as cache_module
+from maplestats_mcp.shared.brief import shape
 from maplestats_mcp.shared.errors import (
     InvalidInput,
     NotFound,
@@ -311,6 +313,146 @@ def test_parse_csv_export_keeps_blank_labels_without_a_total_label():
     assert [row.period for row in rows] == ["Alberta", ""]
     _, rows, _ = client._parse_csv_export(text, total_label="Canada")
     assert [row.period for row in rows] == ["Alberta", "Canada"]
+
+
+# Subtitle lines as HMIP exported them, live on 2026-11-09.
+@pytest.mark.parametrize(
+    ("subtitle", "period", "as_of"),
+    [
+        ("October 2025 Row / Apartment", "October 2025", datetime(2025, 10, 1, tzinfo=UTC)),
+        ("1990 to 2025 Row / Apartment October", "1990 to 2025", None),
+        ("September 2026", "September 2026", datetime(2026, 9, 1, tzinfo=UTC)),
+        (
+            "January 1990 to September 2026",
+            "January 1990 to September 2026",
+            datetime(2026, 9, 1, tzinfo=UTC),
+        ),
+        ("2021", "2021", None),
+        ("2009 to 2021", "2009 to 2021", None),
+        (
+            "octobre 2025 En rangée / Appartements",
+            "octobre 2025",
+            datetime(2025, 10, 1, tzinfo=UTC),
+        ),
+        ("1990 à 2025 En rangée / Appartements octobre", "1990 à 2025", None),
+        ("décembre 2024", "décembre 2024", datetime(2024, 12, 1, tzinfo=UTC)),
+        # Not a period: no reference period rather than a wrong one.
+        ("Row / Apartment", None, None),
+        ("Spring 2025", None, None),
+        ("", None, None),
+    ],
+)
+def test_reference_period_reads_the_subtitle_line(subtitle, period, as_of):
+    assert client._reference_period(subtitle) == (period, as_of)
+
+
+def _mock_export(httpx_mock, lang, match_params, matching_html, export_csv):
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/{lang}/TableMapChart/TableMatchingCriteria"
+            f"?{httpx.QueryParams(match_params)}"
+        ),
+        text=matching_html,
+    )
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/{lang}/TableMapChart/ExportTable",
+        method="POST",
+        content=(_FIXTURES / export_csv).read_bytes(),
+        headers={"content-type": "text/csv"},
+    )
+
+
+def _match_params(category_level_1, category_level_2, column_field, row_field):
+    return {
+        "GeographyType": "Country",
+        "GeographyId": "1",
+        "CategoryLevel1": category_level_1,
+        "CategoryLevel2": category_level_2,
+        "ColumnField": column_field,
+        "RowField": row_field,
+    }
+
+
+_RMS_PROVINCES = ("Primary Rental Market", "Vacancy Rate (%)", "2", "21")
+_SCSS_PROVINCES = ("New Housing Construction", "Starts (Actual)", "1", "30")
+_RMS_SERIES = ("Primary Rental Market", "Vacancy Rate (%)", "2", "TIMESERIES")
+
+
+@pytest.mark.parametrize(
+    ("args", "matching", "export_csv", "period", "as_of"),
+    [
+        (
+            _RMS_PROVINCES,
+            "rms_vacancy_by_province_matching_criteria.html",
+            "rms_vacancy_by_province_export.csv",
+            "October 2025",
+            "2025-10-01T00:00:00Z",
+        ),
+        (
+            _SCSS_PROVINCES,
+            "scss_starts_by_province_matching_criteria.html",
+            "scss_starts_by_province_export.csv",
+            "September 2026",
+            "2026-09-01T00:00:00Z",
+        ),
+        # The series' own rows are dated; the result states its span, and no
+        # as_of month since the subtitle gives none.
+        (_RMS_SERIES, None, "rms_vacancy_timeseries_export.csv", "1990 to 2025", None),
+    ],
+)
+async def test_get_table_data_returns_the_reference_period(
+    httpx_mock, args, matching, export_csv, period, as_of
+):
+    """Recorded exports: the period on the line under the title reaches the
+    result, its citation and its provenance."""
+    matching_html = (
+        (_FIXTURES / matching).read_text(encoding="utf-8")
+        if matching
+        else _TABLE_MATCHING_CRITERIA_HTML
+    )
+    _mock_export(httpx_mock, "en", _match_params(*args), matching_html, export_csv)
+    result = await client.get_table_data(*args)
+    assert result.reference_period == period
+    assert result.citation.startswith(
+        "Canada Mortgage and Housing Corporation (CMHC), Housing Market Information Portal, "
+        f"table {result.table_id}, "
+    )
+    assert result.citation.endswith(f", Canada, {period}.")
+    dumped = result.model_dump(mode="json")
+    assert dumped["provenance"]["as_of"] == as_of
+
+    # Brief mode, what a model reads by default, keeps all three.
+    brief = shape(dumped, "brief", tool="cmhc_get_table_data")
+    assert brief is not None
+    assert brief["reference_period"] == period
+    assert brief["citation"] == result.citation
+    assert brief["provenance"].get("as_of") == as_of
+
+
+async def test_get_table_data_reference_period_in_french(httpx_mock):
+    """A recorded French export: "octobre 2025", and a French citation. The
+    matching-criteria page is the English recording; the table model it
+    carries is the same in both languages apart from its names."""
+    args = ("Marché locatif primaire", "Taux d'inoccupation (%)", "2", "21")
+    _mock_export(
+        httpx_mock,
+        "fr",
+        _match_params(*args),
+        (_FIXTURES / "rms_vacancy_by_province_matching_criteria.html").read_text(encoding="utf-8"),
+        "rms_vacancy_by_province_fr_export.csv",
+    )
+    result = await client.get_table_data(*args, lang="fr")
+    assert result.reference_period == "octobre 2025"
+    assert result.citation.startswith("Société canadienne d'hypothèques et de logement (SCHL)")
+    assert result.citation.endswith(", Canada, octobre 2025.")
+    assert result.provenance.as_of == datetime(2025, 10, 1, tzinfo=UTC)
+    # Confirmed by this recording: the French export writes a decimal comma.
+    assert result.rows[0].values["Studio"].value == 0.8
+
+
+def test_citation_says_when_no_period_is_stated():
+    citation = client._citation("2.2.1", "Historical Vacancy Rates  ", "Canada", None, "en")
+    assert citation.endswith("Historical Vacancy Rates, Canada, reference period not stated.")
 
 
 async def test_get_table_data_applies_and_validates_filters(httpx_mock):

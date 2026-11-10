@@ -126,6 +126,17 @@ class TableDataResult(BaseModel):
     table_id: str
     table_name: str
     geography_name: str
+    reference_period: str | None = Field(
+        default=None,
+        description='The period the values refer to, in CMHC\'s words: "October 2025" for a '
+        'cross-tab, "January 1990 to September 2026" for a time series. Null when the '
+        "export did not state one.",
+    )
+    citation: str = Field(
+        default="",
+        description="A source line to carry with any reuse of the values: publisher, table, "
+        "geography and reference period.",
+    )
     category_level_1: str
     category_level_2: str
     column_field: str
