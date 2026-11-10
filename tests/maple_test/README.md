@@ -1026,6 +1026,27 @@ uv run python -m tests.maple_test grade --version v4 --judge \
     tests/maple_test/runs_v4/2026-11-10_openmcp_claude-sonnet-5-5.jsonl
 ```
 
+### After the first run: four test questions moved to dev (2026-11-10)
+
+All four of MapleStats' test misses in the run above led to changes to the server, so
+rule 3 moved them to dev (`FRESH_MOVED_TO_DEV` in `build_key_v4.py`). They are in-sample
+for MapleStats from now on (`in_sample_for: ["maplestats"]`):
+
+| ID | Source, kind | MapleStats' answer | What it motivated |
+| :-- | :-- | :-- | :-- |
+| N-11 | StatCan, release date | searched the release calendar's history, which has no Daily releases outside the key indicators: abstained | the Daily archive matches every word; the calendar's history includes every Daily release (#233) |
+| N-15 | CMHC, documentation | answered from memory: no tool had the Market Absorption Survey's definitions | `cmhc_get_methodology`, with that survey's methodology (#231) |
+| N-19 | Municipal, documentation | division inferred, DataStore not checked: neither was in a tool's result | CKAN search results name the owning division and count DataStore resources (#230) |
+| N-22 | Federal, refusal | zero rows read as "not in the data I could reach" | an empty station query of a climate collection says whether the station has that data (#232) |
+
+N-16 (CMHC vacancy rate) was answered correctly and stays in test. Each moved question
+needs a replacement of the same source and kind, written and keyed before any server
+answers it: one StatCan release date, one CMHC documentation, one municipal documentation
+and one federal refusal question. They are not written yet. Until they are, the test set
+has 21 questions and no municipal question, and `REPLACEMENT_DUE` lets the builder's
+stratum check pass for those strata only. The scores of 2026-11-10 above stand as they
+were measured, before any of these changes.
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP

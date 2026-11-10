@@ -767,6 +767,50 @@
    }
   },
   {
+   "id": "N-11",
+   "category": "Release",
+   "group": "statcan",
+   "eval_type": "date",
+   "question": "On what date did Statistics Canada release its provisional poverty estimates for 2025?",
+   "expected": {
+    "provisional_poverty_2025_release": "2026-11-04"
+   },
+   "headline": [
+    "provisional_poverty_2025_release"
+   ],
+   "tolerance": "2026-11-04 (The Daily's release schedule).",
+   "grading": {
+    "correct": "2026-11-04.",
+    "hallucinated": "Another date given as this release, or the Canadian Income Survey's release given as it.",
+    "referral": "No date, only a link to the release calendar."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": null,
+     "series_title": "The Daily release schedule: Provisional poverty estimates, 2025",
+     "reference_period": "2025",
+     "value": "2026-11-04",
+     "release_or_revision_date": "2026-11-04",
+     "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/261104/dq261104e-eng.htm"
+    }
+   ],
+   "traps": [
+    "The provisional estimates are not the Canadian Income Survey's final 2025 poverty rates, which come later."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
+   "source": "statcan",
+   "qtype": "release",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "fresh test question (build_key_v4_test.py); rotation rule 3: motivated statcan_daily's every-word archive search and Daily releases in the calendar's history (2026-11-10)",
+   "item": null
+  },
+  {
    "id": "R-01",
    "category": "Release",
    "eval_type": "date",
@@ -1662,6 +1706,68 @@
    }
   },
   {
+   "id": "N-15",
+   "category": "Definitions",
+   "group": "cmhc",
+   "eval_type": "facts",
+   "question": "In CMHC's Market Absorption Survey, what makes a newly built housing unit 'absorbed', and when does CMHC consider a unit sold?",
+   "expected": {
+    "absorbed": "An absorbed unit is a housing unit that has been sold and completed.",
+    "sold": "A unit is considered sold when a binding contract is secured by a non-refundable deposit and has been signed by a qualified purchaser."
+   },
+   "facts": {
+    "completed": "complet",
+    "sold": "\\bsold\\b|\\bsale\\b",
+    "deposit": "deposit",
+    "contract": "contract|agreement"
+   },
+   "headline": [
+    "completed",
+    "deposit"
+   ],
+   "tolerance": "Absorbed: sold and completed. Sold: a binding contract secured by a non-refundable deposit, signed by a qualified purchaser.",
+   "grading": {
+    "correct": "Sold and completed; sold means a binding contract with a non-refundable deposit.",
+    "partial": "Sold and completed, without when a unit counts as sold.",
+    "hallucinated": "Absorbed defined as occupied, rented or started.",
+    "referral": "No definition, only a link to CMHC."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "CMHC Market Absorption Survey",
+     "series_title": "Absorbed",
+     "reference_period": null,
+     "value": "An absorbed unit is a housing unit that has been sold and completed.",
+     "release_or_revision_date": null,
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "CMHC Market Absorption Survey",
+     "series_title": "Sold",
+     "reference_period": null,
+     "value": "A unit is considered sold when a binding contract is secured by a non-refundable deposit and has been signed by a qualified purchaser.",
+     "release_or_revision_date": null,
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey"
+    }
+   ],
+   "traps": [
+    "Unsold completed units are 'unabsorbed'; occupancy is not the test."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
+   "source": "cmhc",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "fresh test question (build_key_v4_test.py); rotation rule 3: motivated cmhc_get_methodology and the Market Absorption Survey methodology text (2026-11-10)",
+   "item": null
+  },
+  {
    "id": "T-14",
    "category": "Survey documentation",
    "group": "cmhc",
@@ -2067,6 +2173,65 @@
    }
   },
   {
+   "id": "N-19",
+   "category": "Dataset metadata",
+   "group": "municipal",
+   "eval_type": "facts",
+   "question": "On Toronto's open data portal, which City division owns the 'Dinesafe' restaurant-inspection dataset, how often is it refreshed, and can it be queried through the DataStore API?",
+   "expected": {
+    "owner_division": "Toronto Public Health",
+    "refresh_rate": "Daily",
+    "datastore": "1 DataStore resource(s)"
+   },
+   "facts": {
+    "division": "Toronto Public Health|\\bTPH\\b",
+    "refresh": "\\bdaily\\b|every day",
+    "datastore": "datastore[^.]{0,80}\\b(?:yes|active|queryable|available|can be queried|enabled)\\b|\\b(?:yes|can)\\b[^.]{0,60}datastore|datastore_search"
+   },
+   "wrong": [
+    "Municipal Licensing|\\bMLS\\b owns",
+    "datastore[^.]{0,60}\\b(?:is not|isn't|isn’t|not active|inactive|unavailable|not available|not enabled|cannot|can't)\\b|\\b(?:no|without)\\s+datastore"
+   ],
+   "headline": [
+    "division",
+    "refresh"
+   ],
+   "tolerance": "Toronto Public Health; refreshed daily; a DataStore resource exists.",
+   "grading": {
+    "correct": "Toronto Public Health, daily, DataStore yes.",
+    "partial": "Two of the three.",
+    "referral": "No answer, only a link to the portal."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "Toronto CKAN dinesafe",
+     "series_title": "Dinesafe™",
+     "reference_period": null,
+     "value": {
+      "owner_division": "Toronto Public Health",
+      "refresh_rate": "Daily"
+     },
+     "release_or_revision_date": null,
+     "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show?id=dinesafe"
+    }
+   ],
+   "traps": [
+    "Dinesafe is run by Toronto Public Health, not Municipal Licensing and Standards."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
+   "source": "municipal",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "fresh test question (build_key_v4_test.py); rotation rule 3: motivated the CKAN search's owner_unit and datastore_resources (2026-11-10)",
+   "item": null
+  },
+  {
    "id": "T-25",
    "category": "DataStore fields",
    "group": "municipal",
@@ -2192,6 +2357,54 @@
     "ceiling": false,
     "floor": false
    }
+  },
+  {
+   "id": "N-22",
+   "category": "Not published",
+   "group": "federal",
+   "eval_type": "refusal",
+   "question": "What is the 1981-2010 Canadian Climate Normal for January's mean daily temperature at Toronto City Centre (climate ID 6158359)?",
+   "expected": {
+    "behaviour": "Say this station has no climate normals: it opened in 2009, after the period, and ECCC lists no normals for it.",
+    "first_date": "2009-12-10"
+   },
+   "absent_pattern": "no (?:climate )?normals?|(?:not|n't|n’t) (?:have|has|publish|calculate|compute)[^.]{0,40}normals?|normals?[^.]{0,60}(?:not available|(?:are|is|were)(?:n't|n’t| not) (?:available|published|calculated))|(?:opened|began|started)[^.]{0,40}20(?:0\\d|1\\d)",
+   "tolerance": "Refusal: HAS_NORMALS_DATA = N; no rows in climate-normals for 6158359.",
+   "grading": {
+    "correct": "Says the station has no 1981-2010 normal (opened in 2009).",
+    "partial": "Declines and offers another station's normal, labelled.",
+    "hallucinated": "A normal given for this station, or another station's given as this one's.",
+    "referral": "Points to ECCC's pages without saying none exists."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "ECCC climate-stations 6158359",
+     "series_title": "TORONTO CITY CENTRE",
+     "reference_period": null,
+     "value": {
+      "FIRST_DATE": "2009-12-10 17:00:00",
+      "HAS_NORMALS_DATA": "N"
+     },
+     "release_or_revision_date": null,
+     "url": "https://api.weather.gc.ca/collections/climate-stations/items?f=json&CLIMATE_IDENTIFIER=6158359"
+    }
+   ],
+   "traps": [
+    "Toronto's normals belong to Toronto City (6158355) and Pearson, not here."
+   ],
+   "tolerances": {},
+   "headline": [],
+   "source_version": "v4-test",
+   "source": "federal",
+   "qtype": "refusal",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "fresh test question (build_key_v4_test.py); rotation rule 3: motivated eccc_query_items' climate-stations note for an empty station query (2026-11-10)",
+   "item": null
   },
   {
    "id": "T-17",
@@ -3369,48 +3582,6 @@
    "item": null
   },
   {
-   "id": "N-11",
-   "category": "Release",
-   "group": "statcan",
-   "eval_type": "date",
-   "question": "On what date did Statistics Canada release its provisional poverty estimates for 2025?",
-   "expected": {
-    "provisional_poverty_2025_release": "2026-11-04"
-   },
-   "headline": [
-    "provisional_poverty_2025_release"
-   ],
-   "tolerance": "2026-11-04 (The Daily's release schedule).",
-   "grading": {
-    "correct": "2026-11-04.",
-    "hallucinated": "Another date given as this release, or the Canadian Income Survey's release given as it.",
-    "referral": "No date, only a link to the release calendar."
-   },
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": null,
-     "series_title": "The Daily release schedule: Provisional poverty estimates, 2025",
-     "reference_period": "2025",
-     "value": "2026-11-04",
-     "release_or_revision_date": "2026-11-04",
-     "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/261104/dq261104e-eng.htm"
-    }
-   ],
-   "traps": [
-    "The provisional estimates are not the Canadian Income Survey's final 2025 poverty rates, which come later."
-   ],
-   "tolerances": {},
-   "source_version": "v4-test",
-   "source": "statcan",
-   "qtype": "release",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [],
-   "why_kept": "fresh test question (build_key_v4_test.py)",
-   "item": null
-  },
-  {
    "id": "N-12",
    "category": "Markets",
    "group": "boc",
@@ -3607,66 +3778,6 @@
    "item": null
   },
   {
-   "id": "N-15",
-   "category": "Definitions",
-   "group": "cmhc",
-   "eval_type": "facts",
-   "question": "In CMHC's Market Absorption Survey, what makes a newly built housing unit 'absorbed', and when does CMHC consider a unit sold?",
-   "expected": {
-    "absorbed": "An absorbed unit is a housing unit that has been sold and completed.",
-    "sold": "A unit is considered sold when a binding contract is secured by a non-refundable deposit and has been signed by a qualified purchaser."
-   },
-   "facts": {
-    "completed": "complet",
-    "sold": "\\bsold\\b|\\bsale\\b",
-    "deposit": "deposit",
-    "contract": "contract|agreement"
-   },
-   "headline": [
-    "completed",
-    "deposit"
-   ],
-   "tolerance": "Absorbed: sold and completed. Sold: a binding contract secured by a non-refundable deposit, signed by a qualified purchaser.",
-   "grading": {
-    "correct": "Sold and completed; sold means a binding contract with a non-refundable deposit.",
-    "partial": "Sold and completed, without when a unit counts as sold.",
-    "hallucinated": "Absorbed defined as occupied, rented or started.",
-    "referral": "No definition, only a link to CMHC."
-   },
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": "CMHC Market Absorption Survey",
-     "series_title": "Absorbed",
-     "reference_period": null,
-     "value": "An absorbed unit is a housing unit that has been sold and completed.",
-     "release_or_revision_date": null,
-     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "CMHC Market Absorption Survey",
-     "series_title": "Sold",
-     "reference_period": null,
-     "value": "A unit is considered sold when a binding contract is secured by a non-refundable deposit and has been signed by a qualified purchaser.",
-     "release_or_revision_date": null,
-     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey"
-    }
-   ],
-   "traps": [
-    "Unsold completed units are 'unabsorbed'; occupancy is not the test."
-   ],
-   "tolerances": {},
-   "source_version": "v4-test",
-   "source": "cmhc",
-   "qtype": "documentation",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [],
-   "why_kept": "fresh test question (build_key_v4_test.py)",
-   "item": null
-  },
-  {
    "id": "N-16",
    "category": "Housing",
    "group": "cmhc",
@@ -3831,63 +3942,6 @@
    "item": null
   },
   {
-   "id": "N-19",
-   "category": "Dataset metadata",
-   "group": "municipal",
-   "eval_type": "facts",
-   "question": "On Toronto's open data portal, which City division owns the 'Dinesafe' restaurant-inspection dataset, how often is it refreshed, and can it be queried through the DataStore API?",
-   "expected": {
-    "owner_division": "Toronto Public Health",
-    "refresh_rate": "Daily",
-    "datastore": "1 DataStore resource(s)"
-   },
-   "facts": {
-    "division": "Toronto Public Health|\\bTPH\\b",
-    "refresh": "\\bdaily\\b|every day",
-    "datastore": "datastore[^.]{0,80}\\b(?:yes|active|queryable|available|can be queried|enabled)\\b|\\b(?:yes|can)\\b[^.]{0,60}datastore|datastore_search"
-   },
-   "wrong": [
-    "Municipal Licensing|\\bMLS\\b owns",
-    "datastore[^.]{0,60}\\b(?:is not|isn't|isn’t|not active|inactive|unavailable|not available|not enabled|cannot|can't)\\b|\\b(?:no|without)\\s+datastore"
-   ],
-   "headline": [
-    "division",
-    "refresh"
-   ],
-   "tolerance": "Toronto Public Health; refreshed daily; a DataStore resource exists.",
-   "grading": {
-    "correct": "Toronto Public Health, daily, DataStore yes.",
-    "partial": "Two of the three.",
-    "referral": "No answer, only a link to the portal."
-   },
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": "Toronto CKAN dinesafe",
-     "series_title": "Dinesafe™",
-     "reference_period": null,
-     "value": {
-      "owner_division": "Toronto Public Health",
-      "refresh_rate": "Daily"
-     },
-     "release_or_revision_date": null,
-     "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show?id=dinesafe"
-    }
-   ],
-   "traps": [
-    "Dinesafe is run by Toronto Public Health, not Municipal Licensing and Standards."
-   ],
-   "tolerances": {},
-   "source_version": "v4-test",
-   "source": "municipal",
-   "qtype": "documentation",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [],
-   "why_kept": "fresh test question (build_key_v4_test.py)",
-   "item": null
-  },
-  {
    "id": "N-20",
    "category": "Dataset metadata",
    "group": "federal",
@@ -3986,52 +4040,6 @@
    "source_version": "v4-test",
    "source": "federal",
    "qtype": "figure",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [],
-   "why_kept": "fresh test question (build_key_v4_test.py)",
-   "item": null
-  },
-  {
-   "id": "N-22",
-   "category": "Not published",
-   "group": "federal",
-   "eval_type": "refusal",
-   "question": "What is the 1981-2010 Canadian Climate Normal for January's mean daily temperature at Toronto City Centre (climate ID 6158359)?",
-   "expected": {
-    "behaviour": "Say this station has no climate normals: it opened in 2009, after the period, and ECCC lists no normals for it.",
-    "first_date": "2009-12-10"
-   },
-   "absent_pattern": "no (?:climate )?normals?|(?:not|n't|n’t) (?:have|has|publish|calculate|compute)[^.]{0,40}normals?|normals?[^.]{0,60}(?:not available|(?:are|is|were)(?:n't|n’t| not) (?:available|published|calculated))|(?:opened|began|started)[^.]{0,40}20(?:0\\d|1\\d)",
-   "tolerance": "Refusal: HAS_NORMALS_DATA = N; no rows in climate-normals for 6158359.",
-   "grading": {
-    "correct": "Says the station has no 1981-2010 normal (opened in 2009).",
-    "partial": "Declines and offers another station's normal, labelled.",
-    "hallucinated": "A normal given for this station, or another station's given as this one's.",
-    "referral": "Points to ECCC's pages without saying none exists."
-   },
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": "ECCC climate-stations 6158359",
-     "series_title": "TORONTO CITY CENTRE",
-     "reference_period": null,
-     "value": {
-      "FIRST_DATE": "2009-12-10 17:00:00",
-      "HAS_NORMALS_DATA": "N"
-     },
-     "release_or_revision_date": null,
-     "url": "https://api.weather.gc.ca/collections/climate-stations/items?f=json&CLIMATE_IDENTIFIER=6158359"
-    }
-   ],
-   "traps": [
-    "Toronto's normals belong to Toronto City (6158355) and Pearson, not here."
-   ],
-   "tolerances": {},
-   "headline": [],
-   "source_version": "v4-test",
-   "source": "federal",
-   "qtype": "refusal",
    "split": "test",
    "extra_passes": false,
    "in_sample_for": [],
