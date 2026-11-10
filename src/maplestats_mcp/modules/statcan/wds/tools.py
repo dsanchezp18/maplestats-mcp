@@ -83,7 +83,8 @@ async def wds_search_cubes(
     "18-10-0004",
     discovering which StatCan tables cover a subject before requesting
     metadata or data. Every word must
-    be in a title, else the best partial matches come back. `limit`
+    be in a title, else the best partial matches come back; active tables
+    come before archived ones. `limit`
     (default 25, max 500) and `offset` page the tables; total_count is
     the number matching. `real_time` marks real-time (revision-history)
     tables; statcan_delta_list_real_time_tables pairs the 19 with their regular tables.
