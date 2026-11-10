@@ -55,14 +55,22 @@ def test_kept_questions_are_copied_unchanged():
 
 
 def test_dev_and_test_cover_every_source_and_kind():
-    for split in ("dev", "test"):
-        part = [q for q in V4.values() if q["split"] == split]
-        assert {q["source"] for q in part} == set(build_key_v4.KEEP_SOURCES)
-        assert {q["qtype"] for q in part} == set(build_key_v4.QTYPES)
-    # The test set is the fresh one, nothing from v1 to v3 (rotation rule 3).
-    test = {q["id"] for q in V4.values() if q["split"] == "test"}
-    assert test == set(build_key_v4.FRESH_TEST)
-    assert all(V4[q]["in_sample_for"] == [] for q in test)
+    dev = [q for q in V4.values() if q["split"] == "dev"]
+    assert {q["source"] for q in dev} == set(build_key_v4.KEEP_SOURCES)
+    assert {q["qtype"] for q in dev} == set(build_key_v4.QTYPES)
+    # Test may lack a stratum only while a replacement for a moved question is due.
+    test = [q for q in V4.values() if q["split"] == "test"]
+    due = build_key_v4.REPLACEMENT_DUE.values()
+    assert {q["source"] for q in test} | {s for s, _ in due} == set(build_key_v4.KEEP_SOURCES)
+    assert {q["qtype"] for q in test} | {t for _, t in due} == set(build_key_v4.QTYPES)
+    # The test set is the fresh one, nothing from v1 to v3 (rotation rule 3), less the
+    # fresh questions that motivated a change since.
+    test_ids = {q["id"] for q in test}
+    assert test_ids == set(build_key_v4.FRESH_TEST) - set(build_key_v4.FRESH_MOVED_TO_DEV)
+    assert all(V4[q]["in_sample_for"] == [] for q in test_ids)
+    for qid in build_key_v4.FRESH_MOVED_TO_DEV:
+        assert V4[qid]["split"] == "dev"
+        assert V4[qid]["in_sample_for"] == ["maplestats"]
 
 
 def test_fresh_questions_repeat_no_earlier_question():

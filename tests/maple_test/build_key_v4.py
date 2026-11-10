@@ -218,6 +218,30 @@ MOVED_TO_DEV: dict[str, str] = {
     ]
 }
 
+# Fresh test questions moved to dev under rotation rule 3: id -> the change its
+# MapleStats answer motivated. Each needs a new question of the same source and kind,
+# written and keyed before any server answers it (README, "After the first run"); until
+# then its stratum may be empty in test (`REPLACEMENT_DUE`). The four were missed in the
+# hosted MapleStats run of 2026-11-10 (results_v4.md).
+FRESH_MOVED_TO_DEV: dict[str, str] = {
+    "N-11": (
+        "rotation rule 3: motivated statcan_daily's every-word archive search and Daily "
+        "releases in the calendar's history (2026-11-10)"
+    ),
+    "N-15": (
+        "rotation rule 3: motivated cmhc_get_methodology and the Market Absorption "
+        "Survey methodology text (2026-11-10)"
+    ),
+    "N-19": (
+        "rotation rule 3: motivated the CKAN search's owner_unit and datastore_resources "
+        "(2026-11-10)"
+    ),
+    "N-22": (
+        "rotation rule 3: motivated eccc_query_items' climate-stations note for an empty "
+        "station query (2026-11-10)"
+    ),
+}
+
 # The fresh test set: written and keyed on 2026-11-09 (build_key_v4_test.py), before any
 # server was asked them, stratified like the set it replaced. id -> (source, qtype).
 FRESH_KEY = HERE / "maple_test_v4_test.json"
@@ -248,6 +272,9 @@ FRESH_TEST: dict[str, tuple[str, str]] = {
     "N-24": ("international", "figure"),
     "N-25": ("international", "documentation"),
 }
+
+# The (source, qtype) of each fresh question moved to dev, awaiting its replacement.
+REPLACEMENT_DUE: dict[str, tuple[str, str]] = {qid: FRESH_TEST[qid] for qid in FRESH_MOVED_TO_DEV}
 
 PROMPT_NOTE = (
     "v4 asks every question with one prompt (`run.PROMPTS['v4']`) that covers figures and "
@@ -337,16 +364,18 @@ def build() -> dict[str, Any]:
     for qid in sorted(fresh):
         source, qtype = FRESH_TEST[qid]
         q = copy.deepcopy(fresh[qid])
+        moved = FRESH_MOVED_TO_DEV.get(qid)
         q.update(
             {
                 "source_version": "v4-test",
                 "source": source,
                 "qtype": qtype,
-                "split": "test",
-                # No server has answered these yet, so there is nothing to judge from.
+                "split": "dev" if moved else "test",
+                # One run so far: too few answers to say which are volatile.
                 "extra_passes": False,
-                "in_sample_for": [],
-                "why_kept": "fresh test question (build_key_v4_test.py)",
+                "in_sample_for": IN_SAMPLE_FOR if moved else [],
+                "why_kept": "fresh test question (build_key_v4_test.py)"
+                + (f"; {moved}" if moved else ""),
                 "item": None,
             }
         )
@@ -391,13 +420,20 @@ def problems(key: dict[str, Any]) -> list[str]:
     test = [q for q in qs if q["split"] == "test"]
     if any(q["source_version"] != "v4-test" for q in test):
         found.append("a question from v1 to v3 is still in test")
+    if any(q["id"] in FRESH_MOVED_TO_DEV for q in test):
+        found.append("a fresh question moved to dev is still in test")
+    # A stratum emptied by a move is reported only once no replacement is due for it.
+    due_sources = {source for source, _ in REPLACEMENT_DUE.values()}
+    due_kinds = {qtype for _, qtype in REPLACEMENT_DUE.values()}
     for split in ("dev", "test"):
         part = [q for q in qs if q["split"] == split]
+        excused_sources = due_sources if split == "test" else set()
+        excused_kinds = due_kinds if split == "test" else set()
         for s in KEEP_SOURCES:
-            if not any(q["source"] == s for q in part):
+            if s not in excused_sources and not any(q["source"] == s for q in part):
                 found.append(f"no {s} question in {split}")
         for t in QTYPES:
-            if not any(q["qtype"] == t for q in part):
+            if t not in excused_kinds and not any(q["qtype"] == t for q in part):
                 found.append(f"no {t} question in {split}")
     for q in qs:
         if q["source"] not in KEEP_SOURCES or q["qtype"] not in QTYPES:
