@@ -125,9 +125,11 @@ async def statcan_daily_search_archive(
     Use for: finding when StatCan first or last released something on
     a topic, or listing every historical release matching a keyword,
     going back to 2012 -- statcan_daily_get_releases only covers the
-    last 100 days via the official Atom feeds. query matches against
-    the release title and reference period (e.g. "second quarter
-    2020"); leave it empty to browse by date range alone. start_date
+    last 100 days via the official Atom feeds. Every word of query must
+    appear in the release title or reference period, in any order (accents
+    and words like "when did" ignored; e.g. "provisional poverty estimates
+    2025"); when none has every word, the closest come with a note. Leave
+    it empty to browse by date range alone. start_date
     and end_date are "YYYY-MM-DD" and filter to releases on or between
     those dates (inclusive); omit either to leave that side open.
     Results are returned most-recent-first. The archive also holds UPCOMING
@@ -136,8 +138,9 @@ async def statcan_daily_search_archive(
     has scheduled (true when the release date is today or later, Toronto
     time); an upcoming one has url null because its article does not exist yet.
     Keywords: The Daily, historical,
-    archive, past releases, release history, when was, Statistics Canada,
-    release date, upcoming releases, release schedule, release calendar.
+    archive, past releases, release history, when was, when did, already
+    released, Statistics Canada, release date, upcoming releases, release
+    schedule, release calendar.
     Mots-clés : Le Quotidien, historique, archive, diffusions passées,
     historique des diffusions, quand, Statistique Canada, date de diffusion,
     diffusions à venir, calendrier de diffusion.
@@ -168,7 +171,9 @@ async def statcan_daily_get_release_calendar(
     the title, reference period or catalogue number
     (accents ignored); start_date and end_date are "YYYY-MM-DD". With
     upcoming_only=True (default) results run soonest first from today
-    (Toronto); with False they are the history, newest first. kind
+    (Toronto); with False they are the history, newest first, and include
+    every past Daily release matching the query (kind "daily_release"),
+    not only key indicators. kind
     "products" is the catalogue-number release history since 2012 only:
     that file has no future dates (use it for "when was catalogue
     62-013-X published"); "all" merges both. Scheduled rows have no URL

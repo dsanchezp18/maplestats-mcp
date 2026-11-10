@@ -69,6 +69,11 @@ class DailyArchiveSearchResult(BaseModel):
     entries: list[DailyArchiveEntry] = Field(default_factory=list)
     returned_count: int
     total_matched: int
+    note: str | None = Field(
+        default=None,
+        description="Set when no release holds every word of the query: the entries shown "
+        "match most of them.",
+    )
     provenance: Provenance
 
 
@@ -238,7 +243,10 @@ class ReleaseFilesResult(BaseModel):
 
 class ReleaseCalendarEntry(BaseModel):
     release_date: date
-    kind: str = Field(description="'key_indicator' (Daily release) or 'product' (catalogue).")
+    kind: str = Field(
+        description="'key_indicator' (Daily release), 'product' (catalogue), or "
+        "'daily_release' (any Daily release, from the full archive; history only)."
+    )
     title: str
     reference_period: str | None = Field(
         default=None, description="Reference period of an indicator release, e.g. 'August 2026'."

@@ -445,6 +445,24 @@ async def test_search_falls_back_to_the_best_partial_match_and_says_so(httpx_moc
     assert "3 of them" in found.provenance.coverage
 
 
+async def test_search_lists_active_tables_before_archived_ones(httpx_mock):
+    """Live (2026-11-10): "job vacancy" listed four inactive tables ahead of the
+    current monthly ones, in product-id order."""
+    inactive = _cube(
+        14100224, "284-0001", "Job vacancies and job vacancy rate, three-month average, inactive"
+    )
+    inactive["archived"] = "1"
+    monthly = _cube(14100371, "", "Job vacancies and job vacancy rate, monthly, unadjusted")
+    adjusted = _cube(14100432, "", "Job vacancies and job vacancy rate, monthly, adjusted")
+    httpx_mock.add_response(url=f"{BASE}getAllCubesListLite", json=[inactive, monthly, adjusted])
+    found = await client.search_cubes("job vacancy")
+    assert [c.product_id for c in found.cubes] == [14100371, 14100432, 14100224]
+    assert [c.archived for c in found.cubes] == [False, False, True]
+    # A listing with no query keeps the inventory's own order.
+    listing = await client.search_cubes()
+    assert [c.product_id for c in listing.cubes] == [14100224, 14100371, 14100432]
+
+
 async def test_real_time_tables_are_flagged(httpx_mock):
     _mock_cubes(httpx_mock)
     found = await client.search_cubes(limit=10)
