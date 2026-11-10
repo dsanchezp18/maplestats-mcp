@@ -23,7 +23,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from tests.maple_test.build_key import _post, _valet_cite, cite, drift, pct, series, valet
+from tests.maple_test.build_key import (
+    SKIPPED_EXIT,
+    _post,
+    _valet_cite,
+    build_or_skip,
+    cite,
+    drift,
+    pct,
+    series,
+    valet,
+)
 
 HERE = Path(__file__).resolve().parent
 KEY = HERE / "maple_test_v2.json"
@@ -551,7 +561,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build or check the Maple Test v2 key.")
     parser.add_argument("--check", action="store_true", help="report drift, write nothing")
     args = parser.parse_args()
-    new = build()
+    new = build_or_skip(build, args.check)
+    if new is None:
+        return SKIPPED_EXIT
     if args.check:
         changes = drift(json.loads(KEY.read_text(encoding="utf-8")), new)
         print("\n".join(changes) or "no drift")

@@ -15,6 +15,7 @@ import asyncio
 import json
 import sys
 
+from _smoke_common import SKIPPED_EXIT
 from fastmcp import Client
 from fastmcp.client.client import CallToolResult
 from mcp.types import TextContent
@@ -40,6 +41,8 @@ async def _call_tool(client: Client, name: str, arguments: dict) -> CallToolResu
 
 async def main() -> int:
     ok = True
+    # The server codes an outage (a timeout, a 5xx) as [upstream_unavailable]: a skip.
+    skipped: list[str] = []
     async with Client(mcp) as client:
         # search_tools/call_tool are the only tools directly exposed
         # (BM25SearchTransform hides the rest behind them by design).
@@ -52,7 +55,10 @@ async def main() -> int:
 
         print()
         result = await _call_tool(client, "wds_search_cubes", {"query": "consumer price index"})
-        if result.is_error:
+        if result.is_error and _text_of(result).startswith("[upstream_unavailable]"):
+            print("SKIP: wds_search_cubes ->", _text_of(result)[:200])
+            skipped.append("wds_search_cubes")
+        elif result.is_error:
             print("FAIL: wds_search_cubes ->", _text_of(result))
             ok = False
         else:
@@ -61,7 +67,10 @@ async def main() -> int:
 
         print()
         result = await _call_tool(client, "rdaas_search_classifications", {"query": "NAICS"})
-        if result.is_error:
+        if result.is_error and _text_of(result).startswith("[upstream_unavailable]"):
+            print("SKIP: rdaas_search_classifications ->", _text_of(result)[:200])
+            skipped.append("rdaas_search_classifications")
+        elif result.is_error:
             print("FAIL: rdaas_search_classifications ->", _text_of(result))
             ok = False
         else:
@@ -69,8 +78,14 @@ async def main() -> int:
             print(_text_of(result)[:500])
 
     print()
-    print("SMOKE TEST PASSED" if ok else "SMOKE TEST FAILED")
-    return 0 if ok else 1
+    if not ok:
+        print("SMOKE TEST FAILED")
+        return 1
+    if skipped:
+        print(f"SMOKE TEST SKIPPED ({', '.join(skipped)} unavailable): not a pass")
+        return SKIPPED_EXIT
+    print("SMOKE TEST PASSED")
+    return 0
 
 
 if __name__ == "__main__":

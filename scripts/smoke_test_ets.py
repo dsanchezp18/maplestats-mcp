@@ -10,17 +10,22 @@ from maplestats_mcp.modules.ets import client
 
 async def main() -> int:
     failures = 0
-    vehicles = await client.get_vehicle_positions(limit=3)
+    vehicles = await client.get_vehicle_positions(limit=10)
     print(f"OK: vehicles total={vehicles.total_matches} feed={vehicles.feed_timestamp}")
     print(f"    first={vehicles.vehicles[0] if vehicles.vehicles else None}")
     failures += not vehicles.vehicles or vehicles.vehicles[0].latitude is None
 
-    route = next((v.route_id for v in vehicles.vehicles if v.route_id), None)
-    if route:
-        on_route = await client.get_vehicle_positions(route)
-        print(f"OK: vehicles on route {route}: {on_route.total_matches}")
+    routes = list(dict.fromkeys(v.route_id for v in vehicles.vehicles if v.route_id))
+    if routes:
+        on_route = await client.get_vehicle_positions(routes[0])
+        print(f"OK: vehicles on route {routes[0]}: {on_route.total_matches}")
         failures += on_route.total_matches == 0
-        predictions = await client.get_stop_predictions(route_id=route, limit=3)
+        # A bus finishing its last trip has no stop predictions left (route 615 on
+        # 2026-11-10), so take the first of the live routes that has some.
+        for route in routes[:5]:
+            predictions = await client.get_stop_predictions(route_id=route, limit=3)
+            if predictions.predictions:
+                break
         print(f"OK: predictions route {route} total={predictions.total_matches}")
         print(f"    first={predictions.predictions[0] if predictions.predictions else None}")
         failures += not predictions.predictions
