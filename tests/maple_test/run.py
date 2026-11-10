@@ -147,8 +147,8 @@ portal datasets). Today is {today}.
 Use official sources: Statistics Canada, the Bank of Canada, CMHC, other federal, \
 provincial and municipal publishers and their open-data portals, and international \
 bodies where the question names them. With every answer, give its source: for \
-Statistics Canada the table number (such as 14-10-0287-01) and vector (such as \
-v2062815), for the Bank of Canada the series, for a portal the dataset and portal, for \
+Statistics Canada the table number (such as 17-10-0009-01) and vector (such as \
+v1), for the Bank of Canada the series, for a portal the dataset and portal, for \
 any other publisher the dataset or page; and the reference period.
 
 If something is not published or you cannot check it, say so instead of estimating. \

@@ -38,6 +38,8 @@ def test_every_earlier_question_is_kept_or_dropped_with_a_reason():
 
 def test_kept_questions_are_copied_unchanged():
     sources = {q["id"]: q for v in ("v1", "v2", "v3") for q in load_key(v)}
+    fresh = json.loads(build_key_v4.FRESH_KEY.read_text(encoding="utf-8"))["questions"]
+    sources |= {q["id"]: q for q in fresh}
     added = {
         "source_version",
         "source",
@@ -57,13 +59,23 @@ def test_dev_and_test_cover_every_source_and_kind():
         part = [q for q in V4.values() if q["split"] == split]
         assert {q["source"] for q in part} == set(build_key_v4.KEEP_SOURCES)
         assert {q["qtype"] for q in part} == set(build_key_v4.QTYPES)
-    test = sum(q["split"] == "test" for q in V4.values())
-    assert abs(2 * test - len(V4)) <= 6
+    # The test set is the fresh one, nothing from v1 to v3 (rotation rule 3).
+    test = {q["id"] for q in V4.values() if q["split"] == "test"}
+    assert test == set(build_key_v4.FRESH_TEST)
+    assert all(V4[q]["in_sample_for"] == [] for q in test)
+
+
+def test_fresh_questions_repeat_no_earlier_question():
+    earlier = {q["question"].strip().lower() for v in ("v1", "v2", "v3") for q in load_key(v)}
+    fresh = [q for q in V4.values() if q["source_version"] == "v4-test"]
+    assert len(fresh) == 25
+    assert not {q["question"].strip().lower() for q in fresh} & earlier
 
 
 def test_the_split_is_fixed_by_its_salt():
     assert build_key_v4.split_of() == build_key_v4.split_of()
-    assert {q: V4[q]["split"] for q in V4} == build_key_v4.split_of()
+    old = {q: V4[q]["split"] for q in V4 if V4[q]["source_version"] != "v4-test"}
+    assert old == build_key_v4.split_of()
     # SALT was the first balanced salt at launch; questions moved under rule 3 go to dev.
     assert build_key_v4._balanced(build_key_v4._alternate(build_key_v4.SALT))
     assert all(V4[q]["split"] == "dev" for q in build_key_v4.MOVED_TO_DEV)
@@ -180,3 +192,37 @@ def test_no_httpx_patch_outlives_the_frozen_server_test():
     import httpx
 
     assert httpx.AsyncClient.send.__module__.startswith("httpx")
+
+
+FRESH = {q["id"]: q for q in V4.values() if q["source_version"] == "v4-test"}
+
+
+def test_fresh_calls_are_graded():
+    # The review (2026-11-09): N-12 and N-13 were typed numeric, so a wrong call passed.
+    q = FRESH["N-13"]
+    rates = list(q["expected"].values())
+    right = (
+        "the Canadian dollar strengthened against the yen"
+        if rates[1] < rates[0]
+        else ("the Canadian dollar weakened against the yen")
+    )
+    wrong = (
+        right.replace("strengthened", "X")
+        .replace("weakened", "strengthened")
+        .replace("X", "weakened")
+    )
+    numbers = f" The rates were {rates[0]} and {rates[1]}."
+    assert grade_v4(q, right + "." + numbers).outcome == "correct"
+    assert grade_v4(q, wrong + "." + numbers).outcome != "correct"
+
+
+def test_review_regex_fixes():
+    # "Normals" is not "no": an invented CSV is no refusal.
+    assert grade_v4(FRESH["N-23"], "Its Climate Normals CSV files cover 1981-2010.").outcome != (
+        "correct"
+    )
+    # A DataStore said to be inactive is wrong.
+    text = "Toronto Public Health owns it; it is refreshed daily. The DataStore is not active."
+    assert grade_v4(FRESH["N-19"], text).outcome != "correct"
+    text = "Toronto Public Health owns it, refreshed daily, and it is in the DataStore (active)."
+    assert grade_v4(FRESH["N-19"], text).outcome == "correct"
