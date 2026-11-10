@@ -17,6 +17,8 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import json
 import os
 import sys
@@ -100,18 +102,23 @@ STEPS: list[Step] = [
     Step(
         "ab_economic",
         "ab_economic_get_indicator_series",
-        lambda ctx: {"indicator": ctx["ab_economic_list_indicators"]["indicators"][0]["name"]},
+        lambda ctx: {
+            "indicator": _first_row(ctx["ab_economic_list_indicators"]["indicators"])["name"]
+        },
     ),
     Step("ab_economic", "ab_economic_list_tables", {"query": "employment"}, _non_empty("tables")),
     Step(
         "ab_economic",
         "ab_economic_get_table_fields",
-        lambda ctx: {"table": ctx["ab_economic_list_tables"]["tables"][0]["table"]},
+        lambda ctx: {"table": _first_row(ctx["ab_economic_list_tables"]["tables"])["table"]},
     ),
     Step(
         "ab_economic",
         "ab_economic_get_data",
-        lambda ctx: {"table": ctx["ab_economic_list_tables"]["tables"][0]["table"], "limit": 5},
+        lambda ctx: {
+            "table": _first_row(ctx["ab_economic_list_tables"]["tables"])["table"],
+            "limit": 5,
+        },
     ),
     # Alberta Energy Regulator
     # The default (yesterday) is the latest posted list, so it carries no stale note
@@ -1726,6 +1733,13 @@ STEPS: list[Step] = [
 ]
 
 COVERED_MODULES = frozenset(step.module for step in STEPS)
+
+
+def _first_row(rows: Any) -> dict[str, Any]:
+    # Brief results write six or more rows as {"csv": "..."} instead of a list.
+    if isinstance(rows, dict) and "csv" in rows:
+        return next(csv.DictReader(io.StringIO(rows["csv"])))
+    return rows[0]
 
 
 def _first_notice_url(issue: dict[str, Any]) -> str:
