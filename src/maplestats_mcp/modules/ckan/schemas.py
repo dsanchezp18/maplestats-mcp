@@ -97,6 +97,20 @@ class PackageSummary(BaseModel):
             "that (a federal code in plain words)."
         ),
     )
+    owner_unit: str | None = Field(
+        default=None,
+        description=(
+            "The division or custodian inside the publisher that owns the dataset, where "
+            "the portal names one (Toronto's owner division, Yukon's custodian)."
+        ),
+    )
+    datastore_resources: int | None = Field(
+        default=None,
+        description=(
+            "How many of its resources have an active DataStore (rows readable with "
+            "ckan_datastore_search); 0 means none. None when the portal has no DataStore."
+        ),
+    )
     metadata_modified: datetime | None = None
     landing_page_url: str
 

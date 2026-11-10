@@ -308,8 +308,45 @@ def _package_summary(obj: dict[str, Any], portal: Portal, lang: str) -> PackageS
         num_resources=get_or(obj, "num_resources", len(list_or_empty(obj, "resources"))),
         resource_formats=_formats(obj),
         update_frequency=_update_frequency(obj, portal, lang),
+        owner_unit=_owner_unit(obj, portal, lang),
+        datastore_resources=_datastore_resources(obj, portal),
         metadata_modified=parse_dt(obj.get("metadata_modified")),
         landing_page_url=_dataset_url(portal, obj, lang),
+    )
+
+
+def _owner_unit(obj: dict[str, Any], portal: Portal, lang: str) -> str | None:
+    """The division or custodian owning the dataset, where the portal names one.
+
+    In the Maple Test (2026-11-10) two answers to "which City division owns this
+    Toronto dataset" said the portal names none: Toronto publishes every dataset as
+    "City of Toronto" and names the division only in `owner_division`, which no tool
+    returned.
+    """
+    fields = tuple(f for f in constants.OWNER_FIELDS if f in portal.extra_fields)
+    extras = _extras(obj, fields, lang)
+    for name in fields:
+        value = extras.get(name)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _datastore_resources(obj: dict[str, Any], portal: Portal) -> int | None:
+    """How many resources have an active DataStore, from the resources a search lists.
+
+    package_search returns each package's resources with `datastore_active` (checked
+    live on Toronto 2026-11-10: Dinesafe has one DataStore resource of eight). An answer
+    that stopped at the search result could not say whether the rows were queryable.
+    """
+    if not portal.has_datastore or not isinstance(obj.get("resources"), list):
+        return None
+    return sum(
+        1
+        for r in list_or_empty(obj, "resources")
+        if isinstance(r, dict)
+        and r.get("datastore_active") is not None
+        and to_bool(r.get("datastore_active"))
     )
 
 
