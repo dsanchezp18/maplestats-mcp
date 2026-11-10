@@ -225,7 +225,7 @@ async def test_list_tables_reads_the_metadata_only(httpx_mock):
 
 async def test_list_tables_detail_for_one_table_and_french(httpx_mock):
     _mock_day(httpx_mock)
-    result = await archive.list_tables(DAY, product_id=10100001, detail=True, lang="fr")
+    result = await archive.list_tables(DAY, product_id=10100001, include_members=True, lang="fr")
     table = result.tables[0]
     assert result.table_count == 4
     assert result.returned == 1
@@ -248,7 +248,7 @@ async def test_list_tables_filters_and_caps(httpx_mock):
     with pytest.raises(NotFound, match="999"):
         await archive.list_tables(DAY, product_id=999)
     with pytest.raises(InvalidInput, match="product_id"):
-        await archive.list_tables(DAY, detail=True)
+        await archive.list_tables(DAY, include_members=True)
     with pytest.raises(InvalidInput, match="YYYY-MM-DD"):
         await archive.list_tables("02/10/2026")
 

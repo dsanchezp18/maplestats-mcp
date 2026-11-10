@@ -47,7 +47,7 @@ async def statcan_delta_list_tables(
     date: str,
     product_id: int | None = None,
     query: str | None = None,
-    detail: bool = False,
+    include_members: bool = False,
     max_tables: int = 200,
     lang: Lang = "en",
 ) -> DeltaTableList:
@@ -58,7 +58,7 @@ async def statcan_delta_list_tables(
     changed that day before fetching it, release-day monitoring. Each
     entry: productId, CANSIM number, English and French titles, frequency,
     release time, series count, archive status, corrections and
-    dimensions (with members and correction notes when `detail` is True and
+    dimensions (with members and correction notes when `include_members` is True and
     `product_id` is given). Cheap even for the 3.9 GB day: about 1 MB is
     fetched. date is "YYYY-MM-DD", a business day among the roughly 47
     kept (statcan_delta_list_files shows which). `query` filters by a word
@@ -84,7 +84,7 @@ async def statcan_delta_list_tables(
         date,
         product_id=product_id,
         query=query,
-        detail=detail,
+        include_members=include_members,
         max_tables=max_tables,
         lang=lang,
     )

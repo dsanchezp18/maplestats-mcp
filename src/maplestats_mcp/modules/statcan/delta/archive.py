@@ -400,7 +400,7 @@ async def list_tables(
     *,
     product_id: int | None = None,
     query: str | None = None,
-    detail: bool = False,
+    include_members: bool = False,
     max_tables: int = 200,
     lang: str = "en",
 ) -> DeltaTableList:
@@ -409,15 +409,17 @@ async def list_tables(
         raise InvalidInput(
             say("max_tables must be at least 1.", "max_tables doit être d'au moins 1.")
         )
-    if detail and product_id is None:
+    if include_members and product_id is None:
         raise InvalidInput(
             say(
-                "detail=True needs a product_id (members and corrections are long).",
-                "detail=True exige un product_id (les membres et les corrections sont longs).",
+                "include_members=True needs a product_id (members and corrections are long).",
+                "include_members=True exige un product_id (les membres et les corrections sont longs).",
             )
         )
     archive = await _open_archive(date)
-    cubes, cached = await _read_cubes(archive, lang=lang, detail_for=product_id if detail else None)
+    cubes, cached = await _read_cubes(
+        archive, lang=lang, detail_for=product_id if include_members else None
+    )
     chosen = cubes
     if product_id is not None:
         chosen = [c for c in cubes if c.product_id == product_id]
