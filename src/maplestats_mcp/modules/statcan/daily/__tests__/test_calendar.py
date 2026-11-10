@@ -94,6 +94,7 @@ async def test_calendar_query_ignores_accents_and_needs_every_word(httpx_mock):
 
 async def test_calendar_history_is_newest_first_with_full_url(httpx_mock):
     httpx_mock.add_response(url=_INDICATORS_URL, json=_INDICATORS)
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=[])
     result = await client.get_release_calendar(
         "manufacturing", upcoming_only=False, end_date="2012-12-31"
     )
@@ -107,6 +108,7 @@ async def test_calendar_products_have_no_future_rows(httpx_mock):
     httpx_mock.add_response(url=_PRODUCTS_URL, json=_PRODUCTS)
     upcoming = await client.get_release_calendar(kind="products")
     assert upcoming.total_matched == 0
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=[])
     history = await client.get_release_calendar("45-004-X", kind="products", upcoming_only=False)
     assert history.entries[0].catalogue_number == "45-004-X2012001"
     assert history.entries[0].reference_period is None
@@ -204,3 +206,67 @@ async def test_upcoming_gives_history_when_the_window_lacks_the_release(httpx_mo
     assert history is not None
     assert [str(e.release_date) for e in history.scheduled_releases] == ["2099-11-05"]
     assert str(history.estimated_next_date) == "2100-11-05"
+
+
+# The archive as the Daily's previous-releases file has it (2026-11-10): the
+# provisional poverty estimates are a Daily release, in neither schedule file.
+_POVERTY = {
+    "date": "2026-11-04 00:00:02",
+    "type": "meeting",
+    "title": "Provisional poverty estimates",
+    "description": "2025",
+    "url": "/daily-quotidien/261104/dq261104e-eng.htm",
+}
+_GDP_PROVINCES = {
+    "date": "2026-05-01 00:00:01",
+    "type": "meeting",
+    "title": "Gross domestic product by industry: Provinces and territories",
+    "description": "2025",
+    "url": "/daily-quotidien/260501/dq260501a-eng.htm",
+}
+
+
+async def test_calendar_history_includes_every_daily_release(httpx_mock):
+    httpx_mock.add_response(url=_INDICATORS_URL, json=_INDICATORS)
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=[_POVERTY, _GDP_PROVINCES])
+    result = await client.get_release_calendar(
+        "poverty", upcoming_only=False, start_date="2025-01-01", end_date="2027-12-31"
+    )
+    assert [(e.title, str(e.release_date), e.kind) for e in result.entries] == [
+        ("Provisional poverty estimates", "2026-11-04", "daily_release")
+    ]
+    assert result.entries[0].reference_period == "2025"
+    assert result.entries[0].url == (
+        "https://www150.statcan.gc.ca/daily-quotidien/261104/dq261104e-eng.htm"
+    )
+
+
+async def test_calendar_history_does_not_repeat_a_schedule_row(httpx_mock):
+    httpx_mock.add_response(url=_INDICATORS_URL, json=_INDICATORS)
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=[_INDICATORS[0]])
+    result = await client.get_release_calendar("manufacturing", upcoming_only=False)
+    assert [e.kind for e in result.entries] == ["key_indicator"]
+
+
+@pytest.mark.parametrize(
+    ("query", "title"),
+    [
+        # A phrase match missed both: the title has a colon, the year is the period.
+        ("gross domestic product by industry provinces", _GDP_PROVINCES["title"]),
+        ("provisional poverty estimates 2025", "Provisional poverty estimates"),
+        ("When did StatCan publish the provisional poverty estimates?", _POVERTY["title"]),
+        ("estimations provisoires", None),
+    ],
+)
+async def test_archive_search_matches_every_word(httpx_mock, query, title):
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=[_POVERTY, _GDP_PROVINCES])
+    result = await client.search_archive(query)
+    assert [e.title for e in result.entries] == ([title] if title else [])
+    assert result.note is None
+
+
+async def test_archive_search_falls_back_to_most_words_and_says_so(httpx_mock):
+    httpx_mock.add_response(url=_ARCHIVE_URL, json=[_POVERTY, _GDP_PROVINCES])
+    result = await client.search_archive("GDP by industry provinces territories 2025")
+    assert [e.title for e in result.entries] == [_GDP_PROVINCES["title"]]
+    assert result.note is not None and "match 4 of 5" in result.note

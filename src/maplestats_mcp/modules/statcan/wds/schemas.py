@@ -104,7 +104,11 @@ class CubeMetadata(BaseModel):
     frequency_code: int
     n_series: int
     n_datapoints: int
-    release_time: str
+    release_time: str = Field(
+        description="The table's latest release or revision (WDS releaseTime). A revision "
+        "moves it, so it is not when a reference period was first published: "
+        "statcan_daily_search_archive gives a release's dates."
+    )
     archive_status_en: str
     archive_status_fr: str
     subject_codes: list[str] = Field(default_factory=list)
