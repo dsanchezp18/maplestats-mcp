@@ -553,12 +553,22 @@ def _header_columns(header: list[str]) -> list[tuple[str, int, int | None]]:
 
 
 def _parse_csv_export(
-    text: str, lang: str = "en"
+    text: str, lang: str = "en", *, total_label: str = ""
 ) -> tuple[list[str], list[TableDataRow], list[str]]:
     """Parse HMIP's ExportTable CSV: title line, subtitle line, a header
     row (columns sometimes, but not always, paired with a following empty
     quality/flag column - see `_header_columns`), one data row per period,
-    a blank line, then a Notes/legend block - see module docstring."""
+    a blank line, then a Notes/legend block - see module docstring.
+
+    A cross-tab export (one row per province or centre) ends with the
+    requested geography's total row, and CMHC leaves that row's label cell
+    empty. Confirmed live on 2026-11-09 for vacancy rates by province
+    (2.1.1.1), starts by province (5.4.1) and Alberta's vacancy rates by
+    centre (2.1.1.2): the unlabelled row is Canada's (or Alberta's) total,
+    the same figures the parent geography's own row shows elsewhere. Such a
+    row takes `total_label`, the geography's name, so it is not returned
+    with an empty `period`.
+    """
     lines = text.splitlines()
     if len(lines) < 3:
         _raise(
@@ -600,7 +610,7 @@ def _parse_csv_export(
                 notes.append(note_text)
             continue
 
-        period = raw_row[0].strip()
+        period = raw_row[0].strip() or total_label
         values: dict[str, TableCell] = {}
         for name, value_idx, flag_idx in column_specs:
             raw_value = raw_row[value_idx] if value_idx < len(raw_row) else ""
@@ -1034,12 +1044,15 @@ async def get_table_data(
             export_params[f"AppliedFilters[{i}].Value"] = value
         raw_csv = await _post_csv(export_url, export_params, lang)
         text = raw_csv.decode(constants.CSV_ENCODING)
-        columns, rows, notes = _parse_csv_export(text, lang)
+        # sic: CMHC's own JSON key is "GeograghyName" - see module docstring.
+        geography_name = model.get("GeograghyName") or ""
+        columns, rows, notes = _parse_csv_export(
+            text, lang, total_label=geography_name or _text("Total", "Total", lang)
+        )
         return {
             "table_id": str(table_id),
-            # sic: CMHC's own JSON key is "GeograghyName" - see module docstring.
             "table_name": model.get("TableName") or "",
-            "geography_name": model.get("GeograghyName") or "",
+            "geography_name": geography_name,
             "columns": columns,
             "rows": rows,
             "notes": notes,

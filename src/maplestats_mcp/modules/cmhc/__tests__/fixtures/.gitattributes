@@ -1,0 +1,3 @@
+# HMIP's CSV exports are recorded byte for byte: cp1252, CRLF line endings.
+# The root .gitattributes would normalize them to LF as text.
+*.csv binary
