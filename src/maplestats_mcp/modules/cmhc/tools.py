@@ -167,10 +167,8 @@ async def cmhc_get_table_data(
     series (one row per period) or a province/centre-breakdown field
     from cmhc_get_table_options for a current cross-tabulation (one row
     per province/centre, then a total row for the requested geography,
-    labelled with its name, e.g. "Canada"). `reference_period` says when
-    the values refer to ("October 2025"; "January 1990 to September 2026"
-    for a series) and `citation` carries it: quote both with the values,
-    since a cross-tab's rows are places, not dates. Each returned cell carries CMHC's own
+    labelled with its name, e.g. "Canada"); `reference_period` dates it
+    ("October 2025"). Each returned cell carries CMHC's own
     reliability flag (a/b/c/d = Excellent/Very good/Good/Poor, use with
     caution) alongside the value, `value: 0` where CMHC prints "-" (no
     units in the universe), or `value: null` with the raw marker in
