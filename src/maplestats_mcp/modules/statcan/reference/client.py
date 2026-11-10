@@ -777,8 +777,10 @@ def _as_of(day: date | None) -> datetime | None:
     return datetime(day.year, day.month, day.day, tzinfo=UTC) if day else None
 
 
-async def _pdf(url: str, tool: str) -> tuple[pdf.PdfText, bool]:
-    """A PDF edition's text (pdf.py), downloaded under PDF_MAX_BYTES and cached."""
+async def _pdf(url: str, tool: str, lang: str) -> tuple[pdf.PdfText, bool]:
+    """A PDF edition's text (pdf.py), downloaded under PDF_MAX_BYTES and cached. On
+    a bilingual two-column page, only the column in `lang` is kept, so the text is
+    cached per language."""
 
     async def fetch() -> pdf.PdfText:
         downloaded = await file_download.download(
@@ -796,6 +798,7 @@ async def _pdf(url: str, tool: str) -> tuple[pdf.PdfText, bool]:
                 max_pages=constants.PDF_MAX_PAGES,
                 max_chars=constants.PDF_MAX_CHARS,
                 seconds=constants.PDF_EXTRACT_SECONDS,
+                lang=lang,
             )
         except pdf.PdfUnreadable as exc:
             raise UpstreamError(
@@ -808,7 +811,7 @@ async def _pdf(url: str, tool: str) -> tuple[pdf.PdfText, bool]:
             ) from exc
 
     return await cached_fetch(
-        f"statcan-reference:pdf:{url}", constants.PAGE_CACHE_TTL_SECONDS, fetch
+        f"statcan-reference:pdf:{lang}:{url}", constants.PAGE_CACHE_TTL_SECONDS, fetch
     )
 
 
@@ -827,6 +830,27 @@ def _pdf_note(document: pdf.PdfText) -> str:
             "(l'url de chaque section se termine par #page=N).",
         )
     ]
+    if document.bilingual_pages:
+        notes.append(
+            say(
+                f"{document.bilingual_pages} pages print English and French side by side: "
+                "only the English column was kept (lang='fr' reads the French one).",
+                f"{document.bilingual_pages} pages présentent l'anglais et le français "
+                "côte à côte : seule la colonne française a été gardée (lang='en' lit "
+                "la colonne anglaise).",
+            )
+        )
+    if document.two_column_pages:
+        notes.append(
+            say(
+                f"{document.two_column_pages} pages in two columns were read a column at "
+                "a time; '[Left column]' and '[Right column]' mark the columns where "
+                "their language could not be told.",
+                f"{document.two_column_pages} pages en deux colonnes ont été lues une "
+                "colonne à la fois ; « [Left column] » et « [Right column] » marquent les "
+                "colonnes dont la langue n'a pu être déterminée.",
+            )
+        )
     if document.pages_read < document.page_count:
         notes.append(
             say(
@@ -951,7 +975,7 @@ async def get_publication(
         "editions_total": editions_total,
     }
     if resolved.pdf_only:
-        document, cached = await _pdf(resolved.edition_url, tool)
+        document, cached = await _pdf(resolved.edition_url, tool, lang)
         sections = _pdf_toc(document, resolved.edition_url)
         notes = [_pdf_note(document)]
         if len(sections) > constants.SECTIONS_LISTED_MAX:
@@ -1230,9 +1254,12 @@ def _score(terms: list[str], title: str, text: str) -> tuple[int, float]:
             distinct += 1
         score += min(hits, 20) + 8 * in_title
     if len(terms) > 1:
-        phrase = " ".join(terms)
-        score += 15 * (" " + " ".join(words)).count(" " + phrase)
-        if phrase in " ".join(title_words):
+        # The terms are stems ("gross" is "gros"), so the phrase matches each as a
+        # word's start. Counted five times at most: a table that repeats "gross
+        # output" in every row is not five times the answer.
+        phrase = re.compile(r"\b" + r"\w*\s+".join(map(re.escape, terms)) + r"\w*")
+        score += 15 * min(5, len(phrase.findall(" ".join(words))))
+        if phrase.search(" ".join(title_words)):
             score += 30
     return distinct, score
 
@@ -1291,6 +1318,21 @@ def _section_result(
     return result, text
 
 
+def _word_text(page: pages.Page) -> str:
+    """A page's text as its folded words, one space apart, for finding a passage."""
+    return " ".join(re.findall(r"[a-z0-9]+", pages.fold(" ".join(b.text for b in page.blocks))))
+
+
+def _read_already(text: str, read: list[str]) -> bool:
+    """The first ten words of `text` (a PDF paragraph) are on one of the pages `read`
+    (_word_text): its HTML page was searched already."""
+    words = re.findall(r"[a-z0-9]+", pages.fold(text))[:10]
+    if len(words) < 5:
+        return False
+    passage = " " + " ".join(words) + " "
+    return any(passage in f" {page} " for page in read)
+
+
 async def get_section_text(
     publication: str,
     *,
@@ -1329,7 +1371,7 @@ async def get_section_text(
     edition_url = resolved.edition_url
     document: pdf.PdfText | None = None
     if resolved.pdf_only:
-        document, all_cached = await _pdf(edition_url, tool)
+        document, all_cached = await _pdf(edition_url, tool, lang)
         main = document.page
         if section is not None:
             section = _pdf_section(section)
@@ -1373,14 +1415,43 @@ async def get_section_text(
             )
     else:
         terms = _terms(query)
+        fallback: pdf.PdfText | None = None  # the whole-edition PDF, when searched too
         if document is not None:
             crawled = [main]
         else:
+            whole_url = main.pdf_url if (main.pdf_url or "").lower().endswith(".pdf") else None
             crawl = await _crawl(main, edition_url, tool, terms=terms, wanted=limit)
             crawled = crawl.pages
             all_cached &= crawl.cached
             pages_read = len(crawled)
-            if crawl.cut_short:
+            if crawl.cut_short and whole_url:
+                # 13-017-X's 2008 edition has 146 pages, past CRAWL_MAX_PAGES, and one
+                # PDF of all of them (3.3 MB, 297 pages): one download searches every
+                # page. Pieces of the PDF whose text is on a page already read give
+                # way to that page's own piece, so citations stay HTML-first.
+                whole: pdf.PdfText | None = None
+                try:
+                    whole, whole_cached = await _pdf(whole_url, tool, lang)
+                    all_cached &= whole_cached
+                except (NotFound, UpstreamError, UpstreamUnavailable):
+                    whole = None
+                if whole is not None:
+                    fallback = whole
+                    notes.append(
+                        say(
+                            f"The edition has more pages than the {len(crawled)} read: its "
+                            f"whole PDF ({main.pdf_url}, {whole.page_count} pages) was "
+                            "searched too. Matches from it cite the PDF page "
+                            "(#page=N): read on with publication=<that PDF>, "
+                            "section='page=N'.",
+                            f"L'édition a plus de pages que les {len(crawled)} lues : son PDF "
+                            f"complet ({main.pdf_url}, {whole.page_count} pages) a aussi été "
+                            "parcouru. Les résultats qui en viennent citent la page du PDF "
+                            "(#page=N) : lisez la suite avec publication=<ce PDF>, "
+                            "section='page=N'.",
+                        )
+                    )
+            if crawl.cut_short and fallback is None:
                 notes.append(
                     say(
                         f"Searched {len(crawled)} pages of the edition (those whose titles "
@@ -1413,14 +1484,21 @@ async def get_section_text(
                     )
                 )
         budget = max(200, max_chars // limit)
-        for distinct, score, page, heading, best in _matches(terms, crawled)[:limit]:
+        searched = crawled + ([fallback.page] if fallback else [])
+        read_text = [_word_text(page) for page in crawled] if fallback else []
+        for distinct, score, page, heading, best in _matches(terms, searched):
+            if len(results) == limit:
+                break
+            in_pdf = fallback is not None and page is fallback.page
+            if in_pdf and _read_already(page.blocks[best].text, read_text):
+                continue  # the same text on an HTML page read: that piece stands for it
             _, offsets = _section_text(page, heading)
             first = heading.position if heading else 0
             begin = offsets[best - first] if 0 <= best - first < len(offsets) else 0
             result, _ = _section_result(
                 page,
                 heading,
-                edition_url,
+                page.url if in_pdf else edition_url,
                 start=begin,
                 limit=budget,
                 score=round(score + 100 * distinct, 1),

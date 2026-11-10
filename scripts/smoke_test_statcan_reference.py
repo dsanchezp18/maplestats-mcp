@@ -204,6 +204,17 @@ async def _publications() -> bool:
     page = await client.get_section_text("15-203-X", section="192", max_chars=6000)
     print(f"OK: 15-203-X section '192' -> {page.sections[0].title}")
     ok &= "selected factor incomes" in page.sections[0].text.lower()
+    # Pages 188 to 196 print English and French side by side: only the column in
+    # lang is kept, so the English page holds no French and the reverse.
+    ok &= "production brute" not in page.sections[0].text.lower()
+    ok &= "pages print English and French side by side" in (page.provenance.limits or "")
+    page_fr = await client.get_section_text("15-203-X", section="192", lang="fr")
+    print(f"OK: 15-203-X section '192', lang='fr' -> {page_fr.sections[0].title}")
+    ok &= "Méthode de la production brute" in page_fr.sections[0].text
+    ok &= "gross output approach" not in page_fr.sections[0].text.lower()
+
+    # 13-017-X's 2008 edition links its whole PDF from the side menu only.
+    ok &= iea.pdf_url == "https://www150.statcan.gc.ca/n1/pub/13-017-x/13-017-x2008001-eng.pdf"
 
     lfs_2006 = await client.get_section_text(
         "71-543-G", edition="2006", query="involuntary part-time", limit=1

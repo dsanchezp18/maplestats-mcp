@@ -164,16 +164,19 @@ async def statcan_reference_get_section_text(
     section= (an id or title from statcan_reference_get_publication, or
     a page URL) for that section's text, or query= ("involuntary
     part-time", "owned accommodation", "hedonic", "basket update",
-    "supplementary labour income") to search every page of the edition
-    and get the best-matching sections, each as an excerpt starting at
-    its best paragraph (limit= of them, default 3). With neither, the
+    "supplementary labour income") to search the edition and get the
+    best-matching sections, each as an excerpt starting at its best
+    paragraph (limit= of them, default 3): up to 40 HTML pages, those
+    whose titles hold the query's words first, then, for a larger edition
+    with a PDF of the whole (13-017-X), every page of that PDF. With neither, the
     edition's main page. Plain text: headings kept as '#' lines, tables
     as 'a | b' rows, menus and footers dropped; cut at max_chars (default
     6,000) with next_start_char to read on (start_char=). Each section
     carries its own URL to cite, and the result the edition's release
     date. PDF-only editions (and a PDF URL as publication) are read from
     the PDF, a page per section (section='page=192'), with the same
-    query and paging; layout and tables may come out imperfect. Covers the
+    query and paging; tables may come out imperfect. On bilingual pages
+    printed in two columns (15-203-X) only the column in lang is kept. Covers the
     Guide to the Labour Force Survey (71-543-G: exclusions, involuntary
     part-time, quality and release rules), the CPI Reference Paper
     (62-553-X: Lowe index, basket updates, owned accommodation, quality
