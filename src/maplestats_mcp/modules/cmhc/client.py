@@ -126,6 +126,7 @@ import html as html_module
 import json
 import re
 import unicodedata
+from datetime import UTC, datetime
 from io import StringIO
 from typing import Any, NoReturn
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -550,6 +551,96 @@ def _header_columns(header: list[str]) -> list[tuple[str, int, int | None]]:
             columns.append((label, i, None))
             i += 1
     return columns
+
+
+# Month names as HMIP writes them in an export's subtitle line, in both languages.
+_MONTHS = {
+    name: number
+    for names in (
+        (
+            "january",
+            "february",
+            "march",
+            "april",
+            "may",
+            "june",
+            "july",
+            "august",
+            "september",
+            "october",
+            "november",
+            "december",
+        ),
+        (
+            "janvier",
+            "février",
+            "mars",
+            "avril",
+            "mai",
+            "juin",
+            "juillet",
+            "août",
+            "septembre",
+            "octobre",
+            "novembre",
+            "décembre",
+        ),
+    )
+    for number, name in enumerate(names, start=1)
+}
+# "[Month] YYYY", optionally followed by " to|à [Month] YYYY". Whatever follows is
+# the table's filter description ("Row / Apartment", a season), not the period.
+_PERIOD_RE = re.compile(
+    r"^\s*(?:(?P<month1>[^\W\d_]+)\s+)?(?P<year1>\d{4})"
+    r"(?:\s+(?:to|à)\s+(?:(?P<month2>[^\W\d_]+)\s+)?(?P<year2>\d{4}))?(?!\d)",
+    re.IGNORECASE,
+)
+
+
+def _reference_period(subtitle: str) -> tuple[str | None, datetime | None]:
+    """The reference period an export's subtitle line states, and its latest month.
+
+    The line under the title starts with the period and may go on with the
+    filters applied. Confirmed live on 2026-11-09: "October 2025 Row /
+    Apartment" (a rental cross-tab), "1990 to 2025 Row / Apartment October"
+    (its time series), "September 2026" and "January 1990 to September 2026"
+    (starts), "2021" and "2009 to 2021" (seniors' housing), and in French
+    "octobre 2025 En rangée / Appartements" and "1990 à 2025 ...". The period
+    is returned in CMHC's own words. The date is the first of the latest
+    period's month, and None when that period has no month: a bare year would
+    claim a precision CMHC did not state (its rental survey is held in October).
+    A line that does not open with a period gives (None, None).
+    """
+    match = _PERIOD_RE.match(subtitle)
+    if not match:
+        return None, None
+    months = [match.group("month1"), match.group("month2")]
+    if any(m is not None and m.lower() not in _MONTHS for m in months):
+        return None, None
+    latest_year = match.group("year2") or match.group("year1")
+    latest_month = months[1] if match.group("year2") else months[0]
+    as_of = (
+        datetime(int(latest_year), _MONTHS[latest_month.lower()], 1, tzinfo=UTC)
+        if latest_month
+        else None
+    )
+    return match.group(0).strip(), as_of
+
+
+def _citation(table_id: str, table_name: str, geography: str, period: str | None, lang: str) -> str:
+    parts = [
+        _text(
+            "Canada Mortgage and Housing Corporation (CMHC), Housing Market Information Portal",
+            "Société canadienne d'hypothèques et de logement (SCHL), Portail de l'information "
+            "sur le marché de l'habitation",
+            lang,
+        ),
+        _text(f"table {table_id}", f"tableau {table_id}", lang),
+        table_name.strip(),
+        geography,
+        period or _text("reference period not stated", "période de référence non indiquée", lang),
+    ]
+    return ", ".join(p for p in parts if p) + "."
 
 
 def _parse_csv_export(
@@ -1053,6 +1144,9 @@ async def get_table_data(
             "table_id": str(table_id),
             "table_name": model.get("TableName") or "",
             "geography_name": geography_name,
+            # The line under the title (the parser above checked it exists): the
+            # reference period, then any filters.
+            "subtitle": text.splitlines()[1],
             "columns": columns,
             "rows": rows,
             "notes": notes,
@@ -1063,10 +1157,19 @@ async def get_table_data(
     parsed, was_cached = await cached_fetch(
         cache_key, constants.CACHE_TTL_TABLE_DATA_SECONDS, fetch
     )
+    reference_period, as_of = _reference_period(parsed.get("subtitle") or "")
     return TableDataResult(
         table_id=parsed["table_id"],
         table_name=parsed["table_name"],
         geography_name=parsed["geography_name"],
+        reference_period=reference_period,
+        citation=_citation(
+            parsed["table_id"],
+            parsed["table_name"],
+            parsed["geography_name"],
+            reference_period,
+            lang,
+        ),
         category_level_1=category_level_1,
         category_level_2=category_level_2,
         column_field=column_field,
@@ -1082,6 +1185,7 @@ async def get_table_data(
             url=export_url,
             cached=was_cached,
             schema_name="cmhc.TableDataResult",
+            as_of=as_of,
             # The export is a form POST, so a URL alone cannot reproduce it;
             # the table is resolved first by a GET to TableMatchingCriteria.
             limits=_text(
