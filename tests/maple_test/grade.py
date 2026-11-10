@@ -519,7 +519,11 @@ def grade_answer(question: dict[str, Any], text: str) -> Grade:
     else:
         pattern = question.get("answer_pattern")
         right_call = True
-        if pattern and question.get("answer_contains"):
+        if question.get("answer_regex"):
+            # A direction stated in words ("strengthened", "lower"): any phrasing the regex
+            # allows is the call (v4's fresh test set).
+            right_call = bool(re.search(question["answer_regex"], text, re.IGNORECASE))
+        elif pattern and question.get("answer_contains"):
             # A name answer (a brand, a status): naming it is the call.
             right_call = bool(re.search(rf"\b{re.escape(pattern)}\b", text, re.IGNORECASE))
         elif pattern:

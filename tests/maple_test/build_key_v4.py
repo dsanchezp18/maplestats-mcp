@@ -183,8 +183,71 @@ IN_SAMPLE_FOR = ["maplestats"]
 # The split's salt, found by first_balanced_salt() when the key was first built
 # (2026-11-09). Never change it: that would reshuffle dev and test.
 SALT = 2
-# Test questions moved to dev under rotation rule 3: id -> the change they motivated.
-MOVED_TO_DEV: dict[str, str] = {}
+# Test questions moved to dev under rotation rule 3: id -> why. The whole first test set
+# moved when the fresh one (FRESH_TEST) replaced it, so MapleStats could be measured
+# out-of-sample (2026-11-09).
+_REPLACED = "rotation rule 3: the first test set, replaced by N-01 to N-25 (2026-11-09)"
+MOVED_TO_DEV: dict[str, str] = {
+    qid: _REPLACED
+    for qid in [
+        "A-01",
+        "A-03",
+        "C-01",
+        "C-05",
+        "C-11",
+        "C-16",
+        "M-15",
+        "R-01",
+        "R-04",
+        "R-06",
+        "T-30",
+        "C-21",
+        "M-11",
+        "T-12",
+        "T-14",
+        "T-15",
+        "T-20",
+        "T-34",
+        "T-25",
+        "T-17",
+        "T-19",
+        "X-15",
+        "X-20",
+        "X-05",
+        "X-08",
+    ]
+}
+
+# The fresh test set: written and keyed on 2026-11-09 (build_key_v4_test.py), before any
+# server was asked them, stratified like the set it replaced. id -> (source, qtype).
+FRESH_KEY = HERE / "maple_test_v4_test.json"
+FRESH_TEST: dict[str, tuple[str, str]] = {
+    "N-01": ("statcan", "figure"),
+    "N-02": ("statcan", "figure"),
+    "N-03": ("statcan", "figure"),
+    "N-04": ("statcan", "figure"),
+    "N-05": ("statcan", "comparison"),
+    "N-06": ("statcan", "flag"),
+    "N-07": ("statcan", "documentation"),
+    "N-08": ("statcan", "documentation"),
+    "N-09": ("statcan", "refusal"),
+    "N-10": ("statcan", "release"),
+    "N-11": ("statcan", "release"),
+    "N-12": ("boc", "figure"),
+    "N-13": ("boc", "comparison"),
+    "N-14": ("boc", "refusal"),
+    "N-15": ("cmhc", "documentation"),
+    "N-16": ("cmhc", "figure"),
+    "N-17": ("provincial", "documentation"),
+    "N-18": ("provincial", "documentation"),
+    "N-19": ("municipal", "documentation"),
+    "N-20": ("federal", "documentation"),
+    "N-21": ("federal", "figure"),
+    "N-22": ("federal", "refusal"),
+    "N-23": ("federal", "refusal"),
+    "N-24": ("international", "figure"),
+    "N-25": ("international", "documentation"),
+}
 
 PROMPT_NOTE = (
     "v4 asks every question with one prompt (`run.PROMPTS['v4']`) that covers figures and "
@@ -266,6 +329,28 @@ def build() -> dict[str, Any]:
             }
         )
         questions.append(q)
+    fresh = {
+        q["id"]: q
+        for q in json.loads(FRESH_KEY.read_text(encoding="utf-8"))["questions"]
+        if q["id"] in FRESH_TEST
+    }
+    for qid in sorted(fresh):
+        source, qtype = FRESH_TEST[qid]
+        q = copy.deepcopy(fresh[qid])
+        q.update(
+            {
+                "source_version": "v4-test",
+                "source": source,
+                "qtype": qtype,
+                "split": "test",
+                # No server has answered these yet, so there is nothing to judge from.
+                "extra_passes": False,
+                "in_sample_for": [],
+                "why_kept": "fresh test question (build_key_v4_test.py)",
+                "item": None,
+            }
+        )
+        questions.append(q)
     order = {s: i for i, s in enumerate(KEEP_SOURCES)}
     questions.sort(key=lambda q: (q["split"], order[q["source"]], q["id"]))
     return {
@@ -273,7 +358,8 @@ def build() -> dict[str, Any]:
         "built_from": {
             v: json.loads(grade.SUITES[v].key.read_text(encoding="utf-8"))["built_at"]
             for v in ("v1", "v2", "v3")
-        },
+        }
+        | {"v4-test": json.loads(FRESH_KEY.read_text(encoding="utf-8"))["built_at"]},
         "note": PROMPT_NOTE,
         "dropped": DROP,
         "questions": questions,
@@ -294,8 +380,17 @@ def problems(key: dict[str, Any]) -> list[str]:
     if unknown:
         found.append(f"not in any source key: {sorted(unknown)}")
     qs = key["questions"]
-    if not 40 <= len(qs) <= 50:
-        found.append(f"{len(qs)} questions; v4 keeps 40 to 50")
+    kept_old = [q for q in qs if q["source_version"] != "v4-test"]
+    if not 40 <= len(kept_old) <= 50:
+        found.append(f"{len(kept_old)} questions kept from v1 to v3; v4 keeps 40 to 50")
+    fresh = {q["id"] for q in qs if q["source_version"] == "v4-test"}
+    if fresh != set(FRESH_TEST):
+        found.append(
+            f"fresh test questions missing from the key: {sorted(set(FRESH_TEST) - fresh)}"
+        )
+    test = [q for q in qs if q["split"] == "test"]
+    if any(q["source_version"] != "v4-test" for q in test):
+        found.append("a question from v1 to v3 is still in test")
     for split in ("dev", "test"):
         part = [q for q in qs if q["split"] == split]
         for s in KEEP_SOURCES:
@@ -307,7 +402,7 @@ def problems(key: dict[str, Any]) -> list[str]:
     for q in qs:
         if q["source"] not in KEEP_SOURCES or q["qtype"] not in QTYPES:
             found.append(f"{q['id']}: unknown source or qtype")
-        if q["item"]["ceiling"] or q["item"]["floor"]:
+        if q["item"] and (q["item"]["ceiling"] or q["item"]["floor"]):
             found.append(f"{q['id']}: every comparable arm always right, or always wrong")
     return found
 

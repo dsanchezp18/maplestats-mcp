@@ -711,7 +711,8 @@ The source keys are still rebuilt from the publishers by their own `--check` bui
 The 47 are split into a public **dev** set (22) and a held-out **test** set (25). The split
 is made by a salted hash of each id, alternating within each source, with the first salt that
 puts every kind of answer in both sets (`SALT = 2`, fixed from now on): nobody chose a
-question's set, and it never reshuffles.
+question's set, and it never reshuffles. Since 2026-11-09 all 47 are dev, and the test set is
+25 fresh questions (below): 72 questions in all.
 
 1. Fixes are tuned on **dev** only. Read dev answers, write caveats for them, re-run dev.
 2. **Test** answers are graded by the grader and the judge. A person reads only the flagged
@@ -722,11 +723,99 @@ question's set, and it never reshuffles.
    the move and what it motivated; no other question changes set.
 4. A server's score on test is out-of-sample only for questions not in its `in_sample_for`.
 
-**Today every v4 question is in-sample for MapleStats** (`in_sample_for: ["maplestats"]`):
-MapleStats was changed after reading v1 and v2 answers, the release history after R-06, and
-v3's `maplestats-postfix` after v3. Comparisons with other servers are fair on the questions;
-a MapleStats score is not out-of-sample until rule 3 has replaced the test set with fresh
-questions.
+**The first test set was in-sample for MapleStats:** MapleStats was changed after reading v1
+and v2 answers, the release history after R-06, and v3's `maplestats-postfix` after v3. Rule 3
+was therefore applied to the whole set on 2026-11-09: its 25 questions moved to dev
+(`MOVED_TO_DEV`), and 25 fresh questions replaced them.
+
+### The fresh test set (N-01 to N-25)
+
+The 25 were written and keyed on 2026-11-09 (`build_key_v4_test.py`, key
+`maple_test_v4_test.json`), before MapleStats or any other server was asked them. They are
+out-of-sample for every server (`in_sample_for: []`). None repeats a v1 to v3 question, and
+none asks the same thing of the same series. They keep the stratification of the set they
+replace: StatCan 11, Bank of Canada 3, CMHC 2, provincial 2, municipal 1, federal 4,
+international 2; figure 8, comparison 2, flag 1, documentation 8, refusal 4, release date 2.
+
+| ID | Source | Kind | Asks |
+| :-- | :-- | :-- | :-- |
+| N-01 | StatCan | figure | Industrial Product Price Index, 12 months to September 2026 |
+| N-02 | StatCan | figure | Business-sector labour productivity, Q2 2026 vs Q1 |
+| N-03 | StatCan | figure | Regular EI beneficiaries, August 2026 |
+| N-04 | StatCan | figure | Canadian-resident return trips from the US by car, August 2026 vs 2025 |
+| N-05 | StatCan | comparison | New Housing Price Index, Calgary vs Edmonton, 12 months to September 2026: where weaker |
+| N-06 | StatCan | flag | Q2 2026 GDP (at annual rates) divided by the population, called GDP per person for the quarter |
+| N-07 | StatCan | documentation | SEPH's data sources and the Business Payrolls Survey's sample |
+| N-08 | StatCan | documentation | Monthly Survey of Manufacturing: target population, its list, number of industries |
+| N-09 | StatCan | refusal | Nova Scotia's monthly GDP (published for Canada only) |
+| N-10 | StatCan | release date | Stock and consumption of fixed capital, 2025 |
+| N-11 | StatCan | release date | Provisional poverty estimates, 2025 (past) |
+| N-12 | Bank of Canada | figure | Monthly nominal CEER, October 2026, vs September |
+| N-13 | Bank of Canada | comparison | CAD against the yen, October 1 vs October 30, 2026 |
+| N-14 | Bank of Canada | refusal | A Bank of Canada rate for the Venezuelan bolívar (none) |
+| N-15 | CMHC | documentation | Market Absorption Survey: absorbed, and when a unit counts as sold |
+| N-16 | CMHC | figure | Vancouver CMA vacancy rate, October 2025, apartments of six units and over |
+| N-17 | BC Data Catalogue | documentation | BC Liquor Store Locations: publisher, licence, format |
+| N-18 | Données Québec | documentation | Uses of AI in Quebec's public administration: ministry, licence, frequency, years |
+| N-19 | Toronto | documentation | Dinesafe: owner division, refresh rate, DataStore |
+| N-20 | open.canada.ca | documentation | Proactive publication of contracts: publisher, frequency, DataStore |
+| N-21 | ECCC | figure | 1981-2010 normal January mean temperature, Winnipeg Richardson Int'l A |
+| N-22 | ECCC | refusal | The same normal at Toronto City Centre (none: opened 2009) |
+| N-23 | open.canada.ca | refusal | CSV files in ECCC's 'Climate Data Products' dataset (none) |
+| N-24 | BIS | figure | Credit to Canada's private non-financial sector, % of GDP, Q1 2026 |
+| N-25 | World Bank | documentation | Definition of 'Labor force, total' (SL.TLF.TOTL.IN): ages, who counts, whose estimates |
+
+**How the key was read.** All values come from the publishers' own APIs and pages, never
+through MapleStats: StatCan's IMDB, WDS and The Daily's release schedule; Valet; CMHC's
+methodology page (and its vacancy rates as StatCan's table 34-10-0127 carries them, as v2's
+C-15 read CMHC's starts); ECCC's MSC GeoMet; the CKAN APIs of open.canada.ca, the BC Data
+Catalogue, Données Québec and Toronto; and the World Bank and BIS APIs. Ontario's and
+Alberta's catalogues and the OECD answered 429 or 403 that day, so the provincial questions
+use BC and Quebec. StatCan's www150 host blocks this machine after heavy use, so the builder
+has two parts that can be rebuilt apart (`--part open`, `--part statcan`). It sends one
+request at a time with a pause, and stops on a 403 or 429 instead of retrying.
+
+```bash
+uv run python -m tests.maple_test.build_key_v4_test --check   # has any source changed?
+uv run python -m tests.maple_test.build_key_v4 --check        # the v4 key with the fresh set
+```
+
+**Independent review.** A second agent read the 25, given only the files (not this
+author's reasoning), for ambiguity, grading risk, overlap with v1 to v3, bias and shelf life.
+Its written report could not be saved (a file permission was declined); its findings came
+back as text, and these changes were made before any server saw the questions:
+
+- calls that were not graded (N-12, N-13 were numeric) are now graded (`answer_regex`, a
+  new optional field the grader reads for a comparison's call);
+- regex bugs: N-23's refusal matched "no" inside "Normals"; N-19 and N-20 counted
+  "DataStore is not active" as yes; N-17, N-18 missed English or reordered wording;
+- N-16 is worded as the series it is keyed on (apartments of six units and over, as
+  StatCan publishes CMHC's survey), so a server reading CMHC's three-plus headline is not
+  marked wrong against a key it was not asked for;
+- the flag question was replaced: averaging the provinces' October 2026 unemployment
+  rates gave 6.72% against Canada's 6.7%, so the trap could not catch anyone (the
+  builder now fails when a flag's trap closes);
+- questions answerable from memory or from their own wording now need the page (SEPH's
+  sample size, the manufacturing survey's 156 industries; N-25 now asks the World Bank's
+  labour-force definition rather than its unemployment series, whose name gave the answer);
+- the release questions use releases that the schedule lists (fixed capital, provisional
+  poverty estimates), since the next quarterly GDP and population releases were not yet on
+  it;
+- the v4 prompt's example table and vector (14-10-0287-01, v2062815) are now 17-10-0009-01
+  and v1, which no v4 question asks for.
+
+**Kept, with the reviewer's objection noted.** The documentation questions on portals (N-17
+BC, N-19 Toronto, N-20 open.canada.ca) ask the same kind of thing as v3's T-17, T-20, T-25
+about other datasets: the stratification requires portal metadata, and no question reuses a
+dataset. N-13 (CAD against the yen) is a Bank of Canada exchange rate like M-11, another
+currency and dates. N-14 (no bolívar rate) is the same kind of refusal as T-12, which every
+arm answered; it may separate no one, and the item analysis after the first full run will
+say. Shelf life is short for about a third of the set (N-01, N-03, N-04 revise at their next
+monthly release; N-02 and N-24 in December): every arm of a comparison runs against one key
+build, checked with `--check` before and after.
+
+**MapleStats was not run on the fresh set before this was merged**, as the rule requires:
+the first MapleStats run on it is the out-of-sample measurement.
 
 ### Structured answers
 

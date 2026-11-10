@@ -3,7 +3,8 @@
  "built_from": {
   "v1": "2026-11-06T03:20:58+00:00",
   "v2": "2026-11-03T06:43:53+00:00",
-  "v3": "2026-11-09T00:03:07+00:00"
+  "v3": "2026-11-09T00:03:07+00:00",
+  "v4-test": "2026-11-10T03:16:52+00:00"
  },
  "note": "v4 asks every question with one prompt (`run.PROMPTS['v4']`) that covers figures and documentation and asks for a closing JSON block (README, 'Structured answers').",
  "dropped": {
@@ -75,6 +76,54 @@
  },
  "questions": [
   {
+   "id": "A-01",
+   "category": "Analyst",
+   "eval_type": "numeric",
+   "question": "What is the child poverty rate in Alberta?",
+   "expected": {
+    "mbm_under18_2024_pct": 12.8
+   },
+   "headline": [
+    "mbm_under18_2024_pct"
+   ],
+   "tolerance": "±0.1; the Market Basket Measure (official poverty line), 2024",
+   "citations": [
+    {
+     "table_id": "11-10-0135-01",
+     "vector_id": "v1792632015",
+     "series_title": "Alberta;Persons under 18 years;Market basket measure, 2023 base;Percentage of persons in low income",
+     "reference_period": "2024",
+     "coordinate": "12.2.7.2.0.0.0.0.0.0",
+     "value": 12.8,
+     "release_or_revision_date": "2026-04-29T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110013501"
+    }
+   ],
+   "traps": [
+    "Not only the census: the Canadian Income Survey (11-10-0135) is annual for the provinces.",
+    "Name the line: MBM is the official poverty line; LIM-AT and LICO differ."
+   ],
+   "group": "analyst",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "child poverty: the annual income survey",
+   "item": {
+    "arms": 17,
+    "mean": 0.765,
+    "spread": 1.0,
+    "volatile": 0.235,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
    "id": "A-02",
    "category": "Analyst",
    "eval_type": "flag",
@@ -141,6 +190,65 @@
    }
   },
   {
+   "id": "A-03",
+   "category": "Analyst",
+   "eval_type": "numeric",
+   "question": "What is the average income in Alberta?",
+   "expected": {
+    "average_income_2024": 66100.0,
+    "median_income_2024": 48100.0
+   },
+   "headline": [],
+   "tolerances": {
+    "average_income_2024": 100,
+    "median_income_2024": 100
+   },
+   "tolerance": "±$100; correct needs the median as well as the average",
+   "citations": [
+    {
+     "table_id": "11-10-0239-01",
+     "vector_id": "v107680657",
+     "series_title": "Alberta;15 years and over;Total - Gender;Total income;Average income (excluding zeros)",
+     "reference_period": "2024",
+     "coordinate": "12.1.1.1.4.0.0.0.0.0",
+     "value": 66100.0,
+     "release_or_revision_date": "2026-04-29T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110023901"
+    },
+    {
+     "table_id": "11-10-0239-01",
+     "vector_id": "v107680658",
+     "series_title": "Alberta;15 years and over;Total - Gender;Total income;Median income (excluding zeros)",
+     "reference_period": "2024",
+     "coordinate": "12.1.1.1.5.0.0.0.0.0",
+     "value": 48100.0,
+     "release_or_revision_date": "2026-04-29T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110023901"
+    }
+   ],
+   "traps": [
+    "Incomes are skewed: the median is the typical income."
+   ],
+   "group": "analyst",
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": true,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "average income with the median beside it; volatile",
+   "item": {
+    "arms": 17,
+    "mean": 0.431,
+    "spread": 1.0,
+    "volatile": 0.471,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
    "id": "A-05",
    "category": "Analyst",
    "eval_type": "refusal",
@@ -187,6 +295,124 @@
     "mean": 0.941,
     "spread": 0.333,
     "volatile": 0.176,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "C-01",
+   "category": "Labour",
+   "eval_type": "comparison",
+   "question": "Was the employment rate higher in Ontario or in Quebec in September 2026? Give both rates.",
+   "expected": {
+    "ontario_pct": 60.1,
+    "quebec_pct": 59.9
+   },
+   "headline": [
+    "ontario_pct",
+    "quebec_pct"
+   ],
+   "answer_pattern": "Ontario",
+   "tolerance": "Right province; each rate ±0.1",
+   "citations": [
+    {
+     "table_id": "14-10-0287-01",
+     "vector_id": "v2063951",
+     "series_title": "Ontario;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+     "reference_period": "2026-09",
+     "coordinate": "7.9.1.1.1.1",
+     "value": 60.1,
+     "release_or_revision_date": "2026-11-06T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+    },
+    {
+     "table_id": "14-10-0287-01",
+     "vector_id": "v2063762",
+     "series_title": "Quebec;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+     "reference_period": "2026-09",
+     "coordinate": "6.9.1.1.1.1",
+     "value": 59.9,
+     "release_or_revision_date": "2026-11-06T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+    }
+   ],
+   "traps": [
+    "The employment rate is not the participation rate or 100 minus unemployment."
+   ],
+   "group": "core",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "comparison",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "Ontario vs Quebec; volatile; replay fixture",
+   "item": {
+    "arms": 17,
+    "mean": 0.784,
+    "spread": 1.0,
+    "volatile": 0.235,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "C-05",
+   "category": "Labour",
+   "eval_type": "numeric",
+   "question": "What was Canada's job vacancy rate in August 2026, and how many vacant positions were there?",
+   "expected": {
+    "vacancy_rate_pct": 2.8,
+    "vacancies": 507220.0
+   },
+   "headline": [
+    "vacancy_rate_pct"
+   ],
+   "tolerance": "±0.1; vacancies ±0.1% (may be rounded)",
+   "citations": [
+    {
+     "table_id": "14-10-0432-01",
+     "vector_id": "v1481212147",
+     "series_title": "Canada;Job vacancy rate",
+     "reference_period": "2026-08",
+     "coordinate": "1.3",
+     "value": 2.8,
+     "release_or_revision_date": "2026-10-29T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
+    },
+    {
+     "table_id": "14-10-0432-01",
+     "vector_id": "v1481212145",
+     "series_title": "Canada;Job vacancies",
+     "reference_period": "2026-08",
+     "coordinate": "1.1",
+     "value": 507220.0,
+     "release_or_revision_date": "2026-10-29T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
+    }
+   ],
+   "traps": [
+    "Seasonally adjusted monthly estimates (14-10-0432), not the quarterly table."
+   ],
+   "group": "core",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": true,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "job vacancies; most volatile core figure",
+   "item": {
+    "arms": 17,
+    "mean": 0.549,
+    "spread": 1.0,
+    "volatile": 0.412,
     "ceiling": false,
     "floor": false
    }
@@ -245,6 +471,113 @@
     "mean": 0.784,
     "spread": 1.0,
     "volatile": 0.235,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "C-11",
+   "category": "Output",
+   "eval_type": "numeric",
+   "question": "How fast did Canada's real GDP grow in the second quarter of 2026, at an annualized rate?",
+   "expected": {
+    "annualized_pct": 3.3
+   },
+   "reference": {
+    "quarterly_pct": 0.8
+   },
+   "headline": [
+    "annualized_pct"
+   ],
+   "tolerance": "±0.1",
+   "citations": [
+    {
+     "table_id": "36-10-0104-01",
+     "vector_id": "v62305752",
+     "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
+     "reference_period": "2026-04",
+     "coordinate": "1.1.1.30",
+     "value": 2524127.0,
+     "release_or_revision_date": "2026-08-28T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
+    },
+    {
+     "table_id": "36-10-0104-01",
+     "vector_id": "v62305752",
+     "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
+     "reference_period": "2026",
+     "coordinate": "1.1.1.30",
+     "value": 2503604.0,
+     "release_or_revision_date": "2026-08-28T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
+    }
+   ],
+   "traps": [
+    "StatCan headlines the annualized rate; the quarter-over-quarter change is a quarter of it, roughly."
+   ],
+   "group": "core",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "annualized quarterly GDP, not the q/q rate",
+   "item": {
+    "arms": 17,
+    "mean": 0.902,
+    "spread": 0.667,
+    "volatile": 0.176,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "C-16",
+   "category": "Housing",
+   "eval_type": "numeric",
+   "question": "What was the total value of building permits issued in Canada in August 2026?",
+   "expected": {
+    "permits_aug_2026_dollars": 13571697000
+   },
+   "headline": [
+    "permits_aug_2026_dollars"
+   ],
+   "tolerance": "±0.1%",
+   "citations": [
+    {
+     "table_id": "34-10-0292-01",
+     "vector_id": "v1675119645",
+     "series_title": "Canada;Total residential and non-residential;Types of work, total;Value of permits;Seasonally adjusted, current",
+     "reference_period": "2026-08",
+     "coordinate": "1.1.1.1.2",
+     "value": 13571697.0,
+     "release_or_revision_date": "2026-10-14T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410029201"
+    }
+   ],
+   "traps": [
+    "Seasonally adjusted, current dollars, residential and non-residential."
+   ],
+   "group": "core",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "building permits; volatile",
+   "item": {
+    "arms": 17,
+    "mean": 0.804,
+    "spread": 1.0,
+    "volatile": 0.176,
     "ceiling": false,
     "floor": false
    }
@@ -386,6 +719,114 @@
    }
   },
   {
+   "id": "M-15",
+   "category": "Labour",
+   "eval_type": "flag",
+   "question": "Using the labour force from the 2021 Census and the September 2026 unemployment rate, how many Canadians were unemployed?",
+   "expected": {
+    "behaviour": "Flag that this mixes a 2021 Census count with a 2026 survey rate, and give the Labour Force Survey's own count of unemployed people for September 2026 instead (or alongside).",
+    "unemployed_sep_2026_thousands": 1474.9
+   },
+   "headline": [],
+   "flag_years": [
+    "2021",
+    "2026"
+   ],
+   "tolerance": "Pass only if the mismatch is stated or the LFS count is given",
+   "citations": [
+    {
+     "table_id": "14-10-0287-01",
+     "vector_id": "v2062814",
+     "series_title": "Canada;Unemployment;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
+     "reference_period": "2026-09",
+     "coordinate": "1.6.1.1.1.1",
+     "value": 1474.9,
+     "release_or_revision_date": "2026-11-06T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+    }
+   ],
+   "traps": [
+    "The LFS publishes the number unemployed directly (in thousands); rebuilding it from a five-year-old census base is both unnecessary and wrong."
+   ],
+   "source_version": "v1",
+   "source": "statcan",
+   "qtype": "flag",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "mixed census/LFS calculation; grader wrong on every answer",
+   "item": {
+    "arms": 7,
+    "mean": 0.286,
+    "spread": 1.0,
+    "volatile": null,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "R-01",
+   "category": "Release",
+   "eval_type": "date",
+   "question": "When does Statistics Canada release Alberta's GDP for 2025 in the provincial and territorial economic accounts (PTEA)?",
+   "expected": {
+    "ptea_2025_release": "2026-11-05"
+   },
+   "reference": {
+    "ptea_2024_release": "2025-11-06",
+    "gdp_by_industry_2025_release": "2026-05-01"
+   },
+   "headline": [
+    "ptea_2025_release"
+   ],
+   "tolerance": "The exact date. A May 1 date (GDP by industry, 2025) is a different release; saying the 2025 PTEA is already out is wrong.",
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": null,
+     "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2025",
+     "reference_period": "2025",
+     "value": "2026-11-05",
+     "release_or_revision_date": "2026-11-05",
+     "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": null,
+     "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2024",
+     "reference_period": "2024",
+     "value": "2025-11-06",
+     "release_or_revision_date": "2025-11-06",
+     "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/251106/dq251106a-eng.htm"
+    }
+   ],
+   "traps": [
+    "GDP by industry for 2025 (May 1, 2026) is not the PTEA release.",
+    "The latest PTEA published before the release date is for 2024."
+   ],
+   "group": "release",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "release",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "PTEA release date",
+   "item": {
+    "arms": 8,
+    "mean": 0.375,
+    "spread": 1.0,
+    "volatile": 0.25,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
    "id": "R-03",
    "category": "Release",
    "eval_type": "date",
@@ -436,6 +877,100 @@
     "arms": 8,
     "mean": 0.125,
     "spread": 1.0,
+    "volatile": 0.125,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "R-04",
+   "category": "Release",
+   "eval_type": "date",
+   "question": "When will Statistics Canada release the Labour Force Survey for October 2026?",
+   "expected": {
+    "lfs_oct_2026_release": "2026-11-06"
+   },
+   "headline": [
+    "lfs_oct_2026_release"
+   ],
+   "tolerance": "The exact date",
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": null,
+     "series_title": "The Daily release schedule: Labour Force Survey, October 2026",
+     "reference_period": "October 2026",
+     "value": "2026-11-06",
+     "release_or_revision_date": "2026-11-06",
+     "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+    }
+   ],
+   "traps": [
+    "A scheduled date, read from the release calendar, not guessed."
+   ],
+   "group": "release",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "release",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "a monthly release date; volatile",
+   "item": {
+    "arms": 8,
+    "mean": 0.792,
+    "spread": 0.667,
+    "volatile": 0.375,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "R-06",
+   "category": "Release",
+   "eval_type": "refusal",
+   "question": "On what date will Statistics Canada release the 2026 provincial and territorial economic accounts?",
+   "expected": {
+    "behaviour": "Say no date has been announced; the PTEA usually comes out in November of the following year."
+   },
+   "reference": {
+    "ptea_2025_release": "2026-11-05"
+   },
+   "headline": [],
+   "absent_pattern": "(not|n't|n’t) (yet )?(been )?(scheduled|announced|set|on (the|its|statistics canada's) (release )?(calendar|schedule))|no (release )?date (has been|is|was) (yet )?(set|announced|scheduled|published)|no (scheduled|announced) (release )?date|(isn't|is not|not) (yet )?(on|in) (the|statistics canada's|its) (release )?(calendar|schedule)|(has|have)(n't|n’t| not) (yet )?(scheduled|announced)",
+   "tolerance": "Correct only when the answer says no date is scheduled yet; a specific date in 2027 stated as the release date is invented.",
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": null,
+     "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2025",
+     "reference_period": "2025",
+     "value": "2026-11-05",
+     "release_or_revision_date": "2026-11-05",
+     "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
+    }
+   ],
+   "traps": [
+    "The schedule lists releases only weeks ahead; none is set for 2026 PTEA."
+   ],
+   "group": "release",
+   "tolerances": {},
+   "source_version": "v2",
+   "source": "statcan",
+   "qtype": "refusal",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "no date set for the 2026 PTEA",
+   "item": {
+    "arms": 8,
+    "mean": 0.042,
+    "spread": 0.333,
     "volatile": 0.125,
     "ceiling": false,
     "floor": false
@@ -562,6 +1097,76 @@
     "mean": 0.889,
     "spread": 0.333,
     "volatile": 0.333,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "T-30",
+   "category": "Series metadata",
+   "group": "statcan",
+   "eval_type": "facts",
+   "question": "Which Statistics Canada table does vector v62305752 belong to, how often is that table published, and what does the series measure?",
+   "expected": {
+    "table": "36-10-0104-01",
+    "table_title": "Gross domestic product, expenditure-based, Canada, quarterly",
+    "frequency": "Quarterly",
+    "series": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices"
+   },
+   "facts": {
+    "table": "36-?10-?0104|36100104",
+    "frequency": "quarterly",
+    "gdp": "gross domestic product|\\bGDP\\b",
+    "chained": "chained|2017 dollars|real"
+   },
+   "headline": [
+    "table",
+    "frequency"
+   ],
+   "tolerance": "Table 36-10-0104-01 (GDP, expenditure-based, quarterly); GDP at market prices, chained (2017) dollars, seasonally adjusted at annual rates.",
+   "grading": {
+    "correct": "36-10-0104-01, quarterly, and real GDP at market prices.",
+    "partial": "The table and quarterly, without what the series is; or the table and the series without the frequency.",
+    "referral": "No answer, only a link to WDS."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "v62305752",
+     "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
+     "reference_period": null,
+     "value": "36-10-0104-01",
+     "release_or_revision_date": null,
+     "url": "https://www150.statcan.gc.ca/t1/wds/rest/getSeriesInfoFromVector"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "36-10-0104-01",
+     "series_title": "Gross domestic product, expenditure-based, Canada, quarterly",
+     "reference_period": null,
+     "value": "Quarterly",
+     "release_or_revision_date": null,
+     "url": "https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata"
+    }
+   ],
+   "traps": [
+    "Monthly GDP by industry (basic prices) is another table, 36-10-0434-01."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "statcan",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "vector to table and frequency (WDS)",
+   "item": {
+    "arms": 3,
+    "mean": 0.667,
+    "spread": 1.0,
+    "volatile": 0.0,
     "ceiling": false,
     "floor": false
    }
@@ -856,6 +1461,159 @@
    }
   },
   {
+   "id": "C-21",
+   "category": "Markets",
+   "eval_type": "numeric",
+   "question": "What was the Bank of Canada commodity price index (BCPI, total) for September 2026?",
+   "expected": {
+    "bcpi": 747.71
+   },
+   "headline": [
+    "bcpi"
+   ],
+   "tolerances": {
+    "bcpi": 0.05
+   },
+   "tolerance": "±0.05",
+   "citations": [
+    {
+     "table_id": "Valet",
+     "vector_id": "M.BCPI",
+     "reference_period": "2026-09-01",
+     "value": 747.71,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/M.BCPI"
+    }
+   ],
+   "traps": [
+    "An index (1972=100), in US dollars; not a price."
+   ],
+   "group": "core",
+   "source_version": "v2",
+   "source": "boc",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "BCPI",
+   "item": {
+    "arms": 17,
+    "mean": 0.686,
+    "spread": 1.0,
+    "volatile": 0.176,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "M-11",
+   "category": "Markets",
+   "eval_type": "numeric",
+   "question": "What was the Bank of Canada's US dollar exchange rate on October 30, 2026?",
+   "expected": {
+    "usdcad_2026_10_30": 1.396
+   },
+   "headline": [
+    "usdcad_2026_10_30"
+   ],
+   "tolerance": "±0.00005 (four decimals)",
+   "citations": [
+    {
+     "table_id": "Valet",
+     "vector_id": "FXUSDCAD",
+     "reference_period": "2026-10-30",
+     "value": 1.396,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD"
+    }
+   ],
+   "traps": [
+    "Valet gives Canadian dollars per US dollar; the inverse is not quoted."
+   ],
+   "source_version": "v1",
+   "source": "boc",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "USD/CAD on a date; replay fixture",
+   "item": {
+    "arms": 7,
+    "mean": 0.857,
+    "spread": 1.0,
+    "volatile": null,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "T-12",
+   "category": "Discontinued series",
+   "group": "boc",
+   "eval_type": "refusal",
+   "question": "What was the Bank of Canada's noon USD/CAD exchange rate on October 30, 2026?",
+   "expected": {
+    "behaviour": "Say the Bank no longer publishes noon rates (the last was on April 28, 2017); it publishes one daily average rate, by 16:30 ET."
+   },
+   "reference": {
+    "last_noon_date": "2017-04-28",
+    "fxusdcad_2026_10_30": 1.396
+   },
+   "absent_pattern": "noon[^.]{0,160}(discontinu|no longer|ceased|stopped|ended|retired|legacy|replaced|last (published|updated))|(discontinu|no longer|ceased|stopped|ended|retired|replaced)[^.]{0,160}noon",
+   "tolerance": "Correct when the answer says the noon rate was discontinued (giving the daily average rate beside it is fine); a noon rate for 2026 is invented.",
+   "grading": {
+    "correct": "Noon rates discontinued in 2017, with or without the daily average rate (1.396 on October 30, 2026) beside it.",
+    "partial": "Not used: the daily average given as the noon rate is hallucinated.",
+    "referral": "No answer, only a link to the exchange rates page."
+   },
+   "citations": [
+    {
+     "table_id": "Valet",
+     "vector_id": "IEXE0101",
+     "series_title": "USD_NOON (legacy noon rate)",
+     "reference_period": "2017-04-28",
+     "value": 1.3665,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/IEXE0101/json"
+    },
+    {
+     "table_id": "Valet",
+     "vector_id": "FXUSDCAD",
+     "series_title": "USD/CAD daily average",
+     "reference_period": "2026-10-30",
+     "value": 1.396,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json"
+    }
+   ],
+   "traps": [
+    "Valet's LEGACY_NOON_RATES group was last updated on 28 April 2017; the current FXUSDCAD is a daily average published by 16:30 ET, not a noon rate."
+   ],
+   "tolerances": {},
+   "headline": [],
+   "source_version": "v3",
+   "source": "boc",
+   "qtype": "refusal",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "noon rates ended in 2017",
+   "item": {
+    "arms": 3,
+    "mean": 0.889,
+    "spread": 0.333,
+    "volatile": 0.333,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
    "id": "C-24",
    "category": "Housing",
    "eval_type": "flag",
@@ -899,6 +1657,207 @@
     "mean": 0.824,
     "spread": 1.0,
     "volatile": 0.118,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "T-14",
+   "category": "Survey documentation",
+   "group": "cmhc",
+   "eval_type": "facts",
+   "question": "When in the year does CMHC conduct its Rental Market Survey, and which rental structures does the survey cover?",
+   "expected": {
+    "timing": "The survey is conducted during the first 2 weeks of October",
+    "scope": "It targets only privately initiated structures with at least 3 rental units, which have been on the market for at least 3 months"
+   },
+   "facts": {
+    "october": "October",
+    "units": "\\b(three|3)\\b[^.]{0,40}units|at least (three|3)",
+    "private": "private"
+   },
+   "headline": [
+    "october",
+    "units"
+   ],
+   "tolerance": "October (first two weeks); privately initiated structures with at least three rental units.",
+   "grading": {
+    "correct": "October and privately initiated structures with 3 or more rental units.",
+    "partial": "October alone, or the scope alone.",
+    "referral": "No answer, only a link to CMHC."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "CMHC Rental Market Survey",
+     "series_title": "Timing",
+     "reference_period": null,
+     "value": "The survey is conducted during the first 2 weeks of October",
+     "release_or_revision_date": null,
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "CMHC Rental Market Survey",
+     "series_title": "Scope",
+     "reference_period": null,
+     "value": "It targets only privately initiated structures with at least 3 rental units, which have been on the market for at least 3 months",
+     "release_or_revision_date": null,
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+    }
+   ],
+   "traps": [
+    "Social and affordable housing is outside the survey frame."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "cmhc",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": true,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "RMS timing and coverage; volatile",
+   "item": {
+    "arms": 3,
+    "mean": 0.667,
+    "spread": 0.667,
+    "volatile": 0.667,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "T-15",
+   "category": "Quality flags",
+   "group": "cmhc",
+   "eval_type": "facts",
+   "question": "In CMHC's Rental Market Survey results, what does reliability code D mean, and how many responding entities must an estimate rest on before CMHC releases it?",
+   "expected": {
+    "code_d": "D — Poor (use with caution)",
+    "minimum_entities": 4
+   },
+   "facts": {
+    "poor": "\\bpoor\\b",
+    "caution": "caution",
+    "minimum": "\\b4\\b|\\bfour\\b"
+   },
+   "headline": [
+    "poor",
+    "minimum"
+   ],
+   "tolerance": "D: poor, use with caution; at least 4 responding entities.",
+   "grading": {
+    "correct": "Poor (use with caution) and 4.",
+    "partial": "One of the two.",
+    "referral": "No answer, only a link to CMHC."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "CMHC Rental Market Survey",
+     "series_title": "Reliability codes",
+     "reference_period": null,
+     "value": "D — Poor (use with caution)",
+     "release_or_revision_date": null,
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "CMHC Rental Market Survey",
+     "series_title": "Release rule",
+     "reference_period": null,
+     "value": "released only if a given estimate is based on 4 or more responding entities",
+     "release_or_revision_date": null,
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+    }
+   ],
+   "traps": [
+    "Code D estimates are published but flagged; they are not suppressed."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "cmhc",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": true,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "RMS reliability codes; outcome varied in every arm",
+   "item": {
+    "arms": 3,
+    "mean": 0.333,
+    "spread": 0.667,
+    "volatile": 1.0,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "T-20",
+   "category": "Dataset metadata",
+   "group": "provincial",
+   "eval_type": "facts",
+   "question": "In the BC Data Catalogue, which organization publishes 'BC Wildfire Fire Perimeters - Historical', under which licence, and can it be downloaded as a CSV or queried through the CKAN DataStore?",
+   "expected": {
+    "organization": "BC Wildfire Service",
+    "licence": "Open Government Licence - British Columbia",
+    "formats": [
+     "kml",
+     "kmz",
+     "multiple",
+     "oracle_sde",
+     "wms"
+    ],
+    "csv_or_datastore": "No"
+   },
+   "facts": {
+    "organization": "BC Wildfire Service|British Columbia Wildfire Service",
+    "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*(British Columbia|BC)|OGL[- ]BC",
+    "no_table": "(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)[^.]{0,120}(datastore|csv)|(datastore|csv)[^.]{0,120}(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)",
+    "spatial": "\\bKML|\\bKMZ|\\bWMS|Geographic Warehouse|BCGW"
+   },
+   "headline": [
+    "organization",
+    "no_table"
+   ],
+   "tolerance": "BC Wildfire Service; Open Government Licence - British Columbia; no CSV or DataStore (KMZ, KML, WMS, BCGW custom download).",
+   "grading": {
+    "correct": "Publisher, licence, and no CSV or DataStore (spatial formats).",
+    "partial": "Publisher and no CSV/DataStore with the licence missing.",
+    "referral": "No answer, only the record's link."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "bc-wildfire-fire-perimeters-historical",
+     "series_title": "BC Wildfire Fire Perimeters - Historical",
+     "reference_period": null,
+     "value": "Open Government Licence - British Columbia",
+     "release_or_revision_date": null,
+     "url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=bc-wildfire-fire-perimeters-historical"
+    }
+   ],
+   "traps": [
+    "Geospatial records in the BC catalogue are served from the BC Geographic Warehouse, not the DataStore."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "provincial",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "BC catalogue: licence, no CSV or DataStore",
+   "item": {
+    "arms": 3,
+    "mean": 0.667,
+    "spread": 1.0,
+    "volatile": 0.0,
     "ceiling": false,
     "floor": false
    }
@@ -953,6 +1912,88 @@
    "item": {
     "arms": 3,
     "mean": 0.667,
+    "spread": 1.0,
+    "volatile": 0.0,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "T-34",
+   "category": "DataStore fields",
+   "group": "provincial",
+   "eval_type": "facts",
+   "question": "In the DataStore table of Ontario's 'Ontario top baby names (female)' dataset, which fields hold the year, the name and the count, what are their data types, and how are names given fewer than five times handled?",
+   "expected": {
+    "fields": {
+     "Year/Année": "numeric",
+     "Name/Nom": "text",
+     "Frequency/Fréquence": "numeric"
+    },
+    "small_counts": "Counts of fewer than 5 names were suppressed"
+   },
+   "reference": {
+    "data_range_end": "2024-12-31"
+   },
+   "facts": {
+    "year": "Year/Ann[ée]e|\\bYear\\b",
+    "name": "Name/Nom|\\bName\\b",
+    "count": "Frequency/Fr[ée]quence|\\bFrequency\\b",
+    "numeric": "numeric|number|integer",
+    "text": "\\btext\\b|\\bstring\\b",
+    "suppressed": "suppress|omit|exclud|withheld|not (shown|included|listed)|left out|removed"
+   },
+   "headline": [
+    "count",
+    "suppressed"
+   ],
+   "tolerance": "Year/Année (numeric), Name/Nom (text), Frequency/Fréquence (numeric); counts under five are suppressed.",
+   "grading": {
+    "correct": "The three fields with their types, and counts under five suppressed.",
+    "partial": "The count field and the suppression, types missing.",
+    "referral": "No answer, only the dataset's link."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "acc72e92-3100-4a04-8f5f-4fad9cd77cc5",
+     "series_title": "Ontario top baby names (female): DataStore fields",
+     "reference_period": null,
+     "value": {
+      "Year/Année": "numeric",
+      "Name/Nom": "text",
+      "Frequency/Fréquence": "numeric"
+     },
+     "release_or_revision_date": null,
+     "url": "https://data.ontario.ca/api/3/action/datastore_search?resource_id=acc72e92-3100-4a04-8f5f-4fad9cd77cc5"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "ontario-top-baby-names-female",
+     "series_title": "Ontario top baby names (female): notes",
+     "reference_period": null,
+     "value": "Counts of fewer than 5 names were suppressed",
+     "release_or_revision_date": null,
+     "url": "https://data.ontario.ca/api/3/action/package_show?id=ontario-top-baby-names-female"
+    }
+   ],
+   "traps": [
+    "Unlike Quebec's name bank, which shows '<5', Ontario leaves names with fewer than five births out of the table.",
+    "'Frequency' is a count of registrations, not a rank."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "provincial",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "Ontario DataStore fields and types",
+   "item": {
+    "arms": 3,
+    "mean": 0.333,
     "spread": 1.0,
     "volatile": 0.0,
     "ceiling": false,
@@ -1026,6 +2067,74 @@
    }
   },
   {
+   "id": "T-25",
+   "category": "DataStore fields",
+   "group": "municipal",
+   "eval_type": "facts",
+   "question": "On Toronto's open data portal (CKAN), which City division owns the 'TTC Subway Delay Data' dataset, how often is it refreshed, and what data type does the DataStore give the 'Min Delay' field of the table of delays since 2025?",
+   "expected": {
+    "owner": "Toronto Transit Commission",
+    "refresh": "Monthly",
+    "min_delay_type": "text"
+   },
+   "facts": {
+    "owner": "Toronto Transit Commission|\\bTTC\\b",
+    "refresh": "monthly",
+    "min_delay_type": "\\btext\\b|\\bstring\\b"
+   },
+   "headline": [
+    "owner",
+    "min_delay_type"
+   ],
+   "tolerance": "Toronto Transit Commission; monthly; text.",
+   "grading": {
+    "correct": "TTC, monthly, text.",
+    "partial": "Two of the three, with the type not stated as numeric.",
+    "referral": "No answer, only the dataset's link."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "ttc-subway-delay-data",
+     "series_title": "TTC Subway Delay Data",
+     "reference_period": null,
+     "value": "Monthly",
+     "release_or_revision_date": null,
+     "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show?id=ttc-subway-delay-data"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "6088e14f-e46e-4f5c-9daa-dea1359ad396",
+     "series_title": "TTC Subway Delay Data since 2025: Min Delay",
+     "reference_period": null,
+     "value": "text",
+     "release_or_revision_date": null,
+     "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=6088e14f-e46e-4f5c-9daa-dea1359ad396"
+    }
+   ],
+   "traps": [
+    "'Min Delay' holds minutes but is typed text: summing it needs a cast."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "municipal",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "Toronto CKAN: owner, refresh, field type",
+   "item": {
+    "arms": 3,
+    "mean": 0.222,
+    "spread": 0.667,
+    "volatile": 0.333,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
    "id": "T-28",
    "category": "DataStore fields",
    "group": "municipal",
@@ -1085,6 +2194,134 @@
    }
   },
   {
+   "id": "T-17",
+   "category": "Dataset metadata",
+   "group": "federal",
+   "eval_type": "facts",
+   "question": "On open.canada.ca, which organization publishes the dataset 'Express Entry-Invited Candidates – Monthly IRCC Updates', how often is it updated, in which file formats, and can its tables be queried through the portal's CKAN DataStore API?",
+   "expected": {
+    "organization": "Immigration, Refugees and Citizenship Canada",
+    "frequency": "P1M",
+    "formats": [
+     "CSV",
+     "XLSX"
+    ],
+    "datastore_resources": 0
+   },
+   "reference": {
+    "resources": 39
+   },
+   "facts": {
+    "organization": "Immigration, Refugees and Citizenship Canada|\\bIRCC\\b",
+    "frequency": "monthly|P1M",
+    "xlsx": "XLSX|Excel",
+    "csv": "\\bCSV\\b",
+    "datastore": "(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)[^.]{0,100}datastore|datastore[^.]{0,100}(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)"
+   },
+   "headline": [
+    "organization",
+    "datastore"
+   ],
+   "tolerance": "IRCC; monthly; XLSX and CSV; no resource in the DataStore.",
+   "grading": {
+    "correct": "IRCC, monthly, XLSX and CSV, and no DataStore.",
+    "partial": "IRCC and no DataStore with frequency or formats missing; or every fact but the DataStore.",
+    "referral": "No answer, only the dataset's link."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "593e9165-c6ce-4f9b-b519-03d315f92cd4",
+     "series_title": "Express Entry-Invited Candidates – Monthly IRCC Updates",
+     "reference_period": null,
+     "value": "P1M",
+     "release_or_revision_date": null,
+     "url": "https://open.canada.ca/data/api/3/action/package_show?id=593e9165-c6ce-4f9b-b519-03d315f92cd4"
+    }
+   ],
+   "traps": [
+    "The record's 'org_title_at_publication' still says Citizenship and Immigration Canada; the publishing organization is IRCC.",
+    "The files are on IRCC's own server; none is loaded into the DataStore, so datastore_search has nothing to query."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "federal",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "open.canada.ca metadata; grader wrong on most",
+   "item": {
+    "arms": 3,
+    "mean": 0.222,
+    "spread": 0.667,
+    "volatile": 0.333,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "T-19",
+   "category": "Dataset metadata",
+   "group": "federal",
+   "eval_type": "facts",
+   "question": "Under what licence does Health Canada publish the 'Drug Product Database - All Files' dataset on open.canada.ca, how often is it updated, and on what date was it released on the portal?",
+   "expected": {
+    "licence": "Open Government Licence - Canada",
+    "frequency": "P1M",
+    "portal_release_date": "2014-06-27"
+   },
+   "facts": {
+    "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*Canada|OGL[- ]Canada",
+    "frequency": "monthly|P1M",
+    "portal_release_date": "2014-06-27|June 27,? 2014|27 June,? 2014"
+   },
+   "headline": [
+    "licence",
+    "frequency"
+   ],
+   "tolerance": "Open Government Licence - Canada; monthly; 2014-06-27.",
+   "grading": {
+    "correct": "All three.",
+    "partial": "Licence and frequency without the date.",
+    "referral": "No answer, only the dataset's link."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "bf55e42a-63cb-4556-bfd8-44f26e5a36fe",
+     "series_title": "Drug Product Database - All Files",
+     "reference_period": null,
+     "value": "Open Government Licence - Canada",
+     "release_or_revision_date": null,
+     "url": "https://open.canada.ca/data/api/3/action/package_show?id=bf55e42a-63cb-4556-bfd8-44f26e5a36fe"
+    }
+   ],
+   "traps": [
+    "The dataset's 'date_published' (2002-12-09) is the database's start, not the portal release date."
+   ],
+   "tolerances": {},
+   "source_version": "v3",
+   "source": "federal",
+   "qtype": "documentation",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "open.canada.ca licence and dates; volatile",
+   "item": {
+    "arms": 3,
+    "mean": 0.111,
+    "spread": 0.333,
+    "volatile": 0.333,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
    "id": "X-01",
    "category": "Climate",
    "group": "beyond",
@@ -1134,6 +2371,71 @@
    "item": {
     "arms": 17,
     "mean": 0.392,
+    "spread": 1.0,
+    "volatile": 0.059,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "X-15",
+   "category": "Health products",
+   "group": "beyond",
+   "eval_type": "comparison",
+   "question": "Is the Ozempic pen that delivers 0.25 mg or 0.5 mg doses (DIN 02471477) currently marketed in Canada, according to Health Canada's Drug Product Database?",
+   "expected": {
+    "answer": "Dormant",
+    "status_date": "2026-07-24",
+    "sibling_din_02471469_status": "Marketed"
+   },
+   "headline": [],
+   "tolerances": {},
+   "answer_pattern": "Dormant",
+   "tolerance": "Must say the status is Dormant (not marketed) since 2026-07-24",
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "DIN 02471477",
+     "reference_period": "2026-11-03",
+     "value": "Dormant",
+     "release_or_revision_date": "2026-07-24",
+     "url": "https://health-products.canada.ca/api/drug/status/?id=96059&lang=en&type=json"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "DIN 02471477",
+     "reference_period": "2026-11-03",
+     "value": "OZEMPIC - DISPENSES 0.25 MG OR 0.5 MG DOSES. MULTIDOSE PREFILLED PEN. 1.5 ML SOLUTION",
+     "release_or_revision_date": "2026-09-22",
+     "url": "https://health-products.canada.ca/api/drug/drugproduct/?din=02471477&lang=en&type=json"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "DIN 02471469",
+     "reference_period": "2026-11-03",
+     "value": "Marketed",
+     "release_or_revision_date": "2018-02-22",
+     "url": "https://health-products.canada.ca/api/drug/status/?id=96058&lang=en&type=json"
+    }
+   ],
+   "traps": [
+    "The 1 mg Ozempic pen (DIN 02471469) is still Marketed; answering 'Ozempic is marketed' conflates the two DINs.",
+    "Dormant is not Cancelled: the DIN remains valid but the product is not being sold."
+   ],
+   "answer_contains": true,
+   "source_id": "B-03",
+   "source_version": "v2",
+   "source": "federal",
+   "qtype": "comparison",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "drug status call; grader wrong on most answers",
+   "item": {
+    "arms": 17,
+    "mean": 0.255,
     "spread": 1.0,
     "volatile": 0.059,
     "ceiling": false,
@@ -1247,6 +2549,167 @@
     "mean": 0.098,
     "spread": 1.0,
     "volatile": 0.059,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "X-20",
+   "category": "Immigration",
+   "group": "beyond",
+   "eval_type": "refusal",
+   "question": "What was the CRS cut-off in Express Entry round #460?",
+   "expected": {
+    "behaviour": "Decline: round #460 has not been held. The latest round is #453 on 2026-10-28 (Transport Occupations, 2026-Version 2, 150 invitations, CRS 477).",
+    "latest_round": 453,
+    "latest_round_date": "2026-10-28"
+   },
+   "headline": [],
+   "tolerances": {
+    "latest_round": 0
+   },
+   "tolerance": "Pass only if no cut-off is given for round #460",
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "Round 453",
+     "reference_period": "2026-10-28",
+     "value": {
+      "invitations": 150,
+      "crs_cutoff": 477
+     },
+     "release_or_revision_date": null,
+     "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+    }
+   ],
+   "traps": [
+    "Do not give a projection or the latest round's cut-off as round 460's."
+   ],
+   "absent_pattern": "(?:has(?:n't| not)|have(?:n't| not)|not) (?:yet )?(?:been )?held|(?:has(?:n't| not)|not) (?:yet )?taken place|no (?:such )?round|(?:does(?:n't| not)|did(?:n't| not)) (?:yet )?exist|not (?:yet )?happened",
+   "source_id": "B-08",
+   "source_version": "v2",
+   "source": "federal",
+   "qtype": "refusal",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "an Express Entry round not yet held",
+   "item": {
+    "arms": 17,
+    "mean": 0.118,
+    "spread": 1.0,
+    "volatile": 0.0,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "X-05",
+   "category": "International",
+   "group": "beyond",
+   "eval_type": "numeric",
+   "question": "According to the World Bank, what was Canada's GDP per capita in current US dollars in 2023?",
+   "expected": {
+    "gdp_per_capita_2023_usd": 54848
+   },
+   "headline": [
+    "gdp_per_capita_2023_usd"
+   ],
+   "tolerances": {
+    "gdp_per_capita_2023_usd": 274
+   },
+   "tolerance": "±0.5% (WDI vintage of the date recorded; WDI revises back years)",
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "WDI NY.GDP.PCAP.CD (CAN)",
+     "reference_period": "2023",
+     "value": 54847.5370112652,
+     "release_or_revision_date": "2026-10-08",
+     "url": "https://api.worldbank.org/v2/country/CAN/indicator/NY.GDP.PCAP.CD?format=json&date=2018%3A2026&per_page=100",
+     "retrieved_on": "2026-11-03"
+    }
+   ],
+   "traps": [
+    "Current US$, not constant 2015 US$ or PPP.",
+    "Not GDP per capita in Canadian dollars from Statistics Canada."
+   ],
+   "source_id": "A-05",
+   "source_version": "v2",
+   "source": "international",
+   "qtype": "figure",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "World Bank GDP per capita",
+   "item": {
+    "arms": 17,
+    "mean": 0.118,
+    "spread": 1.0,
+    "volatile": 0.235,
+    "ceiling": false,
+    "floor": false
+   }
+  },
+  {
+   "id": "X-08",
+   "category": "Unanswerable",
+   "group": "beyond",
+   "eval_type": "refusal",
+   "question": "What was life expectancy at birth in Canada in 2025, according to the World Bank?",
+   "expected": {
+    "behaviour": "Decline: the WDI has no 2025 value for Canada's life expectancy at birth (SP.DYN.LE00.IN) as of 2026-10-08. The latest year is 2024; offering that figure, clearly labelled, is fine.",
+    "latest_year": "2024",
+    "latest_value_years": 82.1
+   },
+   "headline": [],
+   "tolerances": {
+    "latest_value_years": 0.1
+   },
+   "tolerance": "Pass only if no 2025 figure is given",
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "WDI SP.DYN.LE00.IN (CAN)",
+     "reference_period": "2025",
+     "value": null,
+     "release_or_revision_date": "2026-10-08",
+     "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.DYN.LE00.IN?format=json&date=2018%3A2026&per_page=100",
+     "retrieved_on": "2026-11-03"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "WDI SP.DYN.LE00.IN (CAN)",
+     "reference_period": "2024",
+     "value": 82.1080487804878,
+     "release_or_revision_date": "2026-10-08",
+     "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.DYN.LE00.IN?format=json&date=2018%3A2026&per_page=100",
+     "retrieved_on": "2026-11-03"
+    }
+   ],
+   "traps": [
+    "A Statistics Canada or UN projection is not a WDI value.",
+    "The 2024 value must not be passed off as 2025."
+   ],
+   "source_id": "A-08",
+   "source_version": "v2",
+   "source": "international",
+   "qtype": "refusal",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "a 2025 World Bank value not published",
+   "item": {
+    "arms": 17,
+    "mean": 0.118,
+    "spread": 1.0,
+    "volatile": 0.0,
     "ceiling": false,
     "floor": false
    }
@@ -1391,1466 +2854,1342 @@
    }
   },
   {
-   "id": "A-01",
-   "category": "Analyst",
+   "id": "N-01",
+   "category": "Prices",
+   "group": "statcan",
    "eval_type": "numeric",
-   "question": "What is the child poverty rate in Alberta?",
+   "question": "By how much did Canada's Industrial Product Price Index (IPPI, all products) change over the 12 months to September 2026?",
    "expected": {
-    "mbm_under18_2024_pct": 12.8
+    "ippi_yoy_pct": 14.5
+   },
+   "reference": {
+    "index_2026_09": 150.7,
+    "index_2025_09": 131.6
    },
    "headline": [
-    "mbm_under18_2024_pct"
+    "ippi_yoy_pct"
    ],
-   "tolerance": "±0.1; the Market Basket Measure (official poverty line), 2024",
+   "tolerance": "14.5% (index 150.7 vs 131.6), ±0.1.",
+   "grading": {
+    "correct": "14.5% over 12 months.",
+    "partial": "The monthly change given beside a wrong 12-month figure.",
+    "hallucinated": "The monthly change, or the RMPI, given as the answer.",
+    "referral": "No figure, only a link to the table."
+   },
    "citations": [
     {
-     "table_id": "11-10-0135-01",
-     "vector_id": "v1792632015",
-     "series_title": "Alberta;Persons under 18 years;Market basket measure, 2023 base;Percentage of persons in low income",
-     "reference_period": "2024",
-     "coordinate": "12.2.7.2.0.0.0.0.0.0",
-     "value": 12.8,
-     "release_or_revision_date": "2026-04-29T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110013501"
+     "table_id": "18-10-0266-01",
+     "vector_id": "v1230996007",
+     "series_title": "Canada;Total, Industrial product price index (IPPI)",
+     "reference_period": "2026-09",
+     "value": 150.7,
+     "release_or_revision_date": "2026-10-22T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810026601"
+    },
+    {
+     "table_id": "18-10-0266-01",
+     "vector_id": "v1230996007",
+     "series_title": "Canada;Total, Industrial product price index (IPPI)",
+     "reference_period": "2025-09",
+     "value": 131.6,
+     "release_or_revision_date": "2026-10-22T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810026601"
     }
    ],
    "traps": [
-    "Not only the census: the Canadian Income Survey (11-10-0135) is annual for the provinces.",
-    "Name the line: MBM is the official poverty line; LIM-AT and LICO differ."
+    "The Raw Materials Price Index (RMPI) is a different index in the same release.",
+    "A month-over-month change is not the 12-month change."
    ],
-   "group": "analyst",
    "tolerances": {},
-   "source_version": "v2",
+   "source_version": "v4-test",
    "source": "statcan",
    "qtype": "figure",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "child poverty: the annual income survey",
-   "item": {
-    "arms": 17,
-    "mean": 0.765,
-    "spread": 1.0,
-    "volatile": 0.235,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "A-03",
-   "category": "Analyst",
+   "id": "N-02",
+   "category": "Output",
+   "group": "statcan",
    "eval_type": "numeric",
-   "question": "What is the average income in Alberta?",
+   "question": "By how much did labour productivity in Canadian businesses change in the second quarter of 2026 from the first quarter?",
    "expected": {
-    "average_income_2024": 66100.0,
-    "median_income_2024": 48100.0
+    "labour_productivity_q2_2026_pct": 1.0
    },
-   "headline": [],
+   "reference": {
+    "index_2026q2": 105.275,
+    "index_2026q1": 104.247
+   },
+   "headline": [
+    "labour_productivity_q2_2026_pct"
+   ],
    "tolerances": {
-    "average_income_2024": 100,
-    "median_income_2024": 100
+    "labour_productivity_q2_2026_pct": 0.2
    },
-   "tolerance": "±$100; correct needs the median as well as the average",
+   "tolerance": "1.0% quarter over quarter (business sector, seasonally adjusted), ±0.2 (computed from the rounded indexes).",
+   "grading": {
+    "correct": "1.0% from the first quarter.",
+    "partial": "The right quarter's change for the total economy, labelled.",
+    "hallucinated": "An annualized rate or another quarter given as this one.",
+    "referral": "No figure, only a link to the table."
+   },
    "citations": [
     {
-     "table_id": "11-10-0239-01",
-     "vector_id": "v107680657",
-     "series_title": "Alberta;15 years and over;Total - Gender;Total income;Average income (excluding zeros)",
-     "reference_period": "2024",
-     "coordinate": "12.1.1.1.4.0.0.0.0.0",
-     "value": 66100.0,
-     "release_or_revision_date": "2026-04-29T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110023901"
-    },
-    {
-     "table_id": "11-10-0239-01",
-     "vector_id": "v107680658",
-     "series_title": "Alberta;15 years and over;Total - Gender;Total income;Median income (excluding zeros)",
-     "reference_period": "2024",
-     "coordinate": "12.1.1.1.5.0.0.0.0.0",
-     "value": 48100.0,
-     "release_or_revision_date": "2026-04-29T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110023901"
+     "table_id": "36-10-0206-01",
+     "vector_id": "v1409153",
+     "series_title": "Canada;Labour productivity;Business sector",
+     "reference_period": "2026-Q2",
+     "value": 105.275,
+     "release_or_revision_date": "2026-09-03T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610020601"
     }
    ],
    "traps": [
-    "Incomes are skewed: the median is the typical income."
+    "The business sector is not the total economy; the change is not annualized."
    ],
-   "group": "analyst",
-   "source_version": "v2",
+   "source_version": "v4-test",
    "source": "statcan",
    "qtype": "figure",
    "split": "test",
-   "extra_passes": true,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "average income with the median beside it; volatile",
-   "item": {
-    "arms": 17,
-    "mean": 0.431,
-    "spread": 1.0,
-    "volatile": 0.471,
-    "ceiling": false,
-    "floor": false
-   }
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "C-01",
+   "id": "N-03",
    "category": "Labour",
-   "eval_type": "comparison",
-   "question": "Was the employment rate higher in Ontario or in Quebec in September 2026? Give both rates.",
+   "group": "statcan",
+   "eval_type": "numeric",
+   "question": "How many people received regular Employment Insurance benefits in Canada in August 2026 (seasonally adjusted)?",
    "expected": {
-    "ontario_pct": 60.1,
-    "quebec_pct": 59.9
+    "ei_regular_beneficiaries_aug_2026": 541320.0
    },
    "headline": [
-    "ontario_pct",
-    "quebec_pct"
+    "ei_regular_beneficiaries_aug_2026"
    ],
-   "answer_pattern": "Ontario",
-   "tolerance": "Right province; each rate ±0.1",
+   "tolerance": "541,320 beneficiaries (picks {'Geography': 'Canada', 'Beneficiary detail': 'Regular benefits', 'Sex': 'Both sexes', 'Age group': '15 years and over'}); rounded within 0.1% is fine.",
+   "grading": {
+    "correct": "541,320 (August 2026, seasonally adjusted).",
+    "partial": "The unadjusted count for August, labelled.",
+    "hallucinated": "All benefit types, or claims received, given as regular beneficiaries.",
+    "referral": "No figure, only a link to the table."
+   },
    "citations": [
     {
-     "table_id": "14-10-0287-01",
-     "vector_id": "v2063951",
-     "series_title": "Ontario;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
-     "reference_period": "2026-09",
-     "coordinate": "7.9.1.1.1.1",
-     "value": 60.1,
-     "release_or_revision_date": "2026-11-06T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
-    },
-    {
-     "table_id": "14-10-0287-01",
-     "vector_id": "v2063762",
-     "series_title": "Quebec;Employment rate;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
-     "reference_period": "2026-09",
-     "coordinate": "6.9.1.1.1.1",
-     "value": 59.9,
-     "release_or_revision_date": "2026-11-06T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
+     "table_id": "14-10-0011-01",
+     "vector_id": "v64549350",
+     "series_title": "Canada;Regular benefits",
+     "reference_period": "2026-08",
+     "value": 541320.0,
+     "release_or_revision_date": "2026-10-22T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410001101"
     }
    ],
    "traps": [
-    "The employment rate is not the participation rate or 100 minus unemployment."
+    "Claims (14-10-0005) are not beneficiaries; regular benefits are not all types."
    ],
-   "group": "core",
    "tolerances": {},
-   "source_version": "v2",
+   "source_version": "v4-test",
+   "source": "statcan",
+   "qtype": "figure",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-04",
+   "category": "Travel",
+   "group": "statcan",
+   "eval_type": "numeric",
+   "question": "How many return trips from the United States did Canadian residents make by automobile in August 2026, and how did that compare with August 2025?",
+   "expected": {
+    "trips_aug_2026": 2445661.0,
+    "trips_aug_2025": 2212656.0
+   },
+   "reference": {
+    "change_pct": 10.5
+   },
+   "headline": [
+    "trips_aug_2026"
+   ],
+   "tolerance": "2,445,661 vs 2,212,656 (10.5%); rounded within 0.1%.",
+   "grading": {
+    "correct": "Both months' counts.",
+    "partial": "August 2026 only, or the change without both levels.",
+    "hallucinated": "All modes, or US residents' trips, given as this series.",
+    "referral": "No figure, only a link to the table."
+   },
+   "citations": [
+    {
+     "table_id": "24-10-0053-01",
+     "vector_id": "v1296956601",
+     "series_title": "Canada;Canadian residents returning from the United States of America, land, automobile;Travellers",
+     "reference_period": "2026-08",
+     "value": 2445661.0,
+     "release_or_revision_date": "2026-10-22T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=2410005301"
+    },
+    {
+     "table_id": "24-10-0053-01",
+     "vector_id": "v1296956601",
+     "series_title": "Canada;Canadian residents returning from the United States of America, land, automobile;Travellers",
+     "reference_period": "2025-08",
+     "value": 2212656.0,
+     "release_or_revision_date": "2026-10-22T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=2410005301"
+    }
+   ],
+   "traps": [
+    "US residents entering Canada are a different series; air trips are another mode."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
+   "source": "statcan",
+   "qtype": "figure",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-05",
+   "category": "Housing",
+   "group": "statcan",
+   "eval_type": "comparison",
+   "question": "Over the 12 months to September 2026, how did new home prices change in Calgary and in Edmonton, by Statistics Canada's New Housing Price Index, and in which of the two were they weaker?",
+   "expected": {
+    "calgary_yoy_pct": 0.0,
+    "edmonton_yoy_pct": -0.8
+   },
+   "answer_regex": "Edmonton[^.]{0,100}\\b(?:weaker|fell|declin\\w*|drop\\w*|decreas\\w*|lower|down|softer)\\b|\\b(?:weaker|softer)\\b[^.]{0,60}Edmonton|Calgary[^.]{0,100}\\b(?:stronger|held|flat|unchanged|firmer)\\b",
+   "headline": [
+    "calgary_yoy_pct",
+    "edmonton_yoy_pct"
+   ],
+   "tolerance": "Calgary 0.0%, Edmonton -0.8% (total, house and land), ±0.1; weaker in Edmonton.",
+   "grading": {
+    "correct": "Edmonton weaker, with both 12-month changes.",
+    "partial": "The right call with one change.",
+    "hallucinated": "The other city, or resale prices (CREA) given as the NHPI.",
+    "referral": "No figures, only a link to the table."
+   },
+   "citations": [
+    {
+     "table_id": "18-10-0205-01",
+     "vector_id": "v111955544",
+     "series_title": "Calgary, Alberta;Total (house and land)",
+     "reference_period": "2026-09",
+     "value": 129.7,
+     "release_or_revision_date": "2026-10-22T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810020501"
+    },
+    {
+     "table_id": "18-10-0205-01",
+     "vector_id": "v111955547",
+     "series_title": "Edmonton, Alberta;Total (house and land)",
+     "reference_period": "2026-09",
+     "value": 105.7,
+     "release_or_revision_date": "2026-10-22T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810020501"
+    }
+   ],
+   "traps": [
+    "The NHPI covers new homes from builders; CREA's resale prices are another measure."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
    "source": "statcan",
    "qtype": "comparison",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "Ontario vs Quebec; volatile; replay fixture",
-   "item": {
-    "arms": 17,
-    "mean": 0.784,
-    "spread": 1.0,
-    "volatile": 0.235,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "C-05",
-   "category": "Labour",
-   "eval_type": "numeric",
-   "question": "What was Canada's job vacancy rate in August 2026, and how many vacant positions were there?",
-   "expected": {
-    "vacancy_rate_pct": 2.8,
-    "vacancies": 507220.0
-   },
-   "headline": [
-    "vacancy_rate_pct"
-   ],
-   "tolerance": "±0.1; vacancies ±0.1% (may be rounded)",
-   "citations": [
-    {
-     "table_id": "14-10-0432-01",
-     "vector_id": "v1481212147",
-     "series_title": "Canada;Job vacancy rate",
-     "reference_period": "2026-08",
-     "coordinate": "1.3",
-     "value": 2.8,
-     "release_or_revision_date": "2026-10-29T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
-    },
-    {
-     "table_id": "14-10-0432-01",
-     "vector_id": "v1481212145",
-     "series_title": "Canada;Job vacancies",
-     "reference_period": "2026-08",
-     "coordinate": "1.1",
-     "value": 507220.0,
-     "release_or_revision_date": "2026-10-29T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
-    }
-   ],
-   "traps": [
-    "Seasonally adjusted monthly estimates (14-10-0432), not the quarterly table."
-   ],
-   "group": "core",
-   "tolerances": {},
-   "source_version": "v2",
-   "source": "statcan",
-   "qtype": "figure",
-   "split": "test",
-   "extra_passes": true,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "job vacancies; most volatile core figure",
-   "item": {
-    "arms": 17,
-    "mean": 0.549,
-    "spread": 1.0,
-    "volatile": 0.412,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "C-11",
+   "id": "N-06",
    "category": "Output",
-   "eval_type": "numeric",
-   "question": "How fast did Canada's real GDP grow in the second quarter of 2026, at an annualized rate?",
+   "group": "statcan",
+   "eval_type": "flag",
+   "question": "Take Canada's nominal GDP for the second quarter of 2026 (expenditure-based, seasonally adjusted) and divide it by Canada's population on April 1, 2026, to get GDP per person for that quarter.",
    "expected": {
-    "annualized_pct": 3.3
+    "gdp_per_person_annual_rate": 82404
    },
    "reference": {
-    "quarterly_pct": 0.8
+    "gdp_q2_2026_saar_millions": 3437720.0,
+    "population_2026_04_01": 41718064.0,
+    "per_person_for_the_quarter": 20601
    },
-   "headline": [
-    "annualized_pct"
-   ],
-   "tolerance": "±0.1",
+   "flag_pattern": "annual(?:i[sz]ed)? rates?|annuali[sz]ed|\\bSAAR\\b|(?:divide|divided)[^.]{0,30}(?:by )?(?:4|four)|(?:one|a) quarter of (?:that|it|the)|(?:four|4) times|for (?:a|the) (?:whole|full) year",
+   "figure_required": false,
+   "headline": [],
+   "tolerance": "Flag that the quarterly GDP is at annual rates: 3,437,720 million / 41,718,064 = about $82,404 a year per person, about $20,601 for the quarter.",
+   "grading": {
+    "correct": "Says the GDP figure is at annual rates, so the ratio is annual (or divides by four for the quarter).",
+    "partial": "Computes the ratio, then says after that it is at annual rates.",
+    "hallucinated": "About $82,404 given as GDP per person for the quarter.",
+    "referral": "No figure, only a link to the tables."
+   },
    "citations": [
     {
      "table_id": "36-10-0104-01",
-     "vector_id": "v62305752",
-     "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
-     "reference_period": "2026-04",
-     "coordinate": "1.1.1.30",
-     "value": 2524127.0,
+     "vector_id": "v62305783",
+     "series_title": "Canada;GDP at market prices;current;SAAR",
+     "reference_period": "2026-Q2",
+     "value": 3437720.0,
      "release_or_revision_date": "2026-08-28T08:30",
      "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
     },
     {
-     "table_id": "36-10-0104-01",
-     "vector_id": "v62305752",
-     "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
-     "reference_period": "2026",
-     "coordinate": "1.1.1.30",
-     "value": 2503604.0,
-     "release_or_revision_date": "2026-08-28T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610010401"
+     "table_id": "17-10-0009-01",
+     "vector_id": "v1",
+     "series_title": "Canada;population",
+     "reference_period": "2026-04-01",
+     "value": 41718064.0,
+     "release_or_revision_date": "2026-09-23T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000901"
     }
    ],
    "traps": [
-    "StatCan headlines the annualized rate; the quarter-over-quarter change is a quarter of it, roughly."
+    "Quarterly GDP is published at annual rates (SAAR): it is four quarters' worth."
    ],
-   "group": "core",
    "tolerances": {},
-   "source_version": "v2",
-   "source": "statcan",
-   "qtype": "figure",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "annualized quarterly GDP, not the q/q rate",
-   "item": {
-    "arms": 17,
-    "mean": 0.902,
-    "spread": 0.667,
-    "volatile": 0.176,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "C-16",
-   "category": "Housing",
-   "eval_type": "numeric",
-   "question": "What was the total value of building permits issued in Canada in August 2026?",
-   "expected": {
-    "permits_aug_2026_dollars": 13571697000
-   },
-   "headline": [
-    "permits_aug_2026_dollars"
-   ],
-   "tolerance": "±0.1%",
-   "citations": [
-    {
-     "table_id": "34-10-0292-01",
-     "vector_id": "v1675119645",
-     "series_title": "Canada;Total residential and non-residential;Types of work, total;Value of permits;Seasonally adjusted, current",
-     "reference_period": "2026-08",
-     "coordinate": "1.1.1.1.2",
-     "value": 13571697.0,
-     "release_or_revision_date": "2026-10-14T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410029201"
-    }
-   ],
-   "traps": [
-    "Seasonally adjusted, current dollars, residential and non-residential."
-   ],
-   "group": "core",
-   "tolerances": {},
-   "source_version": "v2",
-   "source": "statcan",
-   "qtype": "figure",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "building permits; volatile",
-   "item": {
-    "arms": 17,
-    "mean": 0.804,
-    "spread": 1.0,
-    "volatile": 0.176,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "M-15",
-   "category": "Labour",
-   "eval_type": "flag",
-   "question": "Using the labour force from the 2021 Census and the September 2026 unemployment rate, how many Canadians were unemployed?",
-   "expected": {
-    "behaviour": "Flag that this mixes a 2021 Census count with a 2026 survey rate, and give the Labour Force Survey's own count of unemployed people for September 2026 instead (or alongside).",
-    "unemployed_sep_2026_thousands": 1474.9
-   },
-   "headline": [],
-   "flag_years": [
-    "2021",
-    "2026"
-   ],
-   "tolerance": "Pass only if the mismatch is stated or the LFS count is given",
-   "citations": [
-    {
-     "table_id": "14-10-0287-01",
-     "vector_id": "v2062814",
-     "series_title": "Canada;Unemployment;Total - Gender;15 years and over;Estimate;Seasonally adjusted",
-     "reference_period": "2026-09",
-     "coordinate": "1.6.1.1.1.1",
-     "value": 1474.9,
-     "release_or_revision_date": "2026-11-06T08:30",
-     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701"
-    }
-   ],
-   "traps": [
-    "The LFS publishes the number unemployed directly (in thousands); rebuilding it from a five-year-old census base is both unnecessary and wrong."
-   ],
-   "source_version": "v1",
+   "source_version": "v4-test",
    "source": "statcan",
    "qtype": "flag",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "mixed census/LFS calculation; grader wrong on every answer",
-   "item": {
-    "arms": 7,
-    "mean": 0.286,
-    "spread": 1.0,
-    "volatile": null,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "R-01",
-   "category": "Release",
-   "eval_type": "date",
-   "question": "When does Statistics Canada release Alberta's GDP for 2025 in the provincial and territorial economic accounts (PTEA)?",
-   "expected": {
-    "ptea_2025_release": "2026-11-05"
-   },
-   "reference": {
-    "ptea_2024_release": "2025-11-06",
-    "gdp_by_industry_2025_release": "2026-05-01"
-   },
-   "headline": [
-    "ptea_2025_release"
-   ],
-   "tolerance": "The exact date. A May 1 date (GDP by industry, 2025) is a different release; saying the 2025 PTEA is already out is wrong.",
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": null,
-     "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2025",
-     "reference_period": "2025",
-     "value": "2026-11-05",
-     "release_or_revision_date": "2026-11-05",
-     "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": null,
-     "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2024",
-     "reference_period": "2024",
-     "value": "2025-11-06",
-     "release_or_revision_date": "2025-11-06",
-     "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/251106/dq251106a-eng.htm"
-    }
-   ],
-   "traps": [
-    "GDP by industry for 2025 (May 1, 2026) is not the PTEA release.",
-    "The latest PTEA published before the release date is for 2024."
-   ],
-   "group": "release",
-   "tolerances": {},
-   "source_version": "v2",
-   "source": "statcan",
-   "qtype": "release",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "PTEA release date",
-   "item": {
-    "arms": 8,
-    "mean": 0.375,
-    "spread": 1.0,
-    "volatile": 0.25,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "R-04",
-   "category": "Release",
-   "eval_type": "date",
-   "question": "When will Statistics Canada release the Labour Force Survey for October 2026?",
-   "expected": {
-    "lfs_oct_2026_release": "2026-11-06"
-   },
-   "headline": [
-    "lfs_oct_2026_release"
-   ],
-   "tolerance": "The exact date",
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": null,
-     "series_title": "The Daily release schedule: Labour Force Survey, October 2026",
-     "reference_period": "October 2026",
-     "value": "2026-11-06",
-     "release_or_revision_date": "2026-11-06",
-     "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
-    }
-   ],
-   "traps": [
-    "A scheduled date, read from the release calendar, not guessed."
-   ],
-   "group": "release",
-   "tolerances": {},
-   "source_version": "v2",
-   "source": "statcan",
-   "qtype": "release",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "a monthly release date; volatile",
-   "item": {
-    "arms": 8,
-    "mean": 0.792,
-    "spread": 0.667,
-    "volatile": 0.375,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "R-06",
-   "category": "Release",
-   "eval_type": "refusal",
-   "question": "On what date will Statistics Canada release the 2026 provincial and territorial economic accounts?",
-   "expected": {
-    "behaviour": "Say no date has been announced; the PTEA usually comes out in November of the following year."
-   },
-   "reference": {
-    "ptea_2025_release": "2026-11-05"
-   },
-   "headline": [],
-   "absent_pattern": "(not|n't|n’t) (yet )?(been )?(scheduled|announced|set|on (the|its|statistics canada's) (release )?(calendar|schedule))|no (release )?date (has been|is|was) (yet )?(set|announced|scheduled|published)|no (scheduled|announced) (release )?date|(isn't|is not|not) (yet )?(on|in) (the|statistics canada's|its) (release )?(calendar|schedule)|(has|have)(n't|n’t| not) (yet )?(scheduled|announced)",
-   "tolerance": "Correct only when the answer says no date is scheduled yet; a specific date in 2027 stated as the release date is invented.",
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": null,
-     "series_title": "The Daily release schedule: Provincial and territorial economic accounts, 2025",
-     "reference_period": "2025",
-     "value": "2026-11-05",
-     "release_or_revision_date": "2026-11-05",
-     "url": "https://www150.statcan.gc.ca/n1/dai-quo/cal2-eng.htm"
-    }
-   ],
-   "traps": [
-    "The schedule lists releases only weeks ahead; none is set for 2026 PTEA."
-   ],
-   "group": "release",
-   "tolerances": {},
-   "source_version": "v2",
-   "source": "statcan",
-   "qtype": "refusal",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "no date set for the 2026 PTEA",
-   "item": {
-    "arms": 8,
-    "mean": 0.042,
-    "spread": 0.333,
-    "volatile": 0.125,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "T-30",
-   "category": "Series metadata",
+   "id": "N-07",
+   "category": "Survey documentation",
    "group": "statcan",
    "eval_type": "facts",
-   "question": "Which Statistics Canada table does vector v62305752 belong to, how often is that table published, and what does the series measure?",
+   "question": "Where does Statistics Canada's Survey of Employment, Payrolls and Hours (SEPH) get its monthly counts of employees and payrolls, what is the survey part of it called, and about how many businesses does that survey sample?",
    "expected": {
-    "table": "36-10-0104-01",
-    "table_title": "Gross domestic product, expenditure-based, Canada, quarterly",
-    "frequency": "Quarterly",
-    "series": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices"
+    "administrative": "Canada Revenue Agency Payroll Deduction (PD7)",
+    "survey": "Business Payrolls Survey (BPS)",
+    "bps_sample_businesses": 15000
    },
    "facts": {
-    "table": "36-?10-?0104|36100104",
-    "frequency": "quarterly",
-    "gdp": "gross domestic product|\\bGDP\\b",
-    "chained": "chained|2017 dollars|real"
+    "cra": "Canada Revenue Agency|\\bCRA\\b",
+    "payroll_deductions": "payroll deduction|PD7",
+    "bps": "Business Payrolls? Survey|\\bBPS\\b",
+    "sample": "15[, ]?000|15 thousand"
    },
    "headline": [
-    "table",
-    "frequency"
+    "payroll_deductions",
+    "bps"
    ],
-   "tolerance": "Table 36-10-0104-01 (GDP, expenditure-based, quarterly); GDP at market prices, chained (2017) dollars, seasonally adjusted at annual rates.",
+   "tolerance": "A census of payroll deductions (PD7) from the Canada Revenue Agency, combined with the Business Payrolls Survey (a sample of about 15,000 businesses).",
    "grading": {
-    "correct": "36-10-0104-01, quarterly, and real GDP at market prices.",
-    "partial": "The table and quarterly, without what the series is; or the table and the series without the frequency.",
-    "referral": "No answer, only a link to WDS."
+    "correct": "CRA payroll deduction (PD7) records and the Business Payrolls Survey.",
+    "partial": "One of the two sources.",
+    "referral": "No sources named, only a link to the survey page."
    },
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "v62305752",
-     "series_title": "Canada;Chained (2017) dollars;Seasonally adjusted at annual rates;Gross domestic product at market prices",
+     "vector_id": "IMDB 2612",
+     "series_title": "SEPH data sources",
      "reference_period": null,
-     "value": "36-10-0104-01",
+     "value": "Canada Revenue Agency Payroll Deduction (PD7)",
      "release_or_revision_date": null,
-     "url": "https://www150.statcan.gc.ca/t1/wds/rest/getSeriesInfoFromVector"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "36-10-0104-01",
-     "series_title": "Gross domestic product, expenditure-based, Canada, quarterly",
-     "reference_period": null,
-     "value": "Quarterly",
-     "release_or_revision_date": null,
-     "url": "https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata"
+     "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2612"
     }
    ],
    "traps": [
-    "Monthly GDP by industry (basic prices) is another table, 36-10-0434-01."
+    "SEPH is not a household survey: the LFS is; SEPH counts jobs, not people."
    ],
    "tolerances": {},
-   "source_version": "v3",
+   "source_version": "v4-test",
    "source": "statcan",
    "qtype": "documentation",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "vector to table and frequency (WDS)",
-   "item": {
-    "arms": 3,
-    "mean": 0.667,
-    "spread": 1.0,
-    "volatile": 0.0,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "C-21",
-   "category": "Markets",
-   "eval_type": "numeric",
-   "question": "What was the Bank of Canada commodity price index (BCPI, total) for September 2026?",
+   "id": "N-08",
+   "category": "Survey documentation",
+   "group": "statcan",
+   "eval_type": "facts",
+   "question": "Which establishments make up the target population of Statistics Canada's Monthly Survey of Manufacturing, which list are they drawn from, and into how many industries are they categorized?",
    "expected": {
-    "bcpi": 747.71
+    "target_population": "statistical establishments on the Business Register classified to the manufacturing sector (NAICS)",
+    "industries_over": 156
+   },
+   "facts": {
+    "manufacturing": "manufactur",
+    "register": "Business Register|\\bBR\\b",
+    "industries": "\\b156\\b"
    },
    "headline": [
-    "bcpi"
+    "register",
+    "industries"
+   ],
+   "tolerance": "Mandatory; all statistical establishments on StatCan's Business Register classified to manufacturing (NAICS), over 156 industries.",
+   "grading": {
+    "correct": "Manufacturing establishments on the Business Register, over 156 industries.",
+    "partial": "Two of the three.",
+    "referral": "No answer, only a link to the survey page."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "IMDB 2101",
+     "series_title": "MSM data sources",
+     "reference_period": null,
+     "value": "mandatory",
+     "release_or_revision_date": null,
+     "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2101"
+    },
+    {
+     "table_id": "Other",
+     "vector_id": "IMDB 2101",
+     "series_title": "MSM target population",
+     "reference_period": null,
+     "value": "classified to the manufacturing sector (by NAICS), which are categorized into over 156 industries",
+     "release_or_revision_date": null,
+     "url": "https://www23.statcan.gc.ca/imdb/p2SV.pl?Function=getSurvey&SDDS=2101"
+    }
+   ],
+   "tolerances": {},
+   "traps": [],
+   "source_version": "v4-test",
+   "source": "statcan",
+   "qtype": "documentation",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-09",
+   "category": "Not published",
+   "group": "statcan",
+   "eval_type": "refusal",
+   "question": "What was Nova Scotia's real GDP in August 2026, according to Statistics Canada's monthly GDP by industry?",
+   "expected": {
+    "behaviour": "Say StatCan publishes monthly GDP by industry for Canada only; provincial GDP is annual.",
+    "geographies": [
+     "Canada"
+    ]
+   },
+   "absent_pattern": "(?:only|just)[^.]{0,40}(?:national|Canada)[- ]level|(?:national|Canada)[^.]{0,30}only|no (?:monthly )?provincial|(?:not|n't|n’t) (?:published|available|produce[ds]?)[^.]{0,60}(?:province|monthly)|provincial[^.]{0,60}annual",
+   "tolerance": "Refusal: 36-10-0434-01 has one geography, Canada; provincial GDP is annual (36-10-0402).",
+   "grading": {
+    "correct": "Says monthly GDP is national only.",
+    "partial": "Declines and gives the annual provincial figure, labelled.",
+    "hallucinated": "A monthly Nova Scotia figure.",
+    "referral": "Points to Nova Scotia's finance department without saying StatCan has none."
+   },
+   "citations": [
+    {
+     "table_id": "36-10-0434-01",
+     "vector_id": null,
+     "series_title": "Gross domestic product (GDP) at basic prices, by industry, monthly",
+     "reference_period": null,
+     "value": {
+      "geographies": [
+       "Canada"
+      ]
+     },
+     "release_or_revision_date": null,
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3610043401"
+    }
+   ],
+   "traps": [
+    "Nova Scotia's own economic indicators are not StatCan's monthly GDP."
+   ],
+   "tolerances": {},
+   "headline": [],
+   "source_version": "v4-test",
+   "source": "statcan",
+   "qtype": "refusal",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-10",
+   "category": "Release",
+   "group": "statcan",
+   "eval_type": "date",
+   "question": "On what date does Statistics Canada release its annual estimates of the stock and consumption of fixed capital for 2025?",
+   "expected": {
+    "fixed_capital_2025_release": "2026-11-17"
+   },
+   "headline": [
+    "fixed_capital_2025_release"
+   ],
+   "tolerance": "2026-11-17 (The Daily's release schedule).",
+   "grading": {
+    "correct": "2026-11-17.",
+    "hallucinated": "Another date given as this release (the 2024 edition's date is fine as context).",
+    "referral": "No date, only a link to the release calendar."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": null,
+     "series_title": "The Daily release schedule: Stock and consumption of fixed capital, 2025",
+     "reference_period": "2025",
+     "value": "2026-11-17",
+     "release_or_revision_date": "2026-11-17",
+     "url": "https://www150.statcan.gc.ca/n1/dai-quo/ssi/homepage/schedule-previous_releases-eng.json"
+    }
+   ],
+   "traps": [
+    "Last year's edition came out on another date; the investment survey (capital expenditures) is another release."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
+   "source": "statcan",
+   "qtype": "release",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-11",
+   "category": "Release",
+   "group": "statcan",
+   "eval_type": "date",
+   "question": "On what date did Statistics Canada release its provisional poverty estimates for 2025?",
+   "expected": {
+    "provisional_poverty_2025_release": "2026-11-04"
+   },
+   "headline": [
+    "provisional_poverty_2025_release"
+   ],
+   "tolerance": "2026-11-04 (The Daily's release schedule).",
+   "grading": {
+    "correct": "2026-11-04.",
+    "hallucinated": "Another date given as this release, or the Canadian Income Survey's release given as it.",
+    "referral": "No date, only a link to the release calendar."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": null,
+     "series_title": "The Daily release schedule: Provisional poverty estimates, 2025",
+     "reference_period": "2025",
+     "value": "2026-11-04",
+     "release_or_revision_date": "2026-11-04",
+     "url": "https://www150.statcan.gc.ca/n1/daily-quotidien/261104/dq261104e-eng.htm"
+    }
+   ],
+   "traps": [
+    "The provisional estimates are not the Canadian Income Survey's final 2025 poverty rates, which come later."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
+   "source": "statcan",
+   "qtype": "release",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-12",
+   "category": "Markets",
+   "group": "boc",
+   "eval_type": "comparison",
+   "answer_regex": "\\b(?:lower|fell|declin\\w*|decreas\\w*|dipped|down)\\b",
+   "question": "What was the Bank of Canada's monthly nominal Canadian effective exchange rate (CEER) index for October 2026, and was it higher or lower than in September 2026?",
+   "expected": {
+    "ceer_oct_2026": 111.13
+   },
+   "reference": {
+    "ceer_sep_2026": 111.39
+   },
+   "headline": [
+    "ceer_oct_2026"
    ],
    "tolerances": {
-    "bcpi": 0.05
+    "ceer_oct_2026": 0.005
    },
-   "tolerance": "±0.05",
+   "tolerance": "111.13 (Valet CEER_BROADNM, October 2026), lower than September's 111.39.",
+   "grading": {
+    "correct": "111.13, and lower than September.",
+    "partial": "The October value without the comparison, or the comparison with a September value off.",
+    "referral": "No value, only a link to the Bank's exchange-rate pages."
+   },
    "citations": [
     {
      "table_id": "Valet",
-     "vector_id": "M.BCPI",
-     "reference_period": "2026-09-01",
-     "value": 747.71,
+     "vector_id": "CEER_BROADNM",
+     "series_title": "Monthly nominal Canadian effective exchange rates",
+     "reference_period": "2026-10",
+     "value": 111.13,
      "release_or_revision_date": null,
-     "url": "https://www.bankofcanada.ca/valet/observations/M.BCPI"
+     "url": "https://www.bankofcanada.ca/valet/observations/CEER_BROADNM/json?start_date=2026-09-01&end_date=2026-10-01"
+    },
+    {
+     "table_id": "Valet",
+     "vector_id": "CEER_BROADNM",
+     "series_title": "Monthly nominal Canadian effective exchange rates",
+     "reference_period": "2026-09",
+     "value": 111.39,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/CEER_BROADNM/json?start_date=2026-09-01&end_date=2026-10-01"
     }
    ],
    "traps": [
-    "An index (1972=100), in US dollars; not a price."
+    "The daily nominal CEER (CEER_BROADN) and the real CEER (CEER_BROADM) are other series.",
+    "Valet's description says base year 1999 while its unit says 2010 = 100: the index value is the answer either way."
    ],
-   "group": "core",
-   "source_version": "v2",
+   "source_version": "v4-test",
    "source": "boc",
    "qtype": "figure",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "BCPI",
-   "item": {
-    "arms": 17,
-    "mean": 0.686,
-    "spread": 1.0,
-    "volatile": 0.176,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "M-11",
+   "id": "N-13",
    "category": "Markets",
-   "eval_type": "numeric",
-   "question": "What was the Bank of Canada's US dollar exchange rate on October 30, 2026?",
+   "group": "boc",
+   "eval_type": "comparison",
+   "answer_regex": "(?:dollar|CAD|loonie)[^.]{0,60}\\b(?:strengthen\\w*|appreciat\\w*|rose|gained)\\b|\\b(?:strengthen\\w*|appreciat\\w*)\\b[^.]{0,40}(?:dollar|CAD)",
+   "alternatives": [
+    {
+     "label": "yen per Canadian dollar",
+     "expected": {
+      "yen_per_cad_2026_10_01": 110.86,
+      "yen_per_cad_2026_10_30": 112.74
+     }
+    }
+   ],
+   "question": "Between October 1 and October 30, 2026, did the Canadian dollar strengthen or weaken against the Japanese yen, by the Bank of Canada's daily exchange rates? Give the rate on both days.",
    "expected": {
-    "usdcad_2026_10_30": 1.396
+    "jpycad_2026_10_01": 0.00902,
+    "jpycad_2026_10_30": 0.00887
    },
    "headline": [
-    "usdcad_2026_10_30"
+    "jpycad_2026_10_01",
+    "jpycad_2026_10_30"
    ],
-   "tolerance": "±0.00005 (four decimals)",
+   "tolerances": {
+    "jpycad_2026_10_01": 5e-07,
+    "jpycad_2026_10_30": 5e-07,
+    "yen_per_cad_2026_10_01": 0.06,
+    "yen_per_cad_2026_10_30": 0.06
+   },
+   "tolerance": "0.00902 and 0.00887 CAD per yen (FXJPYCAD): the yen bought fewer Canadian dollars, so the dollar strengthened.",
+   "grading": {
+    "correct": "Both rates and the call: the Canadian dollar strengthened.",
+    "partial": "Both rates with no call, or the call with one rate.",
+    "hallucinated": "The opposite call, or rates from another source given as the Bank's.",
+    "referral": "No rates, only a link to the Bank's exchange-rate page."
+   },
    "citations": [
     {
      "table_id": "Valet",
-     "vector_id": "FXUSDCAD",
-     "reference_period": "2026-10-30",
-     "value": 1.396,
+     "vector_id": "FXJPYCAD",
+     "series_title": "JPY/CAD",
+     "reference_period": "2026-10-01",
+     "value": 0.00902,
      "release_or_revision_date": null,
-     "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD"
+     "url": "https://www.bankofcanada.ca/valet/observations/FXJPYCAD/json?start_date=2026-10-01&end_date=2026-10-30"
+    },
+    {
+     "table_id": "Valet",
+     "vector_id": "FXJPYCAD",
+     "series_title": "JPY/CAD",
+     "reference_period": "2026-10-30",
+     "value": 0.00887,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/FXJPYCAD/json?start_date=2026-10-01&end_date=2026-10-30"
     }
    ],
    "traps": [
-    "Valet gives Canadian dollars per US dollar; the inverse is not quoted."
+    "FXJPYCAD is Canadian dollars per yen: a higher value means a weaker Canadian dollar."
    ],
-   "source_version": "v1",
+   "source_version": "v4-test",
    "source": "boc",
-   "qtype": "figure",
+   "qtype": "comparison",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "USD/CAD on a date; replay fixture",
-   "item": {
-    "arms": 7,
-    "mean": 0.857,
-    "spread": 1.0,
-    "volatile": null,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "T-12",
+   "id": "N-14",
    "category": "Discontinued series",
    "group": "boc",
    "eval_type": "refusal",
-   "question": "What was the Bank of Canada's noon USD/CAD exchange rate on October 30, 2026?",
+   "question": "What was the Bank of Canada's daily exchange rate for the Venezuelan bolívar on October 30, 2026?",
    "expected": {
-    "behaviour": "Say the Bank no longer publishes noon rates (the last was on April 28, 2017); it publishes one daily average rate, by 16:30 ET."
+    "behaviour": "Say the Bank of Canada publishes no bolívar rate: it is not among the currencies in its daily exchange rates."
    },
-   "reference": {
-    "last_noon_date": "2017-04-28",
-    "fxusdcad_2026_10_30": 1.396
-   },
-   "absent_pattern": "noon[^.]{0,160}(discontinu|no longer|ceased|stopped|ended|retired|legacy|replaced|last (published|updated))|(discontinu|no longer|ceased|stopped|ended|retired|replaced)[^.]{0,160}noon",
-   "tolerance": "Correct when the answer says the noon rate was discontinued (giving the daily average rate beside it is fine); a noon rate for 2026 is invented.",
+   "absent_pattern": "(?:does not|doesn't|doesn’t|no longer) (?:publish|provide|report|quote|cover|include)|not (?:among|in|one of|part of|included)|no (?:official |daily )?(?:rate|series)|(?:discontinued|stopped)",
+   "tolerance": "Refusal: no Valet series for the bolívar among the daily rates (27 series in FX_RATES_DAILY).",
    "grading": {
-    "correct": "Noon rates discontinued in 2017, with or without the daily average rate (1.396 on October 30, 2026) beside it.",
-    "partial": "Not used: the daily average given as the noon rate is hallucinated.",
-    "referral": "No answer, only a link to the exchange rates page."
+    "correct": "Says the Bank publishes no bolívar rate.",
+    "hallucinated": "A bolívar rate attributed to the Bank, or a cross rate computed from other series and presented as the Bank's.",
+    "referral": "Points to another source without saying the Bank has none."
    },
    "citations": [
     {
      "table_id": "Valet",
-     "vector_id": "IEXE0101",
-     "series_title": "USD_NOON (legacy noon rate)",
-     "reference_period": "2017-04-28",
-     "value": 1.3665,
+     "vector_id": "FX_RATES_DAILY",
+     "series_title": "Daily exchange rates (group members)",
+     "reference_period": null,
+     "value": [
+      "FXAUDCAD",
+      "FXBRLCAD",
+      "FXCHFCAD",
+      "FXCNYCAD",
+      "FXEURCAD",
+      "FXGBPCAD",
+      "FXHKDCAD",
+      "FXIDRCAD",
+      "FXINRCAD",
+      "FXJPYCAD",
+      "FXKRWCAD",
+      "FXMXNCAD",
+      "FXMYRCAD",
+      "FXNOKCAD",
+      "FXNZDCAD",
+      "FXPENCAD",
+      "FXPLNCAD",
+      "FXRUBCAD",
+      "FXSARCAD",
+      "FXSEKCAD",
+      "FXSGDCAD",
+      "FXTHBCAD",
+      "FXTRYCAD",
+      "FXTWDCAD",
+      "FXUSDCAD",
+      "FXVNDCAD",
+      "FXZARCAD"
+     ],
      "release_or_revision_date": null,
-     "url": "https://www.bankofcanada.ca/valet/observations/IEXE0101/json"
-    },
-    {
-     "table_id": "Valet",
-     "vector_id": "FXUSDCAD",
-     "series_title": "USD/CAD daily average",
-     "reference_period": "2026-10-30",
-     "value": 1.396,
-     "release_or_revision_date": null,
-     "url": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json"
+     "url": "https://www.bankofcanada.ca/valet/groups/FX_RATES_DAILY/json"
     }
    ],
    "traps": [
-    "Valet's LEGACY_NOON_RATES group was last updated on 28 April 2017; the current FXUSDCAD is a daily average published by 16:30 ET, not a noon rate."
+    "A cross rate through the US dollar from another source is not the Bank's."
    ],
    "tolerances": {},
    "headline": [],
-   "source_version": "v3",
+   "source_version": "v4-test",
    "source": "boc",
    "qtype": "refusal",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "noon rates ended in 2017",
-   "item": {
-    "arms": 3,
-    "mean": 0.889,
-    "spread": 0.333,
-    "volatile": 0.333,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "T-14",
-   "category": "Survey documentation",
+   "id": "N-15",
+   "category": "Definitions",
    "group": "cmhc",
    "eval_type": "facts",
-   "question": "When in the year does CMHC conduct its Rental Market Survey, and which rental structures does the survey cover?",
+   "question": "In CMHC's Market Absorption Survey, what makes a newly built housing unit 'absorbed', and when does CMHC consider a unit sold?",
    "expected": {
-    "timing": "The survey is conducted during the first 2 weeks of October",
-    "scope": "It targets only privately initiated structures with at least 3 rental units, which have been on the market for at least 3 months"
+    "absorbed": "An absorbed unit is a housing unit that has been sold and completed.",
+    "sold": "A unit is considered sold when a binding contract is secured by a non-refundable deposit and has been signed by a qualified purchaser."
    },
    "facts": {
-    "october": "October",
-    "units": "\\b(three|3)\\b[^.]{0,40}units|at least (three|3)",
-    "private": "private"
+    "completed": "complet",
+    "sold": "\\bsold\\b|\\bsale\\b",
+    "deposit": "deposit",
+    "contract": "contract|agreement"
    },
    "headline": [
-    "october",
-    "units"
+    "completed",
+    "deposit"
    ],
-   "tolerance": "October (first two weeks); privately initiated structures with at least three rental units.",
+   "tolerance": "Absorbed: sold and completed. Sold: a binding contract secured by a non-refundable deposit, signed by a qualified purchaser.",
    "grading": {
-    "correct": "October and privately initiated structures with 3 or more rental units.",
-    "partial": "October alone, or the scope alone.",
-    "referral": "No answer, only a link to CMHC."
+    "correct": "Sold and completed; sold means a binding contract with a non-refundable deposit.",
+    "partial": "Sold and completed, without when a unit counts as sold.",
+    "hallucinated": "Absorbed defined as occupied, rented or started.",
+    "referral": "No definition, only a link to CMHC."
    },
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "CMHC Rental Market Survey",
-     "series_title": "Timing",
+     "vector_id": "CMHC Market Absorption Survey",
+     "series_title": "Absorbed",
      "reference_period": null,
-     "value": "The survey is conducted during the first 2 weeks of October",
+     "value": "An absorbed unit is a housing unit that has been sold and completed.",
      "release_or_revision_date": null,
-     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey"
     },
     {
      "table_id": "Other",
-     "vector_id": "CMHC Rental Market Survey",
-     "series_title": "Scope",
+     "vector_id": "CMHC Market Absorption Survey",
+     "series_title": "Sold",
      "reference_period": null,
-     "value": "It targets only privately initiated structures with at least 3 rental units, which have been on the market for at least 3 months",
+     "value": "A unit is considered sold when a binding contract is secured by a non-refundable deposit and has been signed by a qualified purchaser.",
      "release_or_revision_date": null,
-     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey"
     }
    ],
    "traps": [
-    "Social and affordable housing is outside the survey frame."
+    "Unsold completed units are 'unabsorbed'; occupancy is not the test."
    ],
    "tolerances": {},
-   "source_version": "v3",
+   "source_version": "v4-test",
    "source": "cmhc",
    "qtype": "documentation",
    "split": "test",
-   "extra_passes": true,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "RMS timing and coverage; volatile",
-   "item": {
-    "arms": 3,
-    "mean": 0.667,
-    "spread": 0.667,
-    "volatile": 0.667,
-    "ceiling": false,
-    "floor": false
-   }
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "T-15",
-   "category": "Quality flags",
+   "id": "N-16",
+   "category": "Housing",
    "group": "cmhc",
-   "eval_type": "facts",
-   "question": "In CMHC's Rental Market Survey results, what does reliability code D mean, and how many responding entities must an estimate rest on before CMHC releases it?",
+   "eval_type": "numeric",
+   "question": "In CMHC's October 2025 Rental Market Survey, as Statistics Canada publishes it for apartment structures of six units and over, what was the vacancy rate in the Vancouver census metropolitan area?",
    "expected": {
-    "code_d": "D — Poor (use with caution)",
-    "minimum_entities": 4
-   },
-   "facts": {
-    "poor": "\\bpoor\\b",
-    "caution": "caution",
-    "minimum": "\\b4\\b|\\bfour\\b"
+    "vancouver_vacancy_2025_pct": 3.7
    },
    "headline": [
-    "poor",
-    "minimum"
+    "vancouver_vacancy_2025_pct"
    ],
-   "tolerance": "D: poor, use with caution; at least 4 responding entities.",
+   "tolerance": "3.7% (CMHC, as in StatCan table 34-10-0127, {'Geography': 'Vancouver, British Columbia'}), ±0.1.",
    "grading": {
-    "correct": "Poor (use with caution) and 4.",
-    "partial": "One of the two.",
-    "referral": "No answer, only a link to CMHC."
+    "correct": "3.7% for October 2025 (six units and over).",
+    "partial": "The 2024 rate, or CMHC's three-units-and-over rate, labelled.",
+    "hallucinated": "Another CMA's rate, or the City of Vancouver's, given as the CMA's.",
+    "referral": "No figure, only a link to CMHC."
    },
    "citations": [
     {
-     "table_id": "Other",
-     "vector_id": "CMHC Rental Market Survey",
-     "series_title": "Reliability codes",
-     "reference_period": null,
-     "value": "D — Poor (use with caution)",
-     "release_or_revision_date": null,
-     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "CMHC Rental Market Survey",
-     "series_title": "Release rule",
-     "reference_period": null,
-     "value": "released only if a given estimate is based on 4 or more responding entities",
-     "release_or_revision_date": null,
-     "url": "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodology-rental-market-survey"
+     "table_id": "34-10-0127-01",
+     "vector_id": "v733351",
+     "series_title": "Vancouver, British Columbia;{'Geography': 'Vancouver, British Columbia'}",
+     "reference_period": "2025-01",
+     "value": 3.7,
+     "release_or_revision_date": "2025-12-17T08:30",
+     "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3410012701"
     }
    ],
    "traps": [
-    "Code D estimates are published but flagged; they are not suppressed."
+    "The CMA is not the City of Vancouver; condominium vacancy is another series."
    ],
    "tolerances": {},
-   "source_version": "v3",
+   "source_version": "v4-test",
    "source": "cmhc",
-   "qtype": "documentation",
+   "qtype": "figure",
    "split": "test",
-   "extra_passes": true,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "RMS reliability codes; outcome varied in every arm",
-   "item": {
-    "arms": 3,
-    "mean": 0.333,
-    "spread": 0.667,
-    "volatile": 1.0,
-    "ceiling": false,
-    "floor": false
-   }
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "T-20",
+   "id": "N-17",
    "category": "Dataset metadata",
    "group": "provincial",
    "eval_type": "facts",
-   "question": "In the BC Data Catalogue, which organization publishes 'BC Wildfire Fire Perimeters - Historical', under which licence, and can it be downloaded as a CSV or queried through the CKAN DataStore?",
+   "question": "In the BC Data Catalogue, which organization publishes the 'BC Liquor Store Locations' dataset, under which licence, and in what format is its data?",
    "expected": {
-    "organization": "BC Wildfire Service",
+    "organization": "Liquor Distribution",
     "licence": "Open Government Licence - British Columbia",
-    "formats": [
-     "kml",
-     "kmz",
-     "multiple",
-     "oracle_sde",
-     "wms"
-    ],
-    "csv_or_datastore": "No"
+    "format": "CSV",
+    "resources": 1
    },
    "facts": {
-    "organization": "BC Wildfire Service|British Columbia Wildfire Service",
-    "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*(British Columbia|BC)|OGL[- ]BC",
-    "no_table": "(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)[^.]{0,120}(datastore|csv)|(datastore|csv)[^.]{0,120}(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)",
-    "spatial": "\\bKML|\\bKMZ|\\bWMS|Geographic Warehouse|BCGW"
+    "organization": "Liquor Distribution",
+    "licence": "Open Government Licen[cs]e\\W{0,3}(?:-|–|—|for)?\\s*British Columbia|OGL[- ]?BC",
+    "csv": "\\bCSV\\b"
    },
+   "wrong": [
+    "Liquor and Cannabis Regulation Branch publishes"
+   ],
    "headline": [
     "organization",
-    "no_table"
+    "licence"
    ],
-   "tolerance": "BC Wildfire Service; Open Government Licence - British Columbia; no CSV or DataStore (KMZ, KML, WMS, BCGW custom download).",
+   "tolerance": "Liquor Distribution (Branch); Open Government Licence - British Columbia; one CSV.",
    "grading": {
-    "correct": "Publisher, licence, and no CSV or DataStore (spatial formats).",
-    "partial": "Publisher and no CSV/DataStore with the licence missing.",
-    "referral": "No answer, only the record's link."
+    "correct": "Liquor Distribution Branch, OGL-BC, CSV.",
+    "partial": "Two of the three.",
+    "hallucinated": "The Liquor and Cannabis Regulation Branch's dataset given as this one, or another licence.",
+    "referral": "No answer, only a link to the catalogue."
    },
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "bc-wildfire-fire-perimeters-historical",
-     "series_title": "BC Wildfire Fire Perimeters - Historical",
-     "reference_period": null,
-     "value": "Open Government Licence - British Columbia",
-     "release_or_revision_date": null,
-     "url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=bc-wildfire-fire-perimeters-historical"
-    }
-   ],
-   "traps": [
-    "Geospatial records in the BC catalogue are served from the BC Geographic Warehouse, not the DataStore."
-   ],
-   "tolerances": {},
-   "source_version": "v3",
-   "source": "provincial",
-   "qtype": "documentation",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "BC catalogue: licence, no CSV or DataStore",
-   "item": {
-    "arms": 3,
-    "mean": 0.667,
-    "spread": 1.0,
-    "volatile": 0.0,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "T-34",
-   "category": "DataStore fields",
-   "group": "provincial",
-   "eval_type": "facts",
-   "question": "In the DataStore table of Ontario's 'Ontario top baby names (female)' dataset, which fields hold the year, the name and the count, what are their data types, and how are names given fewer than five times handled?",
-   "expected": {
-    "fields": {
-     "Year/Année": "numeric",
-     "Name/Nom": "text",
-     "Frequency/Fréquence": "numeric"
-    },
-    "small_counts": "Counts of fewer than 5 names were suppressed"
-   },
-   "reference": {
-    "data_range_end": "2024-12-31"
-   },
-   "facts": {
-    "year": "Year/Ann[ée]e|\\bYear\\b",
-    "name": "Name/Nom|\\bName\\b",
-    "count": "Frequency/Fr[ée]quence|\\bFrequency\\b",
-    "numeric": "numeric|number|integer",
-    "text": "\\btext\\b|\\bstring\\b",
-    "suppressed": "suppress|omit|exclud|withheld|not (shown|included|listed)|left out|removed"
-   },
-   "headline": [
-    "count",
-    "suppressed"
-   ],
-   "tolerance": "Year/Année (numeric), Name/Nom (text), Frequency/Fréquence (numeric); counts under five are suppressed.",
-   "grading": {
-    "correct": "The three fields with their types, and counts under five suppressed.",
-    "partial": "The count field and the suppression, types missing.",
-    "referral": "No answer, only the dataset's link."
-   },
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": "acc72e92-3100-4a04-8f5f-4fad9cd77cc5",
-     "series_title": "Ontario top baby names (female): DataStore fields",
+     "vector_id": "BC Data Catalogue bc-liquor-store-locations",
+     "series_title": "BC Liquor Store Locations",
      "reference_period": null,
      "value": {
-      "Year/Année": "numeric",
-      "Name/Nom": "text",
-      "Frequency/Fréquence": "numeric"
+      "organization": "Liquor Distribution",
+      "licence": "Open Government Licence - British Columbia"
      },
      "release_or_revision_date": null,
-     "url": "https://data.ontario.ca/api/3/action/datastore_search?resource_id=acc72e92-3100-4a04-8f5f-4fad9cd77cc5"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "ontario-top-baby-names-female",
-     "series_title": "Ontario top baby names (female): notes",
-     "reference_period": null,
-     "value": "Counts of fewer than 5 names were suppressed",
-     "release_or_revision_date": null,
-     "url": "https://data.ontario.ca/api/3/action/package_show?id=ontario-top-baby-names-female"
+     "url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=bc-liquor-store-locations"
     }
    ],
    "traps": [
-    "Unlike Quebec's name bank, which shows '<5', Ontario leaves names with fewer than five births out of the table.",
-    "'Frequency' is a count of registrations, not a rank."
+    "The catalogue also has 'Private Liquor Store and BC Liquor Store Locations', from another branch, and an access-only 'Store Locator'."
    ],
    "tolerances": {},
-   "source_version": "v3",
+   "source_version": "v4-test",
    "source": "provincial",
    "qtype": "documentation",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "Ontario DataStore fields and types",
-   "item": {
-    "arms": 3,
-    "mean": 0.333,
-    "spread": 1.0,
-    "volatile": 0.0,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "T-25",
-   "category": "DataStore fields",
-   "group": "municipal",
+   "id": "N-18",
+   "category": "Dataset metadata",
+   "group": "provincial",
    "eval_type": "facts",
-   "question": "On Toronto's open data portal (CKAN), which City division owns the 'TTC Subway Delay Data' dataset, how often is it refreshed, and what data type does the DataStore give the 'Min Delay' field of the table of delays since 2025?",
+   "question": "On Données Québec, which ministry publishes the dataset on uses of artificial intelligence in Quebec's public administration ('Portrait public des utilisations de l'IA dans l'administration publique québécoise'), under which licence, how often is it updated, and which years does it cover?",
    "expected": {
-    "owner": "Toronto Transit Commission",
-    "refresh": "Monthly",
-    "min_delay_type": "text"
+    "organization": "Ministère de la Cybersécurité et du Numérique",
+    "licence": "Attribution (CC-BY 4.0)",
+    "frequency": "annual",
+    "years": [
+     "2024",
+     "2025",
+     "2026"
+    ]
    },
    "facts": {
-    "owner": "Toronto Transit Commission|\\bTTC\\b",
-    "refresh": "monthly",
-    "min_delay_type": "\\btext\\b|\\bstring\\b"
+    "ministry": "Cybers[ée]curit[ée]|Num[ée]rique|Cybersecurity|Digital",
+    "licence": "CC[- ]?BY|Creative Commons",
+    "frequency": "annual|yearly|annuel|every year|once a year",
+    "years": "^(?=[\\s\\S]*2024)(?=[\\s\\S]*2026)"
    },
    "headline": [
-    "owner",
-    "min_delay_type"
+    "ministry",
+    "licence"
    ],
-   "tolerance": "Toronto Transit Commission; monthly; text.",
+   "tolerance": "Ministère de la Cybersécurité et du Numérique; Attribution (CC-BY 4.0); annual; 2024 to 2026, each year in CSV and Excel.",
    "grading": {
-    "correct": "TTC, monthly, text.",
-    "partial": "Two of the three, with the type not stated as numeric.",
-    "referral": "No answer, only the dataset's link."
+    "correct": "The ministry of cybersecurity and digital affairs, CC BY 4.0, annual, 2024 to 2026.",
+    "partial": "The ministry and the licence, frequency or years missing.",
+    "referral": "No answer, only a link to Données Québec."
    },
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "ttc-subway-delay-data",
-     "series_title": "TTC Subway Delay Data",
+     "vector_id": "Données Québec portrait-public-des-utilisations-de-l-ia-dans-l-administration-publique-quebecoise",
+     "series_title": "Portrait public des utilisations de l’IA dans l’administration publique québécoise",
      "reference_period": null,
-     "value": "Monthly",
+     "value": {
+      "frequency": "annual",
+      "years": [
+       "2024",
+       "2025",
+       "2026"
+      ]
+     },
      "release_or_revision_date": null,
-     "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show?id=ttc-subway-delay-data"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "6088e14f-e46e-4f5c-9daa-dea1359ad396",
-     "series_title": "TTC Subway Delay Data since 2025: Min Delay",
-     "reference_period": null,
-     "value": "text",
-     "release_or_revision_date": null,
-     "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=6088e14f-e46e-4f5c-9daa-dea1359ad396"
+     "url": "https://www.donneesquebec.ca/recherche/api/3/action/package_show?id=portrait-public-des-utilisations-de-l-ia-dans-l-administration-publique-quebecoise"
     }
    ],
    "traps": [
-    "'Min Delay' holds minutes but is typed text: summing it needs a cast."
+    "The ministry is the Ministère de la Cybersécurité et du Numérique, not the Conseil du trésor or the Ministère de l'Économie."
    ],
    "tolerances": {},
-   "source_version": "v3",
+   "source_version": "v4-test",
+   "source": "provincial",
+   "qtype": "documentation",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-19",
+   "category": "Dataset metadata",
+   "group": "municipal",
+   "eval_type": "facts",
+   "question": "On Toronto's open data portal, which City division owns the 'Dinesafe' restaurant-inspection dataset, how often is it refreshed, and can it be queried through the DataStore API?",
+   "expected": {
+    "owner_division": "Toronto Public Health",
+    "refresh_rate": "Daily",
+    "datastore": "1 DataStore resource(s)"
+   },
+   "facts": {
+    "division": "Toronto Public Health|\\bTPH\\b",
+    "refresh": "\\bdaily\\b|every day",
+    "datastore": "datastore[^.]{0,80}\\b(?:yes|active|queryable|available|can be queried|enabled)\\b|\\b(?:yes|can)\\b[^.]{0,60}datastore|datastore_search"
+   },
+   "wrong": [
+    "Municipal Licensing|\\bMLS\\b owns",
+    "datastore[^.]{0,60}\\b(?:is not|isn't|isn’t|not active|inactive|unavailable|not available|not enabled|cannot|can't)\\b|\\b(?:no|without)\\s+datastore"
+   ],
+   "headline": [
+    "division",
+    "refresh"
+   ],
+   "tolerance": "Toronto Public Health; refreshed daily; a DataStore resource exists.",
+   "grading": {
+    "correct": "Toronto Public Health, daily, DataStore yes.",
+    "partial": "Two of the three.",
+    "referral": "No answer, only a link to the portal."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "Toronto CKAN dinesafe",
+     "series_title": "Dinesafe™",
+     "reference_period": null,
+     "value": {
+      "owner_division": "Toronto Public Health",
+      "refresh_rate": "Daily"
+     },
+     "release_or_revision_date": null,
+     "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show?id=dinesafe"
+    }
+   ],
+   "traps": [
+    "Dinesafe is run by Toronto Public Health, not Municipal Licensing and Standards."
+   ],
+   "tolerances": {},
+   "source_version": "v4-test",
    "source": "municipal",
    "qtype": "documentation",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "Toronto CKAN: owner, refresh, field type",
-   "item": {
-    "arms": 3,
-    "mean": 0.222,
-    "spread": 0.667,
-    "volatile": 0.333,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "T-17",
+   "id": "N-20",
    "category": "Dataset metadata",
    "group": "federal",
    "eval_type": "facts",
-   "question": "On open.canada.ca, which organization publishes the dataset 'Express Entry-Invited Candidates – Monthly IRCC Updates', how often is it updated, in which file formats, and can its tables be queried through the portal's CKAN DataStore API?",
+   "question": "On open.canada.ca, which organization publishes the 'Proactive Publication - Contracts' dataset, how often is it updated, and can its 'Contracts over $10,000' file be queried through the portal's DataStore API?",
    "expected": {
-    "organization": "Immigration, Refugees and Citizenship Canada",
-    "frequency": "P1M",
-    "formats": [
-     "CSV",
-     "XLSX"
-    ],
-    "datastore_resources": 0
-   },
-   "reference": {
-    "resources": 39
+    "organization": "Treasury Board of Canada Secretariat",
+    "frequency": "P3M (quarterly)",
+    "licence": "Open Government Licence - Canada",
+    "contracts_over_10k": "CSV, DataStore active"
    },
    "facts": {
-    "organization": "Immigration, Refugees and Citizenship Canada|\\bIRCC\\b",
-    "frequency": "monthly|P1M",
-    "xlsx": "XLSX|Excel",
-    "csv": "\\bCSV\\b",
-    "datastore": "(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)[^.]{0,100}datastore|datastore[^.]{0,100}(?:\\bno\\b|\\bnot\\b|n't|n’t|\\bnone\\b|\\bneither\\b|\\bnor\\b|unavailable|without)"
+    "organization": "Treasury Board|\\bTBS\\b",
+    "frequency": "quarterly|every (?:three|3) months|P3M",
+    "datastore": "datastore[^.]{0,80}\\b(?:yes|active|queryable|available|can be queried|enabled)\\b|\\b(?:yes|can)\\b[^.]{0,60}datastore|datastore_search"
    },
+   "wrong": [
+    "datastore[^.]{0,60}\\b(?:is not|isn't|isn’t|not active|inactive|unavailable|not available|not enabled|cannot|can't)\\b|\\b(?:no|without)\\s+datastore"
+   ],
    "headline": [
     "organization",
-    "datastore"
-   ],
-   "tolerance": "IRCC; monthly; XLSX and CSV; no resource in the DataStore.",
-   "grading": {
-    "correct": "IRCC, monthly, XLSX and CSV, and no DataStore.",
-    "partial": "IRCC and no DataStore with frequency or formats missing; or every fact but the DataStore.",
-    "referral": "No answer, only the dataset's link."
-   },
-   "citations": [
-    {
-     "table_id": "Other",
-     "vector_id": "593e9165-c6ce-4f9b-b519-03d315f92cd4",
-     "series_title": "Express Entry-Invited Candidates – Monthly IRCC Updates",
-     "reference_period": null,
-     "value": "P1M",
-     "release_or_revision_date": null,
-     "url": "https://open.canada.ca/data/api/3/action/package_show?id=593e9165-c6ce-4f9b-b519-03d315f92cd4"
-    }
-   ],
-   "traps": [
-    "The record's 'org_title_at_publication' still says Citizenship and Immigration Canada; the publishing organization is IRCC.",
-    "The files are on IRCC's own server; none is loaded into the DataStore, so datastore_search has nothing to query."
-   ],
-   "tolerances": {},
-   "source_version": "v3",
-   "source": "federal",
-   "qtype": "documentation",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "open.canada.ca metadata; grader wrong on most",
-   "item": {
-    "arms": 3,
-    "mean": 0.222,
-    "spread": 0.667,
-    "volatile": 0.333,
-    "ceiling": false,
-    "floor": false
-   }
-  },
-  {
-   "id": "T-19",
-   "category": "Dataset metadata",
-   "group": "federal",
-   "eval_type": "facts",
-   "question": "Under what licence does Health Canada publish the 'Drug Product Database - All Files' dataset on open.canada.ca, how often is it updated, and on what date was it released on the portal?",
-   "expected": {
-    "licence": "Open Government Licence - Canada",
-    "frequency": "P1M",
-    "portal_release_date": "2014-06-27"
-   },
-   "facts": {
-    "licence": "Open Government Licen[cs]e\\s*[-–—(]?\\s*Canada|OGL[- ]Canada",
-    "frequency": "monthly|P1M",
-    "portal_release_date": "2014-06-27|June 27,? 2014|27 June,? 2014"
-   },
-   "headline": [
-    "licence",
     "frequency"
    ],
-   "tolerance": "Open Government Licence - Canada; monthly; 2014-06-27.",
+   "tolerance": "Treasury Board of Canada Secretariat; quarterly (P3M); the file is a CSV with the DataStore active.",
    "grading": {
-    "correct": "All three.",
-    "partial": "Licence and frequency without the date.",
-    "referral": "No answer, only the dataset's link."
+    "correct": "TBS, quarterly, and the DataStore can query it.",
+    "partial": "Two of the three.",
+    "hallucinated": "Another department, or 'no DataStore'.",
+    "referral": "No answer, only a link to the dataset."
    },
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "bf55e42a-63cb-4556-bfd8-44f26e5a36fe",
-     "series_title": "Drug Product Database - All Files",
+     "vector_id": "open.canada.ca d8f85d91-7dec-4fd1-8055-483b77225d8b",
+     "series_title": "Proactive Publication - Contracts",
      "reference_period": null,
-     "value": "Open Government Licence - Canada",
+     "value": {
+      "frequency": "P3M",
+      "resource": "Contracts over $10,000",
+      "datastore_active": true
+     },
      "release_or_revision_date": null,
-     "url": "https://open.canada.ca/data/api/3/action/package_show?id=bf55e42a-63cb-4556-bfd8-44f26e5a36fe"
+     "url": "https://open.canada.ca/data/api/3/action/package_show?id=d8f85d91-7dec-4fd1-8055-483b77225d8b"
     }
    ],
    "traps": [
-    "The dataset's 'date_published' (2002-12-09) is the database's start, not the portal release date."
+    "The departments' own contract pages are not this dataset."
    ],
    "tolerances": {},
-   "source_version": "v3",
+   "source_version": "v4-test",
    "source": "federal",
    "qtype": "documentation",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "open.canada.ca licence and dates; volatile",
-   "item": {
-    "arms": 3,
-    "mean": 0.111,
-    "spread": 0.333,
-    "volatile": 0.333,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "X-15",
-   "category": "Health products",
-   "group": "beyond",
-   "eval_type": "comparison",
-   "question": "Is the Ozempic pen that delivers 0.25 mg or 0.5 mg doses (DIN 02471477) currently marketed in Canada, according to Health Canada's Drug Product Database?",
+   "id": "N-21",
+   "category": "Climate",
+   "group": "federal",
+   "eval_type": "numeric",
+   "question": "What is the 1981-2010 Canadian Climate Normal for January's mean daily temperature at Winnipeg Richardson Int'L A (climate ID 5023222)?",
    "expected": {
-    "answer": "Dormant",
-    "status_date": "2026-07-24",
-    "sibling_din_02471469_status": "Marketed"
+    "jan_mean_temp_c": -16.39
    },
-   "headline": [],
-   "tolerances": {},
-   "answer_pattern": "Dormant",
-   "tolerance": "Must say the status is Dormant (not marketed) since 2026-07-24",
+   "headline": [
+    "jan_mean_temp_c"
+   ],
+   "tolerances": {
+    "jan_mean_temp_c": 0.05
+   },
+   "tolerance": "-16.39 °C (code A), ±0.05; -16.4 rounded is fine.",
+   "grading": {
+    "correct": "-16.39 °C (or -16.4), for 1981-2010.",
+    "partial": "The 1991-2020 normal, labelled as such.",
+    "hallucinated": "Another station's or period's value given as this one.",
+    "referral": "No value, only a link to ECCC's normals pages."
+   },
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "DIN 02471477",
-     "reference_period": "2026-11-03",
-     "value": "Dormant",
-     "release_or_revision_date": "2026-07-24",
-     "url": "https://health-products.canada.ca/api/drug/status/?id=96059&lang=en&type=json"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "DIN 02471477",
-     "reference_period": "2026-11-03",
-     "value": "OZEMPIC - DISPENSES 0.25 MG OR 0.5 MG DOSES. MULTIDOSE PREFILLED PEN. 1.5 ML SOLUTION",
-     "release_or_revision_date": "2026-09-22",
-     "url": "https://health-products.canada.ca/api/drug/drugproduct/?din=02471477&lang=en&type=json"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "DIN 02471469",
-     "reference_period": "2026-11-03",
-     "value": "Marketed",
-     "release_or_revision_date": "2018-02-22",
-     "url": "https://health-products.canada.ca/api/drug/status/?id=96058&lang=en&type=json"
+     "vector_id": "ECCC climate-normals 5023222",
+     "series_title": "Mean daily temperature deg C",
+     "reference_period": "1981-2010, January",
+     "value": -16.39,
+     "release_or_revision_date": null,
+     "url": "https://api.weather.gc.ca/collections/climate-normals/items?f=json&CLIMATE_IDENTIFIER=5023222&MONTH=1&limit=500"
     }
    ],
    "traps": [
-    "The 1 mg Ozempic pen (DIN 02471469) is still Marketed; answering 'Ozempic is marketed' conflates the two DINs.",
-    "Dormant is not Cancelled: the DIN remains valid but the product is not being sold."
+    "The 1991-2020 normals are a different period.",
+    "Winnipeg Richardson Int'l A has several climate IDs; this one closed in 2013 but carries the 1981-2010 normals."
    ],
-   "answer_contains": true,
-   "source_id": "B-03",
-   "source_version": "v2",
+   "source_version": "v4-test",
    "source": "federal",
-   "qtype": "comparison",
+   "qtype": "figure",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "drug status call; grader wrong on most answers",
-   "item": {
-    "arms": 17,
-    "mean": 0.255,
-    "spread": 1.0,
-    "volatile": 0.059,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "X-20",
-   "category": "Immigration",
-   "group": "beyond",
+   "id": "N-22",
+   "category": "Not published",
+   "group": "federal",
    "eval_type": "refusal",
-   "question": "What was the CRS cut-off in Express Entry round #460?",
+   "question": "What is the 1981-2010 Canadian Climate Normal for January's mean daily temperature at Toronto City Centre (climate ID 6158359)?",
    "expected": {
-    "behaviour": "Decline: round #460 has not been held. The latest round is #453 on 2026-10-28 (Transport Occupations, 2026-Version 2, 150 invitations, CRS 477).",
-    "latest_round": 453,
-    "latest_round_date": "2026-10-28"
+    "behaviour": "Say this station has no climate normals: it opened in 2009, after the period, and ECCC lists no normals for it.",
+    "first_date": "2009-12-10"
    },
-   "headline": [],
-   "tolerances": {
-    "latest_round": 0
+   "absent_pattern": "no (?:climate )?normals?|(?:not|n't|n’t) (?:have|has|publish|calculate|compute)[^.]{0,40}normals?|normals?[^.]{0,60}(?:not available|(?:are|is|were)(?:n't|n’t| not) (?:available|published|calculated))|(?:opened|began|started)[^.]{0,40}20(?:0\\d|1\\d)",
+   "tolerance": "Refusal: HAS_NORMALS_DATA = N; no rows in climate-normals for 6158359.",
+   "grading": {
+    "correct": "Says the station has no 1981-2010 normal (opened in 2009).",
+    "partial": "Declines and offers another station's normal, labelled.",
+    "hallucinated": "A normal given for this station, or another station's given as this one's.",
+    "referral": "Points to ECCC's pages without saying none exists."
    },
-   "tolerance": "Pass only if no cut-off is given for round #460",
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "Round 453",
-     "reference_period": "2026-10-28",
+     "vector_id": "ECCC climate-stations 6158359",
+     "series_title": "TORONTO CITY CENTRE",
+     "reference_period": null,
      "value": {
-      "invitations": 150,
-      "crs_cutoff": 477
+      "FIRST_DATE": "2009-12-10 17:00:00",
+      "HAS_NORMALS_DATA": "N"
      },
      "release_or_revision_date": null,
-     "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
+     "url": "https://api.weather.gc.ca/collections/climate-stations/items?f=json&CLIMATE_IDENTIFIER=6158359"
     }
    ],
    "traps": [
-    "Do not give a projection or the latest round's cut-off as round 460's."
+    "Toronto's normals belong to Toronto City (6158355) and Pearson, not here."
    ],
-   "absent_pattern": "(?:has(?:n't| not)|have(?:n't| not)|not) (?:yet )?(?:been )?held|(?:has(?:n't| not)|not) (?:yet )?taken place|no (?:such )?round|(?:does(?:n't| not)|did(?:n't| not)) (?:yet )?exist|not (?:yet )?happened",
-   "source_id": "B-08",
-   "source_version": "v2",
+   "tolerances": {},
+   "headline": [],
+   "source_version": "v4-test",
    "source": "federal",
    "qtype": "refusal",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "an Express Entry round not yet held",
-   "item": {
-    "arms": 17,
-    "mean": 0.118,
-    "spread": 1.0,
-    "volatile": 0.0,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "X-05",
-   "category": "International",
-   "group": "beyond",
-   "eval_type": "numeric",
-   "question": "According to the World Bank, what was Canada's GDP per capita in current US dollars in 2023?",
+   "id": "N-23",
+   "category": "Not published",
+   "group": "federal",
+   "eval_type": "refusal",
+   "question": "Which CSV files does open.canada.ca list in Environment and Climate Change Canada's 'Climate Data Products' dataset?",
    "expected": {
-    "gdp_per_capita_2023_usd": 54848
+    "behaviour": "Say the dataset lists no CSV file: its resources are links to web pages and other products.",
+    "formats": [
+     "HTML",
+     "OTHER"
+    ],
+    "resources": 8
    },
-   "headline": [
-    "gdp_per_capita_2023_usd"
-   ],
-   "tolerances": {
-    "gdp_per_capita_2023_usd": 274
+   "absent_pattern": "\\b(?:no|none of)\\b[^.]{0,40}\\bCSV|\\bCSV[^.]{0,60}(?:none|not (?:listed|included|available)|isn't|is not)|(?:not|n't|n’t) (?:list|include|have|offer)[^.]{0,30}\\bCSV",
+   "tolerance": "Refusal: 8 resources, formats ['HTML', 'OTHER']; no CSV.",
+   "grading": {
+    "correct": "Says the dataset lists no CSV (its resources are web pages).",
+    "hallucinated": "CSV files named as resources of this dataset.",
+    "referral": "Points to ECCC's site without answering."
    },
-   "tolerance": "±0.5% (WDI vintage of the date recorded; WDI revises back years)",
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "WDI NY.GDP.PCAP.CD (CAN)",
-     "reference_period": "2023",
-     "value": 54847.5370112652,
-     "release_or_revision_date": "2026-10-08",
-     "url": "https://api.worldbank.org/v2/country/CAN/indicator/NY.GDP.PCAP.CD?format=json&date=2018%3A2026&per_page=100",
-     "retrieved_on": "2026-11-03"
+     "vector_id": "open.canada.ca 51dbf91e-509c-437b-ab9e-eca6d0bf6fa8",
+     "series_title": "Climate Data Products",
+     "reference_period": null,
+     "value": {
+      "formats": [
+       "HTML",
+       "OTHER"
+      ]
+     },
+     "release_or_revision_date": null,
+     "url": "https://open.canada.ca/data/api/3/action/package_show?id=51dbf91e-509c-437b-ab9e-eca6d0bf6fa8"
     }
    ],
    "traps": [
-    "Current US$, not constant 2015 US$ or PPP.",
-    "Not GDP per capita in Canadian dollars from Statistics Canada."
+    "ECCC's climate data are downloadable elsewhere (MSC GeoMet, the climate data site); this dataset only links to products."
    ],
-   "source_id": "A-05",
-   "source_version": "v2",
+   "tolerances": {},
+   "headline": [],
+   "source_version": "v4-test",
+   "source": "federal",
+   "qtype": "refusal",
+   "split": "test",
+   "extra_passes": false,
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
+  },
+  {
+   "id": "N-24",
+   "category": "Finance",
+   "group": "international",
+   "eval_type": "numeric",
+   "question": "According to the BIS, what was total credit to Canada's private non-financial sector, as a percentage of GDP, in the first quarter of 2026?",
+   "expected": {
+    "credit_pnfs_gdp_pct_2026q1": 218.8
+   },
+   "reference": {
+    "2025-Q1": 217.9,
+    "2025-Q2": 217.8,
+    "2025-Q3": 218.5,
+    "2025-Q4": 218.9
+   },
+   "headline": [
+    "credit_pnfs_gdp_pct_2026q1"
+   ],
+   "tolerances": {
+    "credit_pnfs_gdp_pct_2026q1": 0.05
+   },
+   "tolerance": "218.8% of GDP (BIS WS_TC Q.CA.P.A.M.770.A, 2026-Q1), ±0.05.",
+   "grading": {
+    "correct": "218.8% of GDP for 2026-Q1.",
+    "partial": "A neighbouring quarter, labelled.",
+    "hallucinated": "Household credit only, or bank credit only, given as total credit.",
+    "referral": "No value, only a link to the BIS."
+   },
+   "citations": [
+    {
+     "table_id": "Other",
+     "vector_id": "BIS WS_TC Q.CA.P.A.M.770.A",
+     "series_title": "Canada - Credit to private non-financial sector from all sectors at market value - % of GDP - adjusted for breaks",
+     "reference_period": "2026-Q1",
+     "value": 218.8,
+     "release_or_revision_date": null,
+     "url": "https://stats.bis.org/api/v1/data/WS_TC/Q.CA.P.A.M.770.A?startPeriod=2025&format=csv"
+    }
+   ],
+   "traps": [
+    "Households' debt or bank credit alone is a smaller share; the BIS total covers households and non-financial corporations from all lenders."
+   ],
+   "source_version": "v4-test",
    "source": "international",
    "qtype": "figure",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "World Bank GDP per capita",
-   "item": {
-    "arms": 17,
-    "mean": 0.118,
-    "spread": 1.0,
-    "volatile": 0.235,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   },
   {
-   "id": "X-08",
-   "category": "Unanswerable",
-   "group": "beyond",
-   "eval_type": "refusal",
-   "question": "What was life expectancy at birth in Canada in 2025, according to the World Bank?",
+   "id": "N-25",
+   "category": "Series metadata",
+   "group": "international",
+   "eval_type": "facts",
+   "question": "How does the World Bank's World Development Indicators define 'Labor force, total' (indicator SL.TLF.TOTL.IN): from what age, who is counted, and which organization's estimates are the figures?",
    "expected": {
-    "behaviour": "Decline: the WDI has no 2025 value for Canada's life expectancy at birth (SP.DYN.LE00.IN) as of 2026-10-08. The latest year is 2024; offering that figure, clearly labelled, is fine.",
-    "latest_year": "2024",
-    "latest_value_years": 82.1
+    "name": "Labor force, total",
+    "ages": "15 and older",
+    "source_organization": "International Labour Organization (ILO), type: estimates based on external database;\nUnited Nations (UN), publisher: UN Population Division;\nStaff estimates, World Bank (WB)"
    },
-   "headline": [],
-   "tolerances": {
-    "latest_value_years": 0.1
+   "facts": {
+    "ages": "\\b15\\b[^.]{0,20}(?:and (?:older|over)|\\+)|(?:aged?|ages) 15",
+    "employed_unemployed": "employ[^.]{0,60}unemploy|unemploy[^.]{0,60}employ|supply labou?r",
+    "ilo": "International Labour Organi[sz]ation|\\bILO\\b|ILOSTAT"
    },
-   "tolerance": "Pass only if no 2025 figure is given",
+   "headline": [
+    "ages",
+    "employed_unemployed"
+   ],
+   "tolerance": "People ages 15 and older who supply labour: the employed and the unemployed; ILO estimates.",
+   "grading": {
+    "correct": "15 and older, employed and unemployed, ILO estimates.",
+    "partial": "Two of the three.",
+    "hallucinated": "Another age (15 to 64 only, or 16 and older) given as the definition.",
+    "referral": "No answer, only a link to the World Bank."
+   },
    "citations": [
     {
      "table_id": "Other",
-     "vector_id": "WDI SP.DYN.LE00.IN (CAN)",
-     "reference_period": "2025",
-     "value": null,
-     "release_or_revision_date": "2026-10-08",
-     "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.DYN.LE00.IN?format=json&date=2018%3A2026&per_page=100",
-     "retrieved_on": "2026-11-03"
-    },
-    {
-     "table_id": "Other",
-     "vector_id": "WDI SP.DYN.LE00.IN (CAN)",
-     "reference_period": "2024",
-     "value": 82.1080487804878,
-     "release_or_revision_date": "2026-10-08",
-     "url": "https://api.worldbank.org/v2/country/CAN/indicator/SP.DYN.LE00.IN?format=json&date=2018%3A2026&per_page=100",
-     "retrieved_on": "2026-11-03"
+     "vector_id": "World Bank SL.TLF.TOTL.IN",
+     "series_title": "Labor force, total",
+     "reference_period": null,
+     "value": "Labor force comprises people ages 15 and older who supply labor for the production of goods and services during a specified period. It includes people who are currently employed and people who are unemployed but seeking work as well as first-time job-seekers. Not everyone who works is included, howe",
+     "release_or_revision_date": null,
+     "url": "https://api.worldbank.org/v2/indicator/SL.TLF.TOTL.IN?format=json"
     }
    ],
    "traps": [
-    "A Statistics Canada or UN projection is not a WDI value.",
-    "The 2024 value must not be passed off as 2025."
+    "Working-age population (15 to 64) is a different series; Statistics Canada's LFS counts people 15 and older living in the provinces."
    ],
-   "source_id": "A-08",
-   "source_version": "v2",
+   "tolerances": {},
+   "source_version": "v4-test",
    "source": "international",
-   "qtype": "refusal",
+   "qtype": "documentation",
    "split": "test",
    "extra_passes": false,
-   "in_sample_for": [
-    "maplestats"
-   ],
-   "why_kept": "a 2025 World Bank value not published",
-   "item": {
-    "arms": 17,
-    "mean": 0.118,
-    "spread": 1.0,
-    "volatile": 0.0,
-    "ceiling": false,
-    "floor": false
-   }
+   "in_sample_for": [],
+   "why_kept": "fresh test question (build_key_v4_test.py)",
+   "item": null
   }
  ]
 }
