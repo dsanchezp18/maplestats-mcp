@@ -70,3 +70,29 @@ CACHE_TTL_SECONDS = 6 * 60 * 60
 
 SEARCH_COUNT_DEFAULT = 10
 SEARCH_COUNT_MAX = 100
+
+# --- Publications (statcan_reference_get_publication / _get_section_text) ---------
+# A catalogue number's page (editions, formats) and the publication pages it links,
+# both checked live 2026-11-10; see pages.py for their layout.
+CATALOGUE_URL_TEMPLATE = "https://www150.statcan.gc.ca/n1/{lang}/catalogue/{number}"
+# Only these hosts are fetched, redirects included: publication URLs come from
+# callers, so anything else (another host, http://localhost) is refused.
+ALLOWED_HOSTS = frozenset({"www150.statcan.gc.ca", "www.statcan.gc.ca"})
+MAX_REDIRECTS = 5
+# Publication pages are static once released; a catalogue page gains a row when a
+# new edition comes out.
+PAGE_CACHE_TTL_SECONDS = 24 * 60 * 60
+CATALOGUE_CACHE_TTL_SECONDS = 6 * 60 * 60
+
+TEXT_MAX_CHARS_DEFAULT = 6000
+TEXT_MAX_CHARS_MAX = 40000
+QUERY_MATCHES_DEFAULT = 3
+# Five at most: a brief result writes a list of more than five rows as CSV.
+QUERY_MATCHES_MAX = 5
+# A query reads the edition's pages breadth first: the CPI reference paper has 15,
+# the 2016 Macroeconomic Accounts guide nests four levels deep under its main page.
+CRAWL_MAX_PAGES = 40
+CRAWL_MAX_DEPTH = 3
+CRAWL_CONCURRENCY = 4
+EDITIONS_LISTED_MAX = 20
+SECTIONS_LISTED_MAX = 150

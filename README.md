@@ -285,7 +285,7 @@ by a person
 
 ## What it covers
 
-460 tools in 90 modules. Read `docs://catalogue` (or `docs_read_resource` through `call_tool`) for the full, bilingual list.
+462 tools in 90 modules. Read `docs://catalogue` (or `docs_read_resource` through `call_tool`) for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|

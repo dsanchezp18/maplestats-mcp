@@ -69,9 +69,10 @@ async def statcan_surveys_get_survey_metadata(
     those sections in full and no others. IMDB (Integrated Metadata
     Base) is separate from the Reference/Analysis catalogues. Concepts
     and definitions (LFS involuntary part-time, CPI hedonic quality
-    adjustment) are in each survey's guide, not here: use
-    statcan_reference_search_documents with 'Guide to the Labour Force
-    Survey' (71-543-G) or 'Consumer Price Index Reference Paper'.
+    adjustment) are in each survey's guide, not here: read them with
+    statcan_reference_get_section_text (publication='71-543-G', the Guide
+    to the Labour Force Survey, or '62-553-X', the CPI Reference Paper,
+    with query=<the concept>).
     Keywords: StatCan, IMDB, survey metadata, definitions, methodology,
     target population, sampling, sample size, mandatory or voluntary
     survey, collection method, imputation, disclosure control,

@@ -803,6 +803,29 @@ FR: dict[str, str] = {
         "ses définitions, sources de données et méthodes : survey_id de l'étape précédente "
         "(3701 EPA, 2301 IPC, 2318 IPPI, 2306 IPMB, 4428 ECAE)"
     ),
+    "the CPI Reference Paper's own text: publication='62-553-X', query=<the "
+    "concept> (e.g. 'hedonic', 'owned accommodation', 'basket update')": (
+        "le texte même du document de référence de l'IPC : publication='62-553-X', "
+        "query=<le concept> (par exemple 'hédonique', 'logement en propriété', 'panier')"
+    ),
+    "the Guide's own text for the concept: publication='71-543-G', query=<the "
+    "concept> (e.g. 'involuntary part-time')": (
+        "le texte même du guide sur ce concept : publication='71-543-G', query=<le "
+        "concept> (par exemple 'temps partiel involontaire', avec lang='fr')"
+    ),
+    "the guide's own text: publication=<its catalogue number from the step before>, "
+    "query=<the concept>": (
+        "le texte même du guide : publication=<son numéro au catalogue, de l'étape "
+        "précédente>, query=<le concept>"
+    ),
+    "how GDP and the national and provincial accounts are measured: "
+    "publication='13-017-X' (Guide to the Income and Expenditure Accounts) or "
+    "'13-607-X' (Macroeconomic Accounts methodological guide), query=<the concept>": (
+        "comment le PIB et les comptes nationaux et provinciaux sont mesurés : "
+        "publication='13-017-X' (Guide des comptes des revenus et dépenses) ou '13-607-X' "
+        "(guide méthodologique du Système canadien des comptes macroéconomiques), "
+        "query=<le concept>"
+    ),
     "the survey's guide or reference paper (concepts and definitions): query=<its title>": (
         "le guide ou le document de référence de l'enquête (concepts et définitions) : "
         "query=<son titre>"

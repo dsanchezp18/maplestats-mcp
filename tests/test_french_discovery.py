@@ -249,6 +249,12 @@ CASES = [
     ("Statistiques bancaires et financières Banque du Canada", "boc_search_groups"),
     ("définition temps partiel involontaire", "statcan_surveys_get_survey_metadata"),
     ("Enquête sur la couverture de l'assurance-emploi", "statcan_surveys_search_surveys"),
+    # Le texte des guides eux-mêmes (2026-11-10).
+    ("définition temps partiel involontaire", "statcan_reference_get_section_text"),
+    ("guide de l'Enquête sur la population active", "statcan_reference_get_publication"),
+    ("document de référence de l'IPC logement en propriété", "statcan_reference_get_section_text"),
+    ("ajustement hédonique des indices de prix", "statcan_reference_get_section_text"),
+    ("texte d'un guide méthodologique de Statistique Canada", "statcan_reference_get_publication"),
 ]
 
 
