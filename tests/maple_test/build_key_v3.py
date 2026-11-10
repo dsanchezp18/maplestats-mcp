@@ -43,7 +43,7 @@ from typing import Any, NoReturn
 
 import httpx
 
-from tests.maple_test.build_key import drift
+from tests.maple_test.build_key import SKIPPED_EXIT, build_or_skip, drift
 
 HERE = Path(__file__).resolve().parent
 KEY = HERE / "maple_test_v3.json"
@@ -2004,7 +2004,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build or check the Maple Test v3 key.")
     parser.add_argument("--check", action="store_true", help="report drift, write nothing")
     args = parser.parse_args()
-    new = build()
+    new = build_or_skip(build, args.check)
+    if new is None:
+        return SKIPPED_EXIT
     if args.check:
         changes = drift(json.loads(KEY.read_text(encoding="utf-8")), new)
         print("\n".join(changes) or "no drift")

@@ -17,6 +17,8 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import skip_outage, verdict
+
 from maplestats_mcp.modules.nfd import client
 
 
@@ -25,7 +27,7 @@ def check(ok: bool, label: str) -> bool:
     return ok
 
 
-async def main() -> int:
+async def _checks() -> bool:
     ok = True
 
     listing = await client.list_tables()
@@ -108,8 +110,18 @@ async def main() -> int:
     fr_comments = await client.table_comments("2", province="AB", limit=1, lang="fr")
     ok &= check(fr_comments.matched_count > 0, "fr comments read")
 
-    print("\nNFD SMOKE TEST PASSED" if ok else "\nNFD SMOKE TEST FAILED")
-    return 0 if ok else 1
+    return ok
+
+
+async def main() -> int:
+    ok = True
+    try:
+        ok = await _checks()
+    # national-forestry-database.ca refused connections on 2026-11-10: an outage
+    # to report as a skip; anything else is raised again.
+    except Exception as exc:  # noqa: BLE001 - only an outage is skipped
+        skip_outage("national-forestry-database.ca", exc)
+    return verdict("NFD", ok)
 
 
 if __name__ == "__main__":

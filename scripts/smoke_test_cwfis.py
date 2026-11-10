@@ -99,10 +99,18 @@ async def main() -> int:
         print("OK: get_forecast(KELOWNA) -> ForecastResult")
         _require(len(fc.forecasts) >= 2, "forecast has fewer than 2 days")
 
-    danger = await _check(
-        "get_fire_danger(Kelowna)", client.get_fire_danger(latitude=49.9, longitude=-119.4)
-    )
-    _require(danger.danger_class in client.c.DANGER_CLASSES.values(), "bad danger class")
+    try:
+        danger = await client.get_fire_danger(latitude=49.9, longitude=-119.4)
+    except NotFound as exc:
+        # Outside the fire season regions drop off the danger map (Kelowna on
+        # 2026-11-10); any other NotFound means the layer or the query broke.
+        if "fire season" not in str(exc):
+            print(f"FAIL: get_fire_danger(Kelowna) -> NotFound: {exc}")
+            raise
+        print("OK (skip): get_fire_danger(Kelowna): off the map outside the fire season")
+    else:
+        print("OK: get_fire_danger(Kelowna) -> FireDanger")
+        _require(danger.danger_class in client.c.DANGER_CLASSES.values(), "bad danger class")
 
     fires = await _check(
         "search_large_fires(BC 2023 >=50000)",

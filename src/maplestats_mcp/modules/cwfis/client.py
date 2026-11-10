@@ -777,10 +777,15 @@ async def get_fire_danger(*, latitude: float, longitude: float, lang: str = "en"
         raise lang_error(
             NotFound,
             lang,
-            f"No fire danger polygon covers ({latitude}, {longitude}); "
-            "the grid only covers land in and near Canada.",
-            f"aucun polygone de danger d'incendie ne couvre ({latitude}, {longitude}) ; la "
-            "grille ne couvre que les terres du Canada et des environs.",
+            f"No fire danger polygon covers ({latitude}, {longitude}). The map covers land "
+            "in and near Canada during the fire season; outside it, regions drop off the map "
+            "(on 2026-11-10 it still covered Ottawa but not Kelowna, Edmonton or Whitehorse), "
+            "so no current rating does not mean no risk.",
+            f"aucun polygone de danger d'incendie ne couvre ({latitude}, {longitude}). La carte "
+            "couvre les terres du Canada et des environs pendant la saison des feux ; hors "
+            "saison, des régions en disparaissent (le 2026-11-10, elle couvrait Ottawa, mais "
+            "pas Kelowna, Edmonton ni Whitehorse) : l'absence de cote ne veut pas dire "
+            "l'absence de risque.",
         )
     # A polygon with a null or missing GRIDCODE has no class to report; say so
     # rather than fail on int(None).

@@ -540,11 +540,36 @@ def drift(old: dict[str, Any], new: dict[str, Any]) -> list[str]:
     return found
 
 
+# Exit status for a --check cut short by a source outage (as scripts/_smoke_common):
+# smoke.yml reports it as skipped, not as drift.
+SKIPPED_EXIT = 75
+
+
+def is_outage(exc: BaseException) -> bool:
+    """A network failure or a 5xx that outlasted get()'s retries: not drift."""
+    if isinstance(exc, httpx.TransportError):
+        return True
+    return isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500
+
+
+def build_or_skip(build_key: Any, check: bool) -> Any:
+    """Run the build; under --check, an outage returns None (skip) instead of raising."""
+    try:
+        return build_key()
+    except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+        if not check or not is_outage(exc):
+            raise
+        print(f"SKIP: a source was unavailable ({exc}); the key was not checked")
+        return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build or check the Maple Test answer key.")
     parser.add_argument("--check", action="store_true", help="report drift, write nothing")
     args = parser.parse_args()
-    new = build()
+    new = build_or_skip(build, args.check)
+    if new is None:
+        return SKIPPED_EXIT
     if args.check:
         changes = drift(json.loads(KEY.read_text(encoding="utf-8")), new)
         print("\n".join(changes) or "no drift")

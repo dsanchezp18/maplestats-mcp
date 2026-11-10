@@ -47,6 +47,10 @@ class Step:
     # When set, the step passes only if the call is an error whose text
     # contains this string (a bad input that must be refused, not answered).
     expect_error: str | None = None
+    # Steps ask call_tool for the full result, which the checks were written
+    # against; a brief one writes six or more rows as CSV text and leaves out
+    # null fields. `brief=True` checks the brief form itself.
+    brief: bool = False
 
 
 def _non_empty(key: str) -> Check:
@@ -1479,6 +1483,7 @@ STEPS: list[Step] = [
         # The brief result writes the default 24 observations as CSV text
         # (six or more rows), whose last line starts with the newest period.
         lambda data: data["series"][0]["observations"]["csv"].strip().splitlines()[-1] >= "2026",
+        brief=True,
     ),
     # Mortgage interest cost (85) is published for Canada (2) only: Ontario
     # (14) must be named as missing, and Toronto (16) alone is a NotFound that
@@ -1822,9 +1827,10 @@ async def main(modules: set[str]) -> int:
                     failures.append(label)
                     print(f"FAIL {label}: earlier result has no input for it ({exc!r})")
                 continue
-            result = await client.call_tool(
-                "call_tool", {"name": step.tool, "arguments": args}, raise_on_error=False
-            )
+            request = {"name": step.tool, "arguments": args}
+            if not step.brief:
+                request["detail"] = "full"
+            result = await client.call_tool("call_tool", request, raise_on_error=False)
             text = _text(result)
             if step.expect_error is not None:
                 if result.is_error and step.expect_error in text:
@@ -1863,7 +1869,13 @@ async def main(modules: set[str]) -> int:
                 continue
             data = json.loads(text)
             ctx[step.tool] = data
-            if not step.check(data):
+            try:
+                passed = step.check(data)
+            # A check that cannot read the result fails that step, not the whole run.
+            except (KeyError, IndexError, TypeError, ValueError) as exc:
+                passed = False
+                print(f"     {label}: check raised {exc!r}")
+            if not passed:
                 failures.append(label)
                 print(f"FAIL {label} {args}: check failed on {text[:300]}")
                 continue
