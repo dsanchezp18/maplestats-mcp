@@ -14,7 +14,12 @@ from __future__ import annotations
 
 from fastmcp.resources import resource
 
-from maplestats_mcp.modules.cmhc.methodology import RMS_METHODOLOGY_DOC, RMS_METHODOLOGY_DOC_FR
+from maplestats_mcp.modules.cmhc.methodology import (
+    RMS_METHODOLOGY_DOC,
+    RMS_METHODOLOGY_DOC_FR,
+    STARTS_METHODOLOGY_DOC,
+    STARTS_METHODOLOGY_DOC_FR,
+)
 
 _WELL_KNOWN_CATEGORIES_DOC = """\
 # Well-known CMHC HMIP categories
@@ -364,3 +369,22 @@ def cmhc_rms_methodology_doc_fr() -> str:
     codes de fiabilité, suppression et diffusion.
     Version française de docs://cmhc/rms-methodology."""
     return RMS_METHODOLOGY_DOC_FR
+
+
+@resource("docs://cmhc/starts-absorption-methodology")
+def cmhc_starts_absorption_methodology_doc() -> str:
+    """CMHC Starts and Completions Survey and Market Absorption Survey
+    methodology: coverage by centre size, what counts as a start, a completion,
+    an absorbed (sold and completed) or unabsorbed unit, when a unit counts as
+    sold, dwelling types and intended markets.
+    French version: docs://cmhc/fr/methodologie-mises-en-chantier."""
+    return STARTS_METHODOLOGY_DOC
+
+
+@resource("docs://cmhc/fr/methodologie-mises-en-chantier")
+def cmhc_starts_absorption_methodology_doc_fr() -> str:
+    """Méthodologie du Relevé des mises en chantier et des achèvements et de
+    l'Enquête sur l'écoulement des logements de la SCHL : champ, mise en
+    chantier, achèvement, logement écoulé ou non, vente, types de logements.
+    Version française de docs://cmhc/starts-absorption-methodology."""
+    return STARTS_METHODOLOGY_DOC_FR

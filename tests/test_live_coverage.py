@@ -87,6 +87,8 @@ LOCAL_TOOLS = frozenset(
         "ckan_list_portals",
         "socrata_list_portals",
         "elections_results_list_elections",
+        # Text kept in modules/cmhc/methodology.py, read from CMHC's pages on a stated date.
+        "cmhc_get_methodology",
     }
 )
 

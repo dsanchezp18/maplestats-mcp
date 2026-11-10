@@ -131,6 +131,22 @@ class FilterOption(BaseModel):
     values: list[str]
 
 
+CmhcSurvey = Literal["rental_market", "starts_completions_absorption"]
+
+
+class MethodologyResult(BaseModel):
+    survey: CmhcSurvey
+    title: str
+    text: str = Field(
+        description="The methodology as Markdown: scope, definitions, reliability codes and "
+        "release rules, written from CMHC's own pages."
+    )
+    source_urls: list[str]
+    read_on: str = Field(description="When CMHC's pages were read for this text (YYYY-MM-DD).")
+    resource_uri: str = Field(description="The same text as a docs:// page.")
+    provenance: Provenance
+
+
 class TableDataResult(BaseModel):
     table_id: str
     table_name: str
@@ -192,5 +208,5 @@ class TableDataResult(BaseModel):
         default_factory=dict,
         description="What each cell flag in this result means (a/b/c/d reliability, ** "
         "suppressed, ++ not significant); CMHC's thresholds and release rules are in "
-        "docs://cmhc/rms-methodology.",
+        "cmhc_get_methodology.",
     )

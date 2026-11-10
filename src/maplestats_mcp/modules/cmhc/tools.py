@@ -22,6 +22,8 @@ from fastmcp.tools import tool
 from maplestats_mcp.modules.cmhc import client
 from maplestats_mcp.modules.cmhc.schemas import (
     CategoryList,
+    CmhcSurvey,
+    MethodologyResult,
     MetroAreaList,
     ProvinceList,
     TableDataResult,
@@ -175,9 +177,8 @@ async def cmhc_get_table_data(
     units in the universe), or `value: null` with the raw marker in
     `flag` when data were suppressed ("**"), not applicable ("n/a") or a
     rent change was not significant ("++"). `flag_legend` explains every
-    flag the result carries; docs://cmhc/rms-methodology has the survey's
-    timing, scope, definitions and CMHC's release rules (read it with
-    docs_read_resource when resources are not offered). `category_level_1`/
+    flag the result carries; cmhc_get_methodology has the survey's timing,
+    scope, definitions and CMHC's release rules. `category_level_1`/
     `category_level_2`/`column_field`/`row_field` must come from
     cmhc_list_categories/cmhc_get_table_options first - an unrecognized
     combination raises a clear error rather than guessing. Labels
@@ -224,3 +225,35 @@ async def cmhc_get_table_data(
         aggregate=aggregate,
         lang=lang,
     )
+
+
+@tool
+async def cmhc_get_methodology(
+    survey: CmhcSurvey = "rental_market", lang: Lang = "en"
+) -> MethodologyResult:
+    """CMHC survey methodology and definitions: reliability codes, absorbed, sold, starts.
+
+    Use for: what a CMHC term or code means, from CMHC's own methodology
+    pages, before answering from memory. survey="rental_market": the Rental
+    Market Survey (October timing, scope of private structures of 3+ units,
+    vacant, available, turnover, average rent, same-sample rent change, the
+    a/b/c/d reliability codes and their CV thresholds, ** suppression, the
+    release rule of 4 or more responding entities, the secondary rental
+    market). survey="starts_completions_absorption": the Starts and
+    Completions Survey and the Market Absorption Survey (which centres are
+    surveyed and how often, what counts as a start, under construction or a
+    completion, an absorbed unit (sold and completed), when a unit counts as
+    sold, unabsorbed units, prices, SAAR, dwelling types, intended markets).
+    Answers from text kept in this server, read from CMHC's pages on the date
+    in read_on; cite source_urls.
+    Keywords: CMHC methodology, definition, reliability code, data quality,
+    coefficient of variation, suppressed, responding entities, RMS
+    methodology, vacancy definition, Market Absorption Survey, absorbed units,
+    unabsorbed inventory, sold, housing starts definition, completions, SAAR.
+    Mots-clés : méthodologie de la SCHL, définition, code de fiabilité,
+    qualité des données, coefficient de variation, donnée supprimée, entités
+    répondantes, méthodologie de l'ELL, définition de l'inoccupation,
+    Enquête sur l'écoulement des logements, logements écoulés, non écoulés,
+    vendu, mises en chantier, achèvements, DTA.
+    """
+    return client.get_methodology(survey, lang=lang)
