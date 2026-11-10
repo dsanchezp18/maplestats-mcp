@@ -401,6 +401,14 @@ CACHE_TTL_DATASTORE_SECONDS = 15 * 60
 # package_search silently truncates `rows` above 1000 on most of these
 # deployments; 100 keeps responses compact for an agent choosing what
 # to open next.
+# The fields in which portals state how often a dataset is updated: federal
+# `frequency` (an ISO 8601 code, labelled from FREQUENCY_LABELS), `update_frequency`
+# (Ontario, Québec, NWT, Yukon, Montréal, Niagara), Alberta's `updatefrequency` and
+# Toronto's `refresh_rate`. A portal's `extra_fields` names the one it uses; search
+# results carry it as `update_frequency` (package_search returns the same fields as
+# package_show; checked live 2026-11-09 on federal, Québec, NWT, Montréal, Toronto).
+FREQUENCY_FIELDS = ("frequency", "update_frequency", "updatefrequency", "refresh_rate")
+
 SEARCH_ROWS_DEFAULT = 10
 SEARCH_ROWS_MAX = 100
 NOTES_EXCERPT_LENGTH = 300

@@ -74,7 +74,8 @@ async def ckan_search_datasets(
     sort: str | None = None,
     lang: Lang = "en",
 ) -> PackageSearchResult:
-    """Search one Canadian CKAN open-data catalogue for datasets.
+    """Search one Canadian CKAN open-data catalogue for datasets, with each one's
+    publisher, licence, formats, resource count and update frequency.
 
     Use for: finding a dataset by topic on open.canada.ca (portal
     "federal", ~48,000 datasets incl. CRA, OSFI, Health Canada, ESDC,
@@ -101,13 +102,14 @@ async def ckan_search_datasets(
 
 @tool
 async def ckan_get_dataset(portal: PortalKey, dataset_id: str, lang: Lang = "en") -> PackageDetail:
-    """Get one CKAN dataset's full metadata and every downloadable resource.
+    """Get one CKAN dataset's full metadata (publisher, licence, update frequency,
+    dates) and every downloadable resource.
 
     Use for: resource URLs/formats, license, keywords/tags, publisher,
-    update dates, and portal-specific metadata (in `extras`: on the
-    federal portal, update frequency in plain words, publication and
-    modification dates, time-period coverage and subject) for a
-    dataset found with ckan_search_datasets. `dataset_id` is the id or
+    update dates, and portal-specific metadata (in `extras`: update
+    frequency where the portal states it; on the federal portal also
+    publication and modification dates, time-period coverage and subject)
+    for a dataset found with ckan_search_datasets. `dataset_id` is the id or
     name (slug). Check each resource's `datastore_active` before
     querying rows with ckan_datastore_search.
     Keywords: CKAN, dataset detail, package_show, resources, download,

@@ -115,6 +115,38 @@ async def test_federal_get_dataset_translates_keywords_and_resources(httpx_mock)
     assert detail.resources[0].language == ["en", "fr"]
 
 
+def _searched(name: str, **fields: object) -> dict[str, object]:
+    return {"id": name, "name": name, "title": name, "num_resources": 1, **fields}
+
+
+@pytest.mark.parametrize(
+    ("portal", "fields", "expected"),
+    [
+        # Ontario's ckanext-scheming field, as in its package_show.
+        ("on", {"update_frequency": "yearly"}, "yearly"),
+        # Federal ISO 8601 code, in the portal's own words.
+        ("federal", {"frequency": "P1M"}, "Monthly"),
+        ("ab", {"updatefrequency": "Annual"}, "Annual"),
+        ("toronto", {"refresh_rate": "Monthly"}, "Monthly"),
+        # Québec writes it in French only.
+        ("qc", {"update_frequency": "annual"}, "annual"),
+        # No frequency field on the portal, or none on the dataset.
+        ("bc", {"update_frequency": "yearly"}, None),
+        ("on", {}, None),
+    ],
+)
+async def test_search_results_state_update_frequency(httpx_mock, portal, fields, expected):
+    httpx_mock.add_response(json=_ok({"count": 1, "results": [_searched("d1", **fields)]}))
+    result = await client.search_datasets(portal, "names")
+    assert result.packages[0].update_frequency == expected
+
+
+async def test_search_update_frequency_follows_the_language(httpx_mock):
+    httpx_mock.add_response(json=_ok({"count": 1, "results": [_searched("d1", frequency="P1M")]}))
+    result = await client.search_datasets("federal", "x", lang="fr")
+    assert result.packages[0].update_frequency == "Mensuel"
+
+
 async def test_search_rejects_out_of_bounds_paging():
     with pytest.raises(InvalidInput):
         await client.search_datasets("on", rows=0)
