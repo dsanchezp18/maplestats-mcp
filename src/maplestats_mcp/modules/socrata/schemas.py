@@ -88,6 +88,8 @@ class RowQueryResult(BaseModel):
     select: str | None = None
     where: str | None = None
     order: str | None = None
+    group: str | None = None
+    having: str | None = None
     q: str | None = None
     provenance: Provenance
 

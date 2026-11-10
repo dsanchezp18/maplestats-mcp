@@ -35,7 +35,48 @@ async def check_portal(portal: str) -> bool:
         await client.search_datasets(portal, limit=0)
     except InvalidInput:
         print("OK: limit=0 raises InvalidInput")
+    if portal in _GROUP_BY_CASES:
+        return await check_group_by(portal)
     return True
+
+
+# Building permits on two portals: (dataset, group column, $where).
+_GROUP_BY_CASES = {
+    "calgary": (
+        "c2es-76ed",
+        "permittype",
+        "issueddate between '2025-01-01T00:00:00' and '2025-12-31T23:59:59'",
+    ),
+    "edmonton": ("24uj-dj8v", "job_category", "year='2025'"),
+}
+
+
+async def check_group_by(portal: str) -> bool:
+    dataset_id, column, where = _GROUP_BY_CASES[portal]
+    grouped = await client.query_dataset_rows(
+        portal,
+        dataset_id,
+        select=f"{column}, count(*) AS n",
+        where=where,
+        group=column,
+        having="count(*) > 0",
+        order="n DESC",
+        limit=50,
+    )
+    if not grouped.rows or "n" not in grouped.rows[0]:
+        print(f"FAIL: group by {column} returned {grouped.rows[:2]}")
+        return False
+    print(f"OK: query_dataset_rows group={column} -> {grouped.returned_count} groups")
+    try:
+        await client.query_dataset_rows(portal, dataset_id, select=f"{column}, count(*)")
+    except InvalidInput as exc:
+        if "not in group by" not in str(exc):
+            print(f"FAIL: aggregate without group gave {exc}")
+            return False
+        print("OK: aggregate without group names Socrata's reason")
+        return True
+    print("FAIL: aggregate without group was accepted")
+    return False
 
 
 async def main() -> int:

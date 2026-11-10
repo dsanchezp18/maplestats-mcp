@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import get_args
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.socrata import client, constants
@@ -174,3 +175,99 @@ async def test_every_portal_queries_its_own_domain(httpx_mock, portal):
     result = await client.query_dataset_rows(portal, "abcd-1234")
     assert result.portal == portal
     assert result.provenance.source == f"socrata-{portal}"
+
+
+# Live answers from data.calgary.ca (building permits, c2es-76ed), 2026-11-09.
+_CALGARY = constants.PORTALS["calgary"].domain
+_CALGARY_GROUPED = [
+    {"permittype": "Residential Improvement Project", "n": "11390"},
+    {"permittype": "Single Construction Permit", "n": "6047"},
+    {"permittype": "Commercial / Multi Family Project", "n": "4375"},
+    {"permittype": "Demolition", "n": "906"},
+]
+# The position part echoes the dataset's internal column list (shortened here).
+_CALGARY_NOT_IN_GROUP_BY = {
+    "message": (
+        "Query coordinator error: query.soql.column-not-in-group-bys; Column 'permittype' "
+        'is not in group by; position: Map(row -> 1, column -> 694, line -> "SELECT '
+        "`permitnum`, `statuscurrent`, `applieddate`, `issueddate`, `completeddate`, "
+        '`permittype` |> SELECT `permittype`, count(*) AS `count` LIMIT 5\n   ^")'
+    ),
+    "errorCode": "query.soql.column-not-in-group-bys",
+    "data": {"column": "permittype"},
+}
+
+
+async def test_group_and_having_reach_socrata_as_soql_clauses(httpx_mock):
+    where = "issueddate between '2025-01-01T00:00:00' and '2025-12-31T23:59:59'"
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"https://{_CALGARY}/resource/c2es-76ed.json",
+            params={
+                "$limit": 50,
+                "$offset": 0,
+                "$select": "permittype, count(*) AS n",
+                "$where": where,
+                "$group": "permittype",
+                "$having": "count(*) > 100",
+                "$order": "n DESC",
+            },
+        ),
+        json=_CALGARY_GROUPED,
+    )
+    result = await client.query_dataset_rows(
+        "calgary",
+        "c2es-76ed",
+        select="permittype, count(*) AS n",
+        where=where,
+        group="permittype",
+        having="count(*) > 100",
+        order="n DESC",
+        limit=50,
+    )
+    assert result.rows[0] == {"permittype": "Residential Improvement Project", "n": "11390"}
+    assert result.group == "permittype" and result.having == "count(*) > 100"
+    assert "$group" in (result.provenance.limits or "")
+
+
+async def test_aggregate_without_group_surfaces_socratas_reason(httpx_mock):
+    httpx_mock.add_response(status_code=400, json=_CALGARY_NOT_IN_GROUP_BY)
+    with pytest.raises(InvalidInput) as caught:
+        await client.query_dataset_rows("calgary", "c2es-76ed", select="permittype, count(*)")
+    message = str(caught.value)
+    assert "Column 'permittype' is not in group by" in message
+    assert "query.soql.column-not-in-group-bys" in message
+    assert "group=" in message
+    # The internal column list from the position part is not shown.
+    assert "statuscurrent" not in message and "position" not in message
+
+
+async def test_unknown_column_error_points_to_get_dataset(httpx_mock):
+    # Live answer from data.edmonton.ca (24uj-dj8v), 2026-11-09.
+    httpx_mock.add_response(
+        status_code=400,
+        json={
+            "message": (
+                "Query coordinator error: query.soql.no-such-column; No such column: bogus; "
+                'position: Map(row -> 1, column -> 39, line -> "SELECT count(*) AS '
+                '`count_1` GROUP BY `bogus`\n   ^")'
+            ),
+            "errorCode": "query.soql.no-such-column",
+            "data": {"column": "bogus", "dataset": "foxtrot.3633"},
+        },
+    )
+    with pytest.raises(InvalidInput, match="No such column: bogus.*socrata_get_dataset"):
+        await client.query_dataset_rows(
+            "edmonton", "24uj-dj8v", select="count(*)", group="bogus", lang="en"
+        )
+
+
+async def test_having_without_group_is_rejected_before_any_request():
+    with pytest.raises(InvalidInput, match="group"):
+        await client.query_dataset_rows("calgary", "c2es-76ed", having="count(*) > 1")
+
+
+async def test_other_400s_keep_the_generic_message(httpx_mock):
+    httpx_mock.add_response(status_code=400, json={"message": "Invalid app token"})
+    with pytest.raises(InvalidInput, match=r"rejected the request \(Invalid app token\)"):
+        await client.query_dataset_rows("calgary", "c2es-76ed")

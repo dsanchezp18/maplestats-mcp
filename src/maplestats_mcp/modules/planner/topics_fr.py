@@ -68,8 +68,33 @@ FR: dict[str, str] = {
     "CPI table by component or province (e.g. 18-10-0004)": (
         "tableau de l'IPC par composante ou par province (p. ex. 18-10-0004)"
     ),
-    "Bank of Canada core inflation measures and target": (
-        "mesures de l'inflation fondamentale et cible de la Banque du Canada"
+    "Bank of Canada core inflation: query='CPI-trim', 'CPI-median', 'CPI-common', "
+    "'CPIX' or 'CPI-XFET' (series CPI_TRIM, CPI_MEDIAN, CPI_COMMON; all in the "
+    "group CPI_MONTHLY), and the 2% target": (
+        "inflation fondamentale de la Banque du Canada : query='CPI-trim', 'CPI-median', "
+        "'CPI-common', 'CPIX' ou 'CPI-XFET' (séries CPI_TRIM, CPI_MEDIAN, CPI_COMMON; "
+        "toutes dans le groupe CPI_MONTHLY), et la cible de 2 %"
+    ),
+    "the same core measures in StatCan table 18-10-0256-01 (Bank of Canada "
+    "definitions): query='18-10-0256-01'": (
+        "les mêmes mesures fondamentales dans le tableau 18-10-0256-01 de Statistique "
+        "Canada (définitions de la Banque du Canada) : query='18-10-0256-01'"
+    ),
+    "price levels compared across cities: table 18-10-0003-01, inter-city indexes "
+    "of price differentials (annual, 2000 to 2019, discontinued): "
+    "query='inter-city'; the CPI compares each city with itself over time, so it "
+    "cannot rank cities by price level": (
+        "niveaux de prix comparés entre les villes : tableau 18-10-0003-01, indices "
+        "des écarts de prix entre les villes (annuel, de 2000 à 2019, abandonné) : "
+        "query='inter-city'; l'IPC compare chaque ville avec elle-même dans le temps, "
+        "il ne peut donc pas classer les villes selon leur niveau de prix"
+    ),
+    "how the CPI treats quality change, hedonic adjustment included: "
+    "query='Consumer Price Index Reference Paper' (62-553-X, its quality change "
+    "chapter)": (
+        "traitement des changements de qualité dans l'IPC, y compris l'ajustement "
+        "hédonique : query='Consumer Price Index Reference Paper' (62-553-X, son "
+        "chapitre sur les changements de qualité)"
     ),
     "CPI is not seasonally adjusted unless the series says so; compare year over year.": (
         "L'IPC n'est pas désaisonnalisé, sauf mention contraire dans la série; comparez "
@@ -83,6 +108,12 @@ FR: dict[str, str] = {
     ),
     "low, median and high wage of that NOC code by economic region or province": (
         "salaires bas, médian et élevé de ce code CNP par région économique ou province"
+    ),
+    "LFS concepts and definitions (involuntary part-time, discouraged searchers, "
+    "class of worker...): query='Guide to the Labour Force Survey' (71-543-G)": (
+        "concepts et définitions de l'EPA (temps partiel involontaire, chercheurs "
+        "découragés, catégorie de travailleur...) : query='Guide to the Labour Force "
+        "Survey' (71-543-G; en français, « Guide de l'Enquête sur la population active »)"
     ),
     "latest Labour Force Survey headline": (
         "derniers résultats principaux de l'Enquête sur la population active"
@@ -111,6 +142,17 @@ FR: dict[str, str] = {
         "trouver la série Valet (p. ex. FXUSDCAD, V39079)"
     ),
     "pull the series for the period": "extraire la série pour la période",
+    "Banking and Financial Statistics tables are Valet groups named by table code: "
+    "query='chartered banks', 'monetary aggregates' or a code (A4_RATES_MONTHLY "
+    "lending rates, C1_MONTHLY bank assets, E1_MONTHLY money supply)": (
+        "les tableaux des Statistiques bancaires et financières sont des groupes Valet "
+        "nommés par leur code : query='chartered banks', 'monetary aggregates' ou un "
+        "code (A4_RATES_MONTHLY taux des prêts, C1_MONTHLY actifs des banques, "
+        "E1_MONTHLY masse monétaire)"
+    ),
+    "that table's series together: group_name from the step before": (
+        "les séries de ce tableau ensemble : group_name de l'étape précédente"
+    ),
     # Expectations and forecasts
     "Expectations and forecasts: Bank of Canada surveys and projections": (
         "Attentes et prévisions : enquêtes et projections de la Banque du Canada"
@@ -746,6 +788,24 @@ FR: dict[str, str] = {
     "sample, not the population.": (
         "Les estimations tirées d'un FMGD doivent utiliser sa variable de pondération; les "
         "comptes non pondérés décrivent l'échantillon, pas la population."
+    ),
+    # Survey metadata
+    "Survey metadata: IMDB ids, definitions, data sources and methods": (
+        "Métadonnées d'enquête : numéros de la BMDI, définitions, sources de données et méthodes"
+    ),
+    "the survey's IMDB id: query=<its name or acronym> (e.g. 'IPPI', 'EICS', "
+    "'Labour Force Survey')": (
+        "le numéro de l'enquête dans la BMDI : query=<son nom ou son acronyme> (p. ex. "
+        "'IPPI', 'ECAE', 'Enquête sur la population active')"
+    ),
+    "its definitions, data sources and methods: survey_id from the step before "
+    "(3701 LFS, 2301 CPI, 2318 IPPI, 2306 RMPI, 4428 EICS)": (
+        "ses définitions, sources de données et méthodes : survey_id de l'étape précédente "
+        "(3701 EPA, 2301 IPC, 2318 IPPI, 2306 IPMB, 4428 ECAE)"
+    ),
+    "the survey's guide or reference paper (concepts and definitions): query=<its title>": (
+        "le guide ou le document de référence de l'enquête (concepts et définitions) : "
+        "query=<son titre>"
     ),
     # Recalls
     "Recalls and safety alerts: food, health products, consumer products": (

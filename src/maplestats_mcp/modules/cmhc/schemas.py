@@ -17,6 +17,8 @@ quirks modelled explicitly here rather than smoothed over:
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
@@ -42,12 +44,19 @@ class TableFieldOption(BaseModel):
 
     `label` is HMIP's own human-readable name for this breakdown (e.g.
     "Bedroom Type", "Historical Time Periods") -- pass `column_field`/
-    `row_field` straight through to `get_table_data`.
+    `row_field` straight through to `get_table_data`. `breakdown` says
+    which axis the label names: HMIP lists column breakdowns under "By:"
+    and row breakdowns under "Display Options:".
     """
 
     label: str
     column_field: str
     row_field: str
+    breakdown: Literal["column", "row"] | None = Field(
+        default=None,
+        description='Which axis `label` names: "column" (HMIP\'s "By:" list, e.g. Bedroom '
+        'Type) or "row" (its "Display Options:" list, e.g. Historical Time Periods).',
+    )
 
 
 class TableOptions(BaseModel):
@@ -153,7 +162,31 @@ class TableDataResult(BaseModel):
         description="Extra filters this table supports - pass a subset as get_table_data's filters.",
     )
     applied_filters: dict[str, str] = Field(
-        default_factory=dict, description="The filters (if any) actually applied to this result."
+        default_factory=dict,
+        description="The filters actually applied to this result: those passed in `filters`, "
+        "plus CMHC's own default for any filter key not passed (see default_filters).",
+    )
+    default_filters: dict[str, str] = Field(
+        default_factory=dict,
+        description="Filters CMHC applied by default because `filters` did not set them, e.g. "
+        '{"dwelling_type_desc_en": "Row / Apartment"} for a Rental Market Survey table: '
+        "row and apartment structures combined, not apartments only.",
+    )
+    filter_notes: list[str] = Field(
+        default_factory=list,
+        description="One line per filter dimension: the value applied, whether it is CMHC's "
+        "default, and the other values that can be passed in `filters`.",
+    )
+    aggregate: Literal["annual", "ytd"] | None = Field(
+        default=None,
+        description='The aggregation MapleStats applied to monthly rows: "annual" (calendar-'
+        'year totals) or "ytd" (January to the latest month, for every year). Null: CMHC\'s '
+        "rows as published.",
+    )
+    aggregation_note: str | None = Field(
+        default=None,
+        description="How the rows were summed from CMHC's monthly values, and which years "
+        "were left out as incomplete.",
     )
     flag_legend: dict[str, str] = Field(
         default_factory=dict,

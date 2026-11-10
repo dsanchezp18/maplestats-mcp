@@ -8,6 +8,8 @@ embedded data-table-model JSON rather than a hardcoded catalogue.
 
 from __future__ import annotations
 
+import csv
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -853,7 +855,7 @@ async def test_field_labels_are_turned_into_codes(httpx_mock):
         "Primary Rental Market", "Vacancy Rate (%)", "bedroom type", "Historical Time Periods"
     )
     assert (result.column_field, result.row_field) == ("2", "TIMESERIES")
-    with pytest.raises(InvalidInput, match="Bedroom Type \\(column_field=2"):
+    with pytest.raises(InvalidInput, match=r"column_field accepts: Bedroom Type \(2\)"):
         await client.get_table_data(
             "Primary Rental Market", "Vacancy Rate (%)", "Bedrooms", "TIMESERIES"
         )
@@ -949,5 +951,220 @@ async def test_get_table_data_accepts_word_field_codes(httpx_mock, column_field,
 
 async def test_get_table_data_still_rejects_an_unknown_word_field(httpx_mock):
     _mock_chn_options(httpx_mock)
-    with pytest.raises(InvalidInput, match="column_field=HouseholdType, row_field=Province"):
+    with pytest.raises(
+        InvalidInput, match=r"'RENTQUARTILE' is not a column_field code or label.*HouseholdType"
+    ):
         await client.get_table_data(*_CHN, "RENTQUARTILE", "Province")
+
+
+# ---- Edmonton (0340), recorded live 2026-11-09 ------------------------------------
+# TableCategory pages (the option lists only) and TableMatchingCriteria models
+# (the period list trimmed); the exports byte for byte, the monthly starts from
+# January 2024 on.
+
+_TABLE_CATEGORY = re.compile(r".*/en/TableMapChart/TableCategory\?.*")
+_MATCHING = re.compile(r".*/en/TableMapChart/TableMatchingCriteria\?.*")
+_EXPORT = f"{constants.BASE_URL}/en/TableMapChart/ExportTable"
+
+
+@pytest.fixture
+def _edmonton(monkeypatch):
+    async def resolve(geography_type: str, geography_id: str, lang: str) -> tuple[str, str]:
+        return "MetropolitanMajorArea", "0340"
+
+    monkeypatch.setattr(client, "_resolve_geography", resolve)
+
+
+def _fixture_text(name: str) -> str:
+    return (_FIXTURES / name).read_text(encoding="utf-8")
+
+
+def _mock_table(httpx_mock, matching: str, export: str, category_page: str | None = None):
+    if category_page:
+        httpx_mock.add_response(url=_TABLE_CATEGORY, text=_fixture_text(category_page))
+    httpx_mock.add_response(url=_MATCHING, text=_fixture_text(matching))
+    httpx_mock.add_response(
+        url=_EXPORT,
+        method="POST",
+        content=(_FIXTURES / export).read_bytes(),
+        headers={"content-type": "text/csv"},
+    )
+
+
+async def test_table_options_say_which_axis_each_label_names(httpx_mock, _edmonton):
+    httpx_mock.add_response(
+        url=_TABLE_CATEGORY, text=_fixture_text("edmonton_average_rent_table_category.html")
+    )
+    result = await client.get_table_options(
+        "Primary Rental Market", "Average Rent ($)", geography_type="CMA", geography_id="0340"
+    )
+    by_label = {o.label: (o.breakdown, o.column_field, o.row_field) for o in result.field_options}
+    assert by_label["Bedroom Type"] == ("column", "2", "25")
+    assert by_label["Year of Construction"] == ("column", "28", "25")
+    assert by_label["Historical Time Periods"] == ("row", "2", "TIMESERIES")
+    # The default table is in both lists: its row label is kept too.
+    assert by_label["Survey Zones"] == ("row", "2", "25")
+
+
+async def test_rent_change_accepts_the_column_label_average_rent_takes(httpx_mock, _edmonton):
+    """% Change of Average Rent has no "By:" list (its column is always Bedroom Type), so
+    "Bedroom Type" was refused although Average Rent ($) accepts it (live 2026-11-09)."""
+    _mock_table(
+        httpx_mock,
+        "edmonton_rent_change_timeseries_matching_criteria.html",
+        "rms_vacancy_timeseries_export.csv",
+        category_page="edmonton_rent_change_table_category.html",
+    )
+    result = await client.get_table_data(
+        "Primary Rental Market",
+        "% Change of Average Rent",
+        "Bedroom Type",
+        "Historical Time Periods",
+        geography_type="CMA",
+        geography_id="0340",
+    )
+    assert (result.column_field, result.row_field) == ("2", "TIMESERIES")
+    request = httpx_mock.get_requests(url=_MATCHING)[0]
+    assert request.url.params["ColumnField"] == "2"
+
+
+async def test_rent_change_refuses_a_column_label_its_title_does_not_name(httpx_mock, _edmonton):
+    httpx_mock.add_response(
+        url=_TABLE_CATEGORY,
+        text=_fixture_text("edmonton_rent_change_table_category.html"),
+        is_reusable=True,
+    )
+    _mock_table(
+        httpx_mock,
+        "edmonton_rent_change_timeseries_matching_criteria.html",
+        "rms_vacancy_timeseries_export.csv",
+    )
+    with pytest.raises(InvalidInput, match="Year of Construction.*column_field='2'"):
+        await client.get_table_data(
+            "Primary Rental Market",
+            "% Change of Average Rent",
+            "Year of Construction",
+            "TIMESERIES",
+            geography_type="CMA",
+            geography_id="0340",
+        )
+    with pytest.raises(InvalidInput) as caught:
+        await client.get_table_data(
+            "Primary Rental Market",
+            "% Change of Average Rent",
+            "2",
+            "Bedrooms",
+            geography_type="CMA",
+            geography_id="0340",
+        )
+    message = str(caught.value)
+    assert "row_field accepts: Survey Zones (25), Census Subdivisions (22)" in message
+    assert "Historical Time Periods (TIMESERIES)" in message
+    assert "one column breakdown only, code 2" in message
+
+
+async def test_default_dwelling_type_is_stated(httpx_mock, _edmonton):
+    """Without a filter, Edmonton's 2025 average rent is $1,493: row and apartment
+    combined, CMHC's default, not the $1,464 of apartments only."""
+    _mock_table(
+        httpx_mock,
+        "edmonton_average_rent_by_zone_matching_criteria.html",
+        "edmonton_average_rent_by_zone_export.csv",
+    )
+    result = await client.get_table_data(
+        "Primary Rental Market",
+        "Average Rent ($)",
+        "2",
+        "25",
+        geography_type="CMA",
+        geography_id="0340",
+    )
+    assert result.rows[-1].period == "Edmonton"
+    assert result.rows[-1].values["Total"].value == 1493.0
+    assert result.default_filters == {"dwelling_type_desc_en": "Row / Apartment"}
+    assert result.applied_filters == {"dwelling_type_desc_en": "Row / Apartment"}
+    note = result.filter_notes[0]
+    assert note.startswith("Dwelling Type (dwelling_type_desc_en): Row / Apartment (CMHC's default")
+    assert "Other values: Row, Apartment" in note
+
+
+async def test_starts_annual_totals_match_cmhcs_own_annual_export(httpx_mock, _edmonton):
+    _mock_table(
+        httpx_mock,
+        "edmonton_starts_timeseries_matching_criteria.html",
+        "edmonton_starts_timeseries_export.csv",
+    )
+    result = await client.get_table_data(
+        "New Housing Construction",
+        "Starts (Actual)",
+        "1",
+        "TIMESERIES",
+        aggregate="annual",
+        geography_type="CMA",
+        geography_id="0340",
+    )
+    assert [row.period for row in result.rows] == ["2024", "2025"]
+    # HMIP's own Frequency=Annual export of the same table, recorded the same day.
+    annual = (_FIXTURES / "edmonton_starts_annual_export.csv").read_bytes().decode("cp1252")
+    published = {
+        row[0]: row[1:6]
+        for row in csv.reader(annual.splitlines()[3:])
+        if row and row[0] in ("2024", "2025")
+    }
+    for row in result.rows:
+        expected = [float(v.replace(",", "")) for v in published[row.period]]
+        assert [cell.value for cell in row.values.values()] == expected
+    assert result.aggregate == "annual"
+    assert result.aggregation_note is not None
+    assert "summed by MapleStats" in result.aggregation_note
+    assert "incomplete: 2026" in result.aggregation_note
+    assert result.provenance.coverage == result.aggregation_note
+    assert result.default_filters == {"dimension-18": "All"}
+
+
+async def test_starts_year_to_date_compares_the_same_months(httpx_mock, _edmonton):
+    _mock_table(
+        httpx_mock,
+        "edmonton_starts_timeseries_matching_criteria.html",
+        "edmonton_starts_timeseries_export.csv",
+    )
+    result = await client.get_table_data(
+        "New Housing Construction",
+        "Starts (Actual)",
+        "1",
+        "TIMESERIES",
+        aggregate="ytd",
+        geography_type="CMA",
+        geography_id="0340",
+    )
+    assert [row.period for row in result.rows] == [
+        "January to September 2024",
+        "January to September 2025",
+        "January to September 2026",
+    ]
+    assert result.rows[-1].values["All"].value == 14202.0
+    assert result.rows[-2].values["All"].value == 16484.0
+
+
+@pytest.mark.parametrize(
+    ("level_2", "row_field"),
+    [
+        ("Starts (SAAR)", "TIMESERIES"),
+        ("Under Construction Inventory", "TIMESERIES"),
+        ("Average Rent ($)", "TIMESERIES"),
+        ("Starts (Actual)", "27"),
+    ],
+)
+async def test_stocks_rates_and_cross_tabs_are_never_summed(level_2, row_field):
+    level_1 = "Primary Rental Market" if "Rent" in level_2 else "New Housing Construction"
+    with pytest.raises(InvalidInput, match="aggregate"):
+        await client.get_table_data(level_1, level_2, "1", row_field, aggregate="annual")
+
+
+def test_french_monthly_periods_are_read():
+    assert client._monthly_period("janv. 1990") == (1990, 1)
+    assert client._monthly_period("févr. 2026") == (2026, 2)
+    assert client._monthly_period("août 2025") == (2025, 8)
+    assert client._monthly_period("déc. 2025") == (2025, 12)
+    assert client._monthly_period("Sep 2026") == (2026, 9)
+    assert client._monthly_period("2025 October") is None

@@ -306,6 +306,18 @@ CASES = [
     ("unemployment rate Toronto CMA", "wds_search_cubes"),
     ("GDP by industry monthly", "wds_search_cubes"),
     ("average hourly wage of registered nurses in Ontario", "jobbank_get_wages"),
+    # Economic-statistician exam gaps, 2026-11-09: none of these reached its tool.
+    # Definitions sit in survey guides; the IMDB tool's docstring names them and
+    # sends the agent to statcan_reference_search_documents.
+    ("CPI-trim core inflation Bank of Canada", "boc_search_series"),
+    ("CPI-common", "boc_search_series"),
+    ("Bank of Canada Banking and Financial Statistics tables", "boc_search_groups"),
+    ("Labour Force Survey definitions and concepts", "statcan_surveys_get_survey_metadata"),
+    ("involuntary part-time definition", "statcan_surveys_get_survey_metadata"),
+    ("hedonic adjustment in price indexes", "statcan_surveys_get_survey_metadata"),
+    ("IPPI industrial product price index survey id", "statcan_surveys_search_surveys"),
+    ("Raw materials price index survey", "statcan_surveys_search_surveys"),
+    ("Employment Insurance Coverage Survey", "statcan_surveys_search_surveys"),
 ]
 
 # Queries whose right tool must come first, not just within TOP_N.

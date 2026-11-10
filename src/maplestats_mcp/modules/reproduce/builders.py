@@ -381,7 +381,7 @@ async def _socrata(args: dict[str, Any], result: dict[str, Any]) -> Spec:
     values = {"limit": ROWS_LIMIT_DEFAULT, **{k: v for k, v in args.items() if v is not None}}
     soql = {
         f"${key}": values[key]
-        for key in ("select", "where", "order", "q", "limit", "offset")
+        for key in ("select", "where", "group", "having", "order", "q", "limit", "offset")
         if values.get(key) not in (None, "")
     }
     return Spec(

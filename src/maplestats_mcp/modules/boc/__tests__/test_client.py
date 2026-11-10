@@ -16,6 +16,7 @@ import httpx
 import pytest
 
 from maplestats_mcp.modules.boc import client, constants
+from maplestats_mcp.modules.boc.schemas import SeriesSummary
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import (
     InvalidInput,
@@ -532,3 +533,101 @@ async def test_get_series_missing_series_details_message_is_french(httpx_mock):
     httpx_mock.add_response(url=f"{constants.BASE_URL_FR}series/V39079/json", json={})
     with pytest.raises(UpstreamError, match="seriesDetails"):
         await client.get_series("V39079", lang="fr")
+
+
+# Labels and descriptions as Valet gave them on 2026-11-09 (descriptions cut).
+_CORE_INVENTORY = [
+    ("CPI_TRIM", "CPI-trim", "The monthly value of the trim component of the Consumer Price Index"),
+    ("CPI_MEDIAN", "CPI-median", "The monthly value of the median Consumer Price Index (CPI)."),
+    ("STATIC_CPIXFET", "CPI-XFET, percentage change year-over-year (unadjusted)", ""),
+    (
+        "STATIC_TOTALCPICHANGE",
+        "Total CPI, percentage change year-over-year (unadjusted)",
+        "The unadjusted percentage change in the total Consumer Price Index (CPI).",
+    ),
+    ("CORRA_TRIMMED_VOLUME", "CORRA: trimmed dollar volume of trades eligible", ""),
+    ("V39079", "Target for the overnight rate", "Policy interest rate"),
+]
+
+
+def _core_inventory():
+    # Rarity decides a partial match, so pad with the common words, as the real
+    # inventory of ~16,000 series is: "year-over-year" is everywhere, "trim" rare.
+    filler = [
+        SeriesSummary(name=f"FILLER_{i}", label=f"Series {i}", description=text)
+        for i, text in enumerate(["Percentage change year-over-year"] * 20 + ["Rate"] * 20)
+    ]
+    return [
+        SeriesSummary(name=n, label=lab, description=d) for n, lab, d in _CORE_INVENTORY
+    ] + filler
+
+
+@pytest.mark.parametrize(
+    ("query", "first"),
+    [
+        ("CPI-trim", "CPI_TRIM"),
+        ("cpitrim", "CPI_TRIM"),
+        ("CPI-X", "STATIC_CPIXFET"),
+        ("CPIXFET", "STATIC_CPIXFET"),
+        ("CPI-median", "CPI_MEDIAN"),
+    ],
+)
+def test_core_inflation_names_match_with_or_without_hyphens(query, first):
+    matches, partial = client._filter_inventory(_core_inventory(), query)
+    assert matches[0].name == first
+    assert partial is False
+
+
+@pytest.mark.parametrize(
+    "query", ["CPI-trim inflation", "CPI-trim year-over-year", "core inflation CPI-trim"]
+)
+def test_extra_words_give_a_ranked_partial_match(query):
+    # No entry holds "inflation" or "core": before 2026-11-09 these found nothing.
+    matches, partial = client._filter_inventory(_core_inventory(), query)
+    assert partial is True
+    assert matches[0].name == "CPI_TRIM"
+    assert "V39079" not in [m.name for m in matches]
+
+
+def test_no_word_in_common_finds_nothing():
+    assert client._filter_inventory(_core_inventory(), "zzzqqq") == ([], True)
+
+
+async def test_partial_match_is_said_in_coverage(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}lists/groups/json",
+        json={
+            "groups": {
+                "CPI_MONTHLY": {"label": "Consumer Price Index", "description": "CPI-trim"},
+                "FX_RATES_DAILY": {"label": "Daily exchange rates", "description": ""},
+            }
+        },
+    )
+    result = await client.search_groups("CPI-trim core inflation")
+    assert [g.name for g in result.groups] == ["CPI_MONTHLY"]
+    assert "partial match" in (result.provenance.coverage or "")
+
+
+async def test_banking_and_financial_statistics_searches_the_table_groups(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}lists/groups/json",
+        json={
+            "groups": {
+                "A4_RATES_MONTHLY": {
+                    "label": "Interest rates charged for new and existing lending by "
+                    "chartered banks",
+                    "description": "Month-end, rates in percentage",
+                },
+                "C1_MONTHLY": {"label": "Chartered bank selected assets: Month-end"},
+                "E1_MONTHLY": {"label": "Selected monetary aggregates and their components"},
+                "FSR_2023_C8": {
+                    "label": "The cost of trading rose during recent banking stress",
+                    "description": "Banking and financial statistics chart",
+                },
+            }
+        },
+    )
+    everything = await client.search_groups("Bank of Canada Banking and Financial Statistics")
+    assert [g.name for g in everything.groups] == ["A4_RATES_MONTHLY", "C1_MONTHLY", "E1_MONTHLY"]
+    assets = await client.search_groups("BFS chartered bank assets")
+    assert [g.name for g in assets.groups] == ["C1_MONTHLY"]

@@ -1,0 +1,30 @@
+ — Average Rent by Bedroom Type by Zone
+October 2025 Row / Apartment
+,Studio,,1 Bedroom,,2 Bedroom,,3 Bedroom +,,Total,,
+Downtown,"1,181",a ,"1,350",a ,"1,772",a ,"2,156",b ,"1,484",a ,
+Hudson's Bay Reserve,941,a ,"1,182",a ,"1,466",a ,"1,615",b ,"1,283",a ,
+University,"1,218",b ,"1,305",a ,"1,667",a ,"1,822",b ,"1,443",a ,
+West Central,986,b ,"1,199",b ,"1,468",b ,"1,605",b ,"1,331",b ,
+Jasper Place,938,b ,"1,131",a ,"1,344",a ,"1,698",a ,"1,294",a ,
+West Jasper Place,"1,135",a ,"1,359",a ,"1,621",a ,"1,836",a ,"1,581",a ,
+South West,"1,147",a ,"1,385",a ,"1,606",a ,"1,889",a ,"1,586",a ,
+East Central,"1,188",a ,"1,144",a ,"1,379",a ,"1,683",a ,"1,332",a ,
+Millwoods,**,,"1,434",a ,"1,640",a ,"1,822",a ,"1,636",a ,
+North Central,845,d ,"1,146",b ,"1,321",b ,"1,628",a ,"1,238",a ,
+North East,**,,"1,195",a ,"1,475",a ,"1,751",a ,"1,448",a ,
+Castledown,973,a ,"1,313",a ,"1,529",a ,"1,647",a ,"1,475",a ,
+St. Albert,**,,"1,659",b ,"1,937",b ,"1,943",a ,"1,875",b ,
+Other Outlying Areas,**,,"1,134",a ,"1,505",a ,"1,946",b ,"1,528",b ,
+Fort Saskatchewan,**,,"1,416",a ,"1,535",a ,"1,747",b ,"1,569",a ,
+Leduc,**,,"1,338",a ,"1,448",a ,"1,715",b ,"1,482",a ,
+Spruce Grove,**,,"1,397",b ,"1,601",b ,**,,"1,607",b ,
+Stony Plain,**,,**,,"1,521",b ,"1,791",b ,"1,638",c ,
+Strathcona County,**,,"1,610",a ,"1,908",a ,"1,982",a ,"1,858",a ,
+,"1,108",a ,"1,301",a ,"1,598",a ,"1,802",a ,"1,493",a ,
+
+Notes
+"The following letter codes are used to indicate the reliability of the estimates: a — Excellent, b — Very good, c — Good, d — Poor (Use with Caution))"
+** — Data suppressed to protect confidentiality or data not statistically reliable
+++ — Change in rent is not statistically significant. This means that the change in rent is not statistically different than zero (0). (Applies only to % Change of Average Rent Tables).
+"CMA, CA and CSD definitions are based on 2021 Census Geography Definitions"
+Source,CMHC Rental Market Survey

@@ -115,6 +115,19 @@ async def test_valet_and_socrata_keep_their_filters():
     assert soda.source_url == (
         "https://data.calgary.ca/resource/848s-4m4z.csv?%24where=year+%3E+2020&%24limit=10"
     )
+    # A grouped query must rebuild $group/$having, or the script returns raw rows.
+    grouped = await client.reproduce(
+        "socrata_query_dataset_rows",
+        {
+            "portal": "calgary",
+            "dataset_id": "c2es-76ed",
+            "select": "permittype, count(*)",
+            "group": "permittype",
+            "having": "count(*) > 100",
+        },
+    )
+    assert "%24group=permittype" in grouped.source_url
+    assert "%24having=count%28%2A%29+%3E+100" in grouped.source_url
 
 
 async def test_vectors_flatten_one_object_per_vector():

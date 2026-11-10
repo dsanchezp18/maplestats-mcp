@@ -87,6 +87,64 @@ _TARIFF_TERMS = (
     "tarif douanier",
     "tarif des douanes",
 )
+# Exam agents asked for these on 2026-11-09 and got no plan step naming them.
+# Bank of Canada core inflation measures, as Valet and StatCan spell them.
+_CORE_INFLATION_TERMS = (
+    "core inflation",
+    "cpi-trim",
+    "cpi-median",
+    "cpi-common",
+    "cpix",
+    "cpi-xfet",
+    "cpiw",
+    "trimmed mean",
+    "weighted median",
+    "inflation fondamentale",
+    "ipc-tronq",
+    "ipc-med",
+    "ipc-comm",
+    "ipcx",
+)
+# Price levels between cities are the inter-city index, not the CPI.
+_PRICE_LEVEL_TERMS = (
+    "inter-city",
+    "intercity",
+    "price level",
+    "price differential",
+    "spatial price",
+    "across cities",
+    "between cities",
+    "niveau des prix",
+    "ecarts de prix",
+    "entre les villes",
+    "entre villes",
+)
+_QUALITY_CHANGE_TERMS = (
+    "hedoni*",
+    "quality adjustment",
+    "quality change",
+    "ajustement de la qualite",
+    "changement de qualite",
+)
+_DEFINITION_TERMS = (
+    "definition*",
+    "concept*",
+    "involuntary",
+    "guide to the labour force survey",
+    "involontaire*",
+)
+# Banking and Financial Statistics (BFS): Valet groups named by table code.
+_BFS_TERMS = (
+    "banking and financial statistics",
+    "bfs",
+    "chartered bank*",
+    "monetary aggregate*",
+    "money supply",
+    "statistiques bancaires et financieres",
+    "banques a charte",
+    "agregats monetaires",
+    "masse monetaire",
+)
 _ELECTRICITY_PRICE_TERMS = (
     "electricity price",
     "power price",
@@ -319,11 +377,41 @@ TOPICS: tuple[Topic, ...] = (
             "ipc",
             "cout de la vie",
             "prix",
+            *_CORE_INFLATION_TERMS,
+            *_PRICE_LEVEL_TERMS,
+            *_QUALITY_CHANGE_TERMS,
         ),
         (
             PlanStep("statcan_indicators_get_indicators", "latest headline CPI and change"),
             PlanStep("wds_search_cubes", "CPI table by component or province (e.g. 18-10-0004)"),
-            PlanStep("boc_search_series", "Bank of Canada core inflation measures and target"),
+            PlanStep(
+                "boc_search_series",
+                "Bank of Canada core inflation: query='CPI-trim', 'CPI-median', 'CPI-common', "
+                "'CPIX' or 'CPI-XFET' (series CPI_TRIM, CPI_MEDIAN, CPI_COMMON; all in the "
+                "group CPI_MONTHLY), and the 2% target",
+                _CORE_INFLATION_TERMS,
+            ),
+            PlanStep(
+                "wds_search_cubes",
+                "the same core measures in StatCan table 18-10-0256-01 (Bank of Canada "
+                "definitions): query='18-10-0256-01'",
+                _CORE_INFLATION_TERMS,
+            ),
+            PlanStep(
+                "wds_search_cubes",
+                "price levels compared across cities: table 18-10-0003-01, inter-city indexes "
+                "of price differentials (annual, 2000 to 2019, discontinued): "
+                "query='inter-city'; the CPI compares each city with itself over time, so it "
+                "cannot rank cities by price level",
+                _PRICE_LEVEL_TERMS,
+            ),
+            PlanStep(
+                "statcan_reference_search_documents",
+                "how the CPI treats quality change, hedonic adjustment included: "
+                "query='Consumer Price Index Reference Paper' (62-553-X, its quality change "
+                "chapter)",
+                _QUALITY_CHANGE_TERMS,
+            ),
         ),
         ("CPI is not seasonally adjusted unless the series says so; compare year over year.",),
         # Electricity prices are the energy topic's Ontario price tool, not the CPI.
@@ -346,6 +434,10 @@ TOPICS: tuple[Topic, ...] = (
             "salaire",
             "main-d'oeuvre",
             "travail",
+            "part-time",
+            "involuntary part-time",
+            "temps partiel",
+            "population active",
         ),
         (
             PlanStep("statcan_indicators_get_indicators", "latest Labour Force Survey headline"),
@@ -371,6 +463,12 @@ TOPICS: tuple[Topic, ...] = (
                 "jobbank_get_wages",
                 "low, median and high wage of that NOC code by economic region or province",
                 ("wage", "salary", "economic region", "salaire", "guichet-emplois"),
+            ),
+            PlanStep(
+                "statcan_reference_search_documents",
+                "LFS concepts and definitions (involuntary part-time, discouraged searchers, "
+                "class of worker...): query='Guide to the Labour Force Survey' (71-543-G)",
+                _DEFINITION_TERMS,
             ),
         ),
         (
@@ -412,10 +510,23 @@ TOPICS: tuple[Topic, ...] = (
             "dollar canadien",
             "dollar americain",
             "obligation",
+            *_BFS_TERMS,
         ),
         (
             PlanStep("boc_search_series", "find the Valet series (e.g. FXUSDCAD, V39079)"),
             PlanStep("boc_get_observations", "pull the series for the period"),
+            PlanStep(
+                "boc_search_groups",
+                "Banking and Financial Statistics tables are Valet groups named by table code: "
+                "query='chartered banks', 'monetary aggregates' or a code (A4_RATES_MONTHLY "
+                "lending rates, C1_MONTHLY bank assets, E1_MONTHLY money supply)",
+                _BFS_TERMS,
+            ),
+            PlanStep(
+                "boc_get_group_observations",
+                "that table's series together: group_name from the step before",
+                _BFS_TERMS,
+            ),
         ),
     ),
     Topic(
@@ -1928,6 +2039,44 @@ MICRODATA = Topic(
     ),
 )
 TOPICS = (*TOPICS, MICRODATA)
+
+# Exam agents guessed IMDB ids (2318 IPPI, 4428 EICS) on 2026-11-09: the search
+# by name or acronym comes first.
+SURVEY_METADATA = Topic(
+    "survey_metadata",
+    "Survey metadata: IMDB ids, definitions, data sources and methods",
+    (
+        "imdb",
+        "survey id",
+        "survey number",
+        "sdds",
+        "record number",
+        "survey methodology",
+        "data sources and methods",
+        "bmdi",
+        "numero d'enquete",
+        "methodologie de l'enquete",
+        "sources de donnees et methodes",
+    ),
+    (
+        PlanStep(
+            "statcan_surveys_search_surveys",
+            "the survey's IMDB id: query=<its name or acronym> (e.g. 'IPPI', 'EICS', "
+            "'Labour Force Survey')",
+        ),
+        PlanStep(
+            "statcan_surveys_get_survey_metadata",
+            "its definitions, data sources and methods: survey_id from the step before "
+            "(3701 LFS, 2301 CPI, 2318 IPPI, 2306 RMPI, 4428 EICS)",
+        ),
+        PlanStep(
+            "statcan_reference_search_documents",
+            "the survey's guide or reference paper (concepts and definitions): query=<its title>",
+            _DEFINITION_TERMS,
+        ),
+    ),
+)
+TOPICS = (*TOPICS, SURVEY_METADATA)
 
 RECALLS = Topic(
     "recalls",

@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from maplestats_mcp.modules.statcan.surveys import client, constants
+from maplestats_mcp.modules.statcan.surveys.schemas import SurveyListing
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared import retrying
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
@@ -60,6 +61,67 @@ async def test_search_surveys_filters_by_query(httpx_mock):
     result = await client.search_surveys("aboriginal")
     assert result.total_matched == 1
     assert result.surveys[0].survey_id == 5108
+
+
+# Names as the live directory listed them on 2026-11-09, ids included.
+_DIRECTORY = [
+    (2751, "Coastwise Shipping Survey"),
+    (2301, "Consumer Price Index"),
+    (4428, "Employment Insurance Coverage Survey"),
+    (2318, "Industrial Product Price Index"),
+    (3701, "Labour Force Survey"),
+    (2306, "Raw Materials Price Index"),
+    (2612, "Survey of Employment, Payrolls and Hours"),
+    (5435, "Sector-based Producer Price Indexes (SPPI)"),
+]
+_REPERTOIRE = [
+    (4428, "Enquête sur la couverture de l'assurance-emploi"),
+    (3701, "Enquête sur la population active"),
+    (2306, "Indice des prix des matières brutes"),
+    (2505, "Caisses d'épargne et de crédit"),
+]
+
+
+def _listings(rows):
+    return [SurveyListing(survey_id=i, name=n) for i, n in rows]
+
+
+@pytest.mark.parametrize(
+    ("query", "survey_id"),
+    [
+        ("IPPI", 2318),
+        ("ippi survey", 2318),
+        ("RMPI", 2306),
+        ("LFS", 3701),
+        ("Labour Force Survey (LFS)", 3701),
+        ("EICS", 4428),
+        ("Employment Insurance Coverage Survey (EICS)", 4428),
+        ("SEPH", 2612),
+        ("CPI", 2301),
+        ("SPPI", 5435),
+        ("payroll", 2612),
+        ("raw materials price index", 2306),
+    ],
+)
+def test_surveys_match_by_acronym_and_whole_words(query, survey_id):
+    matched = client._match_surveys(_listings(_DIRECTORY), query)
+    assert matched[0].survey_id == survey_id, [s.name for s in matched]
+
+
+def test_an_acronym_no_longer_matches_inside_a_word():
+    # "IPPI" used to find only "Coastwise Shipping Survey" (shIPPIng).
+    matched = client._match_surveys(_listings(_DIRECTORY), "IPPI")
+    assert [s.survey_id for s in matched] == [2318]
+
+
+@pytest.mark.parametrize(("query", "survey_id"), [("ECAE", 4428), ("EPA", 3701), ("IPMB", 2306)])
+def test_french_acronyms(query, survey_id):
+    matched = client._match_surveys(_listings(_REPERTOIRE), query)
+    assert matched[0].survey_id == survey_id
+
+
+def test_an_inverted_imdb_index_name_keeps_its_acronym():
+    assert "sapm" in client._acronyms("Accessible Print Materials, Survey on")
 
 
 async def test_search_surveys_fr_uses_fr_url(httpx_mock):

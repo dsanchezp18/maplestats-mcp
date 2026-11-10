@@ -27,7 +27,28 @@ confirmed live on 2026-11-03:
 - Seasonal adjustment: an "Unadjusted" member whose dimension also has a
   "Seasonally adjusted" one (12-10-0011, 34-10-0292 "Unadjusted, current" with
   "Seasonally adjusted, current", 14-10-0459). 18-10-0004 (the CPI) has no
-  adjusted member, so it gets no note.
+  adjusted member, so it gets no note. When the table title says "seasonally
+  adjusted" (14-10-0287, "..., seasonally adjusted and trend-cycle") the note
+  names the series' own member, since the title sits in every citation; a
+  "Trend-cycle" member gets its own note.
+
+Checked live on 2026-11-09 against 36-10-0104 and 36-10-0711:
+
+- Percentage change at annual rates: "Chained (2017) dollars percentage change"
+  under "Seasonally adjusted at annual rates" is the change from the previous
+  quarter (2026-Q2 GDP 0.8 = 2,524,127 / 2,503,604 - 1), not an annualized
+  rate, and so is "Contributions to percent change" (GDP 0.82); the table's
+  "Contributions to percent change, annualized" member is the annualized one
+  (GDP 3.316).
+- "Less:" lines: WDS publishes contributions on "Less: imports of goods and
+  services" with the sign of the imports' own change (2026-Q2 +0.09, annualized
+  +0.364, while imports rose), and on its children too (goods +0.143, services
+  -0.053). The components reach the GDP contribution (0.82) only when that line
+  is subtracted: 0.662 + 0.287 - 1.215 + 1.17 - 0.09 + 0.006.
+- Not available (status 1, ".."): 36-10-0711's current-dollar "All industries"
+  series is ".." for 2024 and 2025 in every province and territory, while
+  "Chained (2017) dollars" has both years. Only trailing ".." periods get a
+  note, since rows before a series starts are ".." too.
 
 Index bases ("2002=100") and constant-dollar units are read from the unit
 itself, by context.unit_notes.
@@ -46,6 +67,7 @@ from maplestats_mcp.shared.json_utils import list_or_empty
 # (reference period, status code, security level code) of one observation.
 Flag = tuple[date, int | None, int | None]
 
+STATUS_NOT_AVAILABLE = 1
 STATUS_USE_WITH_CAUTION = 7
 STATUS_TOO_UNRELIABLE = 8
 SECURITY_SUPPRESSED = 1
@@ -71,6 +93,11 @@ _NOT_SUM = re.compile(
 _REPLACED = re.compile(
     r"replaced by (?:the )?(?:new )?table (\d{2}-\d{2}-\d{4})(?:-\d{2})?", re.IGNORECASE
 )
+_PERCENT_CHANGE = re.compile(r"\bper(?:cent|centage) change\b", re.IGNORECASE)
+_CONTRIBUTIONS = re.compile(r"\bcontributions? to per(?:cent|centage) change", re.IGNORECASE)
+_ANNUALIZED = re.compile(r"annuali[sz]ed", re.IGNORECASE)
+_ANNUAL_RATES = re.compile(r"\bat annual rates?\b", re.IGNORECASE)
+_LESS = re.compile(r"^\s*less\s*:\s*", re.IGNORECASE)
 _NUMBERS_FR = {"three": "trois", "six": "six", "twelve": "douze", "two": "deux"}
 
 
@@ -138,8 +165,26 @@ def _periods(days: list[date], frequency_code: int | None, lang: str) -> str:
     return text
 
 
+def trailing_unavailable(flags: Iterable[Flag]) -> list[date]:
+    """The ".." (not available) periods after the last period with any other status.
+
+    Rows before a series starts are ".." as well, so only the trailing ones say
+    that StatCan has not published the latest periods (36-10-0711's current
+    dollars for 2024 and 2025, checked live 2026-11-09).
+    """
+    flags = list(flags)
+    published = [day for day, status, _ in flags if status != STATUS_NOT_AVAILABLE]
+    last = max(published) if published else None
+    return sorted(
+        day
+        for day, status, _ in flags
+        if status == STATUS_NOT_AVAILABLE and (last is None or day > last)
+    )
+
+
 def flag_notes(flags: Iterable[Flag], frequency_code: int | None, lang: str) -> list[str]:
-    """E, F and x periods among the observations returned, named."""
+    """E, F and x periods among the observations returned, and trailing "..", named."""
+    flags = list(flags)
     caution, unreliable, suppressed = [], [], []
     for day, status, security in flags:
         if security == SECURITY_SUPPRESSED:
@@ -179,6 +224,21 @@ def flag_notes(flags: Iterable[Flag], frequency_code: int | None, lang: str) -> 
                 f"{fr[0].upper()}{fr[1:]} : ne donnez aucun chiffre pour ces périodes.",
             )
         )
+    if missing := trailing_unavailable(flags):
+        periods = _periods(missing, frequency_code, lang)
+        notes.append(
+            pick(
+                lang,
+                f"Not available (..) for {periods}: StatCan has not published a value for "
+                "these latest periods in this series (status 'not available for a specific "
+                "reference period'). Do not estimate one; say it is not published, and look "
+                "for another series or table that has it.",
+                f"Indisponible (..) pour {periods} : Statistique Canada n'a pas publié de "
+                "valeur pour ces dernières périodes dans cette série (statut « indisponible "
+                "pour une période de référence précise »). N'en estimez pas ; dites qu'elle "
+                "n'est pas publiée et cherchez une autre série ou un autre tableau qui l'a.",
+            )
+        )
     return notes
 
 
@@ -211,6 +271,123 @@ def adjusted_sibling(members: Sequence[tuple[dict, dict]]) -> tuple[dict, dict, 
                 other_low.partition(",")[2].strip() == tail
             ):
                 return dim, member, other
+    return None
+
+
+def trend_cycle_sibling(members: Sequence[tuple[dict, dict]]) -> tuple[dict, dict] | None:
+    """(the series' Trend-cycle member, its Seasonally adjusted sibling), as in 14-10-0287."""
+    for dim, member in members:
+        if not str(member.get("memberNameEn") or "").strip().lower().startswith("trend-cycle"):
+            continue
+        for other in list_or_empty(dim, "member"):
+            if str(other.get("memberNameEn") or "").strip().lower() == "seasonally adjusted":
+                return member, other
+    return None
+
+
+def _period_word(frequency_code: int | None, lang: str) -> tuple[str, int | None]:
+    """('quarter', 4) or ('month', 12): the period a change is measured over, and
+    how many of them make a year (None when the frequency is neither)."""
+    if frequency_code in (9, 19):
+        return pick(lang, "quarter", "trimestre"), 4
+    if frequency_code == 6:
+        return pick(lang, "month", "mois"), 12
+    return pick(lang, "period", "période"), None
+
+
+def percent_change_note(
+    members: Sequence[tuple[dict, dict]], frequency_code: int | None, lang: str
+) -> str | None:
+    """A percentage change (or contribution to it) in a table at annual rates.
+
+    "Seasonally adjusted at annual rates" describes the levels: 36-10-0104's
+    "Chained (2017) dollars percentage change" is the change from the previous
+    quarter (2026-Q2 0.8 = 2,524,127 / 2,503,604 - 1, live 2026-11-09), easy to
+    read as annualized. A member that says "annualized" is left alone.
+    """
+    if frequency_code not in _SUB_ANNUAL:
+        return None
+    if not any(_ANNUAL_RATES.search(str(m.get("memberNameEn") or "")) for _, m in members):
+        return None
+    for dim, member in members:
+        name_en = str(member.get("memberNameEn") or "").strip()
+        if not _PERCENT_CHANGE.search(name_en) or _ANNUALIZED.search(name_en):
+            continue
+        name = member_name(member, lang)
+        period, per_year = _period_word(frequency_code, lang)
+        annualized = next(
+            (
+                other
+                for other in list_or_empty(dim, "member")
+                if str(other.get("memberNameEn") or "").strip().lower().startswith(name_en.lower())
+                and _ANNUALIZED.search(str(other.get("memberNameEn") or ""))
+            ),
+            None,
+        )
+        if annualized is not None:
+            other = member_name(annualized, lang)
+            tail_en = f" The table's '{other}' member is the annualized figure."
+            tail_fr = f" Le membre « {other} » du tableau donne le chiffre annualisé."
+        elif per_year:
+            tail_en = (
+                f" An annualized rate compounds it: ((1 + x/100)^{per_year} - 1) x 100; say "
+                "which one you report."
+            )
+            tail_fr = (
+                f" Un taux annualisé le compose : ((1 + x/100)^{per_year} - 1) x 100 ; "
+                "précisez lequel vous donnez."
+            )
+        else:
+            tail_en = tail_fr = ""
+        return pick(
+            lang,
+            f"'{name}' is the change from the previous {period}, not an annualized rate: "
+            f"'at annual rates' describes the levels only.{tail_en}",
+            f"« {name} » est la variation par rapport au {period} précédent, pas un taux "
+            f"annualisé : « aux taux annuels » ne s'applique qu'aux niveaux.{tail_fr}",
+        )
+    return None
+
+
+def less_line_note(members: Sequence[tuple[dict, dict]], lang: str) -> str | None:
+    """A contribution to percent change on a "Less:" line or one of its children.
+
+    WDS publishes it with the sign of the line's own change: 36-10-0104's
+    "Less: imports of goods and services" was +0.09 in 2026-Q2 (annualized
+    +0.364) while imports rose, and the components reach GDP's 0.82 only with
+    it subtracted (live 2026-11-09). Imports of goods (+0.143) and services
+    (-0.053), its children, follow the same sign.
+    """
+    if not any(_CONTRIBUTIONS.search(str(m.get("memberNameEn") or "")) for _, m in members):
+        return None
+    for dim, member in members:
+        by_id = {int(m["memberId"]): m for m in list_or_empty(dim, "member")}
+        line: dict | None = member
+        seen: set[int] = set()
+        while line is not None and not _LESS.match(str(line.get("memberNameEn") or "")):
+            parent = line.get("parentMemberId")
+            if parent is None or int(parent) in seen:
+                line = None
+                break
+            seen.add(int(parent))
+            line = by_id.get(int(parent))
+        if line is None:
+            continue
+        name = member_name(line, lang)
+        what_en = _LESS.sub("", str(line.get("memberNameEn") or "")).strip()
+        what_fr = re.sub(
+            r"^\s*moins\s*:\s*", "", member_name(line, "fr"), flags=re.IGNORECASE
+        ).strip()
+        return pick(
+            lang,
+            f"Contribution on a 'Less:' line ('{name}'): StatCan publishes it with the sign of "
+            f"the change in {what_en}, so a positive value means {what_en} rose, which lowered "
+            "growth. Subtract it when adding the components up to the total.",
+            f"Contribution d'une ligne « Moins : » (« {name} ») : Statistique Canada la publie "
+            f"avec le signe de la variation de « {what_fr} » ; une valeur positive signifie une "
+            "hausse, qui a réduit la croissance. Soustrayez-la pour retrouver le total à partir "
+            "des composantes.",
+        )
     return None
 
 
@@ -351,6 +528,11 @@ def metadata_notes(
         )
         break
 
+    if change := percent_change_note(members, frequency, lang):
+        notes.append(change)
+    if less := less_line_note(members, lang):
+        notes.append(less)
+
     if str(cube.get("archiveStatusCode")) == ARCHIVED:
         successor = replacement_table(cube)
         if successor:
@@ -385,16 +567,49 @@ def metadata_notes(
         )
 
     if frequency in _SUB_ANNUAL:
+        # The table title is in every citation, and 14-10-0287's says "seasonally
+        # adjusted and trend-cycle" for its Unadjusted series too, so the note
+        # names the series' own member when the title says otherwise.
+        title_says_adjusted = "seasonally adjusted" in names[0].lower()
         sibling = adjusted_sibling(members)
+        trend = trend_cycle_sibling(members)
         if sibling:
-            other = _name(sibling[2], "memberName", lang)
+            dim, own, adjusted = sibling
+            other = _name(adjusted, "memberName", lang)
+            if title_says_adjusted:
+                dim_name = _name(dim, "dimensionName", lang)
+                own_name = _name(own, "memberName", lang)
+                notes.append(
+                    pick(
+                        lang,
+                        f"Unadjusted series ({dim_name}: '{own_name}'), although the table "
+                        f"title says seasonally adjusted; the table also has '{other}', "
+                        "usually the headline for change from one period to the next.",
+                        f"Série non désaisonnalisée ({dim_name} : « {own_name} »), même si "
+                        f"le titre du tableau dit désaisonnalisé ; le tableau a aussi "
+                        f"« {other} », d'ordinaire celle qu'on compare d'une période à "
+                        "l'autre.",
+                    )
+                )
+            else:
+                notes.append(
+                    pick(
+                        lang,
+                        f"Unadjusted series; the table also has '{other}', usually the "
+                        "headline for change from one period to the next.",
+                        f"Série non désaisonnalisée ; le tableau a aussi « {other} », "
+                        "d'ordinaire celle qu'on compare d'une période à l'autre.",
+                    )
+                )
+        elif trend:
+            other = _name(trend[1], "memberName", lang)
             notes.append(
                 pick(
                     lang,
-                    f"Unadjusted series; the table also has '{other}', usually the "
-                    "headline for change from one period to the next.",
-                    f"Série non désaisonnalisée ; le tableau a aussi « {other} », "
-                    "d'ordinaire celle qu'on compare d'une période à l'autre.",
+                    "Trend-cycle series: a smoothed version of the seasonally adjusted "
+                    f"series, revised as new periods arrive; the headline is '{other}'.",
+                    "Série tendance-cycle : version lissée de la série désaisonnalisée, "
+                    f"révisée à chaque nouvelle période ; le chiffre principal est « {other} ».",
                 )
             )
     return notes, basis is not None
