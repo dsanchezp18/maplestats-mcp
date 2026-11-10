@@ -826,6 +826,20 @@ FR: dict[str, str] = {
         "(guide méthodologique du Système canadien des comptes macroéconomiques), "
         "query=<le concept>"
     ),
+    "how national GDP by industry is allocated to the provinces (net output, gross "
+    "output and selected factor incomes approaches): publication='15-203-X' (PDF), "
+    "query='gross output approach'": (
+        "comment le PIB national par industrie est réparti entre les provinces (méthodes "
+        "de la production nette, de la production brute et de certains revenus des "
+        "facteurs) : publication='15-203-X' (PDF), query='gross output approach'"
+    ),
+    "the supplementary unemployment rates R1 to R8 are defined in the footnotes of "
+    "table 14-10-0077-01 (not in the LFS guide): product_id='14-10-0077-01', "
+    "footnote_limit=20": (
+        "les taux de chômage supplémentaires R1 à R8 sont définis dans les notes du "
+        "tableau 14-10-0077-01 (pas dans le guide de l'EPA) : product_id='14-10-0077-01', "
+        "footnote_limit=20, lang='fr'"
+    ),
     "the survey's guide or reference paper (concepts and definitions): query=<its title>": (
         "le guide ou le document de référence de l'enquête (concepts et définitions) : "
         "query=<son titre>"

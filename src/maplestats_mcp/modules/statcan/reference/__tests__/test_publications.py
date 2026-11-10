@@ -5,19 +5,24 @@ first line names its URL): catalogue pages for 71-543-G (English and French),
 62-553-X, 15-203-X (PDF only), 62F0014M2021011 (one article, a formats table) and
 13-017-X; the LFS guide's 2025 edition (one long page, with the <p><details> nesting
 that html.parser leaves open), the CPI Reference Paper's main page (a table of
-contents modal) and its chapter 10, and 13-017-X's 2008-era main page.
+contents modal) and its chapter 10, and 13-017-X's 2008-era main page. PDFs are
+built here (`_pdf`), with the running header, wrapped and justified lines and
+bookmarks the real ones have.
 """
 
 from __future__ import annotations
 
+import io
+import re
 from datetime import date
 from pathlib import Path
 
 import pytest
+from pypdf import PdfWriter
 
-from maplestats_mcp.modules.statcan.reference import client, pages
+from maplestats_mcp.modules.statcan.reference import client, constants, pages, pdf
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 N1 = "https://www150.statcan.gc.ca/n1"
@@ -27,6 +32,83 @@ LFS_APPENDICES = [f"{N1}/pub/71-543-g/2025001/app_ann_{x}-eng.htm" for x in "abc
 CPI_CATALOGUE = f"{N1}/en/catalogue/62-553-X"
 CPI_2023 = f"{N1}/pub/62-553-x/62-553-x2023001-eng.htm"
 CPI_CHAP_10 = f"{N1}/pub/62-553-x/2023001/chap-10-eng.htm"
+PGDP_CATALOGUE = f"{N1}/en/catalogue/15-203-X"
+PGDP_PDF = f"{N1}/pub/15-203-x/15-203-x1999000-eng.pdf"
+HEADER = "Statistics Canada - Catalogue no. 15-203 {n} Statistique Canada"
+
+# Three pages as 15-203-X's methodology section reads: a running header, a heading,
+# paragraphs wrapped at the line, a word split at a line end, and the 2006 LFS
+# guide's justified lines that come out one word at a time.
+PGDP_PAGES = [
+    [
+        HEADER.format(n=1),
+        "Introduction",
+        "This publication presents estimates of Gross Domestic Product by industry",
+        "for each province and territory, reconciled with the provincial input-output",
+        "tables and the provincial economic accounts.",
+    ],
+    [
+        HEADER.format(n=2),
+        "Gross Output Approach",
+        "This approach consists in allocating national gross output and GDP for a",
+        "particular industry based on the provincial distribution of gross output; the",
+        "distribution is a valid proxy for intermediate inputs and GDP for the indus-",
+        "try in question.",
+    ],
+    [
+        HEADER.format(n=3),
+        "Approach based on Selected Factor Incomes",
+        "This approach consists in allocating national gross output and GDP based on",
+        "the sum of selected factor incomes such as provincial wages and depreciation",
+        "or",
+        "only",
+        "wages.",
+    ],
+]
+
+
+def _pdf(page_lines: list[list[str]], outline: list[tuple[str, int]] | None = None) -> bytes:
+    """A PDF writing each line with its own text object, as Acrobat Distiller wrote
+    StatCan's; with `outline`, (title, 0-based page) bookmarks."""
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"",  # the page tree, filled in below
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    ]
+    kids = []
+    for lines in page_lines:
+        text = b"".join(
+            b"BT /F1 10 Tf 40 %d Td (%s) Tj ET\n" % (760 - 14 * i, line.encode("cp1252"))
+            for i, line in enumerate(lines)
+        )
+        objects.append(b"<< /Length %d >>\nstream\n%s\nendstream" % (len(text), text))
+        content = len(objects)
+        objects.append(
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Resources << /Font << /F1 3 0 R >> >> /Contents %d 0 R >>" % content
+        )
+        kids.append(b"%d 0 R" % len(objects))
+    objects[1] = b"<< /Type /Pages /Kids [%s] /Count %d >>" % (b" ".join(kids), len(kids))
+    body = io.BytesIO()
+    body.write(b"%PDF-1.4\n")
+    offsets = []
+    for number, obj in enumerate(objects, start=1):
+        offsets.append(body.tell())
+        body.write(b"%d 0 obj\n%s\nendobj\n" % (number, obj))
+    xref = body.tell()
+    body.write(b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1))
+    for offset in offsets:
+        body.write(b"%010d 00000 n \n" % offset)
+    body.write(b"trailer\n<< /Size %d /Root 1 0 R >>\n" % (len(objects) + 1))
+    body.write(b"startxref\n%d\n%%%%EOF\n" % xref)
+    if not outline:
+        return body.getvalue()
+    writer = PdfWriter(clone_from=io.BytesIO(body.getvalue()))
+    for title, page in outline:
+        writer.add_outline_item(title, page)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
 
 
 def _fixture(name: str) -> str:
@@ -184,14 +266,38 @@ async def test_get_publication_latest_edition(httpx_mock):
     assert result.provenance.as_of is not None and result.provenance.as_of.year == 2025
 
 
-async def test_get_publication_pdf_only(httpx_mock):
-    httpx_mock.add_response(
-        url=f"{N1}/en/catalogue/15-203-X", html=_fixture("catalogue_15-203-X_en.html")
-    )
+def _pgdp(httpx_mock, body: bytes) -> None:
+    httpx_mock.add_response(url=PGDP_CATALOGUE, html=_fixture("catalogue_15-203-X_en.html"))
+    httpx_mock.add_response(url=PGDP_PDF, content=body)
+
+
+async def test_get_publication_pdf_only_lists_its_pages(httpx_mock):
+    _pgdp(httpx_mock, _pdf(PGDP_PAGES))
     result = await client.get_publication("15-203-X")
-    assert result.format == "pdf" and result.sections == []
-    assert result.url == result.pdf_url == f"{N1}/pub/15-203-x/15-203-x1999000-eng.pdf"
-    assert "PDF only" in (result.provenance.limits or "")
+    assert result.format == "pdf"
+    assert result.url == result.pdf_url == PGDP_PDF
+    assert [(s.id, s.title) for s in result.sections] == [
+        ("page=1", "Page 1 - Introduction"),
+        ("page=2", "Page 2 - Gross Output Approach"),
+        ("page=3", "Page 3 - Approach based on Selected Factor Incomes"),
+    ]
+    assert result.sections[1].url == f"{PGDP_PDF}#page=2"
+    limits = result.provenance.limits or ""
+    assert "PDF only" in limits and "extracted from the PDF (3 pages)" in limits
+
+
+async def test_get_publication_pdf_bookmarks_are_its_sections(httpx_mock):
+    _pgdp(httpx_mock, _pdf(PGDP_PAGES, outline=[("1. Introduction", 0), ("2. Methodology", 1)]))
+    result = await client.get_publication("15-203-X")
+    assert [(s.title, s.url) for s in result.sections] == [
+        ("1. Introduction", f"{PGDP_PDF}#page=1"),
+        ("2. Methodology", f"{PGDP_PDF}#page=2"),
+    ]
+    # A bookmark's section runs over its pages, up to the next bookmark.
+    text = await client.get_section_text("15-203-X", section="2. Methodology")
+    section = text.sections[0]
+    assert section.url == f"{PGDP_PDF}#page=2"
+    assert "## Page 2" in section.text and "Selected Factor Incomes" in section.text
 
 
 async def test_get_publication_unknown_edition_lists_the_editions(httpx_mock):
@@ -323,12 +429,163 @@ async def test_unknown_section_names_the_ids(httpx_mock):
         await client.get_section_text("71-543-G", section="no such heading anywhere")
 
 
-async def test_pdf_only_text_gives_the_link(httpx_mock):
-    httpx_mock.add_response(
-        url=f"{N1}/en/catalogue/15-203-X", html=_fixture("catalogue_15-203-X_en.html")
+async def test_pdf_query_finds_the_page(httpx_mock):
+    _pgdp(httpx_mock, _pdf(PGDP_PAGES))
+    result = await client.get_section_text("15-203-X", query="selected factor incomes")
+    best = result.sections[0]
+    assert (result.format, best.id, best.url) == ("pdf", "page=3", f"{PGDP_PDF}#page=3")
+    # The lines are one paragraph; the one-word lines run on.
+    assert "selected factor incomes such as provincial wages and depreciation or only wages." in (
+        best.text
     )
-    result = await client.get_section_text("15-203-X", query="gross output")
-    assert result.sections == [] and result.pdf_url and result.pdf_url.endswith(".pdf")
+    assert result.pages_read == 3
+    limits = result.provenance.limits or ""
+    assert "extracted from the PDF" in limits
+    # The hint pointing to 15-203-X is not shown on 15-203-X itself.
+    assert "pages 188 to 196" not in limits
+
+
+@pytest.mark.parametrize("section", ["page=2", "2", "p2", "page 2"])
+async def test_pdf_page_by_number(section, httpx_mock):
+    _pgdp(httpx_mock, _pdf(PGDP_PAGES))
+    result = await client.get_section_text("15-203-X", section=section)
+    text = result.sections[0].text
+    assert text.startswith("# Page 2 - Gross Output Approach")
+    # The running header is dropped and the word split at the line end is joined.
+    assert "Catalogue no." not in text and "for the industry in question." in text
+
+
+async def test_pdf_url_as_publication_and_a_heading_inside_a_page(httpx_mock):
+    httpx_mock.add_response(url=PGDP_PDF, content=_pdf(PGDP_PAGES))
+    result = await client.get_section_text(PGDP_PDF, query="gross output approach", limit=1)
+    best = result.sections[0]
+    assert result.format == "pdf"
+    # "Gross Output Approach", a title-case line before a paragraph, is a heading of
+    # its own inside page 2.
+    assert (best.title, best.url) == ("Gross Output Approach", f"{PGDP_PDF}#page=2")
+    assert best.text.startswith("This approach consists in allocating national gross output")
+    again = await client.get_section_text(PGDP_PDF, section=best.id)
+    assert again.sections[0].text.startswith("# Gross Output Approach")
+
+
+def test_pdf_headings_skip_table_rows_and_repeated_lines():
+    assert pdf.looks_like_heading("Gross Output Approach")
+    assert pdf.looks_like_heading("2.iii. Constant Price GDP Estimates")
+    assert not pdf.looks_like_heading("E159 Other Rubber Products Gross output Industries")
+    assert not pdf.looks_like_heading("This approach consists in allocating national output.")
+    assert not pdf.looks_like_heading("Quebec")  # one word: a table's row label
+    paragraph = "A paragraph of running text that is long enough to follow a heading."
+    by_page = [["Running Title Here", paragraph], ["Running Title Here", paragraph]] * 2
+    assert pdf._headings(by_page) == set()  # on more than two pages: a running title
+
+
+async def test_pdf_that_is_not_a_pdf_is_an_upstream_error(httpx_mock):
+    _pgdp(httpx_mock, b"<html>maintenance</html>")
+    with pytest.raises(UpstreamError, match="could not be read as a PDF"):
+        await client.get_section_text("15-203-X", query="gross output")
+
+
+async def test_pdf_over_the_size_cap_is_refused(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "PDF_MAX_BYTES", 1000)
+    _pgdp(httpx_mock, b"%PDF-1.4" + b"x" * 5000)
+    with pytest.raises(UpstreamError, match="1,000"):
+        await client.get_publication("15-203-X")
+
+
+def test_pdf_page_cap_reads_the_first_pages():
+    document = pdf.extract(_pdf(PGDP_PAGES), PGDP_PDF, max_pages=2, max_chars=10**6, seconds=60.0)
+    assert (document.page_count, document.pages_read) == (3, 2)
+    assert [h.anchor for h in document.page.headings] == ["page=1", "page=2"]
+
+
+def _lfs_appendices_missing(httpx_mock) -> None:
+    for url in LFS_APPENDICES:
+        httpx_mock.add_response(url=url, status_code=404, html="<h1>404</h1>", is_optional=True)
+
+
+async def test_query_hint_for_supplementary_unemployment_rates(httpx_mock):
+    _lfs(httpx_mock)
+    _lfs_appendices_missing(httpx_mock)
+    result = await client.get_section_text("71-543-G", query="supplementary unemployment rates R8")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("The supplementary unemployment rates R1 to R8 are not defined")
+    assert "14-10-0077-01" in limits
+
+
+async def test_query_hint_for_provincial_allocation(httpx_mock):
+    _lfs(httpx_mock)
+    _lfs_appendices_missing(httpx_mock)
+    result = await client.get_section_text("71-543-G", query="gross output approach")
+    assert "15-203-X" in (result.provenance.limits or "")
+
+
+async def test_query_reads_matching_chapters_first_and_stops(httpx_mock):
+    _cpi(httpx_mock)
+    other = re.compile(re.escape(f"{N1}/pub/62-553-x/2023001/") + r"(?!chap-10-).*-eng\.htm")
+    httpx_mock.add_response(
+        url=other,
+        html="<main><h1>Other</h1><p>Nothing here.</p></main>",
+        is_optional=True,
+        is_reusable=True,
+    )
+    result = await client.get_section_text("62-553-X", query="owned accommodation", limit=2)
+    assert [s.id for s in result.sections] == ["chap-10#a2", "chap-10#a1"]
+    requested = [str(r.url) for r in httpx_mock.get_requests()]
+    # Chapter 10's title holds both words, so it is the first chapter fetched, and
+    # the search stops before reading all eleven.
+    assert requested[2] == CPI_CHAP_10
+    assert len(requested) < 2 + 11
+    assert "stopped once 2 sections held every word" in (result.provenance.limits or "")
+
+
+async def test_query_on_one_long_page_fetches_nothing_else(httpx_mock):
+    _lfs(httpx_mock)  # no appendix registered: the main page alone is enough
+    result = await client.get_section_text("71-543-G", query="involuntary part-time", limit=1)
+    assert result.sections[0].id == "a3" and result.pages_read == 1
+
+
+async def test_section_by_a_page_id_deeper_than_the_main_page(httpx_mock):
+    main = f"{N1}/pub/13-607-x/13-607-x2016001-eng.htm"
+    deep = f"{N1}/pub/13-607-x/2016001/224-eng.htm"
+    httpx_mock.add_response(url=f"{N1}/en/catalogue/13-607-X", status_code=404, html="<h1/>")
+    httpx_mock.add_response(url=main, html="<main><h1>Guide</h1><p>Overview.</p></main>")
+    httpx_mock.add_response(
+        url=deep, html="<main><h1>Provincial GDP</h1><p>GDP by province.</p></main>"
+    )
+    result = await client.get_section_text(main, section="224")
+    assert (result.sections[0].id, result.sections[0].title) == ("224", "Provincial GDP")
+
+
+async def test_windows_1252_page_sent_as_utf8_is_decoded(httpx_mock):
+    url = f"{N1}/pub/71-543-g/71-543-g2008001-eng.htm"
+    html = "<main><h1>Dictionnaire</h1><p>Données sur la durée du chômage.</p></main>"
+    httpx_mock.add_response(url=f"{N1}/en/catalogue/71-543-G", status_code=404, html="<h1/>")
+    httpx_mock.add_response(
+        url=url,
+        content=html.encode("cp1252"),
+        headers={"Content-Type": "text/html; charset=UTF-8"},
+    )
+    result = await client.get_section_text(url)
+    assert "Données sur la durée du chômage." in result.sections[0].text
+
+
+def test_clf2_layout_reads_div_center_and_drops_the_archived_notice():
+    html = """<html><body><div class="page"><div class="core">
+      <div class="fp"><h1 class="navaid">Common menu bar links</h1><ul><li>Home</li></ul></div>
+      <div class="left"><a href="/pub/71-543-g/2008001/5204012-eng.htm">Sections</a></div>
+      <div class="center"><h1><a name="cont" id="cont"></a></h1>
+        <div id="archived"><h2>Archived Content</h2><p>Information identified as archived.</p>
+        </div>
+        <h1 class="tableNo">Section 3: Dictionary of concepts and definitions</h1>
+        <p>Employment: Employed persons are those who worked.</p>
+        <div class="table_toc_buttons"><form><input value="Next"/></form></div>
+        <div class="footer">Date Modified: 2008-05-27 Top of Page Important Notices</div>
+      </div></div></div></body></html>"""
+    url = f"{N1}/pub/71-543-g/2008001/5204157-eng.htm"
+    page = pages.parse_page(html, url, "/n1/pub/71-543-g/2008001/")
+    assert page.title == "Section 3: Dictionary of concepts and definitions"
+    assert page.archived and page.headings == []
+    assert [b.text for b in page.blocks] == ["Employment: Employed persons are those who worked."]
 
 
 async def test_section_and_query_together_are_refused():

@@ -46,8 +46,8 @@ class PublicationSection(BaseModel):
     id: str = Field(
         description=(
             "Pass as `section` to statcan_reference_get_section_text: an anchor on the "
-            "main page ('a3'), another page of the edition ('chap-10'), or an anchor on "
-            "that page ('chap-10#a2')."
+            "main page ('a3'), another page of the edition ('chap-10'), an anchor on "
+            "that page ('chap-10#a2'), or for a PDF a page ('page=12') or bookmark ('h3')."
         )
     )
     title: str
@@ -96,6 +96,10 @@ class PublicationText(BaseModel):
     release_date: date | None = None
     archived: bool = False
     edition_url: str
+    format: Literal["html", "pdf"] = Field(
+        default="html",
+        description="'pdf' when the text was extracted from a PDF-only edition.",
+    )
     pdf_url: str | None = None
     query: str | None = None
     sections: list[SectionText] = Field(default_factory=list)
@@ -103,5 +107,7 @@ class PublicationText(BaseModel):
         default_factory=list,
         description="Sections and pages inside the one returned, to read next.",
     )
-    pages_read: int = 0
+    pages_read: int = Field(
+        default=0, description="HTML pages of the edition read, or PDF pages for a PDF."
+    )
     provenance: Provenance

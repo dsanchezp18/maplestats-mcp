@@ -138,8 +138,13 @@ async def _publications() -> bool:
     ok &= section.sections[0].next_start_char is not None
 
     owned = await client.get_section_text("62-553-X", query="owned accommodation")
-    print(f"OK: 62-553-X 'owned accommodation' -> {[s.id for s in owned.sections]}")
-    ok &= owned.sections[0].id.startswith("chap-10") and owned.pages_read > 10
+    print(
+        f"OK: 62-553-X 'owned accommodation' -> {[s.id for s in owned.sections]}, "
+        f"{owned.pages_read} pages read"
+    )
+    # Chapter 10's title holds both words: it is read first and the search stops
+    # well before the edition's 15 pages (6 on 2026-11-10).
+    ok &= owned.sections[0].id.startswith("chap-10") and owned.pages_read < 12
 
     basket = await client.get_section_text("62-553-X", section="Weights and Basket Updates")
     print(f"OK: 62-553-X section 'Weights and Basket Updates' -> {basket.sections[0].id}")
@@ -164,9 +169,61 @@ async def _publications() -> bool:
     print(f"OK: 62F0014M2021011 'basket weights' -> {article.sections[0].title}")
     ok &= bool(article.sections)
 
+    provincial = await client.get_section_text("13-017-X", query="provincial allocation")
+    print(
+        f"OK: 13-017-X 'provincial allocation' -> {[s.id for s in provincial.sections]}, "
+        f"{provincial.pages_read} pages read"
+    )
+    # 6.4 "Estimation methods - provincial and territorial estimates" and 2.176
+    # "The Provincial Economic Accounts" (each in the top three of all 146 pages).
+    found = {s.id.partition("#")[0] for s in provincial.sections}
+    ok &= bool(found & {"themes/ch06/5213357", "themes/ch02/5213339"})
+
+    deep = await client.get_section_text("13-607-X", section="224", max_chars=300)
+    print(f"OK: 13-607-X section '224' (a page id below the main page) -> {deep.sections[0].title}")
+    ok &= deep.sections[0].title == "Provincial and Territorial Gross Domestic Product"
+
+    # PDF-only editions: the text is extracted from the PDF.
     pdf = await client.get_publication("15-203-X")
-    print(f"OK: get_publication('15-203-X') -> format={pdf.format} {pdf.url}")
-    ok &= pdf.format == "pdf" and pdf.url.endswith(".pdf")
+    print(
+        f"OK: get_publication('15-203-X') -> format={pdf.format} {pdf.url}, "
+        f"{len(pdf.sections)} sections"
+    )
+    ok &= pdf.format == "pdf" and pdf.url.endswith(".pdf") and len(pdf.sections) > 100
+    ok &= "extracted from the PDF" in (pdf.provenance.limits or "")
+
+    methods = await client.get_section_text("15-203-X", query="gross output approach", limit=3)
+    best = methods.sections[0]
+    print(f"OK: 15-203-X 'gross output approach' -> [{best.id}] {best.title} {best.url}")
+    # The provincial allocation methods (net output, gross output, selected factor
+    # incomes) are on PDF pages 188 to 196 of the 1984-1999 edition; "Gross Output
+    # Approach" is a heading on page 192.
+    ok &= best.title == "Gross Output Approach" and best.url == pdf.url + "#page=192"
+    ok &= "allocating national gross output" in best.text
+
+    page = await client.get_section_text("15-203-X", section="192", max_chars=6000)
+    print(f"OK: 15-203-X section '192' -> {page.sections[0].title}")
+    ok &= "selected factor incomes" in page.sections[0].text.lower()
+
+    lfs_2006 = await client.get_section_text(
+        "71-543-G", edition="2006", query="involuntary part-time", limit=1
+    )
+    print(f"OK: 71-543-G 2006 (PDF) 'involuntary part-time' -> {lfs_2006.sections[0].url}")
+    ok &= lfs_2006.format == "pdf" and "involuntary part-time" in lfs_2006.sections[0].text.lower()
+
+    # The CLF 2.0 layout of the 2007-2012 LFS guides (windows-1252 under a UTF-8
+    # header, its text in div.center).
+    lfs_2008 = await client.get_section_text("71-543-G", edition="2008", section="Sections")
+    print(f"OK: 71-543-G 2008 section 'Sections' -> {lfs_2008.sections[0].title!r}")
+    ok &= "menu" not in lfs_2008.sections[0].title.lower()
+    ok &= "�" not in lfs_2008.sections[0].text
+
+    # R1 to R8 are not in the LFS guide: the result says where they are defined.
+    rates = await client.get_section_text(
+        "71-543-G", query="supplementary unemployment rates R1 R8"
+    )
+    print(f"OK: 71-543-G 'supplementary unemployment rates R1 R8' -> {rates.provenance.limits!r}")
+    ok &= "14-10-0077-01" in (rates.provenance.limits or "")
 
     try:
         await client.get_publication("https://example.com/n1/pub/71-543-g/x-eng.htm")

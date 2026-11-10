@@ -124,8 +124,9 @@ async def statcan_reference_get_publication(
     headings of the main page and the edition's other pages (chapters,
     appendices, glossary). Defaults to the latest edition; edition=
     picks another ("2020001", "2020", "71-543-G2020001") from the
-    editions listed. A PDF-only edition says so and gives the PDF link.
-    Then read the text with statcan_reference_get_section_text
+    editions listed. A PDF-only edition (15-203-X, the LFS guide up to
+    2006) is read from the PDF: its sections are the PDF's bookmarks, or
+    its pages ('page=12') when it has none. Then read the text with statcan_reference_get_section_text
     (section=<id> or query=<words>). Examples: Guide to the Labour Force
     Survey (71-543-G), The Canadian Consumer Price Index Reference Paper
     (62-553-X), Guide to the Income and Expenditure Accounts (13-017-X),
@@ -170,22 +171,31 @@ async def statcan_reference_get_section_text(
     as 'a | b' rows, menus and footers dropped; cut at max_chars (default
     6,000) with next_start_char to read on (start_char=). Each section
     carries its own URL to cite, and the result the edition's release
-    date. PDF-only editions return the PDF link, not text. Covers the
+    date. PDF-only editions (and a PDF URL as publication) are read from
+    the PDF, a page per section (section='page=192'), with the same
+    query and paging; layout and tables may come out imperfect. Covers the
     Guide to the Labour Force Survey (71-543-G: exclusions, involuntary
     part-time, quality and release rules), the CPI Reference Paper
     (62-553-X: Lowe index, basket updates, owned accommodation, quality
     adjustment), the Guide to the Income and Expenditure Accounts
     (13-017-X), the Macroeconomic Accounts methodological guide
-    (13-607-X) and Prices Analytical Series papers such as the 2021 CPI
-    basket update (62F0014M2021011).
+    (13-607-X), Provincial GDP by Industry (15-203-X, PDF: the net
+    output, gross output and selected factor incomes allocation methods)
+    and Prices Analytical Series papers such as the 2021 CPI basket update
+    (62F0014M2021011). The LFS supplementary unemployment rates R1 to R8
+    are not in the LFS guide: they are defined in table 14-10-0077-01's
+    footnotes (wds_get_cube_metadata).
     Keywords: StatCan, definition, concept, methodology, survey guide
     text, LFS guide, CPI reference paper, hedonic adjustment, owned
     accommodation, basket update, involuntary part-time, national
-    accounts methodology, gross output, read guide.
+    accounts methodology, gross output, provincial GDP allocation, PDF
+    text, read guide.
     Mots-clés : Statistique Canada, définition, concept, méthodologie,
     texte du guide, guide de l'EPA, document de référence de l'IPC,
     ajustement hédonique, logement en propriété, mise à jour du panier,
-    temps partiel involontaire, méthodologie des comptes nationaux.
+    temps partiel involontaire, méthodologie des comptes nationaux,
+    ajustement hédonique des indices de prix, répartition provinciale du
+    PIB, production brute, texte d'un PDF.
     """
     use_lang(lang)
     return await client.get_section_text(

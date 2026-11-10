@@ -143,15 +143,33 @@ _CPI_METHOD_TERMS = (
     "mise a jour du panier",
     "ponderation du panier",
 )
+# "gross output" and "factor incomes" are the provincial allocation methods,
+# documented in 15-203-X (_PROVINCIAL_ALLOCATION_TERMS), not in these guides.
 _ACCOUNTS_METHOD_TERMS = (
     "methodolog*",
-    "gross output",
-    "factor income*",
-    "allocation method",
     "sources and methods",
-    "production brute",
-    "revenus des facteurs",
     "sources et methodes",
+)
+# The LFS supplementary unemployment rates (R1-R8): defined only in the footnotes
+# of table 14-10-0077-01, not in the Guide to the Labour Force Survey (checked
+# 2026-11-10 against every HTML edition and the 2006 PDF).
+_SUPPLEMENTARY_RATE_TERMS = (
+    "supplementary unemployment*",
+    "supplementary rate*",
+    "underutili*",
+    "taux de chomage supplementaire*",
+    "sous-utilisation",
+)
+# How national GDP by industry is split by province: 15-203-X's methodology
+# (net output, gross output and selected factor incomes approaches).
+_PROVINCIAL_ALLOCATION_TERMS = (
+    "gross output approach",
+    "factor income*",
+    "allocat*",
+    "net output",
+    "production brute",
+    "revenus de certains facteurs",
+    "repartition provinciale",
 )
 # Banking and Financial Statistics (BFS): Valet groups named by table code.
 _BFS_TERMS = (
@@ -501,6 +519,14 @@ TOPICS: tuple[Topic, ...] = (
                 "the Guide's own text for the concept: publication='71-543-G', query=<the "
                 "concept> (e.g. 'involuntary part-time')",
                 _DEFINITION_TERMS,
+            ),
+            PlanStep(
+                "wds_get_cube_metadata",
+                "the supplementary unemployment rates R1 to R8 are defined in the footnotes of "
+                "table 14-10-0077-01 (not in the LFS guide): product_id='14-10-0077-01', "
+                "footnote_limit=20",
+                _SUPPLEMENTARY_RATE_TERMS,
+                (r"\br[1-8]\b",),
             ),
         ),
         (
@@ -961,6 +987,13 @@ TOPICS: tuple[Topic, ...] = (
                 "publication='13-017-X' (Guide to the Income and Expenditure Accounts) or "
                 "'13-607-X' (Macroeconomic Accounts methodological guide), query=<the concept>",
                 (*_DEFINITION_TERMS, *_ACCOUNTS_METHOD_TERMS),
+            ),
+            PlanStep(
+                "statcan_reference_get_section_text",
+                "how national GDP by industry is allocated to the provinces (net output, gross "
+                "output and selected factor incomes approaches): publication='15-203-X' (PDF), "
+                "query='gross output approach'",
+                _PROVINCIAL_ALLOCATION_TERMS,
             ),
         ),
     ),

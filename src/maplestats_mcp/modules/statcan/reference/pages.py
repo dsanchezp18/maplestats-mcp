@@ -33,9 +33,13 @@ root-relative without /n1 ("/pub/62-553-x/2023001/chap-1-eng.htm", which answers
 - a short main page plus a table of contents in a modal
   (`section#toc-tdm`) linking one page per chapter, e.g. the CPI reference paper;
 - the 2008-era layout (`div#wb-main`, a `div#wb-sec` side menu) with chapter
-  links in the text, nested two or three pages deep (13-017-X, 13-607-X).
+  links in the text, nested two or three pages deep (13-017-X, 13-607-X);
+- the older CLF 2.0 layout of the LFS guide's 2007 to 2012 editions: no
+  role="main", the text in `div.core div.center`, an empty skip-link <h1>
+  before the real one, the archived notice in a `div#archived`, and pages
+  served as windows-1252 under a "charset=UTF-8" header (client.py decodes them).
 
-The text sits in the element with role="main" in all three. Around it, and
+The text sits in the element with role="main" in the first three. Around it, and
 dropped here: screen-reader text (span.wb-inv), the "Archived Content" notice
 (section#archived, #archived-bnr), the release-date label and the PDF / "More
 information" buttons, the modals (section.mfp-hide: "More information",
@@ -380,6 +384,7 @@ class Block:
     text: str
     level: int = 0
     anchor: str | None = None
+    href: str | None = None  # a heading's own URL when not page.url#anchor (PDF bookmarks)
 
 
 @dataclass
@@ -388,6 +393,7 @@ class Heading:
     level: int
     title: str
     anchor: str | None
+    href: str | None = None
 
 
 @dataclass
@@ -409,7 +415,7 @@ class Page:
     @property
     def headings(self) -> list[Heading]:
         return [
-            Heading(i, block.level, block.text, block.anchor)
+            Heading(i, block.level, block.text, block.anchor, block.href)
             for i, block in enumerate(self.blocks)
             if block.kind == "heading"
         ]
@@ -534,6 +540,9 @@ def _content_root(soup: BeautifulSoup) -> Tag:
         soup.select_one("[role=main]"),
         soup.find("main"),
         soup.find(id="wb-main"),
+        # The 2005-2010 layout (CLF 2.0: the LFS guide 2007 to 2012 editions) has
+        # neither: its text is div.center, between a side menu and the footer.
+        soup.select_one("div.core div.center"),
         soup.body,
     ):
         if isinstance(candidate, Tag):
@@ -561,12 +570,17 @@ def parse_page(html: str, url: str, scope: str) -> Page:
         return str(value) if value else None
 
     archived = root.find(id="archived") is not None
-    heading = root.find("h1")
+    # The first h1 with text: the CLF 2.0 layout opens with an empty
+    # <h1><a name="cont"></a></h1> skip-link target before the real title.
     title = ""
-    if isinstance(heading, Tag):
+    for heading in root.find_all("h1"):
+        if _is_screen_reader(heading):
+            continue
         for small in heading.find_all("small"):
             small.insert_after(NavigableString(" – "))
         title = _inline(heading).strip(" –")
+        if title:
+            break
 
     # The release date is in dcterms.issued on most pages; the CPI reference paper
     # has only its "Release date: February 20, 2023" label (span.label).
@@ -616,9 +630,9 @@ def parse_page(html: str, url: str, scope: str) -> Page:
     removals = [
         *root.find_all(_is_screen_reader),
         *root.select(
-            "section#archived, #archived-bnr, section.mfp-hide, details.rel-article, "
+            "#archived, #archived-bnr, section.mfp-hide, details.rel-article, "
             "p.fn-rtn, #wb-dtmd, .block-date-modified-block, #wb-sec, span.label, a.btn, "
-            ".pagination, ul.pager"
+            ".pagination, ul.pager, div.table_toc_buttons, div.footer"
         ),
         *root.find_all("h1"),
     ]

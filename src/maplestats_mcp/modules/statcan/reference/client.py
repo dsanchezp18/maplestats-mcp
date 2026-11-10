@@ -30,6 +30,8 @@ restricted to that first `<details>` only.
 from __future__ import annotations
 
 import asyncio
+import heapq
+import itertools
 import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -40,7 +42,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from maplestats_mcp.modules.statcan.lang import current_lang, say, use_lang
-from maplestats_mcp.modules.statcan.reference import constants, pages
+from maplestats_mcp.modules.statcan.reference import constants, pages, pdf
 from maplestats_mcp.modules.statcan.reference.schemas import (
     Publication,
     PublicationEdition,
@@ -50,6 +52,7 @@ from maplestats_mcp.modules.statcan.reference.schemas import (
     ReferenceSearchResult,
     SectionText,
 )
+from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import (
@@ -58,6 +61,7 @@ from maplestats_mcp.shared.errors import (
     UpstreamError,
     UpstreamUnavailable,
 )
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import new_client
 from maplestats_mcp.shared.rate_limiter import get_limiter
 from maplestats_mcp.shared.retrying import get_with_retry
@@ -474,6 +478,19 @@ def _checked_url(url: str, tool: str) -> str:
     return pages.normalize_url(text)
 
 
+def _decode(response: httpx.Response) -> str:
+    """A page's text. The LFS guide's 2007-2012 pages are windows-1252 sent under
+    "charset=UTF-8" (71-543-g/2008001/5204157-eng.htm, checked 2026-11-10), which
+    httpx would decode with U+FFFD in place of every accented letter."""
+    declared = (response.charset_encoding or "utf-8").lower().replace("_", "-")
+    if declared not in ("utf-8", "utf8"):
+        return response.text
+    try:
+        return response.content.decode("utf-8")
+    except UnicodeDecodeError:
+        return response.content.decode("cp1252", errors="replace")
+
+
 async def _fetch(url: str, tool: str, *, ttl: int, missing: str) -> tuple[dict[str, str], bool]:
     """A page's HTML and final URL, cached; `missing` is the NotFound message on a 404."""
 
@@ -513,7 +530,7 @@ async def _fetch(url: str, tool: str, *, ttl: int, missing: str) -> tuple[dict[s
                         f"{_context(tool)} : {current} n'est pas une page HTML ({content_type}).",
                     )
                 )
-            return {"html": response.text, "url": current}
+            return {"html": _decode(response), "url": current}
         raise UpstreamError(
             say(
                 f"{_context(tool)}: {url} redirected more than {constants.MAX_REDIRECTS} times.",
@@ -724,6 +741,8 @@ def _heading_id(page: pages.Page, heading: pages.Heading, edition_url: str) -> s
 
 
 def _heading_url(page: pages.Page, heading: pages.Heading) -> str:
+    if heading.href:
+        return heading.href
     return f"{page.url}#{heading.anchor}" if heading.anchor else page.url
 
 
@@ -758,13 +777,103 @@ def _as_of(day: date | None) -> datetime | None:
     return datetime(day.year, day.month, day.day, tzinfo=UTC) if day else None
 
 
-def _pdf_note(pdf_url: str) -> str:
-    return say(
-        f"This edition is published as PDF only ({pdf_url}); MapleStats does not extract "
-        "PDF text. Open the link, or pass another edition (edition=) that has HTML.",
-        f"Cette édition n'existe qu'en PDF ({pdf_url}) ; MapleStats n'en extrait pas le "
-        "texte. Ouvrez le lien, ou passez une autre édition (edition=) offerte en HTML.",
+async def _pdf(url: str, tool: str) -> tuple[pdf.PdfText, bool]:
+    """A PDF edition's text (pdf.py), downloaded under PDF_MAX_BYTES and cached."""
+
+    async def fetch() -> pdf.PdfText:
+        downloaded = await file_download.download(
+            url,
+            allow_host=lambda host: host in constants.ALLOWED_HOSTS,
+            limiter_for=lambda _host: _LIMITER,
+            max_bytes=constants.PDF_MAX_BYTES,
+            context=_context(tool),
+        )
+        try:
+            return await run_parse(
+                pdf.extract,
+                downloaded.body,
+                url,
+                max_pages=constants.PDF_MAX_PAGES,
+                max_chars=constants.PDF_MAX_CHARS,
+                seconds=constants.PDF_EXTRACT_SECONDS,
+            )
+        except pdf.PdfUnreadable as exc:
+            raise UpstreamError(
+                say(
+                    f"{_context(tool)}: {url} could not be read as a PDF ({exc}). Open "
+                    "the link, or pass another edition (edition=) that has HTML.",
+                    f"{_context(tool)} : {url} n'a pas pu être lu comme un PDF ({exc}). "
+                    "Ouvrez le lien, ou passez une autre édition (edition=) offerte en HTML.",
+                )
+            ) from exc
+
+    return await cached_fetch(
+        f"statcan-reference:pdf:{url}", constants.PAGE_CACHE_TTL_SECONDS, fetch
     )
+
+
+def _pdf_note(document: pdf.PdfText) -> str:
+    """What a caller should know about text taken from a PDF."""
+    url = document.page.url
+    notes = [
+        say(
+            f"This edition is published as PDF only ({url}); its text was extracted from "
+            f"the PDF ({document.page_count} pages), so line breaks, columns and tables may "
+            "come out imperfect: check a figure against the PDF page cited (each section's "
+            "url ends in #page=N).",
+            f"Cette édition n'existe qu'en PDF ({url}) ; son texte a été extrait du PDF "
+            f"({document.page_count} pages) : les retours à la ligne, les colonnes et les "
+            "tableaux peuvent être imparfaits. Vérifiez un chiffre sur la page du PDF citée "
+            "(l'url de chaque section se termine par #page=N).",
+        )
+    ]
+    if document.pages_read < document.page_count:
+        notes.append(
+            say(
+                f"Only its first {document.pages_read} pages were read (size or time "
+                "limit); open the PDF for the rest.",
+                f"Seules ses {document.pages_read} premières pages ont été lues (limite de "
+                "taille ou de temps) ; ouvrez le PDF pour la suite.",
+            )
+        )
+    return " ".join(notes)
+
+
+def _pdf_toc(document: pdf.PdfText, edition_url: str) -> list[PublicationSection]:
+    """A PDF's bookmarks (two levels) when it has them, else one entry per page."""
+    page = document.page
+    if document.has_outline:
+        return [
+            entry
+            for entry, heading in zip(_toc(page, edition_url, depth=6), page.headings, strict=True)
+            if heading.anchor is None and entry.level <= 2
+        ]
+    return [
+        entry
+        for entry, heading in zip(_toc(page, edition_url, depth=6), page.headings, strict=True)
+        if heading.anchor is not None
+    ]
+
+
+_PDF_PAGE_REF = re.compile(r"^(?:p|pp|page|pages?)?\.?\s*=?\s*(\d{1,4})$", re.IGNORECASE)
+
+
+def _pdf_section(section: str) -> str:
+    """'12', 'p12', 'page 12' and 'page=12' all name page 12 of a PDF."""
+    match = _PDF_PAGE_REF.match(section.strip())
+    return pdf.page_anchor(int(match.group(1))) if match else section
+
+
+def _query_hints(query: str, catalogue_number: str | None) -> list[str]:
+    """Pointers to where a concept is defined, for concepts that are not where a
+    caller would look (constants.QUERY_HINTS)."""
+    folded = pages.fold(query)
+    number = (catalogue_number or "").upper()
+    return [
+        say(hint.en, hint.fr)
+        for hint in constants.QUERY_HINTS
+        if re.search(hint.pattern, folded) and number not in hint.skip
+    ]
 
 
 def _older_note(resolved: _Resolved) -> str | None:
@@ -842,22 +951,50 @@ async def get_publication(
         "editions_total": editions_total,
     }
     if resolved.pdf_only:
+        document, cached = await _pdf(resolved.edition_url, tool)
+        sections = _pdf_toc(document, resolved.edition_url)
+        notes = [_pdf_note(document)]
+        if len(sections) > constants.SECTIONS_LISTED_MAX:
+            notes.append(
+                say(
+                    f"First {constants.SECTIONS_LISTED_MAX} of {len(sections)} pages listed.",
+                    f"Les {constants.SECTIONS_LISTED_MAX} premières de {len(sections)} pages.",
+                )
+            )
+            sections = sections[: constants.SECTIONS_LISTED_MAX]
+        notes.append(
+            say(
+                "Read a page or bookmark with statcan_reference_get_section_text("
+                "publication, section=<id>, edition=...) ('page=12', or a bookmark's id or "
+                "title), or search the whole PDF with query=<words>.",
+                "Lisez une page ou un signet avec statcan_reference_get_section_text("
+                "publication, section=<id>, edition=...) ('page=12', ou l'id ou le titre "
+                "d'un signet), ou cherchez dans tout le PDF avec query=<mots>.",
+            )
+        )
+        older = _older_note(resolved)
+        if older:
+            notes.append(older)
         return Publication(
             **common,
-            title=(catalogue.title if catalogue else None) or (chosen.title if chosen else "PDF"),
-            edition_title=chosen.title if chosen else None,
+            title=(catalogue.title if catalogue else None)
+            or (chosen.title if chosen else None)
+            or document.page.title
+            or "PDF",
+            edition_title=(chosen.title if chosen else None) or document.page.title or None,
             issue=chosen.issue if chosen else None,
             release_date=chosen.release_date if chosen else None,
             archived=chosen.archived if chosen else False,
             format="pdf",
             url=resolved.edition_url,
             pdf_url=resolved.edition_url,
+            sections=sections,
             provenance=make_provenance(
                 source=constants.RATE_LIMIT_SOURCE,
-                url=resolved.catalogue_url or resolved.edition_url,
-                cached=resolved.cached,
+                url=resolved.edition_url,
+                cached=cached and resolved.cached,
                 as_of=_as_of(chosen.release_date if chosen else None),
-                limits=_pdf_note(resolved.edition_url),
+                limits=" ".join(notes),
                 schema_name="statcan_reference.Publication",
                 lang=current_lang(),
             ),
@@ -918,43 +1055,117 @@ async def get_publication(
     )
 
 
+@dataclass
+class _Crawl:
+    pages: list[pages.Page]
+    cached: bool  # every page came from the cache
+    cut_short: bool  # pages were left unread at the page cap
+    stopped_early: bool  # pages were left unread because enough sections matched
+
+
+def _title_hits(terms: list[str], title: str) -> int:
+    """How many query terms a link's title holds."""
+    words = re.findall(r"[a-z0-9]+", pages.fold(title))
+    return sum(1 for term in terms if any(w.startswith(term) for w in words))
+
+
+def _strong(terms: list[str], page: pages.Page) -> int:
+    """Pieces of `page` (see _matches) that hold every query term, about three times
+    each or in their title: on 13-017-X, "provincial allocation" is answered by
+    6.4 "Estimation methods - provincial and territorial estimates", not by the
+    paragraphs of chapter 3 that name each word once."""
+    return sum(
+        1
+        for distinct, score, *_ in _matches(terms, [page])
+        if distinct == len(terms) and score >= 3 * len(terms)
+    )
+
+
 async def _crawl(
-    first: pages.Page, edition_url: str, tool: str
-) -> tuple[list[pages.Page], bool, bool]:
-    """The edition's pages breadth first from `first`: (pages, all cached, cut short)."""
-    found = [first]
+    first: pages.Page,
+    edition_url: str,
+    tool: str,
+    *,
+    terms: list[str] | None = None,
+    wanted: int = 0,
+) -> _Crawl:
+    """The edition's pages from `first`, up to CRAWL_MAX_PAGES and CRAWL_MAX_DEPTH.
+
+    Links whose titles hold more query terms are read first, then shallower ones,
+    in the order the pages list them. With `terms`, the crawl stops once `wanted`
+    pieces hold every term and no unread page has every term in its title: on
+    the CPI Reference Paper, "owned accommodation" is answered by chapter 10's
+    page and the chapters before it are not fetched. Pages are fetched
+    CRAWL_CONCURRENCY at a time, through the rate limiter, as soon as a slot frees
+    (no waiting for a whole level).
+    """
+    terms = terms or []
+    found: list[tuple[int, pages.Page]] = [(-1, first)]  # (order queued, page)
     seen = {urlparse(first.url).path, urlparse(edition_url).path}
-    frontier = [(link.url, 1) for link in first.links]
-    all_cached = True
-    semaphore = asyncio.Semaphore(constants.CRAWL_CONCURRENCY)
+    queue: list[tuple[int, int, int, str]] = []  # (-title hits, depth, order, url)
+    order = itertools.count()
+
+    def enqueue(page: pages.Page, depth: int) -> None:
+        for link in page.links:
+            path = urlparse(link.url).path
+            if path in seen:
+                continue
+            seen.add(path)
+            heapq.heappush(queue, (-_title_hits(terms, link.title), depth, next(order), link.url))
 
     async def load(url: str) -> tuple[pages.Page, bool] | None:
-        async with semaphore:
-            try:
-                return await _page(url, edition_url, tool)
-            except NotFound:
-                return None  # a broken link inside the publication
+        try:
+            return await _page(url, edition_url, tool)
+        except NotFound:
+            return None  # a broken link inside the publication
 
-    while frontier and len(found) < constants.CRAWL_MAX_PAGES:
-        fresh: list[tuple[str, int]] = []
-        for url, depth in frontier:
-            path = urlparse(url).path
-            if path not in seen and all(urlparse(u).path != path for u, _ in fresh):
-                fresh.append((url, depth))
-        room = constants.CRAWL_MAX_PAGES - len(found)
-        batch, frontier = fresh[:room], fresh[room:]
-        seen.update(urlparse(url).path for url, _ in batch)
-        results = await asyncio.gather(*(load(url) for url, _ in batch))
-        for (_, depth), result in zip(batch, results, strict=True):
-            if result is None:
-                continue
-            page, cached = result
-            all_cached &= cached
-            found.append(page)
-            if depth < constants.CRAWL_MAX_DEPTH:
-                frontier.extend((link.url, depth + 1) for link in page.links)
-    unread = any(urlparse(url).path not in seen for url, _ in frontier)
-    return found, all_cached, unread
+    enqueue(first, 1)
+    strong = _strong(terms, first) if terms else 0
+    all_cached = True
+    running: dict[asyncio.Task[tuple[pages.Page, bool] | None], tuple[int, int]] = {}
+
+    def enough() -> bool:
+        if not terms or strong < wanted:
+            return False
+        return not queue or -queue[0][0] < len(terms)
+
+    # The LFS guide is one long page: its own sections may already be enough.
+    stopped_early = enough()
+    try:
+        while True:
+            while (
+                queue
+                and len(running) < constants.CRAWL_CONCURRENCY
+                and len(found) + len(running) < constants.CRAWL_MAX_PAGES
+                and not stopped_early
+            ):
+                _, depth, queued, url = heapq.heappop(queue)
+                running[asyncio.ensure_future(load(url))] = (depth, queued)
+            if not running:
+                break
+            done, _ = await asyncio.wait(running, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                depth, queued = running.pop(task)
+                result = task.result()
+                if result is None:
+                    continue
+                page, cached = result
+                all_cached &= cached
+                found.append((queued, page))
+                if depth < constants.CRAWL_MAX_DEPTH:
+                    enqueue(page, depth + 1)
+                if terms:
+                    strong += _strong(terms, page)
+            # Pages already requested are still read; no new ones are started.
+            stopped_early = stopped_early or enough()
+    finally:
+        for task in running:
+            task.cancel()
+    unread = bool(queue)
+    # In the order the pages were queued, not the order they answered, so ties
+    # between equal matches always break the same way.
+    read = [page for _, page in sorted(found, key=lambda item: item[0])]
+    return _Crawl(read, all_cached, unread and not stopped_early, unread and stopped_early)
 
 
 def _section_text(page: pages.Page, heading: pages.Heading | None) -> tuple[str, list[int]]:
@@ -1115,26 +1326,15 @@ async def get_section_text(
         "edition_url": resolved.edition_url,
         "query": query,
     }
-    if resolved.pdf_only:
-        return PublicationText(
-            **common,
-            title=(catalogue.title if catalogue else None) or "PDF",
-            release_date=chosen.release_date if chosen else None,
-            archived=chosen.archived if chosen else False,
-            pdf_url=resolved.edition_url,
-            provenance=make_provenance(
-                source=constants.RATE_LIMIT_SOURCE,
-                url=resolved.edition_url,
-                cached=resolved.cached,
-                as_of=_as_of(chosen.release_date if chosen else None),
-                limits=_pdf_note(resolved.edition_url),
-                schema_name="statcan_reference.PublicationText",
-                lang=current_lang(),
-            ),
-        )
-
     edition_url = resolved.edition_url
-    main, all_cached = await _page(edition_url, edition_url, tool)
+    document: pdf.PdfText | None = None
+    if resolved.pdf_only:
+        document, all_cached = await _pdf(edition_url, tool)
+        main = document.page
+        if section is not None:
+            section = _pdf_section(section)
+    else:
+        main, all_cached = await _page(edition_url, edition_url, tool)
     all_cached &= resolved.cached
     release = main.release_date or (chosen.release_date if chosen else None)
     results: list[SectionText] = []
@@ -1148,7 +1348,7 @@ async def get_section_text(
             target, heading, cached, read = await _locate(section, main, edition_url, lang, tool)
             all_cached &= cached
             pages_read += read
-        elif resolved.focus_url:
+        elif resolved.focus_url and document is None:
             page_url, _, anchor = resolved.focus_url.partition("#")
             target, cached = await _page(page_url, edition_url, tool)
             all_cached &= cached
@@ -1158,7 +1358,10 @@ async def get_section_text(
             target, heading, edition_url, start=start_char, limit=max_chars
         )
         results.append(result)
-        subsections = _subsections(target, heading, edition_url)
+        if document is not None and heading is None:
+            subsections = _pdf_toc(document, edition_url)[: constants.SECTIONS_LISTED_MAX]
+        else:
+            subsections = _subsections(target, heading, edition_url)
         if result.next_start_char is not None:
             notes.append(
                 say(
@@ -1169,19 +1372,48 @@ async def get_section_text(
                 )
             )
     else:
-        crawled, cached, cut_short = await _crawl(main, edition_url, tool)
-        all_cached &= cached
-        pages_read = len(crawled)
-        if cut_short:
-            notes.append(
-                say(
-                    f"Searched the first {len(crawled)} pages of the edition; more exist.",
-                    f"Recherche dans les {len(crawled)} premières pages de l'édition ; il y en "
-                    "a d'autres.",
+        terms = _terms(query)
+        if document is not None:
+            crawled = [main]
+        else:
+            crawl = await _crawl(main, edition_url, tool, terms=terms, wanted=limit)
+            crawled = crawl.pages
+            all_cached &= crawl.cached
+            pages_read = len(crawled)
+            if crawl.cut_short:
+                notes.append(
+                    say(
+                        f"Searched {len(crawled)} pages of the edition (those whose titles "
+                        "hold the query's words first); more exist.",
+                        f"Recherche dans {len(crawled)} pages de l'édition (d'abord celles "
+                        "dont le titre contient les mots cherchés) ; il y en a d'autres.",
+                    )
                 )
-            )
+                if main.pdf_url:
+                    notes.append(
+                        say(
+                            f"To search every page, pass the edition's PDF as publication "
+                            f"({main.pdf_url}).",
+                            f"Pour chercher dans toutes les pages, passez le PDF de "
+                            f"l'édition comme publication ({main.pdf_url}).",
+                        )
+                    )
+            elif crawl.stopped_early:
+                notes.append(
+                    say(
+                        f"Searched {len(crawled)} pages of the edition: the pages whose "
+                        "titles hold the query's words were read first, and the search "
+                        f"stopped once {limit} sections held every word. Ask for a section "
+                        "by title, or use other words, to look elsewhere.",
+                        f"Recherche dans {len(crawled)} pages de l'édition : celles dont le "
+                        "titre contient les mots cherchés ont été lues d'abord, et la "
+                        f"recherche s'est arrêtée dès que {limit} sections contenaient tous "
+                        "les mots. Demandez une section par son titre, ou d'autres mots, "
+                        "pour chercher ailleurs.",
+                    )
+                )
         budget = max(200, max_chars // limit)
-        for distinct, score, page, heading, best in _matches(_terms(query), crawled)[:limit]:
+        for distinct, score, page, heading, best in _matches(terms, crawled)[:limit]:
             _, offsets = _section_text(page, heading)
             first = heading.position if heading else 0
             begin = offsets[best - first] if 0 <= best - first < len(offsets) else 0
@@ -1215,14 +1447,20 @@ async def get_section_text(
                     "la suite, ou start_char=0 pour la section depuis son titre.",
                 )
             )
+    if query is not None:
+        notes[0:0] = _query_hints(query, common["catalogue_number"])
+    if document is not None:
+        notes.insert(0, _pdf_note(document))
+        pages_read = document.pages_read
     older = _older_note(resolved)
     if older:
         notes.append(older)
     return PublicationText(
         **common,
-        title=(catalogue.title if catalogue else None) or main.title,
+        title=(catalogue.title if catalogue else None) or main.title or "PDF",
         release_date=release,
         archived=main.archived or (chosen.archived if chosen else False),
+        format="pdf" if document is not None else "html",
         pdf_url=main.pdf_url,
         sections=results,
         subsections=subsections,
@@ -1237,6 +1475,9 @@ async def get_section_text(
             lang=current_lang(),
         ),
     )
+
+
+_PAGE_KEY = re.compile(r"[a-z0-9_-]+(?:/[a-z0-9_-]+)*", re.IGNORECASE)
 
 
 async def _locate(
@@ -1305,10 +1546,26 @@ async def _locate(
                 return page, None, cached, 1
     if found is not None:
         return found[0], found[1], True, 0
-    crawled, cached, _ = await _crawl(main, edition_url, tool)
-    found = by_title(crawled)
+    # A page id from a query's results ("178", "themes/ch02/5213339"), deeper
+    # than the main page's own links.
+    if (
+        not has_anchor
+        and not edition_url.lower().endswith(".pdf")
+        and _PAGE_KEY.fullmatch(section)
+        and re.search(r"[\d/]", section)
+    ):
+        try:
+            page, cached = await _page(
+                pages.page_url_for_key(section, edition_url), edition_url, tool
+            )
+        except (NotFound, UpstreamError):
+            pass
+        else:
+            return page, None, cached, 1
+    crawl = await _crawl(main, edition_url, tool)
+    found = by_title(crawl.pages)
     if found is not None:
-        return found[0], found[1], cached, len(crawled) - 1
+        return found[0], found[1], crawl.cached, len(crawl.pages) - 1
     ids = ", ".join(entry.id for entry in _toc(main, edition_url)[:20])
     raise NotFound(
         say(
