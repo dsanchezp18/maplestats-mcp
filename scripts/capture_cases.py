@@ -261,7 +261,11 @@ CASES: dict[str, list[dict[str, Any]]] = {
 
 
 async def _call(client: Client, name: str, arguments: dict[str, Any]) -> Any:
-    result = await client.call_tool("call_tool", {"name": name, "arguments": arguments})
+    # Full results: call_tool answers brief by default, and the site reads the
+    # full shape (provenance.queried_at, observations as a list of objects).
+    result = await client.call_tool(
+        "call_tool", {"name": name, "arguments": arguments, "detail": "full"}
+    )
     data = result.structured_content or {}
     return data.get("result", data)
 

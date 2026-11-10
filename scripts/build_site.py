@@ -294,7 +294,9 @@ SOURCES: dict[str, Source] = {
         "Open Alberta",
         "Open Alberta",
         places=("AB",),
-        row="provincial_agency",
+        # No row: these tools read the same publisher as the Open Alberta CKAN
+        # portal, which already has one; a second row listed it twice and
+        # counted it twice (an outside review caught it, 2026-11-09).
     ),
     "ab_wildfire": Source(
         "Alberta Wildfire: live status",
@@ -579,7 +581,8 @@ SOURCES: dict[str, Source] = {
         "Toronto open data",
         "Données ouvertes de Toronto",
         places=("ON",),
-        row="municipal_feed",
+        # No row: open.toronto.ca already has one as a CKAN portal (see
+        # ab_opendata above).
     ),
     "bc_transit": Source(
         "BC Transit real-time",
@@ -990,8 +993,8 @@ FAMILIES: dict[str, tuple[str, str]] = {
     "statcan/cimt": ("Merchandise trade by commodity", "Commerce de marchandises par produit"),
     "statcan/census_profile": ("2021 Census Profile", "Profil du recensement de 2021"),
     "statcan/census_profile_archive": (
-        "Census Profile archive, 2001-2016",
-        "Archives des profils du recensement, 2001-2016",
+        "Census Profile bulk download links, 2001-2016",
+        "Liens de téléchargement des profils du recensement, 2001-2016",
     ),
     "statcan/daily": (
         "The Daily and the release calendar",
@@ -2864,7 +2867,11 @@ def curve_context(case: dict[str, Any], lang: Lang) -> dict[str, str]:
     months: dict[str, list[float]] = {}
     for iso, gap in days:
         months.setdefault(iso[:7], []).append(gap)
-    points = [(f"{m}-01", sum(v) / len(v)) for m, v in sorted(months.items())]
+    # The month of the capture is still running, so its average covers only
+    # part of it; the chart ends with the last full month (an outside review
+    # caught a partial September plotted as if complete, 2026-11-09).
+    captured_month = case["captured"][:7]
+    points = [(f"{m}-01", sum(v) / len(v)) for m, v in sorted(months.items()) if m < captured_month]
     # Spells of inverted months: runs below zero, joined when fewer than six
     # months apart, named by year ("2006 to 2007").
     runs: list[list[int]] = []
@@ -3807,7 +3814,9 @@ def statcan_snippets(lang: Lang) -> dict[str, str]:
         # later ones call get_cansim_vector_for_latest_periods() over several.
         _excerpt(scripts["r"], "data <- get_cansim_vector", ("data <- get_cansim_vector(c(", ")"))
         + "\n\n# …\n\n"
-        + _excerpt(scripts["r"], "# cansim adds val_norm", "  filter(")
+        # Since the 2026-11 capture the script keeps suppressed observations
+        # instead of filtering them out, so the excerpt ends on that comment.
+        + _excerpt(scripts["r"], "# cansim adds val_norm", "# Suppressed observations")
     )
     if "http2=True" not in python or "10 ** pl.col" not in python:
         raise SystemExit(
