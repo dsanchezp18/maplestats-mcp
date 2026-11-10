@@ -12,12 +12,25 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from _smoke_common import skip_outage, verdict
+
 from maplestats_mcp.modules.ab_opendata import client
 from maplestats_mcp.shared.errors import NotFound
 from maplestats_mcp.shared.http import new_client
 
 
 async def main() -> int:
+    failures = 0
+    try:
+        failures = await _checks()
+    # open.alberta.ca's CKAN API answered HTTP 500 on 2026-11-09 and 2026-11-10:
+    # an outage to report as a skip; anything else is raised again.
+    except Exception as exc:  # noqa: BLE001 - only an outage is skipped
+        skip_outage("open.alberta.ca", exc)
+    return verdict("AB OPENDATA", not failures)
+
+
+async def _checks() -> int:
     failures = 0
 
     def check(ok: bool, label: str) -> None:
@@ -75,8 +88,7 @@ async def main() -> int:
         t_rows = await client.read_resource(t_resource.url, limit=2)
         check(bool(t_rows.rows), f"traffic volumes -> {t_rows.sheet!r}, {t_rows.columns[:4]}")
 
-    print("AB OPENDATA SMOKE TEST", "FAILED" if failures else "PASSED")
-    return 1 if failures else 0
+    return failures
 
 
 if __name__ == "__main__":
