@@ -48,22 +48,25 @@ async def ircc_list_express_entry_rounds(
 
 @tool
 async def ircc_get_express_entry_round(
-    draw_number: str, lang: Lang = "en"
+    draw_number: str | None = None, lang: Lang = "en"
 ) -> ExpressEntryRoundDetail:
     """Get one Express Entry round of invitations by its draw number.
 
     Use for: looking up a specific round found with
     ircc_list_express_entry_rounds, or a round number a user already
-    knows. `draw_number` is a string, not an int: most rounds are plain
-    numbers ("444"), but two rounds IRCC ran on the same day
-    (2018-05-30) are published as "91a" and "91b" rather than separate
-    sequential numbers. Keywords: Express Entry, round, draw number,
+    knows. Without `draw_number` it returns the latest round, as
+    ircc_get_latest_express_entry_round does. `draw_number` is a string,
+    not an int: most rounds are plain numbers ("444"), but two rounds IRCC
+    ran on the same day (2018-05-30) are published as "91a" and "91b"
+    rather than separate sequential numbers. Keywords: Express Entry, round, draw number,
     invitation, CRS cutoff, immigration, permanent residence, IRCC.
     Mots-clés : Entrée express, ronde d'invitations, numéro de ronde,
     numéro de tirage, invitation à présenter une demande, note minimale
     SCG, score limite, immigration, résidence permanente, Immigration,
     Réfugiés et Citoyenneté Canada (IRCC).
     """
+    if draw_number is None:
+        return await client.get_latest_express_entry_round(lang)
     return await client.get_express_entry_round(draw_number, lang)
 
 

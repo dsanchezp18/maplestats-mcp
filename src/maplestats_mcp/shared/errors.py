@@ -37,6 +37,13 @@ class CloudflareChallenge(UpstreamUnavailable):
     """
 
 
+class ModuleUnavailable(RuntimeError):
+    """A tool's module failed to import on this server: a fault of the deployment.
+
+    Not a ValueError, so the caller is not told to fix the arguments.
+    """
+
+
 class DataLocked(ValueError):
     """StatCan's WDS returns HTTP 409 during its 12am-8:30am ET update window.
 

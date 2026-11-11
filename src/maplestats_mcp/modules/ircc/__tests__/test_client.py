@@ -173,6 +173,14 @@ async def test_get_latest_round_returns_first_entry(httpx_mock):
     assert detail.round.draw_number == "444"
 
 
+async def test_get_round_without_a_draw_number_is_the_latest(httpx_mock):
+    from maplestats_mcp.modules.ircc import tools
+
+    httpx_mock.add_response(url=constants.BASE_URL_EN, json=_EN_FEED)
+    detail = await tools.ircc_get_express_entry_round()
+    assert detail.round.draw_number == "444"
+
+
 def _french_body() -> str:
     fr_round = _round(
         "447",

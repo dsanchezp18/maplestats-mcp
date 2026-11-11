@@ -66,7 +66,7 @@ from maplestats_mcp.shared import search, semantic
 from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
 from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
-from maplestats_mcp.shared.errors import InvalidInput
+from maplestats_mcp.shared.errors import InvalidInput, ModuleUnavailable
 from maplestats_mcp.shared.private_logs import configure_private_logs
 from maplestats_mcp.shared.response_budget import ResponseBudgetMiddleware, with_detail
 from maplestats_mcp.shared.timeouts import ToolTimeoutMiddleware
@@ -168,6 +168,12 @@ class ModuleProvider(LocalProvider):
         return f"ModuleProvider(root={self._root!r})"
 
 
+# Why each tool of a module that failed to import cannot run, by tool name: fastmcp
+# logs a provider's error and answers as if the tool did not exist, which reached
+# the caller as "Unknown tool: 'call_tool'" (a missing pypdf, locally, 2026-11-10).
+_LOAD_ERRORS: dict[str, str] = {}
+
+
 class LazyModuleProvider(LocalProvider):
     """A module whose tools are listed from the catalogue and imported on first use.
 
@@ -208,7 +214,12 @@ class LazyModuleProvider(LocalProvider):
         # Synchronous on purpose: no other request runs between the check and
         # the flag, so two first calls cannot import the module twice.
         if not self._tools_loaded:
-            self._import(self._tool_files)
+            try:
+                self._import(self._tool_files)
+            except Exception as exc:
+                reason = f"the {self._root.name} module failed to load ({exc})"
+                _LOAD_ERRORS.update(dict.fromkeys(self._names, reason))
+                raise
             self._tools_loaded = True
 
     def _load_extras(self) -> None:
@@ -508,6 +519,15 @@ async def _call_with_schema(
         return await ctx.fastmcp.call_tool(tool.name, with_detail(arguments, detail))
     except InvalidArguments as exc:
         message = str(exc)
+    except NotFoundError:
+        if tool.name not in _LOAD_ERRORS:
+            raise
+        # `from None`: the "Unknown tool" error is not this one's cause.
+        raise ModuleUnavailable(
+            f"{tool.name} cannot run on this server: {_LOAD_ERRORS[tool.name]}. Fix: this is "
+            "a fault of the server, not of the arguments; use another tool for the same data "
+            "(search_tools), or say the server needs fixing. Do not answer from memory."
+        ) from None
     schema = search.serialize_tools_compact([tool])[0].get("inputSchema") or {}
     lang = str((arguments or {}).get("lang", "en"))
     label = (
