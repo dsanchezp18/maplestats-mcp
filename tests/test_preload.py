@@ -129,3 +129,31 @@ async def test_a_failed_preload_still_starts_the_server(caplog: pytest.LogCaptur
         await app({"type": "lifespan"}, receive, send)
     assert seen == ["lifespan.startup", "lifespan.shutdown"]
     assert "Preloading the modules failed" in caplog.text
+
+
+async def test_a_module_that_fails_to_import_says_so(monkeypatch):
+    # fastmcp logs a provider's error and answers "Unknown tool", which reached the
+    # caller as "Unknown tool: 'call_tool'" (a missing pypdf, 2026-11-10).
+    from fastmcp import Client
+    from mcp.types import TextContent
+
+    built = server.build_server()
+    provider = next(p for p in _lazy(built) if p._root.name == "cdc")
+
+    def broken(files):
+        raise ModuleNotFoundError("No module named 'pypdf'")
+
+    monkeypatch.setattr(provider, "_import", broken)
+    monkeypatch.setattr(server, "_LOAD_ERRORS", {})
+    name = next(iter(provider._names))
+    async with Client(built) as client:
+        result = await client.call_tool(
+            "call_tool", {"name": name, "arguments": {}}, raise_on_error=False
+        )
+    block = result.content[0]
+    assert isinstance(block, TextContent)
+    text = block.text
+    assert result.is_error
+    assert text.startswith("[module_unavailable]"), text
+    assert "the cdc module failed to load (No module named 'pypdf')" in text
+    assert "Unknown tool" not in text

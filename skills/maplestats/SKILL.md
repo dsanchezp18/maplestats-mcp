@@ -136,6 +136,7 @@ Errors begin with a code and end with a fix. Follow it.
 | `[not_found]` | Unknown identifier | Check it with the source's search tool; if the data do not exist, say so |
 | `[upstream_error]` | Source answered with an error | Retry once, try another tool for the same data, or report it |
 | `[unknown_tool]` | Name not in the catalogue | Call `search_tools` and use a name it returns |
+| `[module_unavailable]` | The tool's module failed to load on this server | Use another tool for the same data, or say the server needs fixing |
 | `[error]` | Any other failure | Retry once with the same arguments, then find another tool with `search_tools` or report it |
 
 Never answer from memory after a failure. A tool that is switched off on a

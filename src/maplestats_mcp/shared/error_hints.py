@@ -26,6 +26,7 @@ from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from maplestats_mcp.shared.errors import (
     DataLocked,
     InvalidInput,
+    ModuleUnavailable,
     NotFound,
     UpstreamError,
     UpstreamUnavailable,
@@ -179,6 +180,9 @@ def hint_for(exc: BaseException, lang: str) -> str:
 # branch on "[not_found]" without parsing the sentence, and MCP clients show the text.
 # Most specific first, as in _HINTS.
 _CODES: tuple[tuple[type[BaseException], str], ...] = (
+    # First: it is raised while handling the NotFoundError it replaces, which stays in
+    # the chain as its suppressed context.
+    (ModuleUnavailable, "module_unavailable"),
     (DataLocked, "data_locked"),
     (UpstreamUnavailable, "upstream_unavailable"),
     (InvalidInput, "invalid_input"),
