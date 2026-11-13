@@ -527,6 +527,47 @@ async def test_datastore_unknown_filter_column_is_rejected(httpx_mock):
         await client.datastore_search("federal", "res1", filters={"Yeer": "2024"})
 
 
+@pytest.mark.parametrize("filter_name, valid", [("category", True), ("categroy", False)])
+async def test_datastore_filter_validation_uses_full_schema_with_projection(
+    httpx_mock, filter_name, valid
+):
+    httpx_mock.add_response(
+        json=_ok(
+            {
+                "records": [{"measure_name": "Bankruptcies"}],
+                "fields": [{"id": "measure_name", "type": "text"}],
+                "total": 1,
+            }
+        )
+    )
+    httpx_mock.add_response(
+        json=_ok(
+            {
+                "records": [],
+                "fields": [
+                    {"id": "measure_name", "type": "text"},
+                    {"id": "category", "type": "text"},
+                ],
+                "total": 10,
+            }
+        )
+    )
+    if valid:
+        result = await client.datastore_search(
+            "toronto", "r", fields="measure_name", filters={filter_name: "Community"}
+        )
+        assert result.records == [{"measure_name": "Bankruptcies"}]
+        assert [field.id for field in result.fields] == ["measure_name"]
+    else:
+        with pytest.raises(InvalidInput, match="unknown filter column"):
+            await client.datastore_search(
+                "toronto", "r", fields="measure_name", filters={filter_name: "Community"}
+            )
+    requests = httpx_mock.get_requests()
+    assert _query(requests[1])["limit"] == ["0"]
+    assert "fields" not in _query(requests[1])
+
+
 async def test_unsuccessful_envelope_message_is_short(httpx_mock):
     httpx_mock.add_response(
         json={"success": False, "error": {"message": "x" * 5000, "__type": "Validation Error"}}
