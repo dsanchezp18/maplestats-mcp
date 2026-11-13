@@ -32,7 +32,7 @@ import io
 import math
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import UTC, datetime
 from typing import Any, NoReturn
 
 import httpx
@@ -645,7 +645,7 @@ async def get_series(
 ) -> SeriesData:
     lang = _lang(lang)
     _check_periods(start_period, end_period, last_n, lang)
-    if start_period and _period_start(start_period.strip()) > date.today().isoformat():
+    if start_period and _period_start(start_period.strip()) > datetime.now(UTC).date().isoformat():
         raise_localized(
             NotFound,
             f"start_period {start_period} is in the future: the ECB has no values for it yet.",

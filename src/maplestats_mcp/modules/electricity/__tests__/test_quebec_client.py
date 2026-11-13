@@ -197,6 +197,68 @@ async def test_trade_drops_latest_hours_with_unpublished_exports(httpx_mock):
     assert "limit=38" in url
 
 
+async def test_demand_with_only_an_end_date_asks_for_the_last_rows_up_to_it(httpx_mock):
+    httpx_mock.add_response(
+        url=_exports("demande-electricite-quebec"),
+        json=[
+            {"date": "2026-09-27T23:45:00+00:00", "valeurs_demandetotal": 17000.0},
+            {"date": "2026-09-27T23:30:00+00:00", "valeurs_demandetotal": 17100.0},
+        ],
+    )
+    httpx_mock.add_response(url=_records("demande-electricite-quebec"), json={"total_count": 500})
+    result = await quebec_client.get_demand(end_date="2026-09-27", limit=2)
+    # Oldest first, as for the no-date call, but ending at the end date.
+    assert [p.demand_mw for p in result.points] == [17100.0, 17000.0]
+    url = unquote_plus(str(httpx_mock.get_requests()[0].url))
+    assert "order_by=date desc" in url
+    assert 'date < "2026-09-28T00:00:00Z"' in url
+    assert "date >=" not in url
+
+
+async def test_generation_with_only_an_end_date_asks_for_the_last_rows_up_to_it(httpx_mock):
+    httpx_mock.add_response(
+        url=_exports("production-electricite-quebec"),
+        json=[
+            {
+                "date": "2026-09-27T23:00:00+00:00",
+                "valeurs_total": 13000.0,
+                "valeurs_hydraulique": 10000.0,
+            }
+        ],
+    )
+    httpx_mock.add_response(url=_records("production-electricite-quebec"), json={"total_count": 9})
+    await quebec_client.get_generation(end_date="2026-09-27", limit=1)
+    url = unquote_plus(str(httpx_mock.get_requests()[0].url))
+    assert "order_by=date desc" in url
+    assert 'date < "2026-09-28T00:00:00Z"' in url
+
+
+async def test_trade_with_only_an_end_date_returns_the_last_hours_up_to_it(httpx_mock):
+    end_hour = datetime(2026, 9, 27, 23, tzinfo=UTC)
+    httpx_mock.add_response(
+        url=_exports("importations-exportations-avec-transits"),
+        json=[_trade_row(end_hour - timedelta(hours=h), 600.0 + h, 200.0) for h in range(3)],
+    )
+    httpx_mock.add_response(
+        url=_records("importations-exportations-avec-transits"), json={"total_count": 600}
+    )
+    result = await quebec_client.get_trade(end_date="2026-09-27", limit=2)
+    assert [p.exports_total_mw for p in result.points] == [601.0, 600.0]
+    url = unquote_plus(str(httpx_mock.get_requests()[0].url))
+    assert "order_by=date desc" in url
+    assert 'date < "2026-09-28T00:00:00Z"' in url
+
+
+async def test_demand_with_a_start_date_still_reads_from_the_start(httpx_mock):
+    httpx_mock.add_response(
+        url=_exports("demande-electricite-quebec"),
+        json=[{"date": "2026-09-27T00:00:00+00:00", "valeurs_demandetotal": 17000.0}],
+    )
+    httpx_mock.add_response(url=_records("demande-electricite-quebec"), json={"total_count": 500})
+    await quebec_client.get_demand(start_date="2026-09-27", limit=1)
+    assert "order_by=date&" in unquote_plus(str(httpx_mock.get_requests()[0].url))
+
+
 async def test_input_validation():
     with pytest.raises(InvalidInput):
         await quebec_client.get_demand("archive")  # type: ignore[arg-type]

@@ -118,6 +118,17 @@ async def test_search_needs_a_filter():
         await client.search_products()
 
 
+async def test_blank_schedule_or_atc_does_not_count_as_a_filter():
+    # No table is mocked: the guard refuses before any request. A blank schedule
+    # or atc used to pass it, filter nothing and return the whole table.
+    with pytest.raises(InvalidInput, match="at least one"):
+        await client.search_products(schedule="  ")
+    with pytest.raises(InvalidInput, match="at least one"):
+        await client.search_products(atc=" \t")
+    with pytest.raises(InvalidInput, match="donnez au moins"):
+        await client.search_products(schedule=" ", atc=" ", brand=" ", lang="fr")
+
+
 async def test_get_product_folds_single_objects_and_404_sub_tables(httpx_mock):
     # Live: drugproduct, status, packaging and pharmaceuticalstd answer one
     # object for ?id=; veterinaryspecies and an empty therapeuticclass 404.

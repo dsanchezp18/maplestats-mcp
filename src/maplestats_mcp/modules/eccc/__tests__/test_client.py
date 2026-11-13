@@ -208,6 +208,32 @@ async def test_query_items_rejects_unknown_filter_key_before_request(httpx_mock)
         await client.query_items("weather-alerts", filters={"not_a_real_property": "xyz"})
 
 
+async def test_query_items_accepts_a_multi_key_sortby(httpx_mock):
+    # OGC API allows "key,-key"; the whole string used to be checked as one name.
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections/weather-alerts/queryables?f=json",
+        json={"properties": {"province": {"type": "string"}, "alert_type": {"type": "string"}}},
+    )
+    httpx_mock.add_response(
+        url=(
+            f"{constants.BASE_URL}/collections/weather-alerts/items"
+            "?f=json&lang=en&limit=10&offset=0&sortby=province,-alert_type"
+        ),
+        json={"type": "FeatureCollection", "features": [_alert_feature()], "numberMatched": 1},
+    )
+    result = await client.query_items("weather-alerts", sortby="province,-alert_type")
+    assert result.number_matched == 1
+
+
+async def test_query_items_rejects_an_unknown_key_in_a_multi_key_sortby(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}/collections/weather-alerts/queryables?f=json",
+        json={"properties": {"province": {"type": "string"}}},
+    )
+    with pytest.raises(InvalidInput, match="not_a_real_property"):
+        await client.query_items("weather-alerts", sortby="province,-not_a_real_property")
+
+
 async def test_query_items_maps_datetime_500_to_invalid_input(httpx_mock):
     """Confirmed live: weather-alerts returns HTTP 500 "query error" for
     any datetime value, unlike hydrometric-realtime which filters fine."""

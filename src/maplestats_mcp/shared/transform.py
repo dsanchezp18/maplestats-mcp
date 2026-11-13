@@ -700,7 +700,9 @@ def transform_series(
         assert window is not None and out_ppy is not None  # check_window, _NEEDS_CALENDAR
         values = _trailing_mean(levels, [v for _, v in levels], window, out_ppy)
     elif out_ppy is None:
-        values = [None] + [
+        # Empty levels must give empty values: a lone leading None would make the
+        # strict zip below raise when a window holds no observations.
+        values = [None] * min(len(levels), 1) + [
             _compute(applied, levels[i][1], levels[i - 1][1], None) for i in range(1, len(levels))
         ]
     else:

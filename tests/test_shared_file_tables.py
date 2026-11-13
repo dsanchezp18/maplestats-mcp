@@ -328,3 +328,44 @@ def test_detect_format_does_not_copy_the_whole_body():
     assert tables.detect_format(Body(b"a,b\n1,2\n" * 1000), "CSV") == "csv"
     with pytest.raises(UpstreamError, match="web page"):
         tables.detect_format(Body(b"   <html>" + b"x" * 1000), "CSV")
+
+
+def _with_shared_strings(body: bytes, strings_xml: bytes) -> bytes:
+    """The workbook with its sharedStrings part replaced (or added) as given."""
+    import zipfile
+
+    out = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(body)) as source,
+        zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as target,
+    ):
+        for item in source.infolist():
+            if item.filename != "xl/sharedStrings.xml":
+                target.writestr(item, source.read(item))
+        target.writestr("xl/sharedStrings.xml", strings_xml)
+    return out.getvalue()
+
+
+def test_xlsx_whose_shared_strings_inflate_past_the_cap_is_refused_before_loading():
+    # A reviewer's 88 KB workbook with a 34 MB sharedStrings part held a parse
+    # worker for 36 s inside load_workbook, where no deadline check can fire.
+    from maplestats_mcp.shared.file_download import TooLarge
+    from maplestats_mcp.shared.xlsx_sheets import XLSX_MAX_PART_BYTES
+
+    count = XLSX_MAX_PART_BYTES // 16 + 1000
+    strings = (
+        b'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        + b"<si><t>a</t></si>" * count
+        + b"</sst>"
+    )
+    body = _with_shared_strings(_xlsx({"Data": CASELOAD}), strings)
+    assert len(body) < 1_000_000
+    with pytest.raises(TooLarge, match="Download the file"):
+        tables.sheet_sizes(body, "xlsx")
+    with pytest.raises(TooLarge):
+        tables.describe(body, "xlsx", None)
+
+
+def test_ordinary_workbook_with_shared_strings_still_opens():
+    body = _xlsx({"Data": CASELOAD * 2000})
+    assert tables.sheet_sizes(body, "xlsx") == [("Data", 10000, 4)]

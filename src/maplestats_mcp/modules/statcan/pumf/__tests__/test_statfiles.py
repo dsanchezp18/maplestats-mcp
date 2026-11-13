@@ -85,7 +85,7 @@ async def test_tabulate_reads_a_stat_only_zip(monkeypatch, tmp_path, name):
     async def members(_url):
         return [readme, member], 1, False
 
-    async def local_data_file(_url, _member, *, also_keep=()):
+    async def local_data_file(_url, _member, *, also_keep=(), also_extract=()):
         path = tmp_path / name
         if not path.exists():
             shutil.copy(FIXTURES / name, path)

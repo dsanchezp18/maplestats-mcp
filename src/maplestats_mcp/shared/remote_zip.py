@@ -98,7 +98,12 @@ def redirect_allowed(source: httpx.URL, target: httpx.URL) -> bool:
     return any(host == s.lstrip(".") or host.endswith(s) for s in ALLOWED_REDIRECT_SUFFIXES)
 
 
-async def _check_redirect(response: httpx.Response) -> None:
+async def check_redirect_response(response: httpx.Response) -> None:
+    """Response hook: refuse a redirect hop that `redirect_allowed` rejects.
+
+    Public so every client that follows redirects to download a publisher's
+    file (the PUMF tabulation download too) applies the same rule.
+    """
     if not response.is_redirect:
         return
     location = response.headers.get("location", "")
@@ -116,7 +121,7 @@ async def _check_redirect(response: httpx.Response) -> None:
 _client = new_client(timeout=60.0, follow_redirects=True)
 _client.event_hooks = {
     "request": _client.event_hooks["request"],
-    "response": [*_client.event_hooks["response"], _check_redirect],
+    "response": [*_client.event_hooks["response"], check_redirect_response],
 }
 
 

@@ -76,6 +76,9 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _IESO_TZ = timezone(timedelta(hours=constants.IESO_UTC_OFFSET_HOURS))
+# HOEP ended with the 2025-05-01 market renewal, so 2025 (to April) is the last
+# year IESO publishes; it does not move with the calendar.
+_LAST_HOEP_YEAR = 2025
 
 
 def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
@@ -391,7 +394,9 @@ async def get_hourly_demand(
         for row in all_rows
         if (start is None or row.date >= start) and (end is None or row.date <= end)
     ]
-    shown = matched[:limit] if (start or end) else matched[-limit:]
+    # From a start, the first rows after it; otherwise the last rows, which
+    # with only an end date are the ones up to that end.
+    shown = matched[:limit] if start else matched[-limit:]
     valid = [row for row in matched if row.ontario_demand_mw is not None]
     peak = max(valid, key=lambda row: row.ontario_demand_mw or 0, default=None)
     return HourlyDemand(
@@ -583,7 +588,8 @@ async def get_supply_by_fuel(
         for row in all_rows
         if (start is None or row.date >= start) and (end is None or row.date <= end)
     ]
-    shown = matched[:limit] if (start or end) else matched[-limit:]
+    # Same rule as get_hourly_demand: only a start counts from the front.
+    shown = matched[:limit] if start else matched[-limit:]
     sums: dict[str, int] = {}
     gaps: dict[str, int] = {}
     partial: dict[str, int] = {}
@@ -790,8 +796,10 @@ async def get_zonal_prices(
 
 
 async def get_hoep_history(year: int | None = None, *, lang: str = "en") -> HoepHistory:
-    chosen = year or ieso_today().year - 1
-    if not constants.FIRST_DEMAND_YEAR <= chosen <= 2025:
+    # The default is the last published year, not last calendar year: from 2027
+    # that would fall outside the allowed range and refuse a call with no arguments.
+    chosen = year or _LAST_HOEP_YEAR
+    if not constants.FIRST_DEMAND_YEAR <= chosen <= _LAST_HOEP_YEAR:
         _raise(
             InvalidInput,
             "HOEP year must be 2002-2025 (HOEP ended with the 2025-05-01 market renewal), "

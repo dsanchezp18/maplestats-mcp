@@ -12,18 +12,31 @@ from __future__ import annotations
 
 import io
 import warnings
+import zipfile
 from datetime import date, datetime
 from typing import Any
 
 from maplestats_mcp.shared.errors import InvalidInput
 from maplestats_mcp.shared.executor import check_deadline
+from maplestats_mcp.shared.file_download import TooLarge
 from maplestats_mcp.shared.fr_typography import call_error
+from maplestats_mcp.shared.i18n import fr_number
 
 # A header row is the first of the first rows with this many filled cells.
 HEADER_MIN_CELLS = 3
 HEADER_SEARCH_ROWS = 30
 # Declared sheet sizes above this are formatting, not data (see fix_dimensions).
 SUSPICIOUS_SHEET_CELLS = 10_000_000
+# Caps on the uncompressed XML a workbook's ZIP declares (check_inflated_size).
+# Most readers cap downloads at 40 MB (ab_opendata, bc_stats, ckan); spreadsheet
+# XML compresses about 5-10 times, so 400 MB in total admits any workbook those
+# caps let through while refusing a ZIP bomb. The parts openpyxl loads whole
+# (sharedStrings above all) parse at about 1 MB/s in the worst case (millions
+# of one-character strings), so 32 MB keeps that unstoppable load near half the
+# 60 s parse budget; the shared strings of ordinary agency tables, mostly
+# numbers, run to a few MB, and a whole 20-40 MB workbook passes.
+XLSX_MAX_INFLATED_BYTES = 400 * 1024 * 1024
+XLSX_MAX_PART_BYTES = 32 * 1024 * 1024
 
 
 def cell_text(value: Any) -> str:
@@ -49,11 +62,52 @@ def trim_rows(rows: list[list[str]]) -> list[list[str]]:
     return [r[:width] + [""] * (width - len(r[:width])) for r in rows]
 
 
+def check_inflated_size(body: bytes) -> None:
+    """Refuse a workbook whose ZIP members declare more XML than is safe to load.
+
+    The download caps bound compressed bytes only, and openpyxl reads the
+    shared strings (and styles, workbook) parts whole inside load_workbook,
+    before any row, so no parse deadline check fires and the worker thread
+    cannot be stopped. A reviewer's 88 KB file with a 34 MB sharedStrings
+    part (2,000,000 strings) held a worker for 36 s. Declared sizes are a
+    real bound: zipfile stops reading a member at its declared size.
+    """
+    try:
+        members = zipfile.ZipFile(io.BytesIO(body)).infolist()
+    except zipfile.BadZipFile:
+        return  # Not a ZIP; openpyxl raises its own error for that.
+    total = sum(m.file_size for m in members)
+    # Worksheets stream row by row under the deadline, so only the parts loaded
+    # whole get the tight per-member cap.
+    whole = [m for m in members if not m.filename.startswith("xl/worksheets/")]
+    biggest = max(whole, key=lambda m: m.file_size, default=None)
+    if total > XLSX_MAX_INFLATED_BYTES or (
+        biggest is not None and biggest.file_size > XLSX_MAX_PART_BYTES
+    ):
+        part = f" ({biggest.filename}: {biggest.file_size:,} bytes)" if biggest else ""
+        part_fr = (
+            f" ({biggest.filename} : {fr_number(biggest.file_size)} octets)" if biggest else ""
+        )
+        raise call_error(
+            TooLarge,
+            f"the workbook unpacks to {total:,} bytes of XML{part}, over this server's "
+            f"limit of {XLSX_MAX_INFLATED_BYTES:,} in total and {XLSX_MAX_PART_BYTES:,} "
+            "for one shared part. Download the file from the portal and open it locally, "
+            "or pick a CSV version of the same table if the portal has one.",
+            f"le classeur se décompresse en {fr_number(total)} octets de XML{part_fr}, au-delà "
+            f"de la limite du serveur ({fr_number(XLSX_MAX_INFLATED_BYTES)} au total et "
+            f"{fr_number(XLSX_MAX_PART_BYTES)} pour une partie partagée). Téléchargez le fichier "
+            "depuis le portail et ouvrez-le localement, ou prenez une version CSV du même "
+            "tableau si le portail en a une.",
+        )
+
+
 def open_workbook(body: bytes) -> Any:
     """A read-only, values-only openpyxl workbook over the file's bytes."""
     # openpyxl takes ~0.7 s to import, so it loads on first use.
     from openpyxl import load_workbook
 
+    check_inflated_size(body)
     with warnings.catch_warnings():
         # Agency workbooks carry print-area names openpyxl cannot set; harmless for reading.
         warnings.simplefilter("ignore", UserWarning)

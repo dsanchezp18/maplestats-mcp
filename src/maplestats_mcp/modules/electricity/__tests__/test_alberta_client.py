@@ -185,6 +185,20 @@ async def test_pool_price_without_dates_returns_the_latest_hours(httpx_mock, mon
     assert [(r.date.day, r.hour_ending) for r in result.rows] == [(3, 1), (3, 2)]
 
 
+async def test_pool_price_with_only_an_end_date_returns_the_last_hours_up_to_it(httpx_mock):
+    httpx_mock.add_response(url=POOL_URL, text=POOL_CSV)
+    result = await alberta_client.get_pool_price(end_date="2025-11-03", limit=2)
+    # The end day's own hours, not the earliest hours of the invented window.
+    assert [(r.date.day, r.hour_ending) for r in result.rows] == [(3, 1), (3, 2)]
+    assert result.end_date == date(2025, 11, 3)
+
+
+async def test_pool_price_with_a_start_date_keeps_the_first_hours(httpx_mock):
+    httpx_mock.add_response(url=POOL_URL, text=POOL_CSV)
+    result = await alberta_client.get_pool_price(start_date="2025-11-02", limit=2)
+    assert [(r.date.day, r.hour_ending) for r in result.rows] == [(2, 1), (2, 2)]
+
+
 async def test_pool_price_rejects_long_ranges_and_dates_before_1999():
     with pytest.raises(InvalidInput):
         await alberta_client.get_pool_price("2023-01-01", "2024-12-31")
@@ -255,6 +269,33 @@ async def test_monthly_summary_reports_unpublished_months(httpx_mock):
     result = await alberta_client.get_monthly_summary("2026-09", "2026-10")
     assert [m.month for m in result.months] == ["2026-09"]
     assert result.months_not_published == ["2026-10"]
+
+
+@pytest.mark.parametrize(
+    "first_answer",
+    [
+        {"status_code": 404},
+        {"text": "<html><body>Pool Monthly Summary is being prepared.</body></html>"},
+    ],
+    ids=["page_not_posted", "page_without_the_table"],
+)
+async def test_monthly_summary_does_not_cache_a_month_that_is_not_there_yet(
+    httpx_mock, monkeypatch, first_answer
+):
+    monkeypatch.setattr(alberta_client, "alberta_today", lambda: date(2026, 11, 10))
+    url = re.compile(r".*PMS_10012026\.html")
+    httpx_mock.add_response(url=url, **first_answer)
+    first = await alberta_client.get_monthly_summary("2026-10")
+    assert first.months == [] and first.months_not_published == ["2026-10"]
+    # AESO posts the page minutes later: the next call must ask again instead of
+    # reading a cached "not published" for the 6 h archive TTL.
+    httpx_mock.add_response(url=url, text=MONTHLY_2026)
+    second = await alberta_client.get_monthly_summary("2026-10")
+    assert [m.month for m in second.months] == ["2026-10"]
+    assert second.months_not_published == []
+    # A month that was read is cached as before.
+    third = await alberta_client.get_monthly_summary("2026-10")
+    assert third.provenance.cached is True
 
 
 async def test_monthly_summary_rejects_bad_months():

@@ -18,7 +18,7 @@ from typing import Any
 from urllib.parse import quote, urlencode
 
 from maplestats_mcp.modules.reproduce import cleaning
-from maplestats_mcp.modules.reproduce.spec import Filter, Spec
+from maplestats_mcp.modules.reproduce.spec import Filter, Spec, term_groups
 
 _STDLIB = {
     "csv",
@@ -184,6 +184,11 @@ def _quote(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _either(tests: list[str], operator: str) -> str:
+    """One test as is; alternatives for one term, any of them, in parentheses."""
+    return tests[0] if len(tests) == 1 else "(" + operator.join(tests) + ")"
+
+
 # R ----------------------------------------------------------------------
 
 
@@ -195,8 +200,11 @@ def _r_filter(item: Filter) -> str:
         cells = ", ".join(f'coalesce(as.character({c}), "")' for c in columns)
         haystack = f'str_c({cells}, sep = " ")'
         return ",\n    ".join(
-            f"str_detect({haystack}, fixed({_quote(term)}, ignore_case = TRUE))"
-            for term in str(item.value).lower().split()
+            _either(
+                [f"str_detect({haystack}, fixed({_quote(t)}, ignore_case = TRUE))" for t in group],
+                " | ",
+            )
+            for group in term_groups(item.value)
         )
     if item.op == "is":
         value = _quote(str(item.value).strip().lower())
@@ -475,9 +483,10 @@ def render_r(spec: Spec, tool: str) -> tuple[str, list[str]]:
             "data <- data |>\n"
             f'  rename_with(\\(name) str_remove(name, "^{spec.header_prefix}"))\n'
         )
-    if spec.filters:
+    r_conditions = [c for c in map(_r_filter, spec.filters) if c]
+    if r_conditions:
         packages += ["dplyr", "stringr"]
-        conditions = ",\n    ".join(_r_filter(f) for f in spec.filters)
+        conditions = ",\n    ".join(r_conditions)
         prepare.append(
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data <- data |>\n  filter(\n    {conditions}\n  )\n"
@@ -535,8 +544,8 @@ def _py_filter(item: Filter) -> str:
         parts = ", ".join(f'pl.col({c!r}).cast(pl.Utf8).fill_null("")' for c in item.columns)
         haystack = f'pl.concat_str([{parts}], separator=" ").str.to_lowercase()'
         return ",\n    ".join(
-            f"{haystack}.str.contains({term!r}, literal=True)"
-            for term in str(item.value).lower().split()
+            _either([f"{haystack}.str.contains({t!r}, literal=True)" for t in group], " | ")
+            for group in term_groups(item.value)
         )
     if item.op == "is":
         return (
@@ -746,8 +755,9 @@ def py_prepare(spec: Spec) -> list[str]:
             f"# Drop the {spec.header_prefix!r} that marks the header row.\n\n"
             f"data = data.rename(lambda name: name.removeprefix({spec.header_prefix!r}))\n"
         )
-    if spec.filters:
-        conditions = ",\n    ".join(_py_filter(f) for f in spec.filters)
+    py_conditions = [c for c in map(_py_filter, spec.filters) if c]
+    if py_conditions:
+        conditions = ",\n    ".join(py_conditions)
         blocks.append(
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data = data.filter(\n    {conditions},\n)\n"
@@ -1124,9 +1134,22 @@ def render_stata(spec: Spec, tool: str) -> tuple[str, list[str]]:
 # Julia -----------------------------------------------------------------------
 
 
-def _jl_filter(item: Filter) -> str:
+def _jl_filter(item: Filter, nested: bool = False) -> str:
+    def field(column: str) -> str:
+        # R and Python flatten JSON to dotted names ("title.en"); Julia's records
+        # keep the nested object, so walk into it instead.
+        if not nested or "." not in column:
+            return f"row[{jl_quote(column)}]"
+        first, *rest = column.split(".")
+        found = f"row[{jl_quote(first)}]"
+        for key in rest:
+            found = (
+                f"(x -> x isa AbstractDict ? get(x, {jl_quote(key)}, missing) : missing)({found})"
+            )
+        return found
+
     def cell(column: str) -> str:
-        return f'coalesce(string(row[{jl_quote(column)}]), "")'
+        return f'coalesce(string({field(column)}), "")'
 
     if item.op == "contains":
         needle = jl_quote(str(item.value).lower())
@@ -1134,7 +1157,8 @@ def _jl_filter(item: Filter) -> str:
     if item.op == "terms":
         haystack = f'lowercase(join([{", ".join(cell(c) for c in item.columns)}], " "))'
         return " &&\n        ".join(
-            f"occursin({jl_quote(term)}, {haystack})" for term in str(item.value).lower().split()
+            _either([f"occursin({jl_quote(t)}, {haystack})" for t in group], " || ")
+            for group in term_groups(item.value)
         )
     if item.op == "is":
         value = jl_quote(str(item.value).strip().lower())
@@ -1323,9 +1347,11 @@ def render_julia(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
         prepare.append(
             f'rename!(data, names(data) .=> replace.(names(data), r"^{spec.header_prefix}" => ""))\n'
         )
-    if spec.filters:
+    nested = spec.kind == "json"
+    jl_conditions = [c for c in (_jl_filter(f, nested) for f in spec.filters) if c]
+    if jl_conditions:
         packages.append("DataFrames")
-        conditions = " &&\n        ".join(f"({_jl_filter(f)})" for f in spec.filters)
+        conditions = " &&\n        ".join(f"({c})" for c in jl_conditions)
         prepare.append(
             "# Keep the rows the MapleStats tool kept.\n\n"
             f"data = filter(row -> begin\n        {conditions}\n    end, data)\n"

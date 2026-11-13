@@ -28,7 +28,7 @@ async def test_cache_evicts_past_the_byte_budget(monkeypatch):
     stored = cache_module._caches[ttl]
     assert 0 < len(stored) <= 3
     assert "limits-big-5" in stored  # the newest survives, the oldest went first
-    assert sum(cache_module._sizes[ttl].values()) <= 200_000
+    assert stored.total_bytes == sum(stored.sizes.values()) <= 200_000
 
 
 async def test_cache_skips_a_result_bigger_than_the_whole_budget(monkeypatch):

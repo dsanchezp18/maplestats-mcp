@@ -45,7 +45,7 @@ import math
 import re
 import time
 from collections import deque
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import Any, NoReturn
 
 import httpx
@@ -662,7 +662,7 @@ def _updated(structure: dict[str, Any]) -> datetime | None:
 def _citation(fid: str, info: dict[str, Any], structure: dict[str, Any], lang: str) -> str:
     updated = _updated(structure)
     year = (updated or datetime.now(UTC)).year
-    today = date.today().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     return pick(
         lang,
         f"OECD ({year}), {structure['name']}, OECD Data Explorer, "

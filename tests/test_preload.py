@@ -155,5 +155,82 @@ async def test_a_module_that_fails_to_import_says_so(monkeypatch):
     text = block.text
     assert result.is_error
     assert text.startswith("[module_unavailable]"), text
-    assert "the cdc module failed to load (No module named 'pypdf')" in text
+    assert "the cdc module failed to load (ModuleNotFoundError: No module named 'pypdf')" in text
     assert "Unknown tool" not in text
+
+
+async def test_preload_skips_a_broken_module_and_still_builds_the_index(monkeypatch, caplog):
+    built = server.build_server()
+    providers = _lazy(built)
+    broken = next(p for p in providers if p._root.name == "cdc")
+
+    def fail(files):
+        raise ImportError("boom")
+
+    monkeypatch.setattr(broken, "_import", fail)
+    monkeypatch.setattr(server, "_LOAD_ERRORS", {})
+    with caplog.at_level(logging.WARNING, logger="maplestats_mcp.server"):
+        await server.preload(built)
+
+    assert not broken.loaded
+    assert all(p.loaded for p in providers if p is not broken)
+    assert _transform(built)._indexed
+    assert "failed to load" in caplog.text
+
+
+async def test_a_failed_import_is_remembered_and_not_retried(monkeypatch):
+    built = server.build_server()
+    provider = next(p for p in _lazy(built) if p._root.name == "cdc")
+    calls: list[int] = []
+
+    def fail(files):
+        calls.append(1)
+        raise ImportError("boom")
+
+    monkeypatch.setattr(provider, "_import", fail)
+    monkeypatch.setattr(server, "_LOAD_ERRORS", {})
+    for _ in range(3):
+        with pytest.raises(server.ModuleUnavailable, match="cdc module failed to load"):
+            provider._load_tools()
+    assert len(calls) == 1
+
+
+async def test_a_failed_extras_import_is_remembered_and_recorded(monkeypatch):
+    built = server.build_server()
+    provider = next(p for p in _lazy(built) if p._extra_files)
+    calls: list[int] = []
+
+    def fail(files):
+        calls.append(1)
+        raise ImportError("boom")
+
+    monkeypatch.setattr(provider, "_import", fail)
+    monkeypatch.setattr(server, "_LOAD_ERRORS", {})
+    for _ in range(3):
+        with pytest.raises(server.ModuleUnavailable, match="module failed to load"):
+            await provider._list_resources()
+    assert len(calls) == 1
+    assert set(server._LOAD_ERRORS) == set(provider._names)
+
+
+async def test_the_load_error_callers_see_has_no_server_paths(monkeypatch, caplog):
+    built = server.build_server()
+    provider = next(p for p in _lazy(built) if p._root.name == "cdc")
+    raw = "cannot import name 'x' from 'y' (/app/src/maplestats_mcp/modules/cdc/client.py)"
+
+    def fail(files):
+        raise ImportError(raw)
+
+    monkeypatch.setattr(provider, "_import", fail)
+    monkeypatch.setattr(server, "_LOAD_ERRORS", {})
+    with (
+        caplog.at_level(logging.ERROR, logger="maplestats_mcp.server"),
+        pytest.raises(server.ModuleUnavailable) as caught,
+    ):
+        provider._load_tools()
+    message = str(caught.value)
+    assert "/app/src" not in message
+    assert "ImportError: cannot import name 'x' from 'y'" in message
+    assert all("/app/src" not in reason for reason in server._LOAD_ERRORS.values())
+    # The server log keeps the full text for whoever fixes the deployment.
+    assert raw in caplog.text

@@ -850,7 +850,9 @@ async def search_registrations(
         and (
             not client_words
             or _all_in(r.client_folded, client_words)
-            or r.client_number == client_number
+            # A record with no client number would otherwise equal a None
+            # filter number and pass every name filter.
+            or (client_number is not None and r.client_number == client_number)
         )
         and (not lobbyist_words or _any_all_in(r.lobbyists_folded, lobbyist_words))
         and (not firm_words or _all_in(r.firm_folded, firm_words))
@@ -1043,7 +1045,8 @@ def _filter_reports(
         and (
             not client_words
             or _all_in(r.client_folded, client_words)
-            or r.client_number == client_number
+            # Compare numbers only when the filter gave one (see registrations).
+            or (client_number is not None and r.client_number == client_number)
         )
         and (not lobbyist_words or _any_all_in(r.people_folded, lobbyist_words))
         and (not holder_words or _any_all_in(r.holders_folded, holder_words))

@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 from maplestats_mcp.shared import file_download
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.fr_typography import call_error
 from maplestats_mcp.shared.rate_limiter import TokenBucket
 
@@ -109,20 +110,27 @@ async def fetch_rows(
             context=context,
             timeout=120.0,
         )
-        text = decode(downloaded.body)
-        # A mistyped path can answer HTTP 200 with an HTML page; only the start is read.
-        if text[:1024].lstrip().lower().startswith(("<!doctype", "<html")):
-            raise call_error(
-                NotFound,
-                f"{context}: {url} returned a web page, not a CSV file.",
-                f"{context} : {url} a renvoyé une page Web, pas un fichier CSV.",
-            )
-        return [
-            {(k or "").strip(): (v or "") for k, v in row.items()}
-            for row in csv.DictReader(io.StringIO(text))
-        ]
+        # Decoding and splitting a file of up to 40 MB takes a second or more, so it
+        # runs in the parse pool, as file_tables parsing does, not on the event loop.
+        return await run_parse(parse_rows, downloaded.body, url, context)
 
     return await cached_fetch(f"csv:{url}", ttl, fetch)
+
+
+def parse_rows(body: bytes, url: str, context: str) -> list[dict[str, str]]:
+    """Every row of a downloaded CSV file as a dict, header names trimmed."""
+    text = decode(body)
+    # A mistyped path can answer HTTP 200 with an HTML page; only the start is read.
+    if text[:1024].lstrip().lower().startswith(("<!doctype", "<html")):
+        raise call_error(
+            NotFound,
+            f"{context}: {url} returned a web page, not a CSV file.",
+            f"{context} : {url} a renvoyé une page Web, pas un fichier CSV.",
+        )
+    return [
+        {(k or "").strip(): (v or "") for k, v in row.items()}
+        for row in csv.DictReader(io.StringIO(text))
+    ]
 
 
 class Columns:

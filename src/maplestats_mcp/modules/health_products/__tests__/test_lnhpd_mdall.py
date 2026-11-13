@@ -55,6 +55,28 @@ async def test_nhp_search_streams_the_table_into_an_index(httpx_mock):
     assert by_company.licences_matched == 1
 
 
+async def test_nhp_search_finds_accented_names_whatever_the_case(httpx_mock):
+    # The byte pre-filter folded ASCII case only: "échinacée" (é = C3 A9) never
+    # reached "Échinacée" (É = C3 89), so the tool reported no match.
+    table = [
+        _licence("80000101", 1, "Échinacée Plus", "Écoflore Santé Inc."),
+        _licence("80000102", 2, "Echinacea Root", "Plain Roots Ltd."),
+    ]
+    httpx_mock.add_response(
+        url=_url("natural-licences/productlicence", r"type=json&lang=en$"),
+        text=json.dumps(table),
+    )
+    for query in ("échinacée", "ÉCHINACÉE", "Échinacée plus"):
+        result = await lnhpd.search_products(query)
+        assert [p.npn for p in result.products] == ["80000101"], query
+    by_company = await lnhpd.search_products(company="écoflore")
+    assert [p.npn for p in by_company.products] == ["80000101"]
+    by_company_upper = await lnhpd.search_products(company="ÉCOFLORE SANTÉ")
+    assert [p.npn for p in by_company_upper.products] == ["80000101"]
+    # Matching stays a plain contains: no accent is invented or dropped.
+    assert (await lnhpd.search_products("echinacée")).total_matched == 0
+
+
 async def test_nhp_search_needs_three_characters():
     with pytest.raises(InvalidInput):
         await lnhpd.search_products("ab")

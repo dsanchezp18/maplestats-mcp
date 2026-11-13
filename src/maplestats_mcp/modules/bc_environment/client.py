@@ -860,7 +860,7 @@ async def get_snow_station_data(
                 lang,
                 f"station must be an automated snow station id such as 1A01P; got {station!r}.",
                 "station doit être l'identifiant d'une station nivométrique automatique, p. ex. "
-                "1A01P (reçu {station!r}).",
+                f"1A01P (reçu {station!r}).",
             ),
             lang,
         )
@@ -985,7 +985,7 @@ async def get_snow_readings(
                 lang,
                 f"variable must be one of {', '.join(constants.SNOW_VARIABLES)}; got {variable!r}.",
                 f"variable doit valoir l'une des valeurs {', '.join(constants.SNOW_VARIABLES)} "
-                "(reçu {variable!r}).",
+                f"(reçu {variable!r}).",
             ),
             lang,
         )
@@ -996,6 +996,21 @@ async def get_snow_readings(
     body, cached = await _file(current_url, constants.CACHE_TTL_HOURLY_SECONDS, lang)
     header, rows = _rows(body)
     season_start = norm_time(rows[0][0]) if rows and rows[0] else None
+    if low is None and high is not None and season_start is not None and high < season_start:
+        # An end before the season with no start would mean reading the archive
+        # from October 2003: the byte cap would cut it short and return the
+        # oldest rows, not those nearest the end. Ask for a start instead.
+        raise_typed(
+            InvalidInput,
+            pick(
+                lang,
+                f"end {end!r} is before the current season (from {season_start}); "
+                "give start as well so the archive is read from that date.",
+                f"end {end!r} précède la saison en cours (depuis le {season_start}) ; "
+                "indiquez aussi start pour lire l'archive à partir de cette date.",
+            ),
+            lang,
+        )
     notes: list[str] = [
         pick(
             lang,
@@ -1568,6 +1583,21 @@ async def get_hydrometric_data(
     high = bound(end, end=True, lang=lang, name="end")
     prefix = constants.HYDRO_FILES[parameter]
     current_from = water_year_start()
+    if low is None and high is not None and high < current_from:
+        # Without a start the archives would be read from each station's first
+        # row in every file, capped by bytes and returning the oldest rows,
+        # while the current file alone cannot hold the period. Ask for a start.
+        raise_typed(
+            InvalidInput,
+            pick(
+                lang,
+                f"end {end!r} is before the current water year (from {current_from}); "
+                "give start as well so the archives are read from that date.",
+                f"end {end!r} précède l'année hydrologique en cours (depuis le {current_from}) ; "
+                "indiquez aussi start pour lire les archives à partir de cette date.",
+            ),
+            lang,
+        )
     plan: list[tuple[str, str | None, str | None]] = []
     if low is None or (high or "9999") >= current_from:
         plan.append((f"{prefix}.csv", current_from, None))

@@ -241,6 +241,40 @@ async def test_get_changed_series_list_never_appends_a_date(httpx_mock):
     assert str(request.url) == f"{constants.BASE_URL}getChangedSeriesList"
 
 
+async def test_get_changed_series_list_accepts_explicit_null_fields(httpx_mock):
+    """`.get(key, default)` only defaults an absent key; WDS sends explicit
+    JSON null on some payloads, and int(None) raised an unhandled TypeError."""
+    httpx_mock.add_response(
+        json={
+            "status": "SUCCESS",
+            "object": [
+                {
+                    "productId": 18100004,
+                    "coordinate": None,
+                    "vectorId": None,
+                    "releaseTime": None,
+                },
+                {"productId": 14100287, "coordinate": "1.1", "vectorId": 2062815},
+            ],
+        }
+    )
+    result = await client.get_changed_series_list()
+    nulls, absent = result.series
+    assert (nulls.coordinate, nulls.vector_id, nulls.release_time) == ("", 0, "")
+    assert (absent.coordinate, absent.vector_id, absent.release_time) == ("1.1", 2062815, "")
+
+
+async def test_get_changed_cube_list_accepts_a_null_release_time(httpx_mock):
+    httpx_mock.add_response(
+        json={
+            "status": "SUCCESS",
+            "object": [{"productId": 18100004, "releaseTime": None}],
+        }
+    )
+    result = await client.get_changed_cube_list("2026-09-14")
+    assert [(c.product_id, c.release_time) for c in result.cubes] == [(18100004, "")]
+
+
 async def test_get_bulk_vector_data_by_range_sends_flat_body_not_list(httpx_mock):
     """Confirmed live: wrapping the body in a one-item list (the pattern
     every other WDS POST method uses) gets HTTP 406 from this specific

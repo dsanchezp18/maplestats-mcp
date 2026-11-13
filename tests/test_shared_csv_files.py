@@ -211,3 +211,25 @@ async def test_403_challenge_found_only_in_the_body_is_recognised(httpx_mock):
             max_bytes=1_000_000,
             context="test",
         )
+
+
+async def test_parsing_runs_in_the_parse_pool_not_on_the_event_loop(httpx_mock, monkeypatch):
+    # A 40 MB file took a second or more to decode and split, blocking every request.
+    import threading
+
+    loop_thread = threading.current_thread()
+    seen: list[threading.Thread] = []
+    real = csv_files.parse_rows
+
+    def spy(body: bytes, url: str, context: str):
+        seen.append(threading.current_thread())
+        return real(body, url, context)
+
+    monkeypatch.setattr(csv_files, "parse_rows", spy)
+    url = "https://data.example.invalid/files/pool.csv"
+    httpx_mock.add_response(url=url, content=b"\xef\xbb\xbfYear , Value\n2020,1\n2021,2\n")
+    rows, cached = await _fetch(url)
+    assert rows == [{"Year": "2020", "Value": "1"}, {"Year": "2021", "Value": "2"}]
+    assert cached is False
+    assert seen and seen[0] is not loop_thread
+    assert seen[0].name.startswith("maple-parse")

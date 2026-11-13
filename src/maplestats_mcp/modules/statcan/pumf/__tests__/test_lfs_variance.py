@@ -172,7 +172,7 @@ async def test_tabulate_reports_cv_and_quality(monkeypatch, tmp_path):
     async def members(url):
         return [ZipMember("pub1026.csv", 0, 12_000_000, 8, 0)], 1, False
 
-    async def local_data_file(url, member, *, also_keep=()):
+    async def local_data_file(url, member, *, also_keep=(), also_extract=()):
         return path
 
     monkeypatch.setattr(tabulate.client, "load_codebook", load_codebook)
@@ -203,7 +203,7 @@ async def test_no_generated_replicates_without_the_calibration_variables(monkeyp
     async def members(url):
         return [ZipMember("pub1026.csv", 0, 12_000_000, 8, 0)], 1, False
 
-    async def local_data_file(url, member, *, also_keep=()):
+    async def local_data_file(url, member, *, also_keep=(), also_extract=()):
         return path
 
     monkeypatch.setattr(tabulate.client, "load_codebook", load_codebook)

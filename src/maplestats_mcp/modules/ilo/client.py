@@ -37,7 +37,7 @@ from __future__ import annotations
 import html
 import re
 import unicodedata
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import Any, NoReturn
 
 import httpx
@@ -462,7 +462,7 @@ def _csv_url(fid: str, key: str, params: dict[str, Any]) -> str:
 
 def _citation(name: str, updated: datetime | None, lang: str) -> str:
     year = (updated or datetime.now(UTC)).year
-    today = date.today().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     return pick(
         lang,
         f"International Labour Organization ({year}), {name}, ILOSTAT, "

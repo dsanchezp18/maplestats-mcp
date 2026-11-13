@@ -60,6 +60,8 @@ from maplestats_mcp.shared.transform import (
 
 MAX_FIGURES = 20
 _SOFT = (NotFound, UpstreamError, UpstreamUnavailable, DataLocked, InvalidInput)
+# The source did not answer: the figure is unchecked, not wrong.
+_OUTAGE = (UpstreamError, UpstreamUnavailable, DataLocked)
 
 
 def _words(pattern: str) -> re.Pattern[str]:
@@ -934,7 +936,7 @@ async def _series_infos(ids: list[int]) -> dict[int, dict[str, Any]]:
     return found
 
 
-async def _resolve(ctxs: list[_Ctx], lang: str) -> list[AnswerProblem]:
+async def _resolve(ctxs: list[_Ctx], lang: str, notes: list[str]) -> list[AnswerProblem]:
     problems: list[AnswerProblem] = []
     for ctx in ctxs:
         figure = ctx.figure
@@ -943,6 +945,9 @@ async def _resolve(ctxs: list[_Ctx], lang: str) -> list[AnswerProblem]:
                 info = await wds.get_series_info_from_cube_pid_coord(
                     figure.product_id, figure.coordinate
                 )
+            except _OUTAGE:
+                notes.append(_not_reread(ctx.index, "Statistics Canada WDS", lang))
+                continue
             except _SOFT as exc:
                 problems.append(
                     _problem(
@@ -986,6 +991,16 @@ async def _resolve(ctxs: list[_Ctx], lang: str) -> list[AnswerProblem]:
             ctx.cube, _ = await wds.cube_metadata_raw(ctx.product_id)
         except _SOFT:
             ctx.cube = None
+            notes.append(
+                pick(
+                    lang,
+                    f"Figure {ctx.index}: table {_table(ctx.product_id)}'s metadata did not "
+                    "answer, so its geography, seasonal adjustment and unit are unchecked.",
+                    f"Chiffre {ctx.index} : les métadonnées du tableau "
+                    f"{_table(ctx.product_id)} n'ont pas répondu ; sa géographie, sa "
+                    "désaisonnalisation et son unité ne sont donc pas vérifiées.",
+                )
+            )
         if ctx.cube is not None:
             ctx.members = auto_notes.series_members(ctx.cube, ctx.coordinate)
     return problems
@@ -1068,6 +1083,9 @@ async def _percent_change(
             (start - timedelta(days=1)).isoformat(),
         )
         earlier = [o for s in history.series for o in s.observations if o.value is not None]
+    except _OUTAGE:
+        notes.append(_not_reread(ctx.index, "Statistics Canada WDS", lang))
+        return []
     except _SOFT:
         earlier = []
     average = sum(numbers) / len(numbers)
@@ -1153,7 +1171,7 @@ async def _percent_change(
 async def _check_statcan(
     ctxs: list[_Ctx], question: str, lang: str, notes: list[str]
 ) -> list[AnswerProblem]:
-    problems = await _resolve(ctxs, lang)
+    problems = await _resolve(ctxs, lang, notes)
     live = [c for c in ctxs if c.vector_id is not None]
     if not live:
         return problems
@@ -1252,6 +1270,10 @@ async def _check_statcan(
                 [ctx.vector_id], start.isoformat(), end.isoformat()
             )
             rows = [o for s in window.series for o in s.observations]
+        except _OUTAGE:
+            # An outage is not "no value is published".
+            notes.append(_not_reread(ctx.index, "Statistics Canada WDS", lang))
+            continue
         except _SOFT:
             rows = []
         if not rows:
@@ -1485,10 +1507,40 @@ async def _check_boc(
     except _SOFT:
         notes.append(_not_reread(index, "Bank of Canada Valet", lang))
         return []
-    values = [o.values.get(name) for o in window.observations]
-    values = [v for v in values if v is not None]
+    published = [(o.ref_date, o.values.get(name)) for o in window.observations]
+    values = [v for _, v in published if v is not None]
     problems: list[AnswerProblem] = []
-    if not values:
+    cited_ppy = parse_period(figure.period)[1]
+    if cited_ppy is not None and len(values) > 1:
+        # A year, quarter or month of a daily (or weekly) rate: its average or
+        # total matches, as on the StatCan path, not only one day's value.
+        decimals = max(len(f"{v:g}".partition(".")[2]) for v in values)
+        rows = [
+            ObservationRow(
+                ref_period=day,
+                value=v,
+                decimals=decimals,
+                scalar_factor_code=0,
+                symbol_code=0,
+                status_code=0,
+                security_level_code=0,
+            )
+            for day, v in published
+            if v is not None
+        ]
+        gap = (rows[1].ref_period - rows[0].ref_period).days
+        problems.extend(
+            _coarse_value(
+                index,
+                figure,
+                rows,
+                period_label(start, cited_ppy),
+                1 if gap < 28 else 6,
+                None,
+                lang,
+            )
+        )
+    elif not values:
         problems.append(
             _problem(
                 index,

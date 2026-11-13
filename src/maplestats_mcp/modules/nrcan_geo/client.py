@@ -337,6 +337,7 @@ async def search_names(
 ) -> PlaceNameResult:
     _check_limit(limit, lang)
     params: dict[str, Any] = {"num": limit}
+    radius_note: str | None = None
     if query and query.strip():
         params["q"] = query.strip()
     if province:
@@ -361,7 +362,22 @@ async def search_names(
             )
         # Geonames takes whole kilometres only: radius=5.0 is a 404, radius=5
         # works (confirmed live 2026-10-03), and a float arrives from JSON.
-        params.update(lat=latitude, lon=longitude, radius=max(1, round(radius)))
+        # Rounded up, not to nearest: rounding down would miss places inside the
+        # radius asked for (2.5 became 2), so the search may reach a little past it.
+        searched = math.ceil(radius)
+        if searched != radius:
+            radius_note = (
+                french_spacing(
+                    f"Le service ne prend que des kilomètres entiers : radius_km={radius:g} a été "
+                    f"cherché comme {searched} km, arrondi à l'entier supérieur pour ne manquer "
+                    f"aucun lieu ; des lieux jusqu'à {searched} km du point peuvent figurer."
+                )
+                if lang == "fr"
+                else f"The service takes whole kilometres only: radius_km={radius:g} was searched "
+                f"as {searched} km, rounded up so no place inside the radius is missed; places up "
+                f"to {searched} km from the point can be listed."
+            )
+        params.update(lat=latitude, lon=longitude, radius=searched)
     if bbox is not None:
         _check_bbox(bbox, lang)
         params["bbox"] = ",".join(str(v) for v in bbox)
@@ -399,7 +415,7 @@ async def search_names(
             url=url,
             cached=cached,
             schema_name="nrcan_geo.PlaceNameResult",
-            limits=_FR_NAMES_NOTE if lang == "fr" else None,
+            limits=join_limits(_FR_NAMES_NOTE if lang == "fr" else None, radius_note),
             lang=lang,
         ),
     )

@@ -228,6 +228,37 @@ async def test_optional_columns_missing_and_untimed_stops(httpx_mock):
     assert summary.provenance.coverage is None  # no feed_info.txt dates to report
 
 
+async def test_a_midnight_first_departure_is_not_treated_as_missing(httpx_mock):
+    # X1 leaves at 00:00:00 with its arrival left blank at the first stop. A
+    # truthiness test read that 0 as "no time" and dropped the trip from the
+    # directions and the hourly counts, while trips_on_date still counted it.
+    files = {
+        "routes.txt": "route_id,route_type\nR9,3\n",
+        "stops.txt": (
+            "stop_id,stop_name,stop_lat,stop_lon\nA,Main,50.0,-100.0\nC,End,50.2,-100.2\n"
+        ),
+        "calendar.txt": (
+            "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,"
+            "start_date,end_date\nD,1,1,1,1,1,1,1,20260101,20261231\n"
+        ),
+        "trips.txt": "route_id,service_id,trip_id\nR9,D,X1\nR9,D,X2\n",
+        "stop_times.txt": (
+            "trip_id,arrival_time,departure_time,stop_id,stop_sequence\n"
+            "X1,,00:00:00,A,1\n"
+            "X1,00:20:00,00:20:00,C,2\n"
+            "X2,07:30:00,07:30:00,A,1\n"
+            "X2,07:50:00,07:50:00,C,2\n"
+        ),
+    }
+    _serve_ranges(httpx_mock, "calgary", _zip(files))
+    summary = await client.get_route_summary("calgary", "R9", service_date="2026-10-06")
+    assert summary.trips_on_date == 2
+    assert [(d.trips, d.first_departure, d.last_departure) for d in summary.directions] == [
+        (2, "00:00:00", "07:30:00")
+    ]
+    assert [(h.hour, h.trips) for h in summary.hourly] == [(0, 1), (7, 1)]
+
+
 GTFS_HEADER = b"trip_id,arrival_time,departure_time,stop_id,stop_sequence"
 
 

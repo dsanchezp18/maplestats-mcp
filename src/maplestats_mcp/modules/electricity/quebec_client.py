@@ -247,7 +247,9 @@ async def get_demand(
     field = "valeurs_demandetotal" if dataset == "recent" else "moyenne_mw"
     dataset_id = constants.QUEBEC_DEMAND_DATASETS[dataset]
     where = _where(start, end, field, cutoff=False)
-    latest = not (start or end)
+    # Newest rows first unless a start date anchors the window: with only an end
+    # date, the rows wanted are the last ones up to that end.
+    latest = start is None
     rows, total, was_cached = await _fetch_rows(
         dataset_id,
         where,
@@ -334,7 +336,7 @@ async def get_generation(
     prefix = "valeurs_" if dataset == "recent" else ""
     dataset_id = constants.QUEBEC_GENERATION_DATASETS[dataset]
     where = _where(start, end, f"{prefix}hydraulique", cutoff=dataset == "recent")
-    latest = not (start or end)
+    latest = start is None  # as in get_demand: an end alone means the last rows up to it
     rows, total, was_cached = await _fetch_rows(
         dataset_id,
         where,
@@ -443,7 +445,7 @@ async def get_trade(
     _check_limit(limit, lang)
     start, end = _range(start_date, end_date, lang)
     where = _where(start, end, None, cutoff=True)
-    latest = not (start or end)
+    latest = start is None  # as in get_demand: an end alone means the last rows up to it
     # Extra rows so that dropping the unpublished hours below still fills limit. Not
     # capped at MAX_LIMIT (the caller's cap): the exports endpoint takes more, and a
     # capped fetch came back short for a limit near the maximum.

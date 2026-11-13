@@ -104,6 +104,32 @@ async def test_query_dataset_rows_passes_soql_params(httpx_mock):
     assert result.rows[0]["region"] == "CBRM"
 
 
+async def test_colons_in_free_text_do_not_share_a_cache_key(httpx_mock):
+    # Joined with ":", select="a", where="b:c" and select="a:b", where="c" were one
+    # key, so the second query was answered with the first one's cached rows.
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"https://{DOMAIN}/resource/44ah-ugrd.json",
+            params={"$limit": 10, "$offset": 0, "$select": "a", "$where": "b:c"},
+        ),
+        json=[{"which": "first"}],
+    )
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"https://{DOMAIN}/resource/44ah-ugrd.json",
+            params={"$limit": 10, "$offset": 0, "$select": "a:b", "$where": "c"},
+        ),
+        json=[{"which": "second"}],
+    )
+    first = await client.query_dataset_rows(PORTAL, "44ah-ugrd", select="a", where="b:c")
+    second = await client.query_dataset_rows(PORTAL, "44ah-ugrd", select="a:b", where="c")
+    assert first.rows == [{"which": "first"}]
+    assert second.rows == [{"which": "second"}]
+    # The same query still comes from the cache.
+    again = await client.query_dataset_rows(PORTAL, "44ah-ugrd", select="a", where="b:c")
+    assert again.rows == first.rows and again.provenance.cached
+
+
 async def test_list_categories_and_tags(httpx_mock):
     httpx_mock.add_response(
         url=f"{_CATALOG_URL}/domain_categories?domains={DOMAIN}",
