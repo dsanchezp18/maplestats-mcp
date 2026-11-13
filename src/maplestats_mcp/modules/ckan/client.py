@@ -1009,6 +1009,18 @@ async def datastore_search(
     )
     records = list_or_empty(result, "records")
     field_ids = [f["id"] for f in list_or_empty(result, "fields") if isinstance(f, dict)]
+    if fields and filters and any(name not in field_ids for name in filters):
+        # CKAN returns only projected fields, so a valid filter can be absent
+        # from this response. Fetch the full schema without retrieving rows.
+        schema, _ = await _call(
+            portal,
+            "datastore_search",
+            {"resource_id": resource_id, "limit": 0},
+            constants.CACHE_TTL_DATASTORE_SECONDS,
+            f"{resource_id}:full-schema",
+            lang,
+        )
+        field_ids = [f["id"] for f in list_or_empty(schema, "fields") if isinstance(f, dict)]
     # The file reader rejects an unknown filter column; the DataStore path must
     # too, rather than answer as though the filter had matched.
     unknown = [name for name in (filters or {}) if field_ids and name not in field_ids]
