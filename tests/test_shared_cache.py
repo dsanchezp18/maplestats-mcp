@@ -66,6 +66,34 @@ async def test_cache_bucket_is_bounded_by_max_entries(monkeypatch):
     assert len(cache_module._caches[unique_ttl]) <= 3
 
 
+async def test_byte_total_follows_entry_count_eviction_and_expiry(monkeypatch):
+    # The running byte total must follow entries TTLCache drops on its own,
+    # or the budget would fill with bytes of entries that are long gone.
+    monkeypatch.setattr(cache_module.config, "get_cache_max_entries", lambda: 2)
+    ttl = 3600124
+
+    for index in range(5):
+
+        async def fetcher(index=index):
+            return "v" * (1000 * (index + 1))
+
+        await cached_fetch(f"sized-key-{index}", ttl=ttl, fetcher=fetcher)
+
+    bucket = cache_module._caches[ttl]
+    assert set(bucket.sizes) == {"sized-key-3", "sized-key-4"}
+    assert bucket.total_bytes == sum(bucket.sizes.values())
+    assert bucket.total_bytes == cache_module.approx_size("v" * 4000) + cache_module.approx_size(
+        "v" * 5000
+    )
+
+    cache_module.forget("sized-key-3")
+    assert bucket.total_bytes == cache_module.approx_size("v" * 5000)
+
+    bucket.expire(bucket.timer() + ttl + 1)
+    assert len(bucket) == 0
+    assert bucket.sizes == {} and bucket.total_bytes == 0
+
+
 async def test_concurrent_misses_share_one_fetch():
     calls = 0
     release = asyncio.Event()

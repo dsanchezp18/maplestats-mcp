@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import io
 import re
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Any, Literal
 from urllib.parse import urljoin, urlparse
 
@@ -270,7 +270,10 @@ def _text(value: Any) -> str:
     if isinstance(value, float):
         return str(int(value)) if value.is_integer() and abs(value) < 1e15 else repr(value)
     if isinstance(value, datetime):
-        return value.isoformat(sep=" ") if value.time() else value.date().isoformat()
+        # A date-only Excel cell is read as midnight; a time object is always truthy, so
+        # compare with midnight to tell it from a cell that has a time.
+        has_time = value.time() != time.min
+        return value.isoformat(sep=" ") if has_time else value.date().isoformat()
     if isinstance(value, date):
         return value.isoformat()
     return " ".join(str(value).split())

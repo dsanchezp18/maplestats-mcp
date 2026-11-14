@@ -82,8 +82,10 @@ def parse_stata_do(text: str) -> Variables:
         var.upper(): lbl.upper() for var, lbl in re.findall(r"label\s+values\s+(\w+)\s+(\w+)", text)
     }
     for set_name, values in sets.items():
-        target = next((v for v, lbl in attached.items() if lbl == set_name), set_name)
-        _var(found, target).values = values
+        # One set (yes/no, say) often labels many variables; each gets the codes.
+        targets = [v for v, lbl in attached.items() if lbl == set_name] or [set_name]
+        for target in targets:
+            _var(found, target).values = list(values)
     return found
 
 

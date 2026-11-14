@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import date
+from datetime import UTC, datetime
 from typing import Any, NoReturn
 
 import httpx
@@ -345,7 +345,7 @@ def _csv_url(fid: str, key: str, params: dict[str, Any]) -> str:
 
 
 def _citation(name: str, lang: str) -> str:
-    today = date.today().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     return pick(
         lang,
         f"Australian Bureau of Statistics, {name}, ABS Data API, {constants.BASE_URL} "

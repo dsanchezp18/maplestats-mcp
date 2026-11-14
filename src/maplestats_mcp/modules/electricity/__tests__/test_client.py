@@ -154,6 +154,21 @@ async def test_hourly_demand_default_returns_latest_rows(httpx_mock):
     assert result.rows_matched == 4
 
 
+async def test_hourly_demand_with_only_an_end_date_returns_the_last_rows_up_to_it(httpx_mock):
+    httpx_mock.add_response(url=f"{BASE}/Demand/PUB_Demand_2026.csv", text=_DEMAND_CSV)
+    result = await client.get_hourly_demand(end_date="2026-09-27", limit=2)
+    # Not the earliest rows of the year: the ones that end at the end date.
+    assert [(r.date.day, r.hour_ending) for r in result.rows] == [(27, 1), (27, 2)]
+    assert result.rows_matched == 3
+
+
+async def test_hourly_demand_with_a_start_date_keeps_the_first_rows(httpx_mock):
+    httpx_mock.add_response(url=f"{BASE}/Demand/PUB_Demand_2026.csv", text=_DEMAND_CSV)
+    result = await client.get_hourly_demand(start_date="2026-09-27", limit=2)
+    assert [(r.date.day, r.hour_ending) for r in result.rows] == [(27, 1), (27, 2)]
+    assert result.rows_matched == 3
+
+
 async def test_hourly_demand_rejects_cross_year_and_bad_limit():
     with pytest.raises(InvalidInput):
         await client.get_hourly_demand(start_date="2025-12-31", end_date="2026-01-01")
@@ -211,6 +226,15 @@ def test_parse_fuel_xml_flags_missing_data():
     assert rows[1].output_mw["gas"] is None
     assert rows[1].fuels_without_output == ["gas"]
     assert rows[1].unavailable_data_points == {}
+
+
+async def test_supply_by_fuel_with_only_an_end_date_returns_the_last_hours_up_to_it(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{BASE}/GenOutputbyFuelHourly/PUB_GenOutputbyFuelHourly_2026.xml", text=_FUEL_XML
+    )
+    result = await client.get_supply_by_fuel(end_date="2026-01-01", limit=1)
+    assert [(r.date, r.hour_ending) for r in result.rows] == [(date(2026, 1, 1), 2)]
+    assert result.rows_matched == 2
 
 
 async def test_supply_by_fuel_totals_exclude_control_actions_from_shares(httpx_mock):
@@ -312,6 +336,16 @@ async def test_hoep_history(httpx_mock):
     assert result.months[0].on_peak_weighted == 51.0
     with pytest.raises(InvalidInput):
         await client.get_hoep_history(2026)
+
+
+async def test_hoep_history_default_year_is_the_last_published_year(httpx_mock, monkeypatch):
+    # From 2027 "last calendar year" is 2026, which the range check refuses.
+    monkeypatch.setattr(client, "ieso_today", lambda: date(2027, 3, 1))
+    httpx_mock.add_response(
+        url=f"{BASE}/PriceHOEPAverage/PUB_PriceHOEPAverage_2025.xml", text=_HOEP_XML
+    )
+    result = await client.get_hoep_history()
+    assert result.year == 2025
 
 
 async def test_french_notes_provenance_and_errors(httpx_mock):

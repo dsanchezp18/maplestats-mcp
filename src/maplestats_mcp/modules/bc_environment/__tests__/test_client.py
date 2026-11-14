@@ -254,6 +254,37 @@ async def test_snow_archive_period_is_found_by_range_search(httpx_mock, monkeypa
     assert sum(end - start + 1 for start, end in calls) < len(body) * 2
 
 
+async def test_snow_end_before_the_season_without_start_asks_for_start(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.SNOW_BASE}/SW.csv", content=SW_WIDE)
+    # Reading the archive from 2003 would be cut at the byte cap and answer with
+    # the oldest rows, so the caller is asked for a start instead of an empty list.
+    with pytest.raises(InvalidInput, match="give start as well"):
+        await bc_env_get_snow_readings("SW", end="2015-12-31")
+
+
+async def test_snow_end_inside_the_season_without_start_still_reads_the_current_file(httpx_mock):
+    httpx_mock.add_response(url=f"{constants.SNOW_BASE}/SW.csv", content=SW_WIDE)
+    result = await bc_env_get_snow_readings("SW", end="2026-10-01 00:30")
+    assert [(r.time_utc, r.station_id) for r in result.readings] == [
+        ("2026-10-01 00:00:00", "1A01P")
+    ]
+
+
+async def test_hydrometric_end_before_the_water_year_without_start_asks_for_start(monkeypatch):
+    monkeypatch.setattr(client, "water_year_start", lambda: "2026-10-01 00:00:00")
+    # No request is mocked: the check runs before any file is read, so the answer
+    # is not an empty series with a note that blames the station id.
+    with pytest.raises(InvalidInput, match="give start as well"):
+        await bc_env_get_streamflow("08HA0022", end="2015-12-31")
+
+
+async def test_french_input_errors_show_the_rejected_value():
+    with pytest.raises(InvalidInput, match=r"reçu '\.\./x'"):
+        await bc_env_get_snow_station_data("../x", lang="fr")
+    with pytest.raises(InvalidInput, match=r"reçu 'xx'"):
+        await bc_env_get_snow_readings("xx", lang="fr")
+
+
 def _hydro_archive() -> bytes:
     header = (
         "Location ID, Location Name, Status, Latitude, Longitude, Date/Time(UTC), "

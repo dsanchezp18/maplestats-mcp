@@ -12,6 +12,8 @@ code differed only in the domain; they now share this client keyed by
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from typing import Any, NoReturn
 
@@ -405,10 +407,11 @@ async def query_dataset_rows(
     async def fetch() -> list[dict[str, Any]]:
         return await _fetch_rows(config, dataset_id, params, lang)
 
-    cache_key = (
-        f"{config.source}:rows:{dataset_id}:{select}:{where}:{group}:{having}:{order}:{q}"
-        f":{limit}:{offset}"
-    )
+    # The clauses are free text and can hold ":", so joining them with ":" let
+    # select="a", where="b:c" and select="a:b", where="c" share a key. Hash a JSON
+    # dump of the request parameters instead, as proactive_disclosure does.
+    digest = hashlib.sha256(json.dumps(params, sort_keys=True).encode()).hexdigest()
+    cache_key = f"{config.source}:rows:{dataset_id}:{digest}"
     rows, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_ROWS_SECONDS, fetch)
     grouped_en = "; groups and aggregates computed by Socrata ($group)" if group else ""
     grouped_fr = " ; groupes et agrégats calculés par Socrata ($group)" if group else ""

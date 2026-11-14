@@ -54,6 +54,12 @@ _DATA_EXT = (".csv", ".dat", ".txt", *statfiles.EXTENSIONS)
 _NOT_DATA = ("bsw", "readme", "lisez", "layout", "frq", "codebook", "record", "_i.", "_o.")
 _downloads: dict[str, asyncio.Task[Path]] = {}
 _client = new_client(timeout=600.0, follow_redirects=True)
+# Every redirect hop is checked like shared/remote_zip.py's range reads of the
+# same ZIPs: following any Location let a link hand the download to any host.
+_client.event_hooks = {
+    "request": _client.event_hooks["request"],
+    "response": [*_client.event_hooks["response"], remote_zip.check_redirect_response],
+}
 _log = logging.getLogger(__name__)
 
 
@@ -138,9 +144,17 @@ def _enforce_cache_cap(root: Path, keep: Path, *also_keep: Path) -> None:
 
 
 async def _download(
-    url: str, member: remote_zip.ZipMember, target: Path, also_keep: tuple[Path, ...] = ()
+    url: str,
+    wanted: list[tuple[remote_zip.ZipMember, Path]],
+    also_keep: tuple[Path, ...] = (),
 ) -> Path:
-    target.parent.mkdir(parents=True, exist_ok=True)
+    """Download the ZIP once and extract every (member, target) in `wanted`.
+
+    Returns the first target. The archive is deleted once they are extracted.
+    """
+    target = wanted[0][1]
+    for _, each in wanted:
+        each.parent.mkdir(parents=True, exist_ok=True)
     zip_path = target.parent / "archive.zip.part"
     try:
         async with _client.stream("GET", url, headers=request_headers(url, None)) as response:
@@ -151,7 +165,8 @@ async def _download(
                     written += len(chunk)
                     check_size(written, config.get_pumf_cache_max_bytes(), url)
                     handle.write(chunk)
-    except FileTooLarge:
+    except (FileTooLarge, UpstreamError):
+        # UpstreamError: a redirect off the allowed hosts, refused by the hook.
         zip_path.unlink(missing_ok=True)
         raise
     except Exception as exc:
@@ -164,17 +179,21 @@ async def _download(
         ) from exc
 
     def extract() -> None:
-        part = target.with_suffix(target.suffix + ".part")
         try:
-            with (
-                zipfile.ZipFile(zip_path) as archive,
-                archive.open(member.name) as source,
-                part.open("wb") as sink,
-            ):
-                copy_capped(
-                    source, sink, config.get_pumf_cache_max_bytes(), f"{member.name} in {url}"
-                )
-            part.replace(target)
+            with zipfile.ZipFile(zip_path) as archive:
+                for member, each in wanted:
+                    part = each.with_suffix(each.suffix + ".part")
+                    try:
+                        with archive.open(member.name) as source, part.open("wb") as sink:
+                            copy_capped(
+                                source,
+                                sink,
+                                config.get_pumf_cache_max_bytes(),
+                                f"{member.name} in {url}",
+                            )
+                        part.replace(each)
+                    finally:
+                        part.unlink(missing_ok=True)
         except FileTooLarge:
             raise
         except (zipfile.BadZipFile, KeyError, OSError) as exc:
@@ -185,33 +204,63 @@ async def _download(
                 )
             ) from exc
         finally:
-            part.unlink(missing_ok=True)
             zip_path.unlink(missing_ok=True)
-        _enforce_cache_cap(config.get_pumf_cache_dir(), target, *also_keep)
+        _enforce_cache_cap(
+            config.get_pumf_cache_dir(), target, *(each for _, each in wanted[1:]), *also_keep
+        )
 
     await run_in_pool(extract)
     return target
 
 
+def _cache_slot(url: str, member: remote_zip.ZipMember) -> tuple[str, Path]:
+    key = hashlib.sha1(f"{url}|{member.name}".encode()).hexdigest()[:16]
+    return key, config.get_pumf_cache_dir() / key / Path(member.name).name
+
+
 async def local_data_file(
-    url: str, member: remote_zip.ZipMember, *, also_keep: tuple[Path, ...] = ()
+    url: str,
+    member: remote_zip.ZipMember,
+    *,
+    also_keep: tuple[Path, ...] = (),
+    also_extract: tuple[remote_zip.ZipMember, ...] = (),
 ) -> Path:
     """The extracted member's path, downloading it first when it is not cached.
 
     `also_keep` names files the same call has already found and still needs,
-    so making room for this download cannot evict them.
+    so making room for this download cannot evict them. `also_extract` names
+    other members of the same ZIP the call will ask for next (EICS and CSWC
+    bootstrap weights): when this member has to be downloaded, they are
+    extracted from the same download, so the archive (hundreds of MB) is
+    fetched once rather than once per member; the later call finds them cached.
     """
-    key = hashlib.sha1(f"{url}|{member.name}".encode()).hexdigest()[:16]
-    target = config.get_pumf_cache_dir() / key / Path(member.name).name
+    key, target = _cache_slot(url, member)
     if target.exists():
         target.touch()
         return target
     task = _downloads.get(key)
     if task is None or task.done():
-        task = asyncio.create_task(_download(url, member, target, also_keep))
-        _downloads[key] = task
+        wanted = [(member, target)]
+        extra_keys = []
+        for extra in also_extract:
+            extra_key, extra_target = _cache_slot(url, extra)
+            running = _downloads.get(extra_key)
+            # A member another download is already writing is left to it: two
+            # tasks extracting to the same .part file would corrupt it.
+            if extra_target.exists() or (running is not None and not running.done()):
+                continue
+            wanted.append((extra, extra_target))
+            extra_keys.append(extra_key)
+        task = asyncio.create_task(_download(url, wanted, also_keep))
+        # Registered under every member it writes, so a concurrent call for
+        # any of them joins this download instead of starting another.
+        for each_key in (key, *extra_keys):
+            _downloads[each_key] = task
     # shield: if the tool call times out, the download still finishes for a retry.
-    return await asyncio.shield(task)
+    # The task returns its first member; a call that joined it for another
+    # member it writes wants its own target.
+    await asyncio.shield(task)
+    return target
 
 
 # Labels StatCan codebooks give the reserve codes of a numeric variable
@@ -685,11 +734,17 @@ VARIANCE_METHODS: tuple[VarianceMethod, ...] = (
 )
 
 
+def _replicate_member(
+    members: list[remote_zip.ZipMember], file_marker: str
+) -> remote_zip.ZipMember | None:
+    return next((m for m in members if m.name.lower().endswith(file_marker)), None)
+
+
 async def _replicate_source(
     url: str, members: list[remote_zip.ZipMember], file_marker: str, main_path: Path
 ) -> DataSource:
     """The separate bootstrap-weight file, with its layout from its own .dct."""
-    data = next((m for m in members if m.name.lower().endswith(file_marker)), None)
+    data = _replicate_member(members, file_marker)
     layout = next(
         (m for m in members if "bsw" in m.name.lower() and m.name.lower().endswith(".dct")), None
     )
@@ -849,10 +904,6 @@ async def tabulate(
                     f"Le dictionnaire de données ne donne aucune position de colonne pour {missing}.",
                 )
             )
-    path = await local_data_file(url, member)
-    if stat_file:
-        path = await run_in_pool(statfiles.to_csv, path)
-
     method = variance_method(url)
     if method and chosen_weight != method.main_weight:
         method = None
@@ -862,6 +913,20 @@ async def tabulate(
         needed = [method.id_variable or "", *method.calibration_variables]
         if any(n not in by_name or (fixed_width and not by_name[n].position) for n in needed):
             method = None
+    # The bootstrap weights sit in the same ZIP as the data: extracting them
+    # from the data file's download spares a second download of the archive
+    # when _replicate_source asks for them below.
+    replicate_member = (
+        _replicate_member(members, method.replicate_file)
+        if method and method.replicate_file
+        else None
+    )
+    path = await local_data_file(
+        url, member, also_extract=(replicate_member,) if replicate_member else ()
+    )
+    if stat_file:
+        path = await run_in_pool(statfiles.to_csv, path)
+
     all_weights = [chosen_weight, *(method.replicates if method else [])]
     replicate_source = None
     if method and method.replicate_file:

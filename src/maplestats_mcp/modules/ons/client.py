@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any, NoReturn
 from zoneinfo import ZoneInfo
 
@@ -56,6 +56,7 @@ from maplestats_mcp.shared.http import (
 from maplestats_mcp.shared.i18n import normalize_lang, pick
 from maplestats_mcp.shared.json_utils import list_or_empty
 from maplestats_mcp.shared.rate_limiter import get_limiter
+from maplestats_mcp.shared.transform import parse_period, period_end
 
 _client = new_client(timeout=constants.TIMEOUT_SECONDS)
 
@@ -358,6 +359,13 @@ def _period(raw: str, kind: str) -> str | None:
     return None
 
 
+def _span(period: str) -> tuple[date, date]:
+    """First and last day of a period written 2026, 2026-Q3 or 2026-09."""
+    first, per_year = parse_period(period)
+    # The pattern in _PERIOD only lets a year, a quarter or a month through, so per_year is set.
+    return first, period_end(first, per_year or 1)
+
+
 async def _page(uri: str, lang: str) -> tuple[dict[str, Any], bool]:
     url = f"{constants.SITE_URL}{uri}/data"
 
@@ -383,11 +391,22 @@ async def _page(uri: str, lang: str) -> tuple[dict[str, Any], bool]:
     return await cached_fetch(f"ons:page:{uri}", constants.CACHE_TTL_SERIES_SECONDS, fetch)
 
 
+def _valid_period(text: str) -> bool:
+    if not _PERIOD.match(text):
+        return False
+    try:
+        # 2026-13 matches the pattern but is not a month.
+        parse_period(text)
+    except ValueError:
+        return False
+    return True
+
+
 def _check_periods(
     start_period: str | None, end_period: str | None, last_n: int | None, lang: str
 ) -> None:
     for name, value in (("start_period", start_period), ("end_period", end_period)):
-        if value is not None and not _PERIOD.match(value.strip()):
+        if value is not None and not _valid_period(value.strip()):
             raise_localized(
                 InvalidInput,
                 f"{name} {value!r} is not a period: use 2026, 2026-Q3 or 2026-09.",
@@ -457,13 +476,15 @@ async def _series(
             continue
         observations.append(Observation(period=period, value=value))
     observations.sort(key=lambda o: o.period)
-    # Periods compare as text: 2026-09 >= 2026-01, 2026-Q3 >= 2026-Q1, and a
-    # year bound "2026" keeps every 2026-.. period at the start.
+    # Compare as dates, not text: a bound and a period are often in different formats
+    # (2026-07 against 2026-Q2, where "Q" sorts above "0"). A period is kept when it
+    # overlaps the window, so end_period="2026-03" keeps the quarter 2026-Q1.
     if start_period:
-        observations = [o for o in observations if o.period >= start_period.strip()]
+        window_start = _span(start_period.strip())[0]
+        observations = [o for o in observations if _span(o.period)[1] >= window_start]
     if end_period:
-        end = end_period.strip()
-        observations = [o for o in observations if o.period <= end or o.period.startswith(end)]
+        window_end = _span(end_period.strip())[1]
+        observations = [o for o in observations if _span(o.period)[0] <= window_end]
     notes: list[str] = []
     if last_n is not None:
         observations = observations[-last_n:]
@@ -502,7 +523,7 @@ async def _series(
     released = _release(description.get("releaseDate"))
     dataset_id = str(description.get("datasetId") or item.get("dataset_id") or "").upper()
     cdid = str(description.get("cdid") or item["cdid"]).upper()
-    today = date.today().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     result = SeriesResult(
         series_id=cdid,
         dataset=dataset_id,

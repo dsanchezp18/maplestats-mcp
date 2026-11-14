@@ -32,7 +32,9 @@ class Filter:
     """Keep rows where `columns` satisfy `op` against `value`.
 
     contains: the text appears in the first column (case-insensitive).
-    terms: every word of the text appears somewhere in the columns.
+    terms: every word of the text appears somewhere in the columns. The value
+      may instead be a list of terms, each a text or a list of alternative
+      texts (any one appearing satisfies the term).
     is: the first column equals the text, ignoring case and outer spaces.
     in: the same, for any of a list of texts (a table's members, say).
     starts: the first column starts with the text.
@@ -42,6 +44,19 @@ class Filter:
     op: Op
     columns: list[str]
     value: Any
+
+
+def term_groups(value: Any) -> list[list[str]]:
+    """A terms filter's value as lower-case alternatives per term, blanks dropped,
+    so an all-blank value gives no term (and no filter) rather than an empty one."""
+    items = value.split() if isinstance(value, str) else value
+    groups = []
+    for item in items:
+        forms = [item] if isinstance(item, str) else list(item)
+        kept = [form.strip().lower() for form in forms if form.strip()]
+        if kept:
+            groups.append(kept)
+    return groups
 
 
 @dataclass

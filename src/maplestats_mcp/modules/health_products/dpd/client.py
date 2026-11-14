@@ -206,7 +206,10 @@ async def search_products(
     limit: int = constants.LIMIT_DEFAULT,
     lang: str = "en",
 ) -> DrugProductList:
-    if not any((din, brand.strip(), ingredient.strip(), company.strip(), schedule, atc, status)):
+    # Strip schedule and atc as the filters below do: a blank one passed this
+    # guard, filtered nothing and returned the whole table as matches.
+    given = (din, brand.strip(), ingredient.strip(), company.strip(), schedule.strip(), atc.strip())
+    if not any((*given, status)):
         api.fail(
             InvalidInput,
             "Give at least one of din, brand, ingredient, company, status, schedule or atc.",

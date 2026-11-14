@@ -894,6 +894,15 @@ def _start(period: str) -> date | None:
         return None
 
 
+def _end(period: str) -> date | None:
+    """Last day of `period`: end_period=2024 on a monthly series keeps 2024-12."""
+    try:
+        first, ppy = parse_period(period)
+    except ValueError:
+        return None
+    return period_end(first, ppy) if ppy else first
+
+
 async def _transform(
     series: SdmxSeries,
     request: TransformRequest,
@@ -1071,7 +1080,7 @@ async def get_data(
         series = series[: constants.MAX_SERIES]
     if request is not None and request.active:
         window_start = _start(start_period) if start_period else None
-        window_end = _start(end_period) if end_period else None
+        window_end = _end(end_period) if end_period else None
         series = [
             await _transform(
                 s,

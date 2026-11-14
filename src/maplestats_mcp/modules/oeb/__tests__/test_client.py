@@ -219,6 +219,40 @@ async def test_list_datasets_follows_pager_and_adds_yearbook(httpx_mock):
     assert [d.slug for d in filtered.datasets] == ["applications-oeb"]
 
 
+async def test_an_empty_listing_page_is_an_error_and_not_cached(httpx_mock):
+    page_zero = f"{constants.LISTING_URL}?page=0"
+    httpx_mock.add_response(url=page_zero, text=_listing(""))
+    with pytest.raises(UpstreamError, match="showed no datasets"):
+        await client._listing_rows("en")
+    # The degraded page was not stored: the next call reads the listing again.
+    httpx_mock.add_response(url=page_zero, text=_listing(_row(REL_SLUG, "Reliability", "R.", "x")))
+    rows = await client._listing_rows("en")
+    assert [r.slug for r in rows] == [REL_SLUG]
+
+
+async def test_a_pager_that_never_ends_is_an_error_and_not_cached(httpx_mock, monkeypatch):
+    monkeypatch.setattr(constants, "MAX_LISTING_PAGES", 2)
+    httpx_mock.add_response(
+        url=LISTING,
+        text=_listing(_row(REL_SLUG, "Reliability", "R.", "x"), next_page=True),
+        is_reusable=True,
+    )
+    for _ in range(2):
+        with pytest.raises(UpstreamError, match="partial catalogue"):
+            await client._listing_rows("en")
+    # 2 pages per call, and the second call did not find the first one's rows cached.
+    assert len(httpx_mock.get_requests()) == 4
+
+
+async def test_a_page_without_yearbook_links_gives_no_files_and_is_not_cached(httpx_mock):
+    page_zero = f"{constants.LISTING_URL}?page=0"
+    httpx_mock.add_response(url=page_zero, text=_listing("", yearbook=False))
+    assert (await client._yearbook_page("en")).files == []
+    httpx_mock.add_response(url=page_zero, text=_listing(""))
+    page = await client._yearbook_page("en")
+    assert [f.name for f in page.files] == ["yearbook-System-Reliability-2021.xlsx"]
+
+
 async def test_french_titles_come_from_the_french_listing(httpx_mock):
     _mock_catalogue(httpx_mock)
     httpx_mock.add_response(

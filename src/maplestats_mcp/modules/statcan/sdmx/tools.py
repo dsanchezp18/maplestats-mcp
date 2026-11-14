@@ -41,10 +41,13 @@ async def _described(data: SdmxData, lang: str) -> SdmxData:
     flags: dict[int, list[auto_notes.Flag]] = {}
     for s in data.series:
         if s.vector_id:
+            # Every observation, flagged or not, as the WDS path passes them:
+            # trailing_unavailable needs the last published period to tell a
+            # trailing ".." from a gap before it.
             flags[s.vector_id] = [
                 (day, o.status_code, o.security_level_code)
                 for o in s.observations
-                if (o.status_code or o.security_level_code) and (day := _first_day(o.period))
+                if (day := _first_day(o.period))
             ]
     found, note = await context.describe_vectors(ids, empty, flags)
     series = [

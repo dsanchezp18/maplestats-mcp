@@ -434,6 +434,40 @@ async def test_registration_filters(httpx_mock):
     assert ids(await client.search_registrations()) == ["R-3", "R-2", "R-4"]
 
 
+def _with_rows(original: bytes, header: list[str], rows: list[dict[str, str]]) -> bytes:
+    """The fixture file plus extra rows (absent columns are written as 'null')."""
+    existing = list(csv.DictReader(io.StringIO(original.decode("utf-8-sig"))))
+    return _csv(header, [*existing, *rows])
+
+
+async def test_client_name_filter_does_not_match_records_without_a_number(httpx_mock):
+    # Two records with no client number: a name filter must not let them through
+    # just because the filter text is not a number either.
+    body = _registration_zip(
+        extra={
+            "Registration_Primary_Export.csv": _with_rows(
+                _PRIMARY,
+                _PRIMARY_HEADER,
+                [
+                    _primary(
+                        REG_ID="R-5", REG_TYPE="Org", REG_NUM="1-1-1", FILER_NUM="1",
+                        CLIENT_ORG_NAME="Telus Communications", REG_START_DATE="2026-05-01",
+                    ),
+                    _primary(
+                        REG_ID="R-6", REG_TYPE="Org", REG_NUM="2-2-2", FILER_NUM="2",
+                        CLIENT_ORG_NAME="Unrelated Holdings", REG_START_DATE="2026-05-01",
+                    ),
+                ],
+            )
+        }
+    )  # fmt: skip
+    httpx_mock.add_response(url=_REG_URL, content=body)
+    ids = lambda r: [x.registration_id for x in r.registrations]
+    assert ids(await client.search_registrations(client="Telus")) == ["R-5"]
+    # A real client number still matches on the number.
+    assert ids(await client.search_registrations(client="443")) == ["R-3"]
+
+
 async def test_registration_period_overlap(httpx_mock):
     _mock_registrations(httpx_mock)
     ids = lambda r: sorted(x.registration_id for x in r.registrations)
@@ -585,6 +619,31 @@ async def test_activity_filters(httpx_mock):
         await client.search_activity_reports(date_to="2025/07/01")
     with pytest.raises(InvalidInput):
         await client.search_activity_reports(limit=500)
+
+
+async def test_activity_client_name_filter_does_not_match_reports_without_a_number(httpx_mock):
+    body = _activity_zip(
+        extra={
+            "LAR_Primary_Export.csv": _with_rows(
+                _LAR_PRIMARY,
+                _LAR_HEADER,
+                [
+                    {"LAR_ID": "LAR-300", "CLIENT_ORG_NAME": "Telus Communications",
+                     "FILER_NUM": "1", "FILER_LAST_NAME": "Reed", "FILER_FIRST_NAME": "Ana",
+                     "MEETING_DATE": "2025-09-01", "ARRANGE_MEETING": "N", "REG_TYPE": "Cons",
+                     "SUBMISSION_DATE": "2025-09-02", "POSTED_DATE": "2025-09-02"},
+                    {"LAR_ID": "LAR-400", "CLIENT_ORG_NAME": "Unrelated Holdings",
+                     "FILER_NUM": "2", "FILER_LAST_NAME": "Lee", "FILER_FIRST_NAME": "Sam",
+                     "MEETING_DATE": "2025-09-03", "ARRANGE_MEETING": "N", "REG_TYPE": "Cons",
+                     "SUBMISSION_DATE": "2025-09-04", "POSTED_DATE": "2025-09-04"},
+                ],
+            )
+        }
+    )  # fmt: skip
+    httpx_mock.add_response(url=_LAR_URL, content=body)
+    ids = lambda r: [x.report_id for x in r.reports]
+    assert ids(await client.search_activity_reports(client="Telus")) == ["LAR-300"]
+    assert ids(await client.search_activity_reports(client="3260")) == ["LAR-10"]
 
 
 async def test_summaries_count_distinct_reports(httpx_mock):

@@ -1334,12 +1334,14 @@ async def get_changed_series_list() -> ChangedSeriesList:
     entries_raw: list[dict[str, Any]] = (
         _unwrap_one(data, method) if isinstance(data, dict) else data
     )
+    # `or` rather than a `.get` default: WDS sends explicit JSON null on some
+    # payloads (see _observation_from_json), and int(None) raises TypeError.
     entries = [
         ChangedSeriesEntry(
             product_id=int(obj["productId"]),
-            coordinate=obj.get("coordinate", ""),
-            vector_id=int(obj.get("vectorId", 0)),
-            release_time=obj.get("releaseTime", ""),
+            coordinate=obj.get("coordinate") or "",
+            vector_id=int(obj.get("vectorId") or 0),
+            release_time=obj.get("releaseTime") or "",
         )
         for obj in entries_raw
     ]
@@ -1379,7 +1381,9 @@ async def get_changed_cube_list(date_str: str | None = None) -> ChangedCubeList:
         _unwrap_one(data, method) if isinstance(data, dict) else data
     )
     entries = [
-        ChangedCubeEntry(product_id=int(obj["productId"]), release_time=obj.get("releaseTime", ""))
+        ChangedCubeEntry(
+            product_id=int(obj["productId"]), release_time=obj.get("releaseTime") or ""
+        )
         for obj in entries_raw
     ]
     return ChangedCubeList(

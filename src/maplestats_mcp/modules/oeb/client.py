@@ -156,6 +156,8 @@ async def _listing_rows(lang: str) -> list[pages.ListingRow]:
     base = constants.LISTING_URL if lang == "en" else constants.LISTING_URL_FR
     prefix = "/open-data/" if lang == "en" else "/fr/donnees-ouvertes/"
 
+    # Both checks raise inside the fetch: cached_fetch stores whatever the fetch
+    # returns, so an empty or cut-short catalogue would be served for the 6 h TTL.
     async def fetch() -> list[pages.ListingRow]:
         rows: list[pages.ListingRow] = []
         for page_number in range(constants.MAX_LISTING_PAGES):
@@ -163,25 +165,57 @@ async def _listing_rows(lang: str) -> list[pages.ListingRow]:
             page_rows, has_next = pages.parse_listing(html, prefix=prefix)
             rows.extend(page_rows)
             if not has_next:
-                return rows
+                break
+        else:
+            raise_localized(
+                UpstreamError,
+                f"The OEB open data listing at {base} still had a next page after "
+                f"{constants.MAX_LISTING_PAGES} pages; a partial catalogue is not used.",
+                f"la liste des données ouvertes de la CEO à {base} avait encore une page "
+                f"suivante après {constants.MAX_LISTING_PAGES} pages ; un catalogue partiel "
+                "n'est pas utilisé.",
+                lang,
+            )
+        if not rows:
+            raise_localized(
+                UpstreamError,
+                f"The OEB open data listing at {base} showed no datasets.",
+                f"la liste des données ouvertes de la CEO à {base} n'affichait aucun jeu de "
+                "données.",
+                lang,
+            )
         return rows
 
     rows, _ = await cached_fetch(f"oeb:listing:{lang}", constants.CATALOGUE_TTL_SECONDS, fetch)
-    if not rows:
-        raise_localized(
-            UpstreamError,
-            f"The OEB open data listing at {base} showed no datasets.",
-            f"la liste des données ouvertes de la CEO à {base} n'affichait aucun jeu de données.",
-            lang,
-        )
     return rows
+
+
+class _NoYearbookLinks(UpstreamError):
+    """The listing page links no yearbook workbook (raised only to keep it out of the cache)."""
 
 
 async def _yearbook_page(lang: str) -> pages.DatasetPage:
     async def fetch() -> list[pages.PageFile]:
-        return pages.parse_yearbook_links(await _get_html(f"{constants.LISTING_URL}?page=0", lang))
+        url = f"{constants.LISTING_URL}?page=0"
+        files = pages.parse_yearbook_links(await _get_html(url, lang))
+        # Raised here, not after cached_fetch, so a page that lost its links is not cached.
+        if not files:
+            raise_localized(
+                _NoYearbookLinks,
+                f"The OEB open data page at {url} links no yearbook workbooks.",
+                f"la page des données ouvertes de la CEO à {url} ne lie aucun classeur de "
+                "l'annuaire.",
+                lang,
+            )
+        return files
 
-    files, _ = await cached_fetch("oeb:yearbook", constants.CATALOGUE_TTL_SECONDS, fetch)
+    # No links is answered as a yearbook with no files, read again on the next
+    # call: failing here would fail oeb_list_datasets, which always includes the
+    # yearbook, for as long as the OEB leaves the links off its page.
+    try:
+        files, _ = await cached_fetch("oeb:yearbook", constants.CATALOGUE_TTL_SECONDS, fetch)
+    except _NoYearbookLinks:
+        files = []
     return pages.DatasetPage(
         slug=constants.YEARBOOK_SLUG,
         title=constants.YEARBOOK_TITLE,

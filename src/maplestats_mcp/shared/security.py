@@ -216,6 +216,11 @@ def with_http_security(
         # spends the guesser's own budget like any other request.
         if rate_limit_requests:
             now = time.monotonic()
+            retry_after = 0
+            # Decide under the lock, send after releasing it: send() can block
+            # on a client that is slow to read, and the lock is shared by every
+            # client, so sending the 429 inside it let one over-limit client
+            # stall every other request's rate check.
             async with rate_lock:
                 # Drop clients whose hits have all aged out, once per window
                 # rather than on every request: otherwise every client ever
@@ -235,15 +240,17 @@ def with_http_security(
                 if len(hits) >= rate_limit_requests:
                     rate_hits[client_key] = hits
                     retry_after = max(1, math.ceil(rate_limit_window_seconds - (now - hits[0])))
-                    await _json_response(
-                        send,
-                        429,
-                        {"error": "Rate limit exceeded."},
-                        [(b"retry-after", str(retry_after).encode("ascii"))],
-                    )
-                    return
-                hits.append(now)
-                rate_hits[client_key] = hits
+                else:
+                    hits.append(now)
+                    rate_hits[client_key] = hits
+            if retry_after:
+                await _json_response(
+                    send,
+                    429,
+                    {"error": "Rate limit exceeded."},
+                    [(b"retry-after", str(retry_after).encode("ascii"))],
+                )
+                return
 
         if auth_token:
             authorization = _header(scope, b"authorization") or ""

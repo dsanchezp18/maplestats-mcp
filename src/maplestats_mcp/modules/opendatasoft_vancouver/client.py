@@ -12,6 +12,8 @@ Opendatasoft deployment this client relies on.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from typing import Any
 from urllib.parse import quote
@@ -263,10 +265,19 @@ async def query_records(
             lang=lang,
         )
 
-    cache_key = (
-        f"opendatasoft-vancouver:records:{dataset_id}:{select}:{where}:{order_by}:{query}:"
-        f"{limit}:{offset}"
-    )
+    # The clauses are free text and can hold ":", so joining them with ":" let
+    # select="a", where="b:c" and select="a:b", where="c" share a key. Hash a JSON
+    # dump of the parameters instead, as proactive_disclosure does.
+    parameters = {
+        "select": select,
+        "where": where,
+        "order_by": order_by,
+        "query": query,
+        "limit": limit,
+        "offset": offset,
+    }
+    digest = hashlib.sha256(json.dumps(parameters, sort_keys=True).encode()).hexdigest()
+    cache_key = f"opendatasoft-vancouver:records:{dataset_id}:{digest}"
     result, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_RECORDS_SECONDS, fetch)
     entries = list_or_empty(result, "records")
     rows = [entry.get("record", {}).get("fields", {}) for entry in entries]

@@ -108,6 +108,34 @@ async def test_float_radius_is_sent_as_whole_kilometres(httpx_mock):
     assert parse_qs(urlparse(str(request.url)).query)["radius"] == ["5"]
 
 
+@pytest.mark.parametrize(("asked", "sent"), [(0.4, "1"), (2.5, "3"), (2.01, "3")])
+async def test_fractional_radius_is_rounded_up_and_said(httpx_mock, asked, sent):
+    # round() sent 0.4 as 1 but 2.5 as 2 (banker's rounding), which missed places
+    # between 2 and 2.5 km. The service takes whole km only, so round up and say so.
+    httpx_mock.add_response(url=_NAMES, json={"items": []})
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    result = await client.search_names(latitude=51.05, longitude=-114.07, radius_km=asked)
+    request = next(r for r in httpx_mock.get_requests() if "geonames.json" in str(r.url))
+    assert parse_qs(urlparse(str(request.url)).query)["radius"] == [sent]
+    assert f"was searched as {sent} km" in (result.provenance.limits or "")
+
+
+async def test_whole_radius_needs_no_note(httpx_mock):
+    httpx_mock.add_response(url=_NAMES, json={"items": []})
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    result = await client.search_names(latitude=51.05, longitude=-114.07, radius_km=5.0)
+    assert result.provenance.limits is None
+
+
+async def test_french_radius_note_follows_the_names_note(httpx_mock):
+    httpx_mock.add_response(url=_NAMES, json={"items": []})
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    result = await client.search_names(latitude=51.05, longitude=-114.07, radius_km=2.5, lang="fr")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("Les noms de lieux sont les toponymes")
+    assert "cherché comme 3 km" in limits
+
+
 # Trimmed from https://geogratis.gc.ca/services/geoname/en/geonames.json?q=Banff&num=3,
 # captured 2026-10-03: CRLF-separated JSON, every code wrapped as {"code", "links"},
 # `location` present as null (not absent) on parks, extra keys the client ignores.

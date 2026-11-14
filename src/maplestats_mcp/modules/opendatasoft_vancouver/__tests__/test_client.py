@@ -118,6 +118,27 @@ async def test_query_records_returns_row_fields(httpx_mock):
     assert result.rows[0]["site"] == "LiveCity Downtown 150 Dunsmuir St"
 
 
+async def test_colons_in_free_text_do_not_share_a_cache_key(httpx_mock):
+    # Joined with ":", select="a", where="b:c" and select="a:b", where="c" were one
+    # key, so the second query was answered with the first one's cached rows.
+    records = f"{_CATALOG_URL}/datasets/{_DATASET_ID}/records"
+    httpx_mock.add_response(
+        url=f"{records}?limit=10&offset=0&select=a&where=b%3Ac",
+        json={"total_count": 1, "records": [{"record": {"fields": {"which": "first"}}}]},
+    )
+    httpx_mock.add_response(
+        url=f"{records}?limit=10&offset=0&select=a%3Ab&where=c",
+        json={"total_count": 1, "records": [{"record": {"fields": {"which": "second"}}}]},
+    )
+    first = await client.query_records(_DATASET_ID, select="a", where="b:c")
+    second = await client.query_records(_DATASET_ID, select="a:b", where="c")
+    assert first.rows == [{"which": "first"}]
+    assert second.rows == [{"which": "second"}]
+    # The same query still comes from the cache.
+    again = await client.query_records(_DATASET_ID, select="a", where="b:c")
+    assert again.rows == first.rows and again.provenance.cached
+
+
 async def test_query_records_where_clause_passed_through(httpx_mock):
     httpx_mock.add_response(
         url=(

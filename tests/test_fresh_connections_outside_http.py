@@ -112,7 +112,7 @@ async def test_pumf_whole_archive_download(httpx_mock, monkeypatch, tmp_path: Pa
     httpx_mock.add_callback(_serve(blob), url=STATCAN_ZIP, is_reusable=True)
     member = remote_zip.ZipMember("pub0126.csv", 0, 0, 8, 0)
     target = tmp_path / "pumf" / "k" / "pub0126.csv"
-    await tabulate._download(STATCAN_ZIP, member, target)
+    await tabulate._download(STATCAN_ZIP, [(member, target)])
     assert target.read_text().startswith("PROV")
     sent = httpx_mock.get_requests()
     assert len(sent) == 1

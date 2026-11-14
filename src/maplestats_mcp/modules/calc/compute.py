@@ -390,6 +390,10 @@ def rank(
                 f"period={period!r} n'est pas une période : écrivez 2024, 2024-07, 2024-Q2 ou "
                 "2024-07-15.",
             ) from None
+        if ppy == 6 and given_ppy == 12:
+            # parse_period has no bimonthly form (it never returns 6), so a month
+            # names the two-month period that contains it.
+            first, given_ppy = period_start(first, 6), 6
         if given_ppy != ppy:
             raise error(
                 lang,
@@ -508,6 +512,9 @@ def cagr(
                 f"{name}={text!r} n'est pas une période : écrivez 2024, 2024-07, 2024-Q2 ou "
                 "2024-07-15.",
             ) from None
+        if ppy == 6 and given_ppy == 12:
+            # Same as rank: a month names the bimonthly period that contains it.
+            first, given_ppy = period_start(first, 6), 6
         if given_ppy != ppy:
             raise error(
                 lang,

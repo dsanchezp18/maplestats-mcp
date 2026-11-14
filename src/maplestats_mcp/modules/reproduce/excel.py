@@ -30,7 +30,7 @@ import json
 from typing import Any
 
 from maplestats_mcp.modules.reproduce.render import _safe_spec, _trim_comment, comment_text
-from maplestats_mcp.modules.reproduce.spec import Filter, Spec
+from maplestats_mcp.modules.reproduce.spec import Filter, Spec, term_groups
 
 PACKAGES = ["Power Query (built into Excel 2016 or later and Microsoft 365)"]
 
@@ -70,20 +70,29 @@ def m_value(value: Any) -> str:
     return m_text(value)
 
 
-def _field(column: str) -> str:
-    return f"Record.Field(_, {m_text(column)})"
+def _field(column: str, nested: bool = False) -> str:
+    if not nested or "." not in column:
+        return f"Record.Field(_, {m_text(column)})"
+    # R and Python flatten JSON to dotted names ("title.en"); M's records keep
+    # the nested record, so walk into it instead.
+    found = "_"
+    for key in column.split("."):
+        found = f"Record.Field({found}, {m_text(key)})"
+    return f"(try {found} otherwise null)"
 
 
-def _filter(item: Filter) -> str:
-    cell = _field(item.columns[0])
+def _filter(item: Filter, nested: bool = False) -> str:
+    cell = _field(item.columns[0], nested)
     if item.op == "contains":
         return f"Text.Contains(Text.Lower(AsText({cell})), {m_text(str(item.value).lower())})"
     if item.op == "terms":
-        cells = ", ".join(f"AsText({_field(c)})" for c in item.columns)
+        cells = ", ".join(f"AsText({_field(c, nested)})" for c in item.columns)
         haystack = f'Text.Lower(Text.Combine({{{cells}}}, " "))'
-        return " and ".join(
-            f"Text.Contains({haystack}, {m_text(term)})" for term in str(item.value).lower().split()
-        )
+        tests = [
+            [f"Text.Contains({haystack}, {m_text(t)})" for t in group]
+            for group in term_groups(item.value)
+        ]
+        return " and ".join(t[0] if len(t) == 1 else "(" + " or ".join(t) + ")" for t in tests)
     if item.op == "is":
         return f"Text.Lower(Text.Trim(AsText({cell}))) = {m_text(str(item.value).strip().lower())}"
     if item.op == "in":
@@ -671,8 +680,9 @@ def render_excel(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
             "    ),\n"
         )
         last = "Missing"
-    if spec.filters:
-        conditions = "\n            and ".join(_filter(f) for f in spec.filters)
+    m_conditions = [c for c in (_filter(f, spec.kind == "json") for f in spec.filters) if c]
+    if m_conditions:
+        conditions = "\n            and ".join(m_conditions)
         prepare.append(
             "    // Keep the rows the MapleStats tool kept.\n"
             f"    Filtered = Table.SelectRows(\n        {last},\n        each {conditions}\n    ),\n"

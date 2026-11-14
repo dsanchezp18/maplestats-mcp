@@ -30,7 +30,7 @@ from maplestats_mcp.modules.statcan.wds.schemas import (
     VectorSeries,
 )
 from maplestats_mcp.shared.envelope import make_provenance
-from maplestats_mcp.shared.errors import InvalidInput, UpstreamUnavailable
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
 
 
 def _members(*names: tuple[int, str]) -> list[dict]:
@@ -813,3 +813,98 @@ def test_newer_period_compares_dates_not_labels():
     assert client._newer(0, "2026-06", ("2026-Q3", 1.0), "x", "en") is not None
     assert client._newer(0, "2026-09", ("2026-10", 1.0), "x", "en") is not None
     assert client._newer(0, "2026-10", ("2026-10", 1.0), "x", "en") is None
+
+
+async def test_a_wds_outage_for_a_cited_period_is_unchecked_not_unpublished(monkeypatch):
+    async def down(ids, start, end):
+        raise UpstreamUnavailable("WDS is down.")
+
+    monkeypatch.setattr(wds, "get_data_from_vector_by_reference_period_range", down)
+    problems, result = await _check(
+        "What is Canada's unemployment rate?",
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+    )
+    assert problems == []
+    assert any("not re-read" in note for note in result.notes)
+
+    async def missing(ids, start, end):
+        raise NotFound("No data for that period.")
+
+    monkeypatch.setattr(wds, "get_data_from_vector_by_reference_period_range", missing)
+    problems, _ = await _check(
+        "What is Canada's unemployment rate?",
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+    )
+    assert problems == [(0, "period")]
+
+
+async def test_a_wds_outage_for_the_earlier_period_of_a_percent_is_noted(monkeypatch):
+    window = wds.get_data_from_vector_by_reference_period_range
+
+    async def history_down(ids, start, end):
+        if start < "2026-09-01":
+            raise UpstreamUnavailable("WDS is down.")
+        return await window(ids, start, end)
+
+    monkeypatch.setattr(wds, "get_data_from_vector_by_reference_period_range", history_down)
+    problems, result = await _check(QUEBEC_CPI, _cpi(9.9))
+    assert problems == []
+    assert any("not re-read" in note for note in result.notes)
+    assert not any("cannot be computed" in note for note in result.notes)
+
+
+async def test_a_wds_outage_resolving_a_coordinate_is_not_an_unknown_series(monkeypatch):
+    async def down(pid, coordinate):
+        raise UpstreamUnavailable("WDS is down.")
+
+    monkeypatch.setattr(wds, "get_series_info_from_cube_pid_coord", down)
+    problems, result = await _check(
+        "What is Canada's unemployment rate?",
+        {"value": 6.5, "period": "2026-09", "product_id": "14-10-0287", "coordinate": "1.7"},
+    )
+    assert problems == []
+    assert any("not re-read" in note for note in result.notes)
+
+
+async def test_missing_table_metadata_says_which_checks_were_skipped(monkeypatch):
+    async def down(pid):
+        raise UpstreamUnavailable("WDS is down.")
+
+    monkeypatch.setattr(wds, "cube_metadata_raw", down)
+    problems, result = await _check(
+        "What is Alberta's unemployment rate?",
+        {"value": 6.5, "period": "2026-09", "vector_id": 2062815},
+    )
+    assert (0, "geography") not in problems
+    assert any("geography, seasonal adjustment and unit" in note for note in result.notes)
+
+
+async def test_a_year_of_a_daily_rate_matches_its_average(monkeypatch):
+    days = [date(2025, 1, 2), date(2025, 1, 3), date(2025, 12, 30), date(2025, 12, 31)]
+    rates = [1.40, 1.38, 1.36, 1.34]
+
+    async def observations(names, start_date=None, end_date=None, recent=None, lang="en"):
+        rows = [
+            SimpleNamespace(ref_date=d, values={"FXUSDCAD": v})
+            for d, v in zip(days, rates, strict=True)
+        ]
+        if start_date:
+            rows = [r for r in rows if start_date <= r.ref_date.isoformat() <= str(end_date)]
+        return SimpleNamespace(observations=rows[-recent:] if recent else rows)
+
+    monkeypatch.setattr(client.boc, "get_observations", observations)
+    question = "What was the average USD/CAD rate in 2025?"
+    problems, _ = await _check(
+        question, {"value": 1.37, "period": "2025", "boc_series": "FXUSDCAD"}
+    )
+    assert problems == []
+    # One day's value cited for the year is named as that day.
+    problems, result = await _check(
+        question, {"value": 1.34, "period": "2025", "boc_series": "FXUSDCAD"}
+    )
+    assert problems == [(0, "period")]
+    assert "2025-12-31" in result.problems[0].problem
+    problems, _ = await _check(
+        question, {"value": 1.50, "period": "2025", "boc_series": "FXUSDCAD"}
+    )
+    assert problems == [(0, "value")]

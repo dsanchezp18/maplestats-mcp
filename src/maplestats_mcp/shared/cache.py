@@ -50,11 +50,50 @@ from pydantic import BaseModel
 from maplestats_mcp import config
 from maplestats_mcp.shared.http import is_recording
 
-_caches: dict[int, TTLCache] = {}
+
+class _SizedTTLCache(TTLCache):
+    """A TTLCache that keeps a running total of its entries' estimated bytes.
+
+    TTLCache drops entries on its own (expiry, and its entry-count eviction
+    on insert), so the total is corrected in the two places every removal
+    goes through in cachetools 7: `expire()`, which deletes expired entries
+    without calling `__delitem__`, and `__delitem__`, which `pop()`,
+    `popitem()` and the entry-count eviction all reach. Summing every
+    entry's size on each store instead cost a walk of the whole cache.
+    """
+
+    def __init__(self, maxsize: int, ttl: int) -> None:
+        super().__init__(maxsize=maxsize, ttl=ttl)
+        self.sizes: dict[Any, int] = {}
+        self.total_bytes = 0
+
+    def record_size(self, key: Any, size: int) -> None:
+        self.total_bytes += size - self.sizes.get(key, 0)
+        self.sizes[key] = size
+
+    def _drop_size(self, key: Any) -> None:
+        self.total_bytes -= self.sizes.pop(key, 0)
+
+    def __delitem__(self, key: Any) -> None:
+        # TTLCache removes the entry before raising KeyError for an expired
+        # one, so the size goes in every case.
+        self._drop_size(key)
+        super().__delitem__(key)
+
+    def expire(self, time: Any = None) -> Any:
+        expired = super().expire(time)
+        for key, _ in expired:
+            self._drop_size(key)
+        return expired
+
+    def clear(self) -> None:
+        super().clear()
+        self.sizes.clear()
+        self.total_bytes = 0
+
+
+_caches: dict[int, _SizedTTLCache] = {}
 _inflight: dict[tuple[int, str], asyncio.Future[Any]] = {}
-# Estimated bytes per stored entry, by ttl bucket. Entries TTLCache has
-# expired or evicted are dropped from here when the total is next counted.
-_sizes: dict[int, dict[str, int]] = {}
 
 # Objects visited per size estimate; past it the rest is extrapolated, so a
 # huge result costs a bounded walk rather than one proportional to its size.
@@ -94,43 +133,41 @@ def approx_size(value: Any) -> int:
 
 
 def _counted_bytes() -> int:
+    # expire() costs nothing when no entry is due, and otherwise only the
+    # entries it removes; there are a handful of buckets, not one per key.
     total = 0
-    for ttl in list(_sizes):
-        bucket = _caches.get(ttl)
-        if bucket is None:
-            _sizes.pop(ttl)
-            continue
+    for bucket in _caches.values():
         bucket.expire()
-        sizes = _sizes[ttl]
-        for stale in [k for k in sizes if k not in bucket]:
-            sizes.pop(stale)
-        total += sum(sizes.values())
+        total += bucket.total_bytes
     return total
 
 
-def _store(ttl: int, cache: TTLCache, key: str, data: Any) -> None:
+def _store(ttl: int, cache: _SizedTTLCache, key: str, data: Any) -> None:
     budget = config.get_cache_max_bytes()
     size = approx_size(data)
     if size > budget:
         cache.pop(key, None)
         return
     cache[key] = data
-    _sizes.setdefault(ttl, {})[key] = size
+    cache.record_size(key, size)
     total = _counted_bytes()
     while total > budget:
         # Evict from the bucket holding the most bytes, least recently used first.
-        largest = max(_sizes, key=lambda t: sum(_sizes[t].values()))
-        bucket = _caches[largest]
+        bucket = max(_caches.values(), key=lambda b: b.total_bytes)
         if not bucket:
             break
-        evicted, _ = bucket.popitem()
-        total -= _sizes[largest].pop(evicted, 0)
+        before = bucket.total_bytes
+        try:
+            bucket.popitem()
+        except KeyError:
+            pass  # its last entries expired since they were counted; expire() dropped them
+        total -= before - bucket.total_bytes
 
 
-def _cache_for_ttl(ttl: int) -> TTLCache:
+def _cache_for_ttl(ttl: int) -> _SizedTTLCache:
     cache = _caches.get(ttl)
     if cache is None:
-        cache = TTLCache(maxsize=config.get_cache_max_entries(), ttl=ttl)
+        cache = _SizedTTLCache(maxsize=config.get_cache_max_entries(), ttl=ttl)
         _caches[ttl] = cache
     return cache
 
@@ -201,6 +238,5 @@ async def cached_fetch(
 
 def forget(key: str) -> None:
     """Drop `key` from every TTL bucket, e.g. a result found to be partial."""
-    for ttl, cache in _caches.items():
+    for cache in _caches.values():
         cache.pop(key, None)
-        _sizes.get(ttl, {}).pop(key, None)

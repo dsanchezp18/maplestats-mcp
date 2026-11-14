@@ -1500,7 +1500,8 @@ async def _ircc_rounds(args: dict[str, Any], result: dict[str, Any]) -> Spec:
     url = str(result.get("provenance", {}).get("url") or "")
     filters = []
     if args.get("program"):
-        filters.append(Filter("terms", ["drawName", "drawText2"], args["program"]))
+        # One phrase across name and program, as the tool tests it, not word by word.
+        filters.append(Filter("terms", ["drawName", "drawText2"], [str(args["program"])]))
     if args.get("since"):
         filters.append(Filter("ge", ["drawDate"], str(args["since"])))
     return Spec(
@@ -1517,13 +1518,43 @@ async def _ircc_rounds(args: dict[str, Any], result: dict[str, Any]) -> Spec:
 
 
 async def _statcan_indicators(args: dict[str, Any], result: dict[str, Any]) -> Spec:
+    from maplestats_mcp.modules.statcan.indicators import client as indicators
+    from maplestats_mcp.modules.statcan.indicators import constants as indicators_constants
+
     url = str(result.get("provenance", {}).get("url") or "")
     lang = "en" if str(args.get("lang", "en")) == "en" else "fr"
+    query = str(args.get("query") or "")
+    geo_code = args.get("geo_code")
+    # The place as the tool reads it (indicators.client.get_indicators): a name or
+    # abbreviation, a place named in the query, or an SGC code such as 48, all
+    # become the feed's own 0-13 number, the only one its rows carry.
+    feed_codes = set(indicators_constants.GEO_NAMES_TO_FEED_CODE.values())
+    if isinstance(geo_code, str):
+        geo_code = indicators._geo_from_text(geo_code)
+    elif geo_code is None and query:
+        found, rest = indicators._geo_in_query(query)
+        if found in feed_codes:
+            geo_code, query = found, rest
+    if geo_code is not None and geo_code not in feed_codes:
+        geo_code = indicators_constants.SGC_TO_FEED_GEO_CODE.get(geo_code, geo_code)
+    # Every meaningful word, in any order, each with the forms the tool accepts
+    # for it ("inflation" finds "consumer price index"). A form holding another
+    # ("prices" holds "price") adds nothing to a substring test.
+    terms = [
+        [form for form in forms if not any(other != form and other in form for other in forms)]
+        for forms in indicators._query_terms(query)
+    ]
     filters = []
-    if str(args.get("query") or "").strip():
-        filters.append(Filter("contains", [f"title.{lang}"], str(args["query"]).strip()))
-    if args.get("geo_code") is not None:
-        filters.append(Filter("eq", ["geo_code"], int(args["geo_code"])))
+    notes = []
+    if terms:
+        filters.append(Filter("terms", [f"title.{lang}"], terms))
+        notes.append(
+            "The tool ignores accents when it compares titles (an accented e matches "
+            "a plain e); this script compares them as written, so a title or query "
+            "word with an accent (French titles especially) can match differently."
+        )
+    if geo_code is not None:
+        filters.append(Filter("eq", ["geo_code"], geo_code))
     return Spec(
         kind="json",
         url=url,
@@ -1532,6 +1563,7 @@ async def _statcan_indicators(args: dict[str, Any], result: dict[str, Any]) -> S
         title="StatCan key indicators",
         records_path=["results", "indicators"],
         filters=filters,
+        notes=notes,
     )
 
 

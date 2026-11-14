@@ -1324,3 +1324,120 @@ def test_julia_post_body_is_valid_json_after_one_unquoting():
     body = json.loads(literal.replace("\\$", "$"))
     assert json.loads(body) == spec.post_json
     assert "a\\$b" in literal
+
+
+# StatCan key indicators: the script keeps the rows the tool keeps -------------
+
+
+_INDICATORS = {"provenance": {"url": "https://www150.statcan.gc.ca/x/indicators.json"}}
+
+
+async def _indicators_spec(args):
+    from maplestats_mcp.modules.reproduce import builders
+
+    return await builders._statcan_indicators(args, _INDICATORS)
+
+
+def _keeps(spec: Spec, title: str, geo_code: int) -> bool:
+    """What the generated filters keep, evaluated in Python on one feed row."""
+    from maplestats_mcp.modules.reproduce.spec import term_groups
+
+    kept = True
+    for item in spec.filters:
+        if item.op == "terms":
+            kept &= all(any(t in title.lower() for t in g) for g in term_groups(item.value))
+        else:
+            assert (item.op, item.columns) == ("eq", ["geo_code"])
+            kept &= geo_code == item.value
+    return kept
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        {"query": "unemployment rate Alberta"},
+        {"query": "inflation", "geo_code": "AB"},
+        {"query": "jobs"},
+        {"query": "consumer prices"},
+        {"geo_code": 48},
+        {"geo_code": 10},
+    ],
+)
+async def test_indicators_script_keeps_the_rows_the_tool_keeps(args):
+    from maplestats_mcp.modules.statcan.indicators import client as indicators
+
+    rows = [
+        ("Unemployment rate", 9),
+        ("Unemployment rate", 6),
+        ("Rate of unemployment, youth", 9),
+        ("Consumer Price Index", 9),
+        ("Consumer Price Index", 10),
+        ("Employment", 0),
+        ("Gross domestic product", 9),
+    ]
+    spec = await _indicators_spec(args)
+    # The tool's own resolution of the same arguments (indicators.client).
+    query, geo = str(args.get("query") or ""), args.get("geo_code")
+    if isinstance(geo, str):
+        geo = indicators._geo_from_text(geo)
+    elif geo is None:
+        found, rest = indicators._geo_in_query(query)
+        if found is not None:
+            geo, query = found, rest
+    geo = 9 if geo == 48 else geo
+    terms = indicators._query_terms(query)
+    for title, code in rows:
+        expected = (not terms or indicators._matches(title, terms)) and geo in (None, code)
+        assert _keeps(spec, title, code) == expected, (title, code)
+
+
+async def test_indicators_script_reads_nested_titles_in_julia_and_m():
+    from maplestats_mcp.modules.reproduce.excel import render_excel
+
+    spec = await _indicators_spec({"query": "inflation", "geo_code": "AB"})
+    code = _render(spec)
+    excel = render_excel(spec, "statcan_indicators_get_indicators")
+    assert excel is not None
+    code["excel"] = excel[0]
+    assert "contains('cpi', literal=True)" in code["python"]
+    assert "pl.col('geo_code').cast(pl.Float64, strict=False) == 9" in code["python"]
+    ast.parse(code["python"])
+    # JSON3 keeps title as an object; R and Python flatten it to title.en.
+    assert 'row["title.en"]' not in code["julia"]
+    assert 'get(x, "en", missing)' in code["julia"] and 'row["title"]' in code["julia"]
+    assert 'Record.Field(_, "title.en")' not in code["excel"]
+    assert 'Record.Field(Record.Field(_, "title"), "en")' in code["excel"]
+    assert " or Text.Contains(" in code["excel"]
+    assert "accent" in " ".join(spec.notes)
+
+
+def test_blank_terms_filter_renders_no_filter():
+    from maplestats_mcp.modules.reproduce.excel import render_excel
+
+    spec = Spec(
+        kind="csv",
+        url="https://x.ca/f.csv",
+        file_name="f.csv",
+        method="exact",
+        filters=[Filter("terms", ["title"], "   ")],
+    )
+    code = _render(spec)
+    excel = render_excel(spec, "example_tool")
+    assert excel is not None
+    code["excel"] = excel[0]
+    ast.parse(code["python"])
+    assert "data.filter(" not in code["python"] and "data.filter(" not in code["stata"]
+    assert "filter(" not in code["r"]
+    assert "filter(row" not in code["julia"]
+    assert "Filtered" not in code["excel"]
+
+
+async def test_ircc_program_is_one_phrase_across_name_and_program():
+    from maplestats_mcp.modules.reproduce import builders
+
+    spec = await builders._ircc_rounds(
+        {"program": "Canadian Experience Class"}, {"provenance": {"url": "https://x.ca/r.json"}}
+    )
+    code = _render(spec)
+    assert "contains('canadian experience class', literal=True)" in code["python"]
+    assert "contains('canadian', literal=True)" not in code["python"]

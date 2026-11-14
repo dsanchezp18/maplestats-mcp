@@ -6,14 +6,16 @@ STATUS_CAN on each Obs, and writes a value it does not publish as "NaN".
 
 from __future__ import annotations
 
+import re
+
 import httpx
 import pytest
 from defusedxml import ElementTree
 
 from maplestats_mcp.modules.statcan.sdmx import client, constants, tools
+from maplestats_mcp.modules.statcan.wds import auto_notes, context
 from maplestats_mcp.modules.statcan.wds import client as wds_client
 from maplestats_mcp.modules.statcan.wds import constants as wds_constants
-from maplestats_mcp.modules.statcan.wds import context
 
 
 @pytest.fixture(autouse=True)
@@ -134,3 +136,66 @@ def test_transform_params_reach_back_for_a_smoothed_change():
     assert params == {"startPeriod": "2020-01"}
     latest = client.transform_params({"lastNObservations": 2}, request, 12, latest_n=2)
     assert latest == {"lastNObservations": (2 + 1 + 2) * 12 + 11}
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "kept"),
+    [
+        ("2023", "2024", [f"2024-{m:02d}" for m in range(1, 13)]),
+        ("2024-01", "2024-Q1", ["2024-01", "2024-02", "2024-03"]),
+    ],
+)
+async def test_transform_keeps_the_whole_end_period(httpx_mock, start, end, kept):
+    httpx_mock.add_response(
+        url=f"{wds_constants.BASE_URL}getCubeMetadata",
+        json=[{"status": "SUCCESS", "object": {"productId": 14100287, "frequencyCode": 6}}],
+        is_reusable=True,
+    )
+    months = [f"{y}-{m:02d}" for y in (2022, 2023, 2024) for m in range(1, 13)]
+    httpx_mock.add_response(
+        url=re.compile(rf"{re.escape(constants.BASE_URL)}data/DF_14100287/.*"),
+        content=_xml("".join(_obs(p, str(i)) for i, p in enumerate(months))).encode(),
+    )
+    result = await _fn(tools.sdmx_get_data)(
+        14100287, "1.7.1.1.1.1", start_period=start, end_period=end, transform="diff"
+    )
+    series = result.series[0]
+    computed = series.transformed
+    assert computed is not None
+    assert [p.period for p in computed.points][-len(kept) :] == kept
+    assert computed.points[-1].period == kept[-1]
+    assert series.observations[-1].period == kept[-1]
+
+
+@pytest.mark.parametrize(
+    ("statuses", "trailing"),
+    [
+        # A ".." gap inside the series is not "not yet published".
+        ([None, "1", "1", None], []),
+        # The latest periods are ".." and are named.
+        ([None, None, "1", "1"], ["2026-03-01", "2026-04-01"]),
+    ],
+)
+async def test_unpublished_note_sees_the_last_published_period(
+    httpx_mock, monkeypatch, statuses, trailing
+):
+    seen: dict = {}
+
+    async def capture(vector_ids, empty, flags=None):
+        seen.update(flags or {})
+        return {}, None
+
+    monkeypatch.setattr(context, "describe_vectors", capture)
+    periods = ["2026-01", "2026-02", "2026-03", "2026-04"]
+    httpx_mock.add_response(
+        url=re.compile(rf"{re.escape(constants.BASE_URL)}data/DF_14100287/.*"),
+        content=_xml(
+            "".join(
+                _obs(p, "NaN" if s == "1" else "6.5", s)
+                for p, s in zip(periods, statuses, strict=True)
+            )
+        ).encode(),
+    )
+    await _fn(tools.sdmx_get_data)(14100287, "1.7.1.1.1.1", start_period="2026-01")
+    flags = seen[2062815]
+    assert [d.isoformat() for d in auto_notes.trailing_unavailable(flags)] == trailing

@@ -182,6 +182,14 @@ def test_daily_series_need_a_frequency_for_yoy():
     assert values == {"2026-09-04": None, "2026-09-08": 0.5}
 
 
+@pytest.mark.parametrize("transform", ["diff", "pct_change"])
+def test_a_daily_change_of_no_observations_is_an_empty_series(transform):
+    # A window with no observations used to leave one leading None against zero
+    # levels, and the strict zip raised ValueError instead of returning no points.
+    result = transform_series([], source_ppy=None, transform=transform)
+    assert result.points == []
+
+
 def test_window_and_latest_n():
     result = transform_series(
         MONTHLY,

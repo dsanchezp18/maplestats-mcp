@@ -6,9 +6,12 @@ Checked live 2026-09-24 against LFS January 2025 (Alberta: 4.00 M aged
 
 from __future__ import annotations
 
+import asyncio
+import io
 import logging
 import os
 import time
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -219,7 +222,7 @@ def _bootstrap_setup(monkeypatch, tmp_path, *, main_has_id: bool, layout_has_id:
     async def members(url):
         return [ZipMember("pumf_main.txt", 0, 5_000_000, 8, 0)], 1, False
 
-    async def local_data_file(url, member, *, also_keep=()):
+    async def local_data_file(url, member, *, also_keep=(), also_extract=()):
         return main_path
 
     async def replicate_source(url, members, file_marker, main_path=None):
@@ -248,6 +251,64 @@ async def test_missing_record_id_message_follows_lang(monkeypatch, tmp_path):
     with pytest.raises(InvalidInput, match="'PUMFID'.*dictionnaire principal"):
         await tabulate.tabulate(_EICS_URL, rows=["PROV"], weight="WTPM", lang="fr")
     use_lang("en")
+
+
+_MAIN = ZipMember("Data/pumf_main.txt", 0, 0, 8, 0)
+_BSW = ZipMember("Data/pumf_bsw.txt", 0, 0, 8, 0)
+
+
+def _eics_zip() -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(_MAIN.name, "main rows\n")
+        archive.writestr(_BSW.name, "bootstrap rows\n")
+    return buffer.getvalue()
+
+
+async def test_two_members_of_one_zip_share_one_download(httpx_mock, monkeypatch, tmp_path):
+    # EICS and CSWC need the data file and then the bootstrap weights from the
+    # same ZIP; each used to download the whole archive again.
+    monkeypatch.setattr(tabulate.config, "get_pumf_cache_dir", lambda: tmp_path)
+    httpx_mock.add_response(url=_EICS_URL, content=_eics_zip())
+
+    main_path = await tabulate.local_data_file(_EICS_URL, _MAIN, also_extract=(_BSW,))
+    bsw_path = await tabulate.local_data_file(_EICS_URL, _BSW, also_keep=(main_path,))
+
+    assert main_path.read_text() == "main rows\n"
+    assert bsw_path.read_text() == "bootstrap rows\n"
+    assert len(httpx_mock.get_requests(url=_EICS_URL)) == 1
+    assert not list(tmp_path.rglob("*.part"))  # the archive is not left behind
+
+
+async def test_concurrent_calls_for_members_of_one_zip_join_one_download(
+    httpx_mock, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(tabulate.config, "get_pumf_cache_dir", lambda: tmp_path)
+    httpx_mock.add_response(url=_EICS_URL, content=_eics_zip())
+
+    main_path, bsw_path = await asyncio.gather(
+        tabulate.local_data_file(_EICS_URL, _MAIN, also_extract=(_BSW,)),
+        tabulate.local_data_file(_EICS_URL, _BSW),
+    )
+
+    assert main_path.read_text() == "main rows\n"
+    assert bsw_path.read_text() == "bootstrap rows\n"  # its own file, not the main one
+    assert len(httpx_mock.get_requests(url=_EICS_URL)) == 1
+
+
+async def test_download_redirect_off_the_allowed_hosts_is_refused(
+    httpx_mock, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(tabulate.config, "get_pumf_cache_dir", lambda: tmp_path)
+    httpx_mock.add_response(
+        url=_EICS_URL, status_code=302, headers={"location": "https://files.example.net/2024.zip"}
+    )
+
+    with pytest.raises(UpstreamError, match="not followed"):
+        await tabulate.local_data_file(_EICS_URL, _MAIN)
+
+    assert [str(r.url) for r in httpx_mock.get_requests()] == [_EICS_URL]
+    assert not list(tmp_path.rglob("*.part"))
 
 
 def _cache_file(path, size, age_seconds):

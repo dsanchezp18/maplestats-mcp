@@ -251,7 +251,9 @@ async def get_pool_price(
     start = _parse_date(start_date, "start_date", lang)
     end = _parse_date(end_date, "end_date", lang)
     today = alberta_today()
-    dated = start is not None or end is not None
+    # With no start the window below is invented to finish at `end` (or today),
+    # so the rows wanted are its last `limit`, not its first.
+    newest = start is None
     if end is None:
         end = today if start is None else min(today, start + timedelta(days=1))
     if start is None:
@@ -279,7 +281,7 @@ async def get_pool_price(
         for h in hours
         if h.pool_price is None and h.rolling_30day_average is None and h.ail_demand_mw is None
     )
-    shown = published[:limit] if dated else published[-limit:]
+    shown = published[-limit:] if newest else published[:limit]
     last = published[-1] if published else None
     query = "&".join(f"{k}={v}" for k, v in params.items())
     return AlbertaPoolPrice(
@@ -591,18 +593,31 @@ async def get_monthly_summary(
         if month >= this_month:
             return None, True
 
-        async def fetch() -> AlbertaMonth | None:
-            try:
-                text = await _get_text(_monthly_url(month), None, "alberta_monthly_summary", lang)
-            except NotFound:
-                return None
-            return parse_monthly_html(text, month)
+        # A missing page (404) or one that does not parse raises inside the fetch
+        # and is caught outside it: a None returned here would be cached for the
+        # 6 h archive TTL, and the month would stay "not published" for hours
+        # after AESO posts it. Only a parsed month is cached.
+        async def fetch() -> AlbertaMonth:
+            text = await _get_text(_monthly_url(month), None, "alberta_monthly_summary", lang)
+            parsed = parse_monthly_html(text, month)
+            if parsed is None:
+                raise _error(
+                    NotFound,
+                    f"electricity:alberta_monthly_summary: no readable summary for {month:%Y-%m}.",
+                    f"electricity:alberta_monthly_summary : aucun sommaire lisible pour "
+                    f"{month:%Y-%m}.",
+                    lang,
+                )
+            return parsed
 
-        return await cached_fetch(
-            f"electricity:aeso:monthly:{month:%Y-%m}",
-            constants.CACHE_TTL_ARCHIVE_SECONDS,
-            fetch,
-        )
+        try:
+            return await cached_fetch(
+                f"electricity:aeso:monthly:{month:%Y-%m}",
+                constants.CACHE_TTL_ARCHIVE_SECONDS,
+                fetch,
+            )
+        except NotFound:
+            return None, False
 
     months: list[AlbertaMonth] = []
     missing: list[str] = []

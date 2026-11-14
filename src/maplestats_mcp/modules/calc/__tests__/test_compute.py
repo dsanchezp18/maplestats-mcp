@@ -249,6 +249,35 @@ def test_rank_annual_averages():
     assert [(e.label, e.value) for e in entries] == [("B", 3.0), ("A", 1.0)]
 
 
+def test_rank_takes_a_month_for_a_bimonthly_series():
+    # Bimonthly periods start in Jan, Mar, May, ...: April falls in the March one.
+    bimonthly = [
+        _series("A", [(date(2025, 1, 1), 1.0), (date(2025, 3, 1), 5.0)], ppy=6),
+        _series("B", [(date(2025, 1, 1), 2.0), (date(2025, 3, 1), 3.0)], ppy=6),
+    ]
+    period, entries, ppy, _ = compute.rank(
+        bimonthly,
+        period="2025-04",
+        descending=True,
+        frequency=None,
+        aggregation="average",
+        lang="en",
+    )
+    assert (period, ppy) == ("2025-03", 6)
+    assert [(e.series.id, e.value) for e in entries] == [("A", 5.0), ("B", 3.0)]
+    # Only a month names a bimonthly period; any other form is still refused.
+    for other in ("2025", "2025-Q1", "2025-03-15"):
+        with pytest.raises(InvalidInput, match="bimonthly"):
+            compute.rank(
+                bimonthly,
+                period=other,
+                descending=True,
+                frequency=None,
+                aggregation="average",
+                lang="en",
+            )
+
+
 # Compound annual growth ------------------------------------------------------------------
 
 
@@ -284,6 +313,26 @@ def test_cagr_counts_quarters_and_days():
     )
     assert years == pytest.approx(731 / 365.25)
     assert not notes
+
+
+def test_cagr_takes_months_for_a_bimonthly_series():
+    # Two years of six periods: 2023-03 (the March-April period) to 2025-03.
+    bimonthly = _series("v1", [(date(2023, 3, 1), 100.0), (date(2025, 3, 1), 121.0)], ppy=6)
+    first, last, _, _, years, ppy, _ = compute.cagr(
+        bimonthly, start="2023-04", end="2025-03", frequency=None, aggregation="average", lang="en"
+    )
+    assert (first, last, years, ppy) == (date(2023, 3, 1), date(2025, 3, 1), 2.0, 6)
+    # Only a month names a bimonthly period; a year or a quarter is still refused.
+    for other in ("2025", "2025-Q1"):
+        with pytest.raises(InvalidInput, match="bimonthly"):
+            compute.cagr(
+                bimonthly,
+                start="2023-03",
+                end=other,
+                frequency=None,
+                aggregation="average",
+                lang="en",
+            )
 
 
 def test_cagr_refuses_rates_mismatched_periods_missing_and_non_positive():

@@ -65,6 +65,7 @@ from maplestats_mcp.catalogue import (
 from maplestats_mcp.shared import search, semantic
 from maplestats_mcp.shared.breaker import render_status
 from maplestats_mcp.shared.dereference import CachedDereferenceMiddleware
+from maplestats_mcp.shared.duck_worker import clean_error
 from maplestats_mcp.shared.error_hints import ErrorHintMiddleware
 from maplestats_mcp.shared.errors import InvalidInput, ModuleUnavailable
 from maplestats_mcp.shared.private_logs import configure_private_logs
@@ -196,6 +197,9 @@ class LazyModuleProvider(LocalProvider):
         self._extra_files = [path for path in files if path.name in EXTRA_FILES]
         self._tools_loaded = False
         self._extras_loaded = not self._extra_files
+        # Why an import failed, once it has; later requests fail at once with it.
+        self._tools_error: str | None = None
+        self._extras_error: str | None = None
         self._listed: list[Tool] = []
         for item in entry["tools"]:
             switch = TOOL_SWITCHES.get(item["name"])
@@ -210,21 +214,44 @@ class LazyModuleProvider(LocalProvider):
         for component in import_components(self._root, files):
             _register(self, component, self._annotations)
 
+    def _failed(self, exc: Exception, part: str) -> str:
+        """Log a failed import in full and return the path-free reason callers see."""
+        _logger.error("the %s module's %s failed to import", self._root.name, part, exc_info=exc)
+        # The raw text names files on the server ("cannot import name 'x' from 'y'
+        # (/app/src/...)"); the log keeps it, the caller gets the type and no paths.
+        detail = clean_error(f"{type(exc).__name__}: {exc}")
+        return f"the {self._root.name} module failed to load ({detail})"
+
     def _load_tools(self) -> None:
         # Synchronous on purpose: no other request runs between the check and
         # the flag, so two first calls cannot import the module twice.
+        if self._tools_error is not None:
+            # Remembered, never retried: an import fails the same way until the
+            # deployment is fixed and restarted, and each retry would re-run the
+            # whole synchronous import on the event loop before failing again.
+            raise ModuleUnavailable(self._tools_error)
         if not self._tools_loaded:
             try:
                 self._import(self._tool_files)
             except Exception as exc:
-                reason = f"the {self._root.name} module failed to load ({exc})"
-                _LOAD_ERRORS.update(dict.fromkeys(self._names, reason))
-                raise
+                self._tools_error = self._failed(exc, "tools")
+                _LOAD_ERRORS.update(dict.fromkeys(self._names, self._tools_error))
+                raise ModuleUnavailable(self._tools_error) from exc
             self._tools_loaded = True
 
     def _load_extras(self) -> None:
+        # Remembered and never retried, as in _load_tools.
+        if self._extras_error is not None:
+            raise ModuleUnavailable(self._extras_error)
         if not self._extras_loaded:
-            self._import(self._extra_files)
+            try:
+                self._import(self._extra_files)
+            except Exception as exc:
+                self._extras_error = self._failed(exc, "resources or prompts")
+                # A tool whose module is already broken keeps the first reason.
+                for name in self._names:
+                    _LOAD_ERRORS.setdefault(name, self._extras_error)
+                raise ModuleUnavailable(self._extras_error) from exc
             self._extras_loaded = True
 
     def load(self) -> None:
@@ -887,7 +914,12 @@ async def preload(server: FastMCP) -> None:
     """
     for provider in server.providers:
         if isinstance(provider, LazyModuleProvider):
-            provider.load()
+            # One broken module must not leave the rest lazy and the index unbuilt;
+            # its failure is logged and remembered, and its tools say so when called.
+            try:
+                provider.load()
+            except ModuleUnavailable:
+                _logger.warning("preload: skipped %r, which failed to load", provider)
     # A search builds the BM25 index over the catalogue, which later searches
     # reuse while the catalogue is unchanged; the query itself does not matter.
     transform = next(t for t in server.transforms if isinstance(t, AnnotatedBM25SearchTransform))

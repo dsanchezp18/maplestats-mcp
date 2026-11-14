@@ -651,7 +651,9 @@ async def query_items(
     filters = filters or {}
     names_to_check = list(filters.keys()) + list(fields or [])
     if sortby:
-        names_to_check.append(sortby.lstrip("+-"))
+        # OGC API sortby takes several keys, "STATION_NAME,-LATITUDE": each key
+        # carries its own sign, so check them one at a time.
+        names_to_check.extend(key.strip().lstrip("+-") for key in sortby.split(","))
     if names_to_check:
         queryables, _ = await _queryables(collection_id, lang)
         _validate_known_properties(

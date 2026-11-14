@@ -1186,7 +1186,10 @@ async def get_route_summary(
     first_departure: dict[str, int] = {}
     for trip_id, trip_rows in by_trip.items():
         first = min(trip_rows, key=lambda r: r.stop_sequence)
-        seconds = gtfs.to_seconds(first.departure) or gtfs.to_seconds(first.arrival)
+        # `is None`, not `or`: a departure at 00:00:00 is 0 seconds, not a missing time.
+        seconds = gtfs.to_seconds(first.departure)
+        if seconds is None:
+            seconds = gtfs.to_seconds(first.arrival)
         if seconds is not None:
             first_departure[trip_id] = seconds
 

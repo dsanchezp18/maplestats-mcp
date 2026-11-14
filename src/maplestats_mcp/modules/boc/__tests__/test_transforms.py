@@ -107,6 +107,34 @@ async def test_policy_rate_change_is_in_points_and_daily_yoy_needs_a_frequency(h
         await client.get_observations(["V39079"], request=TransformRequest("yoy_pct_change"))
 
 
+async def test_a_daily_change_over_a_window_with_no_observations_is_empty(httpx_mock):
+    # Valet answers a start_date past the newest row with seriesDetail and no
+    # observations; the daily change used to raise ValueError from a strict zip.
+    detail = {
+        "V39079": _detail("Target for the overnight rate", "Percent", "daily", "Business daily")
+    }
+    httpx_mock.add_response(
+        url=httpx.URL(
+            f"{constants.BASE_URL}observations/V39079/json", params={"start_date": "2099-01-01"}
+        ),
+        json={"seriesDetail": detail, "observations": []},
+    )
+    # The status check asks for the newest row, since the window held none.
+    httpx_mock.add_response(
+        url=httpx.URL(f"{constants.BASE_URL}observations/V39079/json", params={"recent": 1}),
+        json={
+            "seriesDetail": detail,
+            "observations": [{"d": "2026-09-17", "V39079": {"v": "2.25"}}],
+        },
+    )
+    result = await client.get_observations(
+        ["V39079"], start_date="2099-01-01", request=TransformRequest("diff")
+    )
+    assert result.observations == []
+    assert result.transformed is not None
+    assert result.transformed["V39079"].points == []
+
+
 def test_rate_words_without_a_unit():
     exchange = client.SeriesInfoBrief(
         name="FXUSDCAD", label="USD/CAD", description="Daily average exchange rate"

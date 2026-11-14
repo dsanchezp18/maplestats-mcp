@@ -17,6 +17,7 @@ logging and usage counting still see NotFound, UpstreamUnavailable and so on.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
@@ -165,14 +166,32 @@ def _effective(cls: type[BaseException], chain: list[BaseException]) -> type[Bas
     return cls
 
 
+def _deciding_class(
+    classes: Sequence[type[BaseException]], chain: list[BaseException]
+) -> type[BaseException] | None:
+    """The class of the outermost error in `chain` that `classes` knows, most specific first.
+
+    Walking the chain before the classes matters: an InvalidInput raised inside
+    `except UpstreamUnavailable:` carries the outage as its context, and checking
+    the classes first coded it upstream_unavailable with a retry hint. Only an
+    outer error none of `classes` knows (FastMCP's ToolError wrapper) defers to
+    its causes.
+    """
+    for item in chain:
+        for cls in classes:
+            if isinstance(item, cls):
+                return cls
+    return None
+
+
 def hint_for(exc: BaseException, lang: str) -> str:
     french = normalize_lang(lang) == "fr"
     chain = _chain(exc)
-    for cls, _, _ in _HINTS:
-        if any(isinstance(item, cls) for item in chain):
-            target = _effective(cls, chain)
-            en, fr = next((e, f) for c, e, f in _HINTS if c is target)
-            return french_spacing(fr) if french else en
+    cls = _deciding_class([c for c, _, _ in _HINTS], chain)
+    if cls is not None:
+        target = _effective(cls, chain)
+        en, fr = next((e, f) for c, e, f in _HINTS if c is target)
+        return french_spacing(fr) if french else en
     return french_spacing(_FALLBACK[1]) if french else _FALLBACK[0]
 
 
@@ -180,8 +199,8 @@ def hint_for(exc: BaseException, lang: str) -> str:
 # branch on "[not_found]" without parsing the sentence, and MCP clients show the text.
 # Most specific first, as in _HINTS.
 _CODES: tuple[tuple[type[BaseException], str], ...] = (
-    # First: it is raised while handling the NotFoundError it replaces, which stays in
-    # the chain as its suppressed context.
+    # Raised while handling the NotFoundError it replaces, which stays in the chain as
+    # its suppressed context; being the outer error, it decides (_deciding_class).
     (ModuleUnavailable, "module_unavailable"),
     (DataLocked, "data_locked"),
     (UpstreamUnavailable, "upstream_unavailable"),
@@ -199,10 +218,10 @@ ERROR_CODES = frozenset(code for _, code in _CODES) | {"error"}
 
 def error_code(exc: BaseException) -> str:
     chain = _chain(exc)
-    for cls, _ in _CODES:
-        if any(isinstance(item, cls) for item in chain):
-            target = _effective(cls, chain)
-            return next(code for c, code in _CODES if c is target)
+    cls = _deciding_class([c for c, _ in _CODES], chain)
+    if cls is not None:
+        target = _effective(cls, chain)
+        return next(code for c, code in _CODES if c is target)
     # A pydantic error not yet re-raised by ValidationErrorMiddleware (usage counting
     # runs inside it): coded as that middleware will code it.
     return argument_error_code(exc) or "error"

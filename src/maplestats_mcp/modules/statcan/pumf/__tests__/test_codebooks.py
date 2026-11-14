@@ -80,6 +80,15 @@ def test_label_sets_attached_from_another_do_file():
     assert "GEOGPRV_FMT" not in found
 
 
+def test_one_label_set_labels_every_variable_it_is_attached_to():
+    found = codebooks.parse_stata_do(
+        'label define yn 1 "Yes" 2 "No"\nlabel values q1 yn\nlabel values q2 yn\n'
+    )
+    for name in ("Q1", "Q2"):
+        assert [(v.code, v.label) for v in found[name].values] == [("1", "Yes"), ("2", "No")]
+    assert "YN" not in found
+
+
 def test_spss_labels():
     found = codebooks.parse_spss(EICS_VARE)
     codebooks.merge(found, codebooks.parse_spss(EICS_VALE))

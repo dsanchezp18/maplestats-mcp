@@ -69,6 +69,37 @@ async def test_rate_limit_returns_429():
     assert await _call(app, _scope()) == 429
 
 
+async def test_blocked_429_send_does_not_stall_other_clients():
+    # The 429 used to be sent while holding the rate limiter's shared lock,
+    # so a client that never read its response froze every other client.
+    app = with_http_security(_ok_app, rate_limit_requests=1, rate_limit_window_seconds=60)
+    slow_client = ("5.6.7.8", 1)
+    assert await _call(app, _scope(client=slow_client)) == 200
+
+    send_started = asyncio.Event()
+    never_drains = asyncio.Event()
+
+    async def receive():
+        return {"type": "http.request", "body": b""}
+
+    async def blocked_send(message):
+        send_started.set()
+        await never_drains.wait()
+
+    async def over_limit_request() -> None:
+        await app(_scope(client=slow_client), receive, blocked_send)
+
+    blocked = asyncio.create_task(over_limit_request())
+    await asyncio.wait_for(send_started.wait(), timeout=1)
+    try:
+        status = await asyncio.wait_for(_call(app, _scope(client=("9.9.9.9", 1))), timeout=1)
+        assert status == 200
+    finally:
+        blocked.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await blocked
+
+
 async def test_open_sse_streams_do_not_consume_concurrency_slots():
     """Long-lived GET /mcp streams must not lock out POST tool calls."""
     release = asyncio.Event()

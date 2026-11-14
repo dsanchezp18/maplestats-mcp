@@ -8,10 +8,13 @@ population_quarterly.xlsx and migration_quarterly.xls are the live files
 
 from __future__ import annotations
 
+import io
+from datetime import datetime
 from pathlib import Path
 
 import httpx
 import pytest
+from openpyxl import Workbook
 
 from maplestats_mcp.modules.nl_stats import client, constants
 from maplestats_mcp.shared import cache as cache_module
@@ -125,6 +128,22 @@ async def test_read_legacy_xls(httpx_mock):
     assert data.format == "xls"
     assert data.sheets and data.rows
     assert data.header_row is not None
+
+
+async def test_date_only_cells_read_as_dates_not_midnight_timestamps(httpx_mock):
+    # openpyxl returns a date-formatted cell as a datetime at 00:00:00; a time
+    # object is always truthy, so these used to read "2026-01-01 00:00:00".
+    workbook = Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    sheet.append(["Reference date", "Value"])
+    sheet.append([datetime(2026, 1, 1), 1])
+    sheet.append([datetime(2026, 2, 1, 8, 30), 2])
+    out = io.BytesIO()
+    workbook.save(out)
+    httpx_mock.add_response(url=_XLSX, content=out.getvalue())
+    data = await client.read_file(_XLSX)
+    assert [row[0] for row in data.rows[-2:]] == ["2026-01-01", "2026-02-01 08:30:00"]
 
 
 async def test_unknown_sheet_and_paging(httpx_mock):

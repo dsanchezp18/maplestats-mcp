@@ -92,6 +92,16 @@ async def test_get_data_validates_inputs(httpx_mock):
         await client.get_data("CPI_18100004", start_date="2026-09-01", end_date="2026-01-01")
 
 
+async def test_filter_named_table_is_refused_instead_of_replacing_the_table(httpx_mock):
+    # Nothing is mocked: the filter is refused before any request is sent.
+    for column in ("table", "Table", "TABLE"):
+        with pytest.raises(InvalidInput, match="reserved"):
+            await client.get_data("CPI_18100004", {column: "AESO_PowerGen"})
+    with pytest.raises(InvalidInput, match="réservée"):
+        await client.get_data("CPI_18100004", {"table": "x"}, lang="fr")
+    assert httpx_mock.get_requests() == []
+
+
 async def test_unknown_column_400_is_invalid_input(httpx_mock):
     httpx_mock.add_response(url=_TABLES_URL, json=_TABLES)
     httpx_mock.add_response(status_code=400, text="Invalid column name ")

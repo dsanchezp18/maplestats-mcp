@@ -247,6 +247,22 @@ async def get_data(
                 f"la colonne de filtre {column!r} n'est pas un nom de colonne valide.",
                 lang,
             )
+        # The API selects the table with the query parameter `table`, so a
+        # column of that name cannot be filtered: merged into the request it
+        # replaced the validated table name while the result still reported the
+        # validated one. Refused rather than dropped, so the caller is told;
+        # matched case-insensitively because the server's parameter matching
+        # was not checked.
+        if column.strip().lower() == "table":
+            raise_localized(
+                InvalidInput,
+                f"Filter column {column!r} is reserved: the data API uses 'table' to "
+                "choose the table, so a column with that name cannot be filtered.",
+                f"la colonne de filtre {column!r} est réservée : l'API de données utilise "
+                "'table' pour choisir le tableau, une colonne de ce nom ne peut donc pas "
+                "servir de filtre.",
+                lang,
+            )
     start = _parse_date(start_date, "start_date", lang)
     end = _parse_date(end_date, "end_date", lang)
     if start and end and start > end:

@@ -87,6 +87,31 @@ async def test_get_series_annual_with_year_bounds(httpx_mock):
     ]
 
 
+async def test_month_bound_on_a_quarterly_series_compares_dates(httpx_mock):
+    _search(httpx_mock, "d7g7", "search_d7g7.json")
+    httpx_mock.add_response(url=D7G7, json=_json("d7g7_mm23.json"))
+    result = await client.get_series("D7G7", frequency="quarterly", start_period="2026-07")
+    # As text, "2026-Q1" and "2026-Q2" sort above "2026-07" and used to stay.
+    assert [o.period for o in result.observations] == ["2026-Q3"]
+
+
+async def test_quarter_bound_on_a_monthly_series_compares_dates(httpx_mock):
+    _search(httpx_mock, "d7g7", "search_d7g7.json")
+    httpx_mock.add_response(url=D7G7, json=_json("d7g7_mm23.json"))
+    result = await client.get_series("D7G7", frequency="monthly", start_period="2026-Q3")
+    # As text, every "2026-MM" sorts below "2026-Q3" and the call ended in NotFound.
+    assert [o.period for o in result.observations] == ["2026-07", "2026-08", "2026-09"]
+
+
+async def test_month_end_bound_keeps_the_quarter_it_falls_in(httpx_mock):
+    _search(httpx_mock, "d7g7", "search_d7g7.json")
+    httpx_mock.add_response(url=D7G7, json=_json("d7g7_mm23.json"))
+    result = await client.get_series("D7G7", frequency="quarterly", end_period="2026-03")
+    # 2026-Q1 starts on or before 31 March; 2026-Q2 starts after it.
+    assert result.observations[-1].period == "2026-Q1"
+    assert "2026-Q2" not in [o.period for o in result.observations]
+
+
 async def test_series_in_several_datasets_says_so(httpx_mock):
     _search(httpx_mock, "ihyq", "search_ihyq.json")
     httpx_mock.add_response(url=IHYQ, json=_json("ihyq_qna.json"))
@@ -133,6 +158,9 @@ async def test_bad_inputs_are_invalid():
         await client.get_series("CPI annual")
     with pytest.raises(InvalidInput, match="not a period"):
         await client.get_series("D7G7", start_period="Sept 2026")
+    # Matches the pattern but is not a month.
+    with pytest.raises(InvalidInput, match="not a period"):
+        await client.get_series("D7G7", end_period="2026-13")
     with pytest.raises(InvalidInput, match="Unknown indicator"):
         await client.get_indicator("gdp")
 
