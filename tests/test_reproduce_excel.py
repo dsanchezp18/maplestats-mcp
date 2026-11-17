@@ -247,7 +247,7 @@ def test_filters_and_sort_repeat_the_tool():
 
 async def test_all_includes_excel_and_explains_a_missing_query():
     result = await client.reproduce("wds_get_cube_metadata", {"product_id": 18100004})
-    assert [s.language for s in result.scripts] == ["r", "python", "stata", "julia", "excel"]
+    assert [s.language for s in result.scripts] == ["r", "python", "stata", "julia", "sas", "excel"]
 
 
 def test_kinds_m_cannot_read_get_no_query():

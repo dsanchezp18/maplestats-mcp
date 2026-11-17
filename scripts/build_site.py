@@ -1556,6 +1556,7 @@ _COMMENT = {
     "python": r"#.*$",
     "julia": r"#.*$",
     "stata": r"(?:^\s*\*|//).*$",
+    "sas": r"/\*.*$|^\s*\*.*\*/\s*$",
     "excel": r"//.*$",
 }
 
@@ -2034,6 +2035,7 @@ def script_tabs(
         "python": "Python",
         "stata": "Stata",
         "julia": "Julia",
+        "sas": "SAS",
         "excel": "Excel (Power Query)",
     }
     tabs, panels = [], []

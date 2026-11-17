@@ -302,7 +302,7 @@ _CITE_DATASET = {
         "(provenance.queried_at), provenance.url, and the attribution in "
         "provenance.licence, word for word when it is set.\n"
         "5. For an analyst: reproduce_code(tool_name=..., arguments=...) gives R, Python, "
-        "Stata and Julia scripts and reproduce_workbook(tool_name=..., arguments=...) an "
+        "Stata, Julia and SAS scripts and reproduce_workbook(tool_name=..., arguments=...) an "
         "Excel workbook of the same rows.\n"
     ),
     "fr": (
@@ -325,7 +325,7 @@ _CITE_DATASET = {
         "et la mention de licence de provenance.licence, mot pour mot lorsqu'elle est "
         "renseignée.\n"
         "5. Pour un analyste : reproduce_code(tool_name=..., arguments=...) fournit des "
-        "scripts R, Python, Stata et Julia, et reproduce_workbook(tool_name=..., "
+        "scripts R, Python, Stata, Julia et SAS, et reproduce_workbook(tool_name=..., "
         "arguments=...) un classeur Excel des mêmes lignes.\n"
     ),
 }

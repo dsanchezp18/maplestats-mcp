@@ -731,7 +731,7 @@ other results name their source in provenance. Keep StatCan quality flags
 when the user will reuse the data.
 For a monthly StatCan headline (jobs, trade, permits, sales), report the
 seasonally adjusted series unless the question asks otherwise, and say which.
-After fetching data, offer reproduce_code (R, Python, Stata, Julia, Excel
+After fetching data, offer reproduce_code (R, Python, Stata, Julia, SAS, Excel
 Power Query that re-fetch the same data) and reproduce_workbook (the rows as
 an Excel workbook). docs://catalogue describes every module in one bilingual line.
 check_answer re-reads the StatCan and Bank of Canada figures an answer

@@ -322,6 +322,16 @@ _NOTES: list[tuple[str, Template]] = [
         ),
     ),
     (
+        (
+            r"No sas script: SAS reads delimited text, ZIP and Excel downloads only, and "
+            r"cannot repeat steps written for other languages\."
+        ),
+        (
+            "Pas de script sas : SAS ne lit que les téléchargements en texte délimité, ZIP et "
+            "Excel, et ne peut pas répéter les étapes écrites pour d'autres langages."
+        ),
+    ),
+    (
         r"No (?P<languages>.+) script: this language cannot read the source\.",
         "Pas de script {languages} : ce langage ne peut pas lire la source.",
     ),
