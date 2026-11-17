@@ -65,7 +65,7 @@ async def test_vectors_all_languages_with_house_layout():
     assert "http2=True" in code["python"]  # StatCan rejects HTTP/1.1-only clients
     # House layout: header block, then numbered sections in order.
     for language, text in code.items():
-        assert text.lstrip().startswith(("# ====", "* ====", "// ====")), language
+        assert text.lstrip().startswith(("# ====", "* ====", "// ====", "/* ====")), language
         marks = ["0. Setup", "1. Read inputs", "2. Check inputs", "3. Prepare data"]
         positions = [text.index(mark) for mark in marks]
         assert positions == sorted(positions), language

@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field
 
 from maplestats_mcp.shared.models import Provenance
 
-Language = Literal["r", "python", "stata", "julia", "excel"]
-LanguageChoice = Literal["all", "r", "python", "stata", "julia", "excel"]
+Language = Literal["r", "python", "stata", "julia", "sas", "excel"]
+LanguageChoice = Literal["all", "r", "python", "stata", "julia", "sas", "excel"]
 
 
 class Script(BaseModel):

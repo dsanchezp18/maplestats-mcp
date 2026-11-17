@@ -44,14 +44,14 @@ _NOTES: list[tuple[str, Template]] = [
             r"StatCan serves this file to most scripts, but answers some networks with a "
             r"captcha \(since November 2026\)\. There the R, Python and Stata scripts rebuild "
             r"the same rows through StatCan's Web Data Service \(WDS\), slower but with the "
-            r"same columns and values; the Julia and Power Query versions stop at the captcha\."
+            r"same columns and values; the Julia, SAS and Power Query versions stop at the captcha\."
         ),
         (
             "StatCan sert ce fichier à la plupart des scripts, mais répond à certains réseaux "
             "par une vérification anti-robot (depuis novembre 2026). Là, les scripts R, Python "
             "et Stata reconstruisent les mêmes lignes par le Service de données Web (WDS) de "
             "StatCan, plus lentement mais avec les mêmes colonnes et valeurs ; les versions "
-            "Julia et Power Query s'arrêtent à la vérification."
+            "Julia, SAS et Power Query s'arrêtent à la vérification."
         ),
     ),
     (
@@ -334,6 +334,16 @@ _NOTES: list[tuple[str, Template]] = [
             "Pas de script {languages} : Power Query ne peut pas répéter les étapes de cette "
             "source (elles s'exécutent en Python ou en R dans les autres scripts, ou le "
             "téléchargement n'est pas un tableau)."
+        ),
+    ),
+    (
+        (
+            r"No sas script: SAS reads delimited text, ZIP and Excel downloads only, and "
+            r"cannot repeat steps written for other languages\."
+        ),
+        (
+            "Pas de script sas : SAS ne lit que les téléchargements en texte délimité, ZIP et "
+            "Excel, et ne peut pas répéter les étapes écrites pour d'autres langages."
         ),
     ),
     (

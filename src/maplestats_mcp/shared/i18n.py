@@ -37,7 +37,7 @@ LABELS: dict[str, dict[str, str]] = {
     },
     "provenance.reproduce": {
         # Repeated in every result, so kept short; SERVER_INSTRUCTIONS says what
-        # reproduce_code returns (R, Python, Stata, Julia, Excel Power Query).
+        # reproduce_code returns (R, Python, Stata, Julia, SAS, Excel Power Query).
         "en": "For scripts, call reproduce_code with this tool's name and arguments.",
         "fr": (
             "Pour obtenir des scripts, appelez reproduce_code avec le nom de cet outil et ses "
