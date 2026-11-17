@@ -105,7 +105,7 @@ sources come back as "not checked".
 
 Offer, do not force:
 
-- `reproduce_code(tool_name, arguments, language)`: R, Python, Stata, Julia or
+- `reproduce_code(tool_name, arguments, language)`: R, Python, Stata, Julia, SAS or
   an Excel Power Query that refetches the same data. `language` picks one;
   `summary=True` ends R and Python scripts with a printed summary, useful for
   large results.

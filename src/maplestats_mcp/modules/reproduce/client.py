@@ -1,5 +1,5 @@
-"""reproduce_code: the same data, fetched and cleaned by an R, Python, Stata
-or Julia script, or an Excel Power Query (M) query, the server writes.
+"""reproduce_code: the same data, fetched and cleaned by an R, Python, Stata,
+Julia or SAS script, or an Excel Power Query (M) query, the server writes.
 
 Three routes, most exact first:
 
@@ -30,6 +30,7 @@ from typing import Any
 from maplestats_mcp.modules.reproduce import builders, french, ip_horizons, probe
 from maplestats_mcp.modules.reproduce.excel import render_excel
 from maplestats_mcp.modules.reproduce.render import RENDERERS as SCRIPT_RENDERERS
+from maplestats_mcp.modules.reproduce.sas import render_sas
 from maplestats_mcp.modules.reproduce.schemas import (
     Language,
     LanguageChoice,
@@ -86,8 +87,8 @@ _DOCUMENTS = (
 )
 _IP_HORIZONS = ("ised_ip_horizons_get_patent", "ised_ip_horizons_search_patents")
 # excel is a Power Query M query (excel.py), rendered from the same Spec.
-RENDERERS = {**SCRIPT_RENDERERS, "excel": render_excel}
-ALL_LANGUAGES: list[Language] = ["r", "python", "stata", "julia", "excel"]
+RENDERERS = {**SCRIPT_RENDERERS, "sas": render_sas, "excel": render_excel}
+ALL_LANGUAGES: list[Language] = ["r", "python", "stata", "julia", "sas", "excel"]
 # Spec.summary's printout exists in these only: they are what an assistant can
 # run and read back, and an analyst using the others reads the frame directly.
 SUMMARY_LANGUAGES: tuple[Language, ...] = ("python", "r")
@@ -342,6 +343,13 @@ async def reproduce(
             )
     scripts, skipped = render_scripts(spec, tool, requested)
     if skipped and spec.kind not in ("none",):
+        # SAS reads fewer sources than the others, so its reason is its own.
+        if "sas" in skipped:
+            skipped.remove("sas")
+            notes.append(
+                "No sas script: SAS reads delimited text, ZIP and Excel downloads only, and "
+                "cannot repeat steps written for other languages."
+            )
         reason = {
             "html_table": "Julia has no maintained HTML table reader",
             "feed": "Julia has no maintained RSS/Atom reader",
@@ -351,7 +359,8 @@ async def reproduce(
                 "Power Query cannot repeat this source's steps (they run in Python or R in "
                 "the other scripts, or the download is not a table)"
             )
-        notes.append(f"No {', '.join(skipped)} script: {reason}.")
+        if skipped:
+            notes.append(f"No {', '.join(skipped)} script: {reason}.")
     if spec.kind == "zip":
         notes.append("The script unzips the archive; pick the data file inside it.")
     return ReproductionCode(

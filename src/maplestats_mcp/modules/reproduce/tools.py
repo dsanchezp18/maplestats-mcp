@@ -1,4 +1,4 @@
-"""reproduce_code: the same data as an R, Python, Stata or Julia script or an
+"""reproduce_code: the same data as an R, Python, Stata, Julia or SAS script or an
 Excel Power Query; reproduce_workbook: the data as a formatted Excel workbook."""
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ async def reproduce_code(
     lang: Literal["en", "fr"] = "en",
     summary: bool = False,
 ) -> ReproductionCode:
-    """Get R, Python, Stata, Julia or Excel Power Query code that refetches the same data.
+    """Get R, Python, Stata, Julia, SAS or Excel Power Query code that refetches the same data.
 
     Use for: moving any data tool's result into an analysis script
     reproducibly. Pass the tool name and the arguments you called it
@@ -39,7 +39,9 @@ async def reproduce_code(
     follow a header plus numbered sections (setup, read, check, prepare),
     save downloads under data/raw/, and clean names, text and numbers;
     Python uses polars, Julia CSV.jl and TidierData, Stata import delimited (JSON
-    and filtered files go through Stata's built-in Python). language
+    and filtered files go through Stata's built-in Python), SAS PROC HTTP with
+    a DATA step (delimited text, ZIP and Excel downloads only; the prepared
+    table is work.maple_data). language
     "excel" is a Power Query M query to paste into Excel (Get Data > Blank
     Query > Advanced Editor): it calls the same URL, filters and cleans the
     same way, and refreshes inside Excel, with nothing to install. notes
@@ -50,10 +52,10 @@ async def reproduce_code(
     rows) instead of leaving the frame to print: for a large result, run
     the script and read that rather than passing the rows through the
     conversation.
-    Keywords: reproducible, R code, Python code, Stata do-file, Julia,
-    Excel, Power Query, M query, script, cansim, download data,
+    Keywords: reproducible, R code, Python code, Stata do-file, Julia, SAS,
+    SAS program,    Excel, Power Query, M query, script, cansim, download data,
     replication, code generation, large table, summary.
-    Mots-clés : reproductible, code R, code Python, Stata, Julia, Excel,
+    Mots-clés : reproductible, code R, code Python, Stata, Julia, SAS, programme SAS, Excel,
     Power Query, requête M, script, télécharger les données, réplication,
     génération de code, grand tableau, résumé.
     """

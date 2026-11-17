@@ -62,7 +62,7 @@ async def test_summary_scripts_are_r_and_python_with_the_filters():
 async def test_without_summary_the_scripts_are_unchanged():
     result = await client.reproduce("wds_get_full_table_download", {"product_id": 18100256})
     code = _by_language(result)
-    assert set(code) == {"r", "python", "stata", "julia", "excel"}
+    assert set(code) == {"r", "python", "stata", "julia", "sas", "excel"}
     assert not any("Summarize" in text for text in code.values())
     assert result.notes == []
 

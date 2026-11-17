@@ -60,7 +60,7 @@ chiffre revient avec sa citation, ses indicateurs de qualité et sa licence.*
   newer data exist.
 - **Answers can be checked.** `check_answer` re-reads the StatCan and Bank of
   Canada figures an answer cites and reports only the problems.
-  `reproduce_code` writes the R, Python, Stata or Julia script (or Excel Power
+  `reproduce_code` writes the R, Python, Stata, Julia or SAS script (or Excel Power
   Query) that pulls the same data straight from the publisher, and
   `reproduce_workbook` gives the rows.
 - **Licences travel with the data.** Each result carries the publisher's
@@ -97,7 +97,7 @@ other tools on public benchmarks: [see how it does](https://maplestats.danielsta
 - **The answer can be checked.** Before replying, the assistant can send the
   StatCan and Bank of Canada figures it cites to `check_answer`, which re-reads
   them from the source.
-- **Your work stays reproducible.** It writes the R, Python, Stata or Julia
+- **Your work stays reproducible.** It writes the R, Python, Stata, Julia or SAS
   script, or the Excel query, that pulls the same data from the source.
 - **Quality flags and revisions, shown:** "use with caution", "too unreliable
   to be published", preliminary and revised are spelled out on every StatCan
@@ -224,7 +224,7 @@ Tools are found through search rather than listed flat: call
 ```
 
 `plan_query` turns a question into an ordered, multi-source plan, and
-`reproduce_code` writes the R, Python, Stata or Julia script (or an Excel
+`reproduce_code` writes the R, Python, Stata, Julia or SAS script (or an Excel
 Power Query) that fetches the same data straight from the source;
 `reproduce_workbook` returns the rows as a formatted Excel workbook.
 Before replying with figures, the assistant can call `check_answer` with the
