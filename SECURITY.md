@@ -30,8 +30,7 @@ confirmed vulnerability is fixed ahead of other work and credited in the
 In scope: the code in this repository, the hosted server at
 `mcp.maplestats.danielstats.io` (and its backup copy at
 `maplestats-mcp.onrender.com`), the chat demo at
-`chat.maplestats.danielstats.io` (and its backup copy at
-`maplestats-chat-ydx4.onrender.com`; a public endpoint that holds a paid
+`chat.maplestats.danielstats.io` (a public endpoint that holds a paid
 model-provider API key, so a way to spend that key or get around its rate
 limits is a vulnerability), and the website.
 
