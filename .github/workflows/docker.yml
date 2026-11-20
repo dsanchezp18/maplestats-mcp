@@ -1,8 +1,8 @@
 name: Docker images
 
-# Render deploys backup copies of the server and the chat demo straight from these Dockerfiles
-# (render.yaml and chat/render.yaml), and deploy-azure below rolls the server
-# image out to Azure (deploy-chat-azure the chat image), so a base-image bump or a dependency without a wheel for the
+# Render deploys the server backup from its Dockerfile (render.yaml), and
+# deploy-azure and deploy-chat-azure roll both images out to Azure. A base-image
+# bump or a dependency without a wheel for the
 # image's Python must fail here, not on the next deploy. ci.yml's test matrix
 # runs uv's own Python, not the image. Kept out of ci.yml so a registry outage
 # cannot hold back the website, which publishes only after CI passes.
@@ -105,7 +105,7 @@ jobs:
           --label org.opencontainers.image.source=https://github.com/${{ github.repository }}
           -f chat/Dockerfile chat
       # Building is not enough: an image that misses a module (results.py, 2026-11-02)
-      # builds fine and fails only when Render starts it.
+      # builds fine and fails only when the service starts it.
       - name: The image starts and answers /health
         run: |
           docker run -d --name chat -p 10000:10000 maplestats-chat
