@@ -219,7 +219,7 @@ token budget, as before. The wrap-up instruction goes in a second system block a
 cached one, so the cached prefix is the same on every request. With the flag off the
 request has no cache fields at all.
 
-It is off so it can be tried on the Render backup first: ask one question twice within
+It is off; to test it in a separate environment, ask one question twice within
 five minutes and read `/stats`. `tokens.cache_write` should grow on the first and
 `tokens.cache_read` on the second. Anthropic's pages do not say whether the connector
 reuses the cache between the steps of its own tool loop, so `cache_read` on the first
