@@ -343,12 +343,12 @@ async def wds_get_data_from_vectors(
     with their formula.
     A challenged WDS gets a labelled stand-in.
     Keywords: statcan, vector, observations, latest, data, time series,
-    wds, values, year-over-year, yoy, inflation rate, percent change,
+    wds, values, year-over-year, yoy, inflation rate, CPI inflation, percent change,
     growth rate, annualized, quarterly average, annual average, index,
     moving average, rolling average.
     Mots-clés : Statistique Canada, vecteur, observations, dernières
     données, données récentes, série chronologique, valeurs, dernières
-    périodes, variation annuelle, glissement annuel, taux d'inflation,
+    périodes, variation annuelle, glissement annuel, taux d'inflation, inflation de l'IPC,
     variation en pourcentage, taux de croissance, moyenne trimestrielle,
     moyenne annuelle, indice, moyenne mobile.
     """
@@ -867,18 +867,19 @@ async def wds_get_full_table_download(
     end_period: str | None = None,
     lang: Lang = "en",
 ) -> FullTableDownloadLink:
-    """Get a whole StatCan table: its file link for a browser, and (CSV) a
-    Python script that rebuilds the same CSV through WDS.
+    """Get a whole StatCan table: its file link, and (CSV) a Python script
+    that rebuilds the same CSV through WDS.
 
     Use for: an entire table, or hundreds of its series, for offline
     analysis; or reconciling a workbook of vector IDs against a published
-    table (the CSV has a VECTOR column to join on). Statistics Canada blocks
-    automated full-table downloads since November 2026, so download_url is
-    for a person in a browser, and `file_check` says whether it served the
-    file or the captcha just now. For CSV the tool also returns a Python
-    script that rebuilds the table through WDS, which StatCan still serves:
-    the same columns, order and values as StatCan's file, written to
-    data/raw/. `members` ({"Geography": ["Canada", "Ontario"]}, dimension
+    table (the CSV has a VECTOR column to join on). StatCan serves the file
+    to most scripts, but since November 2026 answers some networks with a
+    captcha only a person in a browser can pass; `file_check` says which it
+    answered just now. For CSV the tool also returns a Python script that
+    rebuilds the table through WDS, which StatCan serves everywhere: the
+    same columns, order and values as StatCan's file, written to data/raw/.
+    reproduce_code writes R, Python and Stata scripts that download the
+    file and rebuild through WDS only at the captcha. `members` ({"Geography": ["Canada", "Ontario"]}, dimension
     and member names as in wds_get_cube_metadata) and `start_period` /
     `end_period` (REF_DATE's form: 2020, 2020-01) keep part of the table.
     `rebuild` gives its size in WDS calls; past the limit there is no

@@ -293,11 +293,12 @@ async def test_download_link_for_a_known_table(httpx_mock):
     link = await client.get_full_table_download_csv("18-10-0004-01")
     assert link.product_id == 18100004
     assert link.download_url.endswith("18100004-eng.zip")
-    # Live 2026-11-18 from a cloud host: the zip still downloads, but StatCan has
-    # announced the block, so the note says what to do if a script meets it.
+    # Live 2026-11-18 and 2026-11-20 from cloud hosts: the zip still downloads, but
+    # some networks get the captcha, so the note says what the scripts do there.
     assert link.file_check == "downloadable"
-    assert "no script relies on download_url" in link.notes[0]
-    assert "still served the file" in link.notes[1]
+    assert "serves download_url to scripts from most networks" in link.notes[0]
+    assert "rebuild the same rows through WDS" in link.notes[0]
+    assert "served the file" in link.notes[1]
 
 
 async def test_download_link_behind_statcans_captcha_says_so(httpx_mock, cloudflare_challenge):
@@ -316,7 +317,7 @@ async def test_download_link_behind_statcans_captcha_says_so(httpx_mock, cloudfl
     )
     link = await client.get_full_table_download_csv("18-10-0004-01")
     assert link.file_check == "blocked"
-    assert "no script relies on download_url" in link.notes[0]
+    assert "rebuild the same rows through WDS" in link.notes[0]
     assert "captcha, not the file" in link.notes[1]
 
 

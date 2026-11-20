@@ -526,14 +526,14 @@ class FullTableDownloadLink(BaseModel):
         default="not_checked",
         description="What StatCan answered when MapleStats asked for the file's first bytes just "
         "now: 'downloadable' (the file came back), 'blocked' (StatCan's captcha, which only a "
-        "person in a web browser can pass) or 'not_checked'. Either way no script relies on "
-        "the file: StatCan announced in November 2026 that it blocks automated full-table "
-        "downloads.",
+        "person in a web browser can pass) or 'not_checked'. The file answers scripts from "
+        "most networks; reproduce_code's scripts rebuild the table through WDS where it gets "
+        "the captcha.",
     )
     notes: list[str] = Field(
         default_factory=list,
-        description="StatCan's block on full-table files, and how the table is rebuilt through "
-        "WDS instead. Pass these on to the user.",
+        description="Whether scripts get the file, and how the table is rebuilt through WDS "
+        "where they do not. Pass these on to the user.",
     )
     rebuild: TableRebuild | None = Field(
         default=None,

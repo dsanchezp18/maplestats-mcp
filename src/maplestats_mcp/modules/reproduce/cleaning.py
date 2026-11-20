@@ -210,14 +210,18 @@ GENERIC: dict[str, Code] = {
 # names them, Python and Julia as in the source file.
 SPECIFIC: dict[str, dict[str, Code]] = {
     "statcan_table": {
-        # cansim in R already returns val_norm (scaled value) and Date. No filter
-        # on val_norm: suppressed cells (x, F, ..) have a missing value, and the
-        # tool and the other languages keep those rows with their flags.
+        # No filter on the scaled value: suppressed cells (x, F, ..) have a missing
+        # value, and the tool and the other languages keep those rows with their
+        # flags. Until 2026-11-20 the R comment said cansim added val_norm, but R
+        # reads StatCan's CSV itself since cansim's get_cansim() was dropped
+        # (2026-11-18), so nothing added it.
         "r": Code(
-            [],
+            ["dplyr"],
             (
-                "# cansim adds val_norm (VALUE times its scalar factor) and a Date column.\n"
-                "# Suppressed cells keep a missing val_norm; STATUS and SYMBOL say why.\n"
+                "# value is in the unit named by scalar_factor; scalar_id is its power of ten.\n"
+                "# Suppressed cells keep a missing value; status and symbol say why.\n\n"
+                "data <- data |>\n"
+                "  mutate(value_normalized = as.numeric(value) * 10^as.numeric(scalar_id))\n"
             ),
         ),
         "python": Code(
@@ -341,11 +345,21 @@ SPECIFIC: dict[str, dict[str, Code]] = {
 }
 
 # French full tables (checked 2026-09-24 on 18100004-fra): same columns in
-# French, e.g. VALEUR and IDENTIFICATEUR SCALAIRE. cansim returns val_norm
-# in both languages. Stata turns these accented, spaced headers into
-# generic names, so its French version skips the scaling step.
+# French, e.g. VALEUR and IDENTIFICATEUR SCALAIRE (valeur and
+# identificateur_scalaire after R's clean_names). Stata turns these accented,
+# spaced headers into generic names, so its French version skips the scaling step.
 SPECIFIC["statcan_table_fr"] = {
-    "r": SPECIFIC["statcan_table"]["r"],
+    "r": Code(
+        ["dplyr"],
+        (
+            "# valeur est dans l'unité de facteur_scalaire; identificateur_scalaire en est\n"
+            "# la puissance de dix.\n\n"
+            "data <- data |>\n"
+            "  mutate(\n"
+            "    valeur_normalisee = as.numeric(valeur) * 10^as.numeric(identificateur_scalaire)\n"
+            "  )\n"
+        ),
+    ),
     "python": Code(
         [],
         (

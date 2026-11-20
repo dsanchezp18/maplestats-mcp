@@ -5,8 +5,9 @@ MODULE_DESCRIPTION = (
     "States in some datasets) on GDP and growth, HICP inflation, unemployment, "
     "employment, house prices, government debt and deficit, and exports and imports; "
     "plus any of Eurostat's datasets and tables by code, searched by title, with status "
-    "flags (provisional, estimated, break in series) decoded. Labels in English or "
-    "French. Free reuse with attribution (CC BY 4.0); data for non-EU, non-EFTA and "
+    "flags (provisional, estimated, break in series) decoded; where the server offers "
+    "it, eurostat_query_dataset runs SQL over a dataset's slice server-side, refusing "
+    "sums of a total with its parts. Labels in English or French. Free reuse with attribution (CC BY 4.0); data for non-EU, non-EFTA and "
     "non-candidate countries may not be reused commercially."
 )
 MODULE_DESCRIPTION_FR = (
@@ -16,7 +17,10 @@ MODULE_DESCRIPTION_FR = (
     "l'inflation IPCH, le chômage, l'emploi, les prix des logements, la dette et le "
     "déficit publics, les exportations et les importations ; et tout jeu de données ou "
     "tableau d'Eurostat par code, cherché par titre, avec les indicateurs de statut "
-    "(provisoire, estimé, rupture de série) décodés. Libellés en anglais ou en français. "
+    "(provisoire, estimé, rupture de série) décodés ; là où le serveur l'offre, "
+    "eurostat_query_dataset exécute du SQL sur une tranche d'un jeu de données côté "
+    "serveur, en refusant de sommer un total avec ses parties. Libellés en anglais ou en "
+    "français. "
     "Réutilisation libre avec mention de la source (CC BY 4.0) ; les données des pays "
     "hors UE, AELE et pays candidats ne peuvent pas être réutilisées à des fins "
     "commerciales."

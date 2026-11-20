@@ -5,7 +5,9 @@ MODULE_DESCRIPTION = (
     "government balance and debt), productivity (GDP per hour worked), unit labour costs, "
     "purchasing power parities, tax-to-GDP ratios (Revenue Statistics), house prices and "
     "composite leading indicators; plus any series of the OECD's 1,500 dataflows by SDMX "
-    "key. Free reuse with citation; third-party data excepted. 60 data downloads an hour."
+    "key; where the server offers it, oecd_query_dataset runs SQL over a dataset's slice "
+    "server-side, refusing sums of a total with its parts. Free reuse with citation; "
+    "third-party data excepted. 60 data downloads an hour."
 )
 MODULE_DESCRIPTION_FR = (
     "Statistiques de l'Explorateur de données de l'OCDE, centrées sur le Canada : le "
@@ -15,6 +17,8 @@ MODULE_DESCRIPTION_FR = (
     "unitaires de main-d'œuvre, les parités de pouvoir d'achat, les recettes fiscales en "
     "pourcentage du PIB (Statistiques des recettes publiques), les prix des logements et "
     "les indicateurs composites avancés ; et toute série des 1 500 jeux de données de "
-    "l'OCDE par clé SDMX. Réutilisation libre avec mention de la source, sauf données de "
+    "l'OCDE par clé SDMX ; là où le serveur l'offre, oecd_query_dataset exécute du SQL "
+    "sur une tranche d'un jeu de données côté serveur, en refusant de sommer un total avec "
+    "ses parties. Réutilisation libre avec mention de la source, sauf données de "
     "tiers. 60 téléchargements de données par heure."
 )

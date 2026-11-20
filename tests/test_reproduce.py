@@ -1580,16 +1580,12 @@ def test_statcan_file_scripts_stop_plainly_at_the_captcha(kind):
             {"product_id": 18100004, "key": "2.2", "last_n_observations": 1},
             "https://www150.statcan.gc.ca/t1/wds/sdmx/",
         ),
-        (
-            "wds_get_full_table_download",
-            {"product_id": 18100004},
-            "https://www150.statcan.gc.ca/n1/tbl/csv/",
-        ),
     ],
 )
 async def test_no_script_where_statcan_blocks_scripts(monkeypatch, tool, arguments, url):
-    # StatCan blocks its SDMX service and announced it blocks full-table files for
-    # automated clients (November 2026): a script there would fail, so none is written.
+    # StatCan blocks its SDMX service for automated clients (November 2026): a script
+    # there would fail, so none is written. Full-table files get scripts again since
+    # 2026-11-20 (tests/test_reproduce_summary.py): most networks still get them.
     async def run_tool(name, args, lang):
         return {"provenance": {"url": url}}, []
 

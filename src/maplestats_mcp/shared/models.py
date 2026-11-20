@@ -99,3 +99,39 @@ class Provenance(BaseModel):
         default="For scripts, call reproduce_code with this tool's name and arguments.",
         description="How to get retrieval and cleaning code for this result.",
     )
+
+
+# ---- SQL over an SDMX dataset's slice (shared/sdmx_query.py) ----
+
+SdmxQueryCell = str | int | float | bool | None
+
+
+class SdmxQueryResult(BaseModel):
+    """The result of one read-only SQL query over a slice of an SDMX dataset."""
+
+    sql: str = Field(description="The SQL as run against the table `obs`.")
+    columns: list[str] = Field(description="Result column names, in order.")
+    column_types: list[str] = Field(description="DuckDB type of each result column.")
+    rows: list[list[SdmxQueryCell]] = Field(
+        description="Result rows (dates as YYYY-MM-DD), at most the row cap in provenance.limits."
+    )
+    row_count: int = Field(description="Rows in `rows`.")
+    truncated: bool = Field(description="True when the query returned more rows than the cap.")
+    input_rows: int = Field(description="Observations of the slice loaded into `obs`.")
+    dataset: str
+    dataset_title: str
+    citation: str = Field(description="Quote it with the result, with the periods used.")
+    dimension_columns: dict[str, str] = Field(
+        description="Each dimension and the `obs` column holding its codes; the column "
+        "with the same name plus '_label' holds their labels."
+    )
+    filters: dict[str, list[str]] = Field(
+        default_factory=dict, description="The codes kept per dimension (all where absent)."
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="What the query does with the numbers that is easy to misread, measured "
+        "on the data: say these with the result.",
+    )
+    notes: list[str] = Field(default_factory=list)
+    provenance: Provenance

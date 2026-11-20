@@ -52,7 +52,7 @@ class Step:
     check: Check = lambda data: True
     # When set, the step passes only if the call is an error whose text
     # contains this string (a bad input that must be refused, not answered).
-    expect_error: str | None = None
+    expect_error: str | tuple[str, ...] | None = None
     # Steps ask call_tool for the full result, which the checks were written
     # against; a brief one writes six or more rows as CSV text and leaves out
     # null fields. `brief=True` checks the brief form itself.
@@ -101,12 +101,25 @@ DOWN_TOOLS: dict[str, str] = {}
 _HOSTED_CALL_SPACING_SECONDS = 2.0
 
 
+# After a refused call: a 429 waits the Retry-After the server sends (its window is 60 s),
+# anything else (a 503 when every slot is busy, an ingress 502 or 504, a dropped
+# connection) waits these seconds before the next try.
+_HOSTED_RETRY_WAITS_SECONDS = (15.0, 30.0)
+_HOSTED_MAX_RETRY_AFTER_SECONDS = 65.0
+
+
 class _HostedClient:
     """The call_tool of fastmcp.Client, one HTTP session per call to a hosted server.
 
     A session held for the whole run was dropped by Azure's ingress partway through
-    (ReadError, 2026-11-19). A call whose connection drops is tried once more; a
-    second drop is returned as a failed call, so the run goes on.
+    (ReadError, 2026-11-19). On 2026-11-20 six steps failed on Azure with the MCP
+    client's "Server returned an error response", which is what it says for any HTTP
+    status of 400 or more whose body is not a JSON-RPC error: the server's own 429
+    (rate limit) or 503 (every slot busy), or an ingress error. The retry came 2 s
+    later and met the same refusal, and the status was lost. Now each error response's
+    status (and Retry-After) is recorded, the call is tried three times, waiting as
+    the server asks on a 429 and longer on anything else, and a call that still fails
+    says which status it met, so the run goes on.
     """
 
     def __init__(self, url: str) -> None:
@@ -121,17 +134,56 @@ class _HostedClient:
     async def call_tool(self, name: str, arguments: dict[str, Any], **kwargs: Any) -> Any:
         from types import SimpleNamespace
 
+        from fastmcp.client.transports import StreamableHttpTransport
+        from mcp.shared._httpx_utils import create_mcp_http_client
         from mcp.shared.exceptions import MCPError
 
+        refused: list[tuple[int, str | None]] = []
+
+        async def note(response: Any) -> None:
+            if response.status_code >= 400:
+                refused.append((response.status_code, response.headers.get("retry-after")))
+
+        # fastmcp passes follow_redirects (and the timeout only when it has one), which
+        # create_mcp_http_client does not take.
+        def factory(
+            headers: dict[str, str] | None = None,
+            timeout: Any = None,
+            auth: Any = None,
+            follow_redirects: bool = True,
+        ) -> Any:
+            http = create_mcp_http_client(headers=headers, timeout=timeout, auth=auth)
+            http.follow_redirects = follow_redirects
+            http.event_hooks.setdefault("response", []).append(note)
+            return http
+
         problem: Exception | None = None
-        for _ in range(2):
-            await asyncio.sleep(_HOSTED_CALL_SPACING_SECONDS)
+        met: list[int] = []
+        wait = _HOSTED_CALL_SPACING_SECONDS
+        for attempt in range(len(_HOSTED_RETRY_WAITS_SECONDS) + 1):
+            await asyncio.sleep(wait)
+            refused.clear()
+            transport = StreamableHttpTransport(self.url, httpx_client_factory=factory)
             try:
-                async with Client(self.url, timeout=180) as client:
+                async with Client(transport, timeout=180) as client:
                     return await client.call_tool(name, arguments, **kwargs)
             except (MCPError, OSError, RuntimeError) as exc:
                 problem = exc
-        text = f"[hosted_connection] {type(problem).__name__}: {problem}"
+            met += [status for status, _ in refused]
+            if attempt == len(_HOSTED_RETRY_WAITS_SECONDS):
+                break
+            # A failed attempt can meet two refusals (its request, then the session's
+            # close); a 429's Retry-After is what to wait for.
+            status, retry_after = next(
+                (r for r in refused if r[0] == 429), refused[-1] if refused else (0, None)
+            )
+            if status == 429 and retry_after and retry_after.isdigit():
+                wait = min(_HOSTED_MAX_RETRY_AFTER_SECONDS, float(retry_after) + 1)
+            else:
+                wait = _HOSTED_RETRY_WAITS_SECONDS[attempt]
+            print(f"     {name}: HTTP {status or 'no answer'}, trying again in {wait:.0f} s")
+        statuses = "HTTP " + ", ".join(map(str, met)) if met else "no HTTP status"
+        text = f"[hosted_connection] {type(problem).__name__}: {problem} ({statuses})"
         return SimpleNamespace(is_error=True, content=[TextContent(type="text", text=text)])
 
 
@@ -1642,7 +1694,13 @@ STEPS: list[Step] = [
         "statcan/sdmx",
         "sdmx_get_data",
         {"product_id": 18100004, "key": "16.85", "last_n_observations": 1},
-        expect_error="series only for: 2 (Canada)",
+        # SDMX names where the series is published; behind StatCan's captcha (since
+        # November 2026) the tool answers from WDS, which refuses the same series in
+        # its own words (2026-11-20, locally and on Azure).
+        expect_error=(
+            "series only for: 2 (Canada)",
+            "does not publish a series for this combination",
+        ),
     ),
     Step(
         "statcan/sdmx",
@@ -1993,7 +2051,12 @@ async def main(modules: set[str], url: str | None = None) -> int:
             result = await client.call_tool("call_tool", request, raise_on_error=False)
             text = _text(result)
             if step.expect_error is not None:
-                if result.is_error and step.expect_error in text:
+                wanted = (
+                    (step.expect_error,)
+                    if isinstance(step.expect_error, str)
+                    else step.expect_error
+                )
+                if result.is_error and any(w in text for w in wanted):
                     print(f"OK   {label} {args} (refused as expected)")
                 elif (
                     os.environ.get("GITHUB_ACTIONS") == "true"

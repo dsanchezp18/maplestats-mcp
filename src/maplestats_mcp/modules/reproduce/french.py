@@ -41,6 +41,21 @@ _NOTES: list[tuple[str, Template]] = [
     ),
     (
         (
+            r"StatCan serves this file to most scripts, but answers some networks with a "
+            r"captcha \(since November 2026\)\. There the R, Python and Stata scripts rebuild "
+            r"the same rows through StatCan's Web Data Service \(WDS\), slower but with the "
+            r"same columns and values; the Julia and Power Query versions stop at the captcha\."
+        ),
+        (
+            "StatCan sert ce fichier à la plupart des scripts, mais répond à certains réseaux "
+            "par une vérification anti-robot (depuis novembre 2026). Là, les scripts R, Python "
+            "et Stata reconstruisent les mêmes lignes par le Service de données Web (WDS) de "
+            "StatCan, plus lentement mais avec les mêmes colonnes et valeurs ; les versions "
+            "Julia et Power Query s'arrêtent à la vérification."
+        ),
+    ),
+    (
+        (
             r"No (?P<languages>.+) script: the summary printout is written in R and Python "
             r"only; ask without summary for them\."
         ),

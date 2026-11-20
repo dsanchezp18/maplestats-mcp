@@ -63,6 +63,8 @@ TOOL_SWITCHES: dict[str, Callable[[], bool]] = {
     "statcan_pumf_tabulate": config.get_pumf_tabulate_enabled,
     "wds_query_series": config.get_query_series_enabled,
     "wds_query_table": config.get_query_series_enabled,
+    "eurostat_query_dataset": config.get_query_series_enabled,
+    "oecd_query_dataset": config.get_query_series_enabled,
     **dict.fromkeys(gis_profile.PURE_GIS_TOOLS, config.get_gis_enabled),
 }
 _SWITCH_ENV = {"MAPLE_PUMF_TABULATE": "1", "MAPLE_QUERY_SERIES": "1", "MAPLE_GIS": "1"}

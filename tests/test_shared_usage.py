@@ -46,6 +46,18 @@ def test_fallback_answers_are_counted_by_a_fixed_list_of_sources() -> None:
     assert UsageStats().snapshot()["fallbacks"] == {}
 
 
+def test_refused_requests_are_counted_by_a_fixed_list_of_reasons() -> None:
+    stats = UsageStats()
+    stats.record_refusal("rate_limited")
+    stats.record_refusal("rate_limited")
+    stats.record_refusal("server_busy")
+    stats.record_refusal("203.0.113.5")
+    snap = stats.snapshot()
+    assert snap["refused_requests"] == {"rate_limited": 2, "server_busy": 1, "other": 1}
+    assert "203.0.113.5" not in json.dumps(snap)
+    assert UsageStats().snapshot()["refused_requests"] == {}
+
+
 def test_old_days_are_dropped() -> None:
     stats = UsageStats(("boc_get_observations", "wds_search_cubes"))
     for n in range(MAX_DAYS + 10):

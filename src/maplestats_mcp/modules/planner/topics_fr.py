@@ -1192,10 +1192,9 @@ FR: dict[str, str] = {
     "which StatCan services answer scripts right now, and which are blocked": (
         "les services de StatCan qui répondent aux scripts en ce moment, et ceux qui sont bloqués"
     ),
-    "a whole table from its product_id: the file link for a browser and a script that "
-    "rebuilds it through WDS": (
-        "un tableau complet à partir de son product_id : le lien du fichier pour un "
-        "navigateur et un script qui le reconstruit par le WDS"
+    "a whole table from its product_id: the file link and a script that rebuilds it through WDS": (
+        "un tableau complet à partir de son product_id : le lien du fichier et un script qui "
+        "le reconstruit par le WDS"
     ),
     "A blocked service is StatCan's change, not an outage; WDS still answers scripts, "
     "and each error names the closest route that still works.": (
@@ -1261,14 +1260,13 @@ FR: dict[str, str] = {
     "a date window for a few known vectors, returned inline": (
         "une plage de dates pour quelques vecteurs connus, retournée directement"
     ),
-    "wds_get_full_table_download gives the file link for a browser (StatCan blocks "
-    "scripted full-table downloads since November 2026) and a Python script that "
-    "rebuilds the same CSV through WDS, keeping the members and periods asked for: "
-    "offer it, and read its output rather than the rows.": (
-        "wds_get_full_table_download donne le lien du fichier pour un navigateur (StatCan "
-        "bloque les téléchargements de tableaux complets par script depuis novembre 2026) et "
-        "un script Python qui reconstruit le même CSV par le WDS, en gardant les membres et "
-        "les périodes demandés : proposez-le, et lisez sa sortie plutôt que les lignes."
+    "wds_get_full_table_download gives the file link and a Python script that rebuilds "
+    "the same CSV through WDS where StatCan's captcha blocks the file, keeping the "
+    "members and periods asked for: offer it, and read its output rather than the rows.": (
+        "wds_get_full_table_download donne le lien du fichier et un script Python qui "
+        "reconstruit le même CSV par le WDS là où la vérification anti-robot de StatCan bloque "
+        "le fichier, en gardant les membres et les périodes demandés : proposez-le, et lisez "
+        "sa sortie plutôt que les lignes."
     ),
     "The vector tools return every observation inline, several fields each: fine for a "
     "handful of series, the wrong tool for hundreds.": (

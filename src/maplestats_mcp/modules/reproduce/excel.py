@@ -632,7 +632,9 @@ def render_excel(spec: Spec, tool: str) -> tuple[str, list[str]] | None:
     spec = _safe_spec(spec)
     native = spec.native.get("excel")
     if native is None and (
-        spec.kind in _SKIPPED_KINDS or "python" in spec.native or "python" in spec.prepare
+        spec.kind in _SKIPPED_KINDS
+        or ("python" in spec.native and not spec.native_fallback)
+        or "python" in spec.prepare
     ):
         return None
     read = ("", native.body) if native else _read(spec)

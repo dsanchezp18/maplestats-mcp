@@ -55,9 +55,10 @@ async def statcan_reference_search_analysis(
     count: int = constants.SEARCH_COUNT_DEFAULT,
     page: int = 0,
 ) -> ReferenceSearchResult:
-    """Search StatCan's Analysis catalogue: analytical articles, journals and periodicals.
+    """Search Statistics Canada's Analysis catalogue: analytical articles, studies, journals.
 
-    Use for: finding analytical publications, "Stats in brief" (many
+    Use for: finding articles and research analysing a subject (Insights
+    on Canadian Society, Economic and Social Reports), "Stats in brief" (many
     of these are also Daily articles republished with a catalogue
     number), and journal/periodical series -- distinct from
     statcan_reference_search_documents (methodology/definitions
@@ -67,10 +68,12 @@ async def statcan_reference_search_analysis(
     "46-28-0001"), a category (e.g. "Journals and periodicals"), a
     description, and a release date. An empty query returns the full
     unfiltered catalogue (paginate with page/count to browse it).
-    Keywords: StatCan, analysis, analytical article, stats in brief,
-    journal, periodical, working paper, insights.
-    Mots-clés : Statistique Canada, analyse, article analytique, coup d'œil
-    sur, revue, périodique, document de travail, études.
+    Keywords: StatCan, analysis, analyses, analysing, analyzing, analytical
+    article, research, study, stats in brief, journal, periodical, working
+    paper, insights.
+    Mots-clés : Statistique Canada, analyse, analyser, article analytique,
+    recherche, étude, coup d'œil sur, revue, périodique, document de
+    travail, études.
     """
     use_lang(lang)
     return await client.search_analysis(query, count=count, page=page, lang=lang)

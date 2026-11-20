@@ -1,8 +1,8 @@
 """Summary scripts: a whole table downloaded and summarized outside the conversation.
 
-wds_get_full_table_download returns Python and R scripts that keep the members
-and periods asked for and print a summary; reproduce_code(summary=True) ends
-any R or Python script the same way. No network: the WDS calls are replaced.
+reproduce_code for wds_get_full_table_download returns scripts that keep the members
+and periods asked for (download the zip, rebuild through WDS at StatCan's captcha);
+reproduce_code(summary=True) ends any R or Python script with a summary. No network: the WDS calls are replaced.
 The Python script was also run live on 2026-11-03 against 18-10-0256 and
 34-10-0130 (English and French editions).
 """
@@ -29,19 +29,66 @@ def _by_language(result) -> dict[str, str]:
     return {s.language: s.code for s in result.scripts}
 
 
-async def test_a_full_table_gets_no_script(monkeypatch):
-    # StatCan blocks automated full-table downloads (November 2026), so even with
-    # summary=True there is no script, and the note says why. The builder reads only
-    # the arguments, so the tool's run is replaced and no request leaves the test.
+async def _full_table(monkeypatch, arguments, **options):
+    # The builder reads only the arguments, so the tool's run is replaced and no
+    # request leaves the test.
     async def run_tool(name, args, lang="en"):
         return {}, []
 
     monkeypatch.setattr(client, "_run_tool", run_tool)
-    result = await client.reproduce(
-        "wds_get_full_table_download", {"product_id": "18-10-0256-01"}, summary=True
-    )
-    assert result.scripts == []
-    assert any("No script: Statistics Canada blocks" in n for n in result.notes)
+    return await client.reproduce("wds_get_full_table_download", arguments, **options)
+
+
+async def test_a_full_table_script_tries_the_file_then_wds(monkeypatch):
+    # StatCan's full-table zips answer most networks (cloud hosts and the hosted
+    # server, 2026-11-20) but some get its captcha: R, Python and Stata download the
+    # zip and rebuild the same rows through WDS only at the captcha. Until 2026-11-20
+    # reproduce_code refused full tables. Run live on 2026-11-20 (18-10-0004, English
+    # and French, both routes): the same final table either way.
+    arguments = {
+        "product_id": "18-10-0004-01",
+        "members": {"Geography": ["Canada"]},
+        "start_period": "2025",
+    }
+    result = await _full_table(monkeypatch, arguments)
+    code = _by_language(result)
+    assert set(code) == {"r", "python", "stata", "julia", "excel"}
+    url = "https://www150.statcan.gc.ca/n1/tbl/csv/18100004-eng.zip"
+    for language in ("r", "python", "stata"):
+        assert url in code[language]
+        assert "getDataFromCubePidCoordAndLatestNPeriods" in code[language]
+    python = code["python"]
+    compile(python, "python", "exec")
+    fetch = python.split("def fetch_table", 1)[1]
+    assert fetch.index(f"client.get({url!r})") < fetch.index("wds_rebuild(output)")
+    assert "MEMBERS = {'Geography': ['Canada']}" in python
+    assert "START_PERIOD = '2025'" in python
+    assert 'list(dimension = "Geography", keep = c("Canada"))' in code["r"]
+    assert "if (wds_captcha(response)) {" in code["r"]
+    # Stata runs the same Python, one physical line at a time.
+    block = code["stata"].split("python:\n", 1)[1].split("\nend\n", 1)[0]
+    for line in filter(str.strip, block.splitlines()):
+        compile(line, "stata", "exec")
+    assert any("rebuild the same rows" in n for n in result.notes)
+
+
+async def test_a_french_full_table_script_writes_the_french_edition(monkeypatch):
+    arguments = {"product_id": 18100004, "members": {"Géographie": ["Québec"]}, "lang": "fr"}
+    result = await _full_table(monkeypatch, arguments, language="r", lang="fr")
+    (script,) = result.scripts
+    assert "18100004-fra.zip" in script.code
+    assert 'table_language <- "fr"' in script.code
+    # R literals are ASCII: in a C locale a literal "É" reached R as "<c3><89>".
+    settings = script.code.split("# --- Settings", 1)[1].split("# --- End of settings", 1)[0]
+    assert 'list(dimension = "G\\u00e9ographie", keep = c("Qu\\u00e9bec"))' in settings
+    assert "valeur_normalisee" in script.code
+    assert any("vérification anti-robot" in n for n in result.notes)
+
+
+async def test_a_full_table_summary_comes_in_r_and_python(monkeypatch):
+    result = await _full_table(monkeypatch, {"product_id": "18-10-0256-01"}, summary=True)
+    assert {s.language for s in result.scripts} == {"r", "python"}
+    assert all("Summarize" in s.code for s in result.scripts)
 
 
 @pytest.mark.parametrize(

@@ -14,10 +14,12 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.oecd import client
+from maplestats_mcp import config
+from maplestats_mcp.modules.oecd import client, query
 from maplestats_mcp.modules.oecd.schemas import (
     ComparisonResult,
     DataResult,
+    DatasetQueryResult,
     DatasetSearch,
     DatasetStructure,
 )
@@ -164,3 +166,47 @@ async def oecd_get_data(
         last_n=last_n,
         lang=lang,
     )
+
+
+# Left undefined when MAPLE_QUERY_SERIES=0, like wds_query_series: the hosted server
+# keeps DuckDB queries off until each runs in a memory-capped process.
+if config.get_query_series_enabled():
+
+    @tool
+    async def oecd_query_dataset(
+        dataset: str,
+        sql: str,
+        filters: dict[str, list[str]] | None = None,
+        start_period: str | None = None,
+        end_period: str | None = None,
+        lang: Lang = "en",
+    ) -> DatasetQueryResult:
+        """Run one read-only SQL query over an OECD dataset, or a slice of it,
+        on the server, and get back only its result.
+
+        Use for: questions across an OECD dataset's breadth that
+        oecd_get_data (200 series) cannot hold: every member country ranked,
+        all age groups and activities, averages and growth over many series.
+        The server reads the slice (codes per dimension in `filters`, e.g.
+        {"REF_AREA": ["DEU", "FRA"], "FREQ": ["A"]}, ids as in
+        oecd_describe_dataset, and `start_period` / `end_period`), up to
+        20,000 series and 150,000 observations, and runs `sql` with DuckDB
+        over them as the table `obs`: series_id, dataset, series_key,
+        period, ref_period (DATE), value, scale_multiplier, decimals,
+        status, series_title, dataset_title, unit, scale, frequency,
+        geography, adjustment, quality, and per dimension its code and its
+        label (`dimension_columns` names them: ref_area and ref_area_label).
+        A query that mixes units or adjustments, or sums a total with its own
+        parts (the OECD or G7 and their members, an activity and its
+        sections, a total and its categories), is refused with the reason.
+        At most 500 rows come back. Each query spends one of the OECD's
+        hourly downloads. Quote the `citation` and any `warnings`.
+        Keywords: OECD, SQL, query dataset, whole dataset, member countries,
+        aggregate, group by, ranking, cross-country, DuckDB.
+        Mots-clés : OCDE, requête SQL, jeu de données complet, pays membres,
+        agréger, regrouper, classement, comparaison internationale, tranche.
+        """
+        return await query.query_dataset(
+            dataset, sql, filters=filters, start_period=start_period,
+            end_period=end_period, lang=lang,
+        )  # fmt: skip

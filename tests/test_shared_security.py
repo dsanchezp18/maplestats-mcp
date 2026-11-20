@@ -69,6 +69,37 @@ async def test_rate_limit_returns_429():
     assert await _call(app, _scope()) == 429
 
 
+async def test_refusals_are_reported_by_reason_without_the_caller():
+    # /stats counts them (shared/usage.py): on 2026-11-20 six steps of the Azure live
+    # check met refusals the server kept no trace of.
+    reasons: list[str] = []
+    app = with_http_security(
+        _ok_app, rate_limit_requests=1, rate_limit_window_seconds=60, on_refusal=reasons.append
+    )
+    assert await _call(app, _scope()) == 200
+    assert await _call(app, _scope()) == 429
+    assert await _call(app, _scope(client=("5.6.7.8", 1))) == 200
+    assert reasons == ["rate_limited"]
+
+
+async def test_trusted_proxy_reads_the_rightmost_forwarded_address():
+    # Azure Container Apps' ingress connects to the app itself and appends the caller's
+    # address to X-Forwarded-For; whatever the caller wrote sits to its left. With the
+    # header trusted (the Azure deploy, since 2026-11-20), callers get their own bucket
+    # and a forged entry does not buy a new one.
+    app = with_http_security(
+        _ok_app, rate_limit_requests=1, rate_limit_window_seconds=60, trust_proxy_headers=True
+    )
+    ingress = ("100.100.0.7", 1)
+
+    def via(*addresses: str):
+        return _scope(headers=[(b"x-forwarded-for", ", ".join(addresses).encode())], client=ingress)
+
+    assert await _call(app, via("203.0.113.5")) == 200
+    assert await _call(app, via("198.51.100.9")) == 200
+    assert await _call(app, via("1.1.1.1", "203.0.113.5")) == 429
+
+
 async def test_blocked_429_send_does_not_stall_other_clients():
     # The 429 used to be sent while holding the rate limiter's shared lock,
     # so a client that never read its response froze every other client.
@@ -138,12 +169,16 @@ async def test_saturated_server_still_sheds_load(monkeypatch):
         await release.wait()
         await _ok_app(scope, receive, send)
 
-    app = with_http_security(blocking_app, max_concurrent_requests=1, rate_limit_requests=0)
+    reasons: list[str] = []
+    app = with_http_security(
+        blocking_app, max_concurrent_requests=1, rate_limit_requests=0, on_refusal=reasons.append
+    )
     first = asyncio.create_task(_call(app, _scope()))
     await asyncio.sleep(0)
     assert await _call(app, _scope()) == 503
     release.set()
     assert await first == 200
+    assert reasons == ["server_busy"]
 
 
 async def test_health_bypasses_auth():

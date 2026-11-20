@@ -6,10 +6,12 @@ from typing import Literal
 
 from fastmcp.tools import tool
 
-from maplestats_mcp.modules.eurostat import client
+from maplestats_mcp import config
+from maplestats_mcp.modules.eurostat import client, query
 from maplestats_mcp.modules.eurostat.schemas import (
     Comparison,
     DataResult,
+    DatasetQueryResult,
     DatasetSearch,
     DatasetStructure,
 )
@@ -131,3 +133,47 @@ async def eurostat_get_data(
         dataset, filters=filters, geo=geo, start_period=start_period,
         end_period=end_period, last_n=last_n, lang=lang,
     )  # fmt: skip
+
+
+# Left undefined when MAPLE_QUERY_SERIES=0, like wds_query_series: the hosted server
+# keeps DuckDB queries off until each runs in a memory-capped process.
+if config.get_query_series_enabled():
+
+    @tool
+    async def eurostat_query_dataset(
+        dataset: str,
+        sql: str,
+        filters: dict[str, list[str]] | None = None,
+        geo: list[str] | None = None,
+        start_period: str | None = None,
+        end_period: str | None = None,
+        lang: Lang = "en",
+    ) -> DatasetQueryResult:
+        """Run one read-only SQL query over a Eurostat dataset, or a slice of
+        it, on the server, and get back only its result.
+
+        Use for: questions across a Eurostat dataset's breadth that
+        eurostat_get_data (400 series) cannot hold: every NUTS region
+        ranked, all member states by sex and age, averages and growth over
+        many series. The server reads the slice (codes per dimension in
+        `filters`, e.g. {"unit": ["CP_MEUR"]}, `geo` as in
+        eurostat_get_data, and `start_period` / `end_period`), up to 20,000
+        series and 150,000 observations, and runs `sql` with DuckDB over
+        them as the table `obs`: series_id, dataset, series_key, period,
+        ref_period (DATE), value, scale_multiplier, decimals, status,
+        series_title, dataset_title, unit, scale, frequency, geography,
+        adjustment, quality, and per dimension its code and its label
+        (`dimension_columns` names them: geo and geo_label). A query that
+        mixes units or adjustments, or sums a total with its own parts (the
+        EU and its members, a country and its regions, a total age band and
+        its parts), is refused with the reason. At most 500 rows come back.
+        Quote the `citation` and any `warnings` with the result.
+        Keywords: Eurostat, SQL, query dataset, whole dataset, EU regions,
+        NUTS, member states, aggregate, group by, ranking, DuckDB.
+        Mots-clés : Eurostat, requête SQL, jeu de données complet, régions
+        NUTS, États membres, agréger, regrouper, classement, tranche.
+        """
+        return await query.query_dataset(
+            dataset, sql, filters=filters, geo=geo, start_period=start_period,
+            end_period=end_period, lang=lang,
+        )  # fmt: skip

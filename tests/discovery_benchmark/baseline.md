@@ -325,6 +325,10 @@ cases lost); a lower BM25 `b` moved MRR by less than 0.005.
 Floors raised with this record: overall R@1 0.60, R@5 0.86, R@10 0.91, MRR 0.71; French
 R@5 0.87; `boc` R@5 0.90; `ambiguity` R@5 0.65.
 
+Re-recorded 2026-11-20 after merging main's place-aware ranking (502 tools): search R@1 0.682, R@5 0.922, R@10 0.961, MRR 0.783, French R@5 0.962, `statcan` R@5 0.96; plan R@5 0.876, MRR 0.675.
+
+Re-recorded again the same day (504 tools, with `eurostat_query_dataset` and `oecd_query_dataset`, which moved no question) after the StatCan category's two lost questions were fixed under the rules: `statcan-en-11` ("articles analysing the gender wage gap", rank 9 to 1: `statcan_reference_search_analysis` gained "Statistics Canada", "analysing", "studies" and "research", the words for its own content, which Job Bank's wage tools and the Daily article reader had outranked on "wage" and "article") and `statcan-fr-06` (the next CPI release, in French, rank 5 to 1: `statcan_daily_get_release_calendar` gained "prochaine publication", "prochain communiqué" and "sera publié", in a description six words shorter). No other question moved. Search R@1 0.698, R@5 0.930, MRR 0.796; `statcan` R@5 1.00 (0.96), MRR 0.933 (0.866).
+
 ## Regression floors
 
 `tests/test_discovery_benchmark.py` fails below: `search_tools` R@1 0.53, R@5 0.83, R@10 0.88,

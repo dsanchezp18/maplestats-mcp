@@ -165,11 +165,10 @@ async def statcan_daily_get_release_calendar(
 
     Use for: "when is the next release of X" -- the planned date of
     upcoming Daily releases of key indicators (Labour Force Survey,
-    international merchandise trade, building permits, CPI
-    and so on, with their reference period), checked live to
-    reach about six months ahead. query needs every word to appear in
-    the title, reference period or catalogue number
-    (accents ignored); start_date and end_date are "YYYY-MM-DD". With
+    merchandise trade, building permits, CPI, with their reference
+    period), about six months ahead. query needs every word in the
+    title, reference period or catalogue number (accents ignored);
+    start_date and end_date are "YYYY-MM-DD". With
     upcoming_only=True (default) results run soonest first from today
     (Toronto); with False they are the history, newest first, and include
     every past Daily release matching the query (kind "daily_release"),
@@ -188,10 +187,10 @@ async def statcan_daily_get_release_calendar(
     releases, when is the next, Labour Force Survey release date, CPI
     release date, The Daily, indicators calendar, last year's release
     date, PTEA, supply and use tables, Statistics Canada.
-    Mots-clés : calendrier de diffusion, prochaine diffusion, prochaines
-    parutions, date de diffusion, quand sort, Enquête sur la population
-    active, indice des prix à la consommation, Le Quotidien, indicateurs
-    clés, Statistique Canada.
+    Mots-clés : calendrier de diffusion, prochaine diffusion, prochaine
+    publication, prochain communiqué, sera publié, date de diffusion, quand
+    sort, Enquête sur la population active, indice des prix à la
+    consommation, Le Quotidien, indicateurs clés, Statistique Canada.
     """
     use_lang(lang)
     return await client.get_release_calendar(

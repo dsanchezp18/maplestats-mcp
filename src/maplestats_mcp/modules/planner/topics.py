@@ -2928,8 +2928,8 @@ STATCAN_ACCESS = Topic(
         ),
         PlanStep(
             "wds_get_full_table_download",
-            "a whole table from its product_id: the file link for a browser and a script that "
-            "rebuilds it through WDS",
+            "a whole table from its product_id: the file link and a script that rebuilds it "
+            "through WDS",
         ),
     ),
     caveats=(
@@ -3014,10 +3014,9 @@ STATCAN_TABLES = Topic(
     ),
     (
         (
-            "wds_get_full_table_download gives the file link for a browser (StatCan blocks "
-            "scripted full-table downloads since November 2026) and a Python script that "
-            "rebuilds the same CSV through WDS, keeping the members and periods asked for: "
-            "offer it, and read its output rather than the rows."
+            "wds_get_full_table_download gives the file link and a Python script that rebuilds "
+            "the same CSV through WDS where StatCan's captcha blocks the file, keeping the "
+            "members and periods asked for: offer it, and read its output rather than the rows."
         ),
         (
             "The vector tools return every observation inline, several fields each: fine for a "

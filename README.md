@@ -285,7 +285,7 @@ by a person
 
 ## What it covers
 
-502 tools in 95 modules. Read `docs://catalogue` (or `docs_read_resource` through `call_tool`) for the full, bilingual list.
+504 tools in 95 modules. Read `docs://catalogue` (or `docs_read_resource` through `call_tool`) for the full, bilingual list.
 
 | Area | Tool prefixes | Covers |
 |---|---|---|
@@ -376,8 +376,9 @@ then send that token as a bearer token. Docker is optional and unnecessary on
 a personal computer. If the server is exposed beyond your machine, set
 `MAPLE_AUTH_TOKEN` and keep `MAPLE_REQUIRE_AUTH=1`. `GET /health` reports uptime and version. `GET /stats`
 is public, needs no token and reports calls per tool name and day, each tool's
-p50 and p95 duration, and each upstream host's error counts and circuit-breaker
-state (see `MAPLE_USAGE_STATS` and `MAPLE_BREAKER` below). After repeated
+p50 and p95 duration, each upstream host's error counts and circuit-breaker
+state, and how many requests the HTTP layer refused, by reason only (`rate_limited`,
+`client_busy`, `server_busy`; see `MAPLE_USAGE_STATS` and `MAPLE_BREAKER` below). After repeated
 failures (timeouts, connection errors, 5xx answers) a host is paused for a
 cooldown: its tools fail at once with an "unavailable" error that says when to
 retry, instead of waiting for another timeout. The `docs://status` resource
@@ -406,7 +407,7 @@ sécurité"), and reports it.
 | `MAPLE_MAX_CONCURRENT_REQUESTS` | `8` | In-flight request cap; the excess waits 5 s, then gets 503 |
 | `MAPLE_MAX_REQUESTS_PER_CLIENT` | `0` (off) | In-flight requests one client (IPv6: one /64) may hold; past it, 429. Leave off where many people share an address |
 | `MAPLE_SSL_CERTFILE` / `MAPLE_SSL_KEYFILE` | unset | TLS in-process |
-| `MAPLE_TRUST_PROXY_HEADERS` | `0` | Rate-limit on `X-Forwarded-For`; only behind a proxy that sets it |
+| `MAPLE_TRUST_PROXY_HEADERS` | `0` | Rate-limit on `X-Forwarded-For`; only behind a proxy that sets it (the Azure deploy sets it: Container Apps' ingress appends the caller's address) |
 | `MAPLE_TRUSTED_PROXY_HOPS` | `1` | Proxies that append to `X-Forwarded-For`; the client address is read that many entries from the right |
 | `MAPLE_ALLOWED_ORIGINS` | project website, localhost | Browser origins allowed on `/mcp` (comma-separated, `*.` and `:*` wildcards); others get 403, clients without an Origin are allowed |
 | `MAPLE_CACHE_MAX_ENTRIES` | `2000` | Response cache size per TTL bucket |

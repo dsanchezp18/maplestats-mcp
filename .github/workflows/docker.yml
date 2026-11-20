@@ -185,6 +185,12 @@ jobs:
       # 80-90 s on a 20-core laptop and is slower on 1 vCPU over the file share.
       # Container Apps' ingress cuts a request at 240 s; 230 s leaves the server time
       # to send its own [upstream_unavailable] timeout error before that.
+      # The per-client rate limit (120 requests a minute) keys on the caller. Container
+      # Apps' ingress connects to the app itself and appends the caller's address to
+      # X-Forwarded-For ("Only the rightmost IP is provided by Azure Container Apps",
+      # Microsoft's ingress overview, read 2026-11-20), so the app trusts that one entry
+      # (MAPLE_TRUST_PROXY_HEADERS, one hop). Until then every caller shared one bucket,
+      # and the live check below met refusals at 90 requests a minute of its own.
       - name: Deploy the image
         run: |
           az containerapp update --resource-group "$RESOURCE_GROUP" --name "$APP" \
@@ -194,6 +200,7 @@ jobs:
               MAPLE_PUMF_TABULATE=1 MAPLE_QUERY_SERIES=1 MAPLE_OCR=1 MAPLE_PUMF_CACHE_DIR=/data/pumf MAPLE_PUMF_CACHE_MAX_GB=5 \
               MAPLE_DUCKDB_MEMORY_LIMIT=384MB MAPLE_TOOL_TIMEOUT_SECONDS=230 \
               MAPLE_CENSUS_CACHE_DIR=/data/census \
+              MAPLE_TRUST_PROXY_HEADERS=1 MAPLE_TRUSTED_PROXY_HOPS=1 \
             --only-show-errors --output none
       # The app keeps serving the previous revision until the new one passes
       # its probes, so a bad image fails this step without taking the server down.

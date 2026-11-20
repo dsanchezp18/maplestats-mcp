@@ -21,8 +21,10 @@ project's client (HTTP/2, the maplestats-mcp User-Agent):
 
 StatCan announced on 2026-11-16 that it would disable automated full-table
 downloads; others (MountainMath's {cansim} R package) reported the zips
-challenged on 2026-11-18. Which paths are checked can differ by network and
-day, so the notes say what to do when a path is challenged, not that it is.
+challenged on 2026-11-18, while from cloud hosts and the hosted MapleStats server
+they still downloaded on 2026-11-20 (statcan_check_access). Which paths are
+checked can differ by network and day, so the notes say what to do when a path
+is challenged, not that it is.
 """
 
 from __future__ import annotations
@@ -100,11 +102,14 @@ NOTES: tuple[ChallengeNote, ...] = (
         ("/n1/tbl/", "/n1/delta/"),
         "This is a file download: open the link in a web browser, pass the check, and save "
         "the file. For a full table, wds_get_full_table_download also returns a Python script "
-        "that rebuilds the same CSV through WDS, which StatCan still serves to scripts.",
+        "that rebuilds the same CSV through WDS, which StatCan still serves to scripts, and "
+        "reproduce_code's R, Python and Stata scripts for it switch to WDS on their own at "
+        "the captcha.",
         "Il s'agit d'un téléchargement de fichier : ouvrez le lien dans un navigateur, "
         "passez la vérification et enregistrez le fichier. Pour un tableau complet, "
         "wds_get_full_table_download fournit aussi un script Python qui reconstruit le même "
-        "CSV par le WDS, que StatCan sert toujours aux scripts.",
+        "CSV par le WDS, que StatCan sert toujours aux scripts, et les scripts R, Python et "
+        "Stata de reproduce_code passent d'eux-mêmes au WDS devant la vérification.",
     ),
     ChallengeNote(
         "www150.statcan.gc.ca",
@@ -180,16 +185,16 @@ def note_for(host: str, path: str) -> tuple[str, str] | None:
 
 
 # Where reproduce_code writes no script: services StatCan blocks for automated
-# clients (live 2026-11-18), and the full-table files it announced it would block
-# (2026-11-16; already blocked on some networks). A script there would fail when
-# run, so the user is told why instead. WDS (/t1/wds/rest/), the Delta File,
-# PUMF and LODE zips, and The Daily's archive JSON still get scripts.
+# clients (live 2026-11-18). A script there would fail when run, so the user is
+# told why instead. WDS (/t1/wds/rest/), the full-table zips (/n1/tbl/: they still
+# answer most networks, and the full-table scripts rebuild through WDS where they
+# get the captcha; until 2026-11-20 they were refused here), the Delta File, PUMF
+# and LODE zips, and The Daily's archive JSON get scripts.
 _NO_SCRIPT_PREFIXES: dict[str, tuple[str, ...]] = {
     "www150.statcan.gc.ca": (
         "/t1/wds/sdmx/",
         "/t1/cimt/",
         "/n1/rss/",
-        "/n1/tbl/",
         "/n1/en/",
         "/n1/fr/",
     ),
@@ -224,14 +229,4 @@ def script_refusal(url: str) -> tuple[str, str] | None:
         blocked = not path.lower().endswith(".zip")
     if not blocked:
         return None
-    english, french = _NO_SCRIPT_EN.format(url=url), _NO_SCRIPT_FR.format(url=url)
-    if path.startswith("/n1/tbl/"):
-        english += (
-            " For a whole table, wds_get_full_table_download returns a Python script that "
-            "rebuilds the same CSV through WDS."
-        )
-        french += (
-            " Pour un tableau complet, wds_get_full_table_download fournit un script Python "
-            "qui reconstruit le même CSV par le WDS."
-        )
-    return english, french
+    return _NO_SCRIPT_EN.format(url=url), _NO_SCRIPT_FR.format(url=url)

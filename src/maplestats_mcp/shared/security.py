@@ -167,6 +167,7 @@ def with_http_security(
     client_ip_header: str | None = None,
     max_requests_per_client: int = 0,
     max_body_bytes: int = MAX_BODY_BYTES,
+    on_refusal: Callable[[str], None] | None = None,
 ) -> ASGIApp:
     """Protect MCP requests while leaving health checks and stdio untouched.
 
@@ -177,7 +178,14 @@ def with_http_security(
     per-client sliding-window limit protects a remotely exposed instance
     from one client consuming all available request capacity. Set the
     request limit to 0 to disable it for a trusted local-only deployment.
+    `on_refusal` is told each refusal's reason ("rate_limited", "client_busy",
+    "server_busy"), never who was refused: /stats counts them (shared/usage.py).
     """
+
+    def refused(reason: str) -> None:
+        if on_refusal is not None:
+            on_refusal(reason)
+
     slots = asyncio.Semaphore(max(1, max_concurrent_requests))
     rate_limit_requests = max(0, rate_limit_requests)
     rate_limit_window_seconds = max(1.0, rate_limit_window_seconds)
@@ -244,6 +252,7 @@ def with_http_security(
                     hits.append(now)
                     rate_hits[client_key] = hits
             if retry_after:
+                refused("rate_limited")
                 await _json_response(
                     send,
                     429,
@@ -284,6 +293,7 @@ def with_http_security(
         # Optional (MAPLE_MAX_REQUESTS_PER_CLIENT): with only the global
         # semaphore, one caller holding every slot leaves the rest with 503s.
         if max_requests_per_client and in_flight.get(client_key, 0) >= max_requests_per_client:
+            refused("client_busy")
             await _json_response(
                 send,
                 429,
@@ -296,6 +306,7 @@ def with_http_security(
             try:
                 await asyncio.wait_for(slots.acquire(), timeout=_QUEUE_TIMEOUT_SECONDS)
             except TimeoutError:
+                refused("server_busy")
                 await _json_response(
                     send,
                     503,

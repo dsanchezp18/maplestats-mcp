@@ -9,9 +9,9 @@ phac_infobase.py, IP Horizons), the tool parses HTML tables itself (CFIA
 in cfia.py), or a better
 native path exists (cansim's vector functions for WDS series).
 
-StatCan full-table zips get no script since November 2026 (StatCan blocks
-automated full-table downloads); reproduce/client.py refuses them through
-shared/challenge_notes.script_refusal.
+StatCan full-table zips (wds_get_full_table_download) get scripts that download the
+zip and, where StatCan answers it with its captcha (some networks, since November
+2026), rebuild the same rows through WDS (reproduce/wds_table.py).
 
 Each builder takes the tool's arguments and its result payload (the tool
 has already run) and returns a Spec.
@@ -27,6 +27,7 @@ from datetime import date
 from typing import Any
 from urllib.parse import parse_qsl, urlencode
 
+from maplestats_mcp.modules.reproduce import wds_table
 from maplestats_mcp.modules.reproduce.render import comment_text, jl_quote
 from maplestats_mcp.modules.reproduce.spec import Code, Filter, Op, Spec
 from maplestats_mcp.modules.statcan.lang import say
@@ -155,14 +156,41 @@ def full_table_spec(
     start_period: Any = None,
     end_period: Any = None,
 ) -> Spec:
-    """The whole table's CSV, kept to the members and periods asked for."""
+    """The whole table's CSV, kept to the members and periods asked for.
+
+    The R, Python and Stata scripts download StatCan's zip and, only where StatCan
+    answers it with its captcha, rebuild the same rows through WDS
+    (reproduce/wds_table.py); Julia and Power Query read the zip alone.
+    """
     spec = table_spec(product_id, lang)
     spec.filters = table_member_filters(members, start_period, end_period, lang)
-    spec.notes = (
-        ["The script downloads the whole table, then keeps the members and periods asked for."]
-        if spec.filters
-        else []
-    )
+    pid = int(spec.file_name[:8])
+    kept = {
+        str(dimension).strip(): [names] if isinstance(names, str) else list(names)
+        for dimension, names in (members or {}).items()
+    }
+    start = None if start_period is None else str(start_period)
+    end = None if end_period is None else str(end_period)
+    python_imports, python_body = wds_table.zip_first_python(pid, lang, kept, start, end)
+    r_packages, r_body = wds_table.zip_first_r(pid, lang, kept, start, end)
+    spec.native = {
+        "python": Code(python_imports, python_body),
+        "r": Code(r_packages, r_body),
+    }
+    spec.native_fallback = True
+    spec.notes = [
+        *(
+            ["The script downloads the whole table, then keeps the members and periods asked for."]
+            if spec.filters
+            else []
+        ),
+        (
+            "StatCan serves this file to most scripts, but answers some networks with a captcha "
+            "(since November 2026). There the R, Python and Stata scripts rebuild the same rows "
+            "through StatCan's Web Data Service (WDS), slower but with the same columns and "
+            "values; the Julia and Power Query versions stop at the captcha."
+        ),
+    ]
     return spec
 
 

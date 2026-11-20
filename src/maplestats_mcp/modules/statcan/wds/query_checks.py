@@ -318,8 +318,22 @@ def _windowed(node: Mapping[str, Any]) -> bool:
     return any(e.get("class") == "WINDOW" for e in _expressions(node.get("select_list")))
 
 
-def _groups(node: Mapping[str, Any]) -> list[dict[str, Any]] | None:
+def _filtered(node: Mapping[str, Any]) -> bool:
+    """Whether an aggregate over `value` has its own FILTER (WHERE ...): the diagnostic
+    measures the whole group, not the filtered rows, so it would judge the wrong rows.
+    `sum(value) FILTER (WHERE geo = 'DE')` beside a total was refused until 2026-11-20."""
+    for part in (node.get("select_list"), node.get("having")):
+        for expression in _expressions(part):
+            if _function(expression) in _VALUE_AGGREGATES and expression.get("filter"):
+                return True
+    return False
+
+
+def _groups(
+    node: Mapping[str, Any], obs_names: frozenset[str] | None = None
+) -> list[dict[str, Any]] | None:
     """The node's grouping expressions as plain expressions, or None when unusual."""
+    obs_names = _OBS_NAMES if obs_names is None else obs_names
     select = list(node.get("select_list") or [])
     if node.get("aggregate_handling") == "FORCE_AGGREGATES":
         return [copy.deepcopy(e) for e in select if not _has_aggregate(e)]
@@ -336,7 +350,7 @@ def _groups(node: Mapping[str, Any]) -> list[dict[str, Any]] | None:
             if not 1 <= position <= len(select):
                 return None
             resolved.append(copy.deepcopy(select[position - 1]))
-        elif name and name in aliases and name not in _OBS_NAMES:
+        elif name and name in aliases and name not in obs_names:
             resolved.append(copy.deepcopy(aliases[name]))
         else:
             resolved.append(copy.deepcopy(expression))
@@ -352,9 +366,14 @@ def set_obs_columns(names: Iterable[str]) -> None:
     _OBS_NAMES = frozenset(n.lower() for n in names)
 
 
-def _template(connection: Any) -> tuple[list[Any], dict[str, Any]]:
-    """The diagnostic select list, and a CAST(... AS VARCHAR) expression to fill."""
-    tree = _tree(connection, _DIAGNOSTIC_SELECT)
+def _template(
+    connection: Any, series_column: str = "vector_id"
+) -> tuple[list[Any], dict[str, Any]]:
+    """The diagnostic select list, and a CAST(... AS VARCHAR) expression to fill.
+
+    `series_column` names the column that tells series apart: vector_id for StatCan,
+    series_id for an SDMX dataset's slice (shared/sdmx_query.py)."""
+    tree = _tree(connection, _DIAGNOSTIC_SELECT.replace("vector_id", series_column))
     cast_tree = _tree(connection, "SELECT CAST(x AS VARCHAR) FROM obs")
     if tree is None or cast_tree is None:
         raise ValueError("diagnostic template does not parse")
@@ -364,12 +383,17 @@ def _template(connection: Any) -> tuple[list[Any], dict[str, Any]]:
 
 
 def _diagnostic(
-    connection: Any, tree: Mapping[str, Any], node: Mapping[str, Any], index: int
+    connection: Any,
+    tree: Mapping[str, Any],
+    node: Mapping[str, Any],
+    index: int,
+    series_column: str = "vector_id",
+    obs_names: frozenset[str] | None = None,
 ) -> str | None:
-    groups = _groups(node)
+    groups = _groups(node, obs_names)
     if groups is None:
         return None
-    select, cast = _template(connection)
+    select, cast = _template(connection, series_column)
     for expression in groups:
         expression["alias"] = ""
     label = select[0]
@@ -414,36 +438,49 @@ class Plan:
     diagnostic_sql: str | None
     aggregates: list[list[tuple[str, bool]]]
     literals: list[tuple[str, str]]
+    # The column that tells series apart, as the refusals name it.
+    series_column: str = "vector_id"
 
 
-def plan(sql: str, text_columns: Iterable[str] = ()) -> Plan:
+def plan(
+    sql: str,
+    text_columns: Iterable[str] = (),
+    *,
+    series_column: str = "vector_id",
+    obs_columns: Iterable[str] | None = None,
+) -> Plan:
     """Read `sql` once: the diagnostic to run and the literals its WHERE compares.
 
     `text_columns` adds text columns beyond TEXT_COLUMNS (a table's dimensions).
+    `series_column` and `obs_columns` describe another `obs` than wds_query_series'
+    (an SDMX dataset's slice: series_id, and its own columns).
     """
+    obs_names = None if obs_columns is None else frozenset(c.lower() for c in obs_columns)
     connection = duck_worker.open_sandbox(16)
     try:
         tree = _tree(connection, sql)
         if tree is None:
-            return Plan(None, [], [])
+            return Plan(None, [], [], series_column)
         literals = _where_literals(tree, TEXT_COLUMNS | {c.lower() for c in text_columns})
         parts: list[str] = []
         aggregates: list[list[tuple[str, bool]]] = []
         for node in _select_nodes(tree):
-            if not _reads_obs(node) or _windowed(node):
+            if not _reads_obs(node) or _windowed(node) or _filtered(node):
                 continue
             used = _value_aggregates(node)
             if not used:
                 continue
             try:
-                part = _diagnostic(connection, tree, node, len(aggregates))
+                part = _diagnostic(
+                    connection, tree, node, len(aggregates), series_column, obs_names
+                )
             except (KeyError, IndexError, TypeError, ValueError):
                 _logger.debug("query_checks: no diagnostic for one SELECT", exc_info=True)
                 part = None
             if part is not None:
                 parts.append(part)
                 aggregates.append(used)
-        return Plan(" UNION ALL ".join(parts) or None, aggregates, literals)
+        return Plan(" UNION ALL ".join(parts) or None, aggregates, literals, series_column)
     finally:
         connection.close()
 
@@ -510,8 +547,9 @@ def check_literals(literals: Sequence[tuple[str, str]], values: Mapping[str, set
         )
 
 
-Hierarchy = Mapping[int, Mapping[int, Mapping[int, int | None]]]
-"""product id -> dimension position -> member id -> parent member id."""
+Hierarchy = Mapping[int, Mapping[int, Mapping[int, int | Sequence[int] | None]]]
+"""product id -> dimension position -> member id -> parent member id. An SDMX code
+can have several (a country inside the EU and the OECD; shared/sdmx_query.py)."""
 
 
 def hierarchy_from(
@@ -533,12 +571,15 @@ def hierarchy_from(
     return out
 
 
-def _ancestors(parents: Mapping[int, int | None], member: int) -> set[int]:
+def _ancestors(parents: Mapping[int, int | Sequence[int] | None], member: int) -> set[int]:
     seen: set[int] = set()
-    current = parents.get(member)
-    while current is not None and current not in seen:
-        seen.add(current)
-        current = parents.get(current)
+    todo = [member]
+    while todo:
+        found = parents.get(todo.pop())
+        for parent in [found] if isinstance(found, int) else (found or []):
+            if parent not in seen:
+                seen.add(parent)
+                todo.append(parent)
     return seen
 
 
@@ -584,7 +625,9 @@ def evaluate(
         record: dict[str, Any] = dict(zip(_DIAGNOSTIC_COLUMNS, row, strict=False))
         by_node.setdefault(int(record["node"]), []).append(record)
     for index, aggregates in enumerate(plan_.aggregates):
-        _evaluate_node(findings, aggregates, by_node.get(index, []), by_id, hierarchy)
+        _evaluate_node(
+            findings, aggregates, by_node.get(index, []), by_id, hierarchy, plan_.series_column
+        )
     return findings
 
 
@@ -598,6 +641,7 @@ def _evaluate_node(
     groups: list[dict[str, Any]],
     by_id: Mapping[int, SeriesRef],
     hierarchy: Hierarchy,
+    series_column: str = "vector_id",
 ) -> None:
     names = {name for name, _ in aggregates}
     summing = bool(names & _SUM)
@@ -650,11 +694,11 @@ def _evaluate_node(
         findings.refuse(
             client._m(
                 f"mixed_units: {', '.join(sorted(measured['units']))} are aggregated together "
-                f"in group(s) {groups_of('mixed_units')}. Add unit (or vector_id) to GROUP BY, "
-                "or filter to one unit.",
+                f"in group(s) {groups_of('mixed_units')}. Add unit (or {series_column}) to GROUP "
+                "BY, or filter to one unit.",
                 f"mixed_units : {', '.join(sorted(measured['units']))} sont agrégés ensemble "
-                f"dans le ou les groupes {groups_of('mixed_units')}. Ajoutez unit (ou vector_id) "
-                "au GROUP BY, ou filtrez sur une seule unité.",
+                f"dans le ou les groupes {groups_of('mixed_units')}. Ajoutez unit (ou "
+                f"{series_column}) au GROUP BY, ou filtrez sur une seule unité.",
             )
         )
     if "mixed_scale" in hits:
@@ -685,11 +729,11 @@ def _evaluate_node(
         findings.refuse(
             client._m(
                 f"total_with_parts: the sum adds a total to its own parts, e.g. {whole!r} "
-                f"includes {part!r} (table member hierarchy), in group(s) "
+                f"includes {part!r} (member hierarchy), in group(s) "
                 f"{groups_of('total_with_parts')}: the total would be counted twice. Drop the "
                 "total or the parts from the query.",
                 f"total_with_parts : la somme ajoute un total à ses propres parties, p. ex. "
-                f"{whole!r} comprend {part!r} (hiérarchie des membres du tableau), dans le ou "
+                f"{whole!r} comprend {part!r} (hiérarchie des membres), dans le ou "
                 f"les groupes {groups_of('total_with_parts')} : le total serait compté deux "
                 "fois. Retirez le total ou les parties de la requête.",
             )

@@ -107,6 +107,16 @@ async def through_server() -> bool:
             {"dataset": "teina225", "geo": ["EU27", "FR"], "last_n": 2},
         ),
         ("eurostat_compare", {"indicator": "hicp_inflation", "geo": ["EURO_AREA", "IT"]}),
+        (
+            "eurostat_query_dataset",
+            {
+                "dataset": "une_rt_m",
+                "sql": "SELECT geo, avg(value) FROM obs GROUP BY geo ORDER BY 2 DESC LIMIT 3",
+                "filters": {"age": ["TOTAL"], "sex": ["T"], "unit": ["PC_ACT"], "s_adj": ["SA"]},
+                "geo": ["EU_MEMBERS"],
+                "start_period": "2025-01",
+            },
+        ),
     ]
     async with Client(mcp) as session:
         for name, args in calls:
@@ -118,9 +128,50 @@ async def through_server() -> bool:
     return ok
 
 
+async def queries() -> bool:
+    """eurostat_query_dataset: a ranking answered, and the checks refusing wrong sums."""
+    from maplestats_mcp.modules.eurostat import query
+
+    ok = True
+    gdp = {"unit": ["CP_MEUR"], "na_item": ["B1GQ"]}
+    ranked = await query.query_dataset(
+        "nama_10_gdp",
+        "SELECT geo, value FROM obs WHERE period = '2023' "
+        "AND geo IN ('DE', 'FR', 'IT', 'ES', 'NL') ORDER BY value DESC LIMIT 3",
+        filters=gdp,
+        start_period="2023",
+        end_period="2023",
+    )
+    print(f"OK: query ranking -> {ranked.rows}")
+    ok &= [r[0] for r in ranked.rows] == ["DE", "FR", "IT"]
+    for label, kwargs in (
+        ("EU27 with members", {"filters": gdp, "geo": ["EU27_2020", "DE", "FR"]}),
+        (
+            "country with its NUTS regions",
+            {"dataset": "demo_r_pjangroup", "filters": {"age": ["TOTAL"], "sex": ["T"]},
+             "geo": ["DE", "DE1", "DE2"]},
+        ),
+    ):  # fmt: skip
+        arguments = {"dataset": "nama_10_gdp", **kwargs}
+        try:
+            await query.query_dataset(
+                sql="SELECT period, sum(value) FROM obs GROUP BY period",
+                start_period="2023",
+                **arguments,
+            )
+        except InvalidInput as exc:
+            print(f"OK: query refuses {label} -> {str(exc)[:110]}")
+            ok &= "total_with_parts" in str(exc)
+        else:
+            print(f"FAIL: query did not refuse {label}")
+            ok = False
+    return ok
+
+
 async def run() -> int:
     ok = await main()
     ok &= await errors()
+    ok &= await queries()
     ok &= await through_server()
     print("ALL OK" if ok else "SOME CHECKS FAILED")
     return 0 if ok else 1

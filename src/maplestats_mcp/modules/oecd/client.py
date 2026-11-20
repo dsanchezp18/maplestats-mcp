@@ -617,11 +617,12 @@ async def _structure(fid: str, info: dict[str, Any], lang: str) -> tuple[dict[st
         ):
             dim_id = str(dim.get("id") or "")
             enumeration = (dim.get("localRepresentation") or {}).get("enumeration") or ""
-            names = {
-                str(c["id"]): str(c.get("name") or c["id"])
+            listed = [
+                c
                 for c in list_or_empty(codelists.get(_urn_key(enumeration)) or {}, "codes")
                 if isinstance(c, dict) and c.get("id")
-            }
+            ]
+            names = {str(c["id"]): str(c.get("name") or c["id"]) for c in listed}
             used = constraint["values"].get(dim_id)
             ids = used if used is not None else list(names)
             dimensions.append(
@@ -630,6 +631,10 @@ async def _structure(fid: str, info: dict[str, Any], lang: str) -> tuple[dict[st
                     "name": concepts.get(dim_id) or dim_id,
                     "codes": [[code, names.get(code, code)] for code in ids],
                     "constrained": used is not None,
+                    # Each code's parent where the codelist gives one (areas, ISIC,
+                    # COICOP, sectors, transactions; checked live 2026-11-20), for
+                    # oecd_query_dataset's check of a total summed with its parts.
+                    "parents": {str(c["id"]): str(c["parent"]) for c in listed if c.get("parent")},
                 }
             )
         if not dimensions:

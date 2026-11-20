@@ -86,6 +86,9 @@ _Saved = tuple[
 # fixed list, so the counter never holds text from a request. An unknown name counts as
 # "other".
 FALLBACK_SOURCES = ("ccei", "stcshared", "boc", "ab_economic")
+# Why the HTTP layer refused a request (shared/security.py): over the per-client rate
+# limit (429), too many in flight from one client (429), every slot busy (503).
+REFUSAL_REASONS = ("rate_limited", "client_busy", "server_busy")
 
 # Header the maintainer's own clients send, with the secret MAPLE_INTERNAL_TOKEN holds.
 INTERNAL_HEADER = "x-maple-internal"
@@ -186,6 +189,10 @@ class UsageStats:
         # Answers a tool gave from a substitute source because its own was blocked
         # (shared/substitution.py), by source; in memory, like the latencies.
         self.fallbacks: Counter[str] = Counter()
+        # MCP requests the HTTP layer refused before any tool ran (shared/security.py),
+        # by reason only; in memory. Added 2026-11-20, when six steps of the Azure live
+        # check failed on refusals that left no trace on the server.
+        self.refusals: Counter[str] = Counter()
         self.durations: dict[str, deque[float]] = {}
         # Per tool: [results sized, characters in all of them, the largest]. The
         # size of what the client read, never its content.
@@ -226,6 +233,10 @@ class UsageStats:
     def record_fallback(self, source: str) -> None:
         """Count one answer served from `source` in place of a blocked StatCan source."""
         self.fallbacks[source if source in FALLBACK_SOURCES else CLIENT_OTHER] += 1
+
+    def record_refusal(self, reason: str) -> None:
+        """Count one MCP request refused before it reached a tool (a 429 or a 503)."""
+        self.refusals[reason if reason in REFUSAL_REASONS else CLIENT_OTHER] += 1
 
     def record_size(self, tool: str, chars: int) -> None:
         """Count one result of `chars` characters (the text the client read) for `tool`."""
@@ -434,7 +445,9 @@ class UsageStats:
                 "durations and result sizes (characters, "
                 "and tokens estimated at four characters each), upstream host names with "
                 "their error counts, and how many answers a blocked StatCan tool took from "
-                f"another official source (by source name), only, in memory; {kept}. Where "
+                "another official source (by source name), and how many requests the HTTP "
+                "layer refused by reason (rate limit, busy), "
+                f"only, in memory; {kept}. Where "
                 "GoatCounter is "
                 "configured, each call's tool name and outcome are also counted there."
             ),
@@ -451,6 +464,7 @@ class UsageStats:
             "latency_ms": latency,
             "result_size": sizes,
             "fallbacks": dict(self.fallbacks.most_common()),
+            "refused_requests": dict(self.refusals.most_common()),
         }
 
 

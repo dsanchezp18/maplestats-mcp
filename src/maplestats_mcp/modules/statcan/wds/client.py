@@ -1487,35 +1487,45 @@ def _download_url(body: Any, method: str) -> str:
 
 # StatCan announced on 2026-11-16 that it would stop serving full-table files to
 # automated clients; on 2026-11-18 the {cansim} maintainer reported them behind its
-# Cloudflare captcha, while from this project's cloud host the same day they still
-# downloaded. Which networks are blocked differs, so each link is checked when given,
-# and the script rebuilds the table through WDS instead of downloading the file.
+# Cloudflare captcha, while from cloud hosts and the hosted MapleStats server they
+# still downloaded (statcan_check_access, 2026-11-20). Which networks are blocked
+# differs, so each link is checked when given, and reproduce_code's scripts download
+# the file first and rebuild the table through WDS only at the captcha.
 _BLOCKED_FILES = (
     (
-        "Statistics Canada announced in November 2026 that it blocks automated full-table "
-        "downloads with a captcha (a Cloudflare check that only a person in a web browser can "
-        "pass), so no script relies on download_url: it is for a person to open in a browser."
+        "Statistics Canada serves download_url to scripts from most networks, but since "
+        "November 2026 answers some with a captcha (a Cloudflare check that only a person in "
+        "a web browser can pass). reproduce_code's R, Python and Stata scripts for this table "
+        "download the file and, at the captcha, rebuild the same rows through WDS."
     ),
     (
-        "Statistique Canada a annoncé en novembre 2026 qu'il bloque les téléchargements "
-        "automatisés de tableaux complets par une vérification anti-robot (un contrôle "
-        "Cloudflare que seule une personne dans un navigateur peut passer) ; aucun script ne "
-        "dépend donc de download_url, qui sert à une personne, dans un navigateur."
+        "Statistique Canada sert download_url aux scripts depuis la plupart des réseaux, mais "
+        "depuis novembre 2026 en bloque certains par une vérification anti-robot (un contrôle "
+        "Cloudflare que seule une personne dans un navigateur peut passer). Les scripts R, "
+        "Python et Stata de reproduce_code pour ce tableau téléchargent le fichier et, devant "
+        "la vérification, reconstruisent les mêmes lignes par le WDS."
     ),
 )
 _FILE_NOTES = {
     "blocked": (
-        "Just now this link answered MapleStats with the captcha, not the file.",
-        "À l'instant, ce lien a répondu à MapleStats par la vérification, et non par le fichier.",
+        (
+            "Just now this link answered MapleStats with the captcha, not the file: open it in "
+            "a browser, or use a script, which rebuilds the table through WDS."
+        ),
+        (
+            "À l'instant, ce lien a répondu à MapleStats par la vérification, et non par le "
+            "fichier : ouvrez-le dans un navigateur, ou utilisez un script, qui reconstruit le "
+            "tableau par le WDS."
+        ),
     ),
     "downloadable": (
         (
-            "Just now this link still served the file to MapleStats, but that can differ by "
-            "network and change without notice."
+            "Just now this link served the file to MapleStats; that can differ by network "
+            "and change without notice."
         ),
         (
-            "À l'instant, ce lien servait encore le fichier à MapleStats, mais cela peut varier "
-            "selon le réseau et changer sans préavis."
+            "À l'instant, ce lien servait le fichier à MapleStats ; cela peut varier selon le "
+            "réseau et changer sans préavis."
         ),
     ),
 }
@@ -1573,28 +1583,26 @@ def _rebuild_notes(rebuild: TableRebuild | None, lang: str) -> list[str]:
                 "du tableau.",
             )
         ]
-    notes = [
+    return [
         _m(
-            "The Python script in `scripts` rebuilds the same CSV through WDS, which StatCan "
-            "still serves to scripts: same columns, order and values as StatCan's file (checked "
-            "byte for byte on 36-10-0104, 18-10-0004 and 14-10-0287 on 2026-11-18). It asks "
-            f"for {rebuild.combinations:,} member combinations in about {rebuild.wds_calls:,} WDS "
-            "calls; WDS answers only the series StatCan publishes. The idea comes from "
-            "vrraiv/sixfigures. In R, cansim's get_cansim_data_for_table_coord_periods() reads "
-            "table coordinates through WDS too.",
-            "Le script Python de `scripts` reconstruit le même CSV par le WDS, que StatCan sert "
-            "toujours aux scripts : mêmes colonnes, ordre et valeurs que le fichier de StatCan "
-            "(vérifié octet par octet sur 36-10-0104, 18-10-0004 et 14-10-0287 le 2026-11-18). "
-            f"Il demande {rebuild.combinations:,} combinaisons de membres en environ "
+            "The Python script in `scripts` rebuilds the same CSV through WDS, for a network "
+            "where the file gets the captcha: same columns, order and values as StatCan's file, "
+            "in the edition asked for (checked byte for byte in English and French on "
+            "2026-11-18 and 2026-11-20). It asks for "
+            f"{rebuild.combinations:,} member combinations in about {rebuild.wds_calls:,} WDS "
+            "calls; WDS answers only the series StatCan publishes. reproduce_code writes R, "
+            "Python and Stata scripts that try the file first. The idea comes from "
+            "vrraiv/sixfigures.",
+            "Le script Python de `scripts` reconstruit le même CSV par le WDS, pour un réseau "
+            "où le fichier reçoit la vérification : mêmes colonnes, ordre et valeurs que le "
+            "fichier de StatCan, dans l'édition demandée (vérifié octet par octet en anglais et "
+            "en français les 2026-11-18 et 2026-11-20). Il demande "
+            f"{rebuild.combinations:,} combinaisons de membres en environ "
             f"{rebuild.wds_calls:,} appels au WDS ; le WDS ne répond que pour les séries que "
-            "StatCan publie. L'idée vient de vrraiv/sixfigures. En R, "
-            "get_cansim_data_for_table_coord_periods() de cansim lit aussi les coordonnées "
-            "d'un tableau par le WDS.",
+            "StatCan publie. reproduce_code écrit des scripts R, Python et Stata qui essaient "
+            "d'abord le fichier. L'idée vient de vrraiv/sixfigures.",
         )
     ]
-    if lang == "fr":
-        notes.append("Le script écrit l'édition anglaise du CSV (en-têtes et libellés en anglais).")
-    return notes
 
 
 def _kept_members(
@@ -1605,8 +1613,10 @@ def _kept_members(
         list_or_empty(cube, "dimension"), key=lambda d: int(d["dimensionPositionId"])
     )
     names = [str(d.get("dimensionNameEn") or "") for d in dimensions]
+    # A dimension or member may be named in English or French, as the script accepts.
+    french = [str(d.get("dimensionNameFr") or "") for d in dimensions]
     wanted = {str(k).strip().lower(): v for k, v in (members or {}).items()}
-    unknown = set(wanted) - {n.strip().lower() for n in names}
+    unknown = set(wanted) - {n.strip().lower() for n in [*names, *french]}
     if unknown:
         raise InvalidInput(
             _m(
@@ -1617,22 +1627,21 @@ def _kept_members(
             )
         )
     kept: list[list[dict[str, Any]]] = []
-    for dimension, name in zip(dimensions, names, strict=True):
+    for dimension, name, name_fr in zip(dimensions, names, french, strict=True):
         every = list_or_empty(dimension, "member")
-        asked_for = wanted.get(name.strip().lower())
+        asked_for = wanted.get(name.strip().lower()) or wanted.get(name_fr.strip().lower())
         if not asked_for:
             kept.append(every)
             continue
         asked = {str(a).strip().lower() for a in asked_for}
-        found = [
-            m
-            for m in every
-            if str(m.get("memberNameEn") or "").strip().lower() in asked
-            or str(m.get("memberId")) in asked
-        ]
-        matched = {str(m.get("memberNameEn") or "").strip().lower() for m in found} | {
-            str(m.get("memberId")) for m in found
-        }
+
+        def labels(member: dict[str, Any]) -> set[str]:
+            return {
+                str(member.get(k) or "").strip().lower() for k in ("memberNameEn", "memberNameFr")
+            } | {str(member.get("memberId"))}
+
+        found = [m for m in every if labels(m) & asked]
+        matched = set().union(*(labels(m) for m in found))
         missing = sorted(asked - matched)
         if missing:
             raise InvalidInput(
@@ -1652,8 +1661,9 @@ async def _rebuild(
     members: dict[str, list[str]] | None,
     start_period: str | None,
     end_period: str | None,
+    lang: str = "en",
 ) -> tuple[TableRebuild | None, list[Script]]:
-    """The size of a WDS rebuild and, within the limit, its script."""
+    """The size of a WDS rebuild and, within the limit, its script (in `lang`'s edition)."""
     for name, value in (("start_period", start_period), ("end_period", end_period)):
         if value is not None and not _PERIOD.match(value):
             raise InvalidInput(
@@ -1682,7 +1692,7 @@ async def _rebuild(
     )
     if not rebuild.within_limit:
         return rebuild, []
-    code = wds_table.rebuild_script(pid, members, start_period, end_period)
+    code = wds_table.rebuild_script(pid, members, start_period, end_period, lang=lang)
     return rebuild, [Script(language="python", code=code, packages=["httpx[http2]"])]
 
 
@@ -1697,7 +1707,7 @@ async def get_full_table_download_csv(
     pid = normalize_product_id(product_id)
     await _require_known_table(pid)
     # Built before the link request, so bad members or periods fail without it.
-    rebuild, scripts = await _rebuild(pid, members, start_period, end_period)
+    rebuild, scripts = await _rebuild(pid, members, start_period, end_period, lang)
     data = await _get(method, path_suffix=f"/{pid}/{lang}")
     download_url = _download_url(data, method)
     check = await check_file(download_url)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from maplestats_mcp.shared.models import Provenance
+from maplestats_mcp.shared.models import Provenance, SdmxQueryResult
 
 
 class DatasetHit(BaseModel):
@@ -131,3 +131,7 @@ class Comparison(BaseModel):
     databrowser_url: str
     notes: list[str] = Field(default_factory=list)
     provenance: Provenance
+
+
+class DatasetQueryResult(SdmxQueryResult):
+    """One read-only SQL query over a slice of a Eurostat dataset, and its result."""

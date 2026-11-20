@@ -309,15 +309,16 @@ async def main() -> int:
     ok &= await raises(
         NotFound, "unknown table has no download", client.get_full_table_download_csv(99999999)
     )
-    # The link is for a browser (StatCan said in November 2026 that it blocks
-    # automated full-table downloads; some networks get its captcha): the first note
-    # says so, and another says how the WDS rebuild script gets the table. The step
-    # looked for wds_get_data_from_cube_coord in the first note, which 0.7.0 reworded.
+    # The file answers most networks, some get StatCan's captcha (November 2026): the
+    # first note says what the scripts do there, and another how the WDS rebuild
+    # script gets the table. Until 2026-11-20 the first note said no script relied on
+    # the link.
     ok &= check(
         bool(csv.notes)
         and "captcha" in csv.notes[0]
+        and "rebuild" in csv.notes[0]
         and any("WDS" in note for note in csv.notes[1:]),
-        "full-table notes say why there is no script",
+        "full-table notes say the scripts rebuild through WDS at the captcha",
     )
 
     # wds_get_code_sets: capped, one category, filter.

@@ -135,6 +135,15 @@ async def through_server() -> bool:
             {"dataset": "DSD_EO@DF_EO", "key": "CAN+USA.GDPV_ANNPCT.A", "start_period": "2024"},
         ),
         ("oecd_compare_countries", {"indicator": "real_gdp_growth", "compare_with": ["G7"]}),
+        (
+            "oecd_query_dataset",
+            {
+                "dataset": "DSD_EO@DF_EO",
+                "sql": "SELECT ref_area, max(value) FROM obs GROUP BY ref_area",
+                "filters": {"REF_AREA": ["CAN", "USA"], "MEASURE": ["GDPV_ANNPCT"]},
+                "start_period": "2024",
+            },
+        ),
     ]
     async with Client(mcp) as session:
         for name, args in calls:
@@ -146,9 +155,43 @@ async def through_server() -> bool:
     return ok
 
 
+async def queries() -> bool:
+    """oecd_query_dataset: a ranking answered, and the checks refusing wrong sums."""
+    from maplestats_mcp.modules.oecd import query
+
+    ok = True
+    base = {"MEASURE": ["UNE_LF"], "SEX": ["_T"], "AGE": ["Y_GE15"], "ADJUSTMENT": ["Y"],
+            "FREQ": ["A"], "UNIT_MEASURE": ["PT_LF_SUB"]}  # fmt: skip
+    ranked = await query.query_dataset(
+        "DSD_LFS@DF_IALFS_INDIC",
+        "SELECT ref_area, value FROM obs WHERE period = '2024' ORDER BY value DESC LIMIT 3",
+        filters=base,
+        start_period="2024",
+        end_period="2024",
+    )
+    print(f"OK: query ranking -> {ranked.rows}")
+    ok &= ranked.row_count == 3
+    levels = {**base, "MEASURE": ["UNE"], "UNIT_MEASURE": ["PS"], "REF_AREA": ["G7", "CAN", "USA"]}
+    try:
+        await query.query_dataset(
+            "DSD_LFS@DF_IALFS_INDIC",
+            "SELECT period, sum(value) FROM obs GROUP BY period",
+            filters=levels,
+            start_period="2023",
+        )
+    except InvalidInput as exc:
+        print(f"OK: query refuses the G7 with members -> {str(exc)[:110]}")
+        ok &= "total_with_parts" in str(exc)
+    else:
+        print("FAIL: query did not refuse the G7 with members")
+        ok = False
+    return ok
+
+
 async def run() -> int:
     ok = await main()
     ok &= await errors()
+    ok &= await queries()
     ok &= await through_server()
     print("ALL OK" if ok else "SOME CHECKS FAILED")
     return 0 if ok else 1

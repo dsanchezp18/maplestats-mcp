@@ -734,11 +734,13 @@ for every field and the full provenance.
 For a French question, pass lang='fr' to plan_query and every tool.
 For a handful of series use the vector tools (every observation inline);
 for averages, sums or rankings over a few series, wds_query_series (where the
-server offers it; off over HTTP by default) runs SQL server-side. For hundreds of
+server offers it; off over HTTP by default) runs SQL server-side, as
+eurostat_query_dataset and oecd_query_dataset do over those sources. For hundreds of
 series, batch the vector or coordinate tools (up to 300 per call). For a whole
-StatCan table, wds_get_full_table_download gives the file link for a browser
-(StatCan blocks scripted full-table downloads) and a Python script that rebuilds
-the same CSV through WDS; offer the script and run it only if the user agrees.
+StatCan table, wds_get_full_table_download gives the file link and a Python
+script that rebuilds the same CSV through WDS, for networks where StatCan's
+captcha blocks the file; reproduce_code's scripts try the file first. Offer a
+script and run it only if the user agrees.
 Cite every figure you report: a StatCan series carries context.citation
 (table, vector, release date) to quote with each value's reference period;
 other results name their source in provenance. Keep StatCan quality flags

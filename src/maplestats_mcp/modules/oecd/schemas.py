@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from maplestats_mcp.shared.models import Provenance
+from maplestats_mcp.shared.models import Provenance, SdmxQueryResult
 
 
 class DatasetSummary(BaseModel):
@@ -145,3 +145,7 @@ class ComparisonResult(BaseModel):
     citation: str
     notes: list[str] = Field(default_factory=list)
     provenance: Provenance
+
+
+class DatasetQueryResult(SdmxQueryResult):
+    """One read-only SQL query over a slice of an OECD dataset, and its result."""

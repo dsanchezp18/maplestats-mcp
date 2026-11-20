@@ -1,7 +1,7 @@
 """wds_get_full_table_download's WDS rebuild: its size, its member checks, and its script.
 
-Since November 2026 StatCan blocks scripted downloads of full-table zips but still
-serves WDS. The script asks WDS for every series and writes StatCan's CSV layout;
+Since November 2026 StatCan answers scripted downloads of full-table zips with a
+captcha on some networks but serves WDS everywhere. The script asks WDS for every series and writes StatCan's CSV layout;
 live on 2026-11-18 its output was byte for byte StatCan's own file for 36-10-0104,
 18-10-0004 (from 2024-01) and 14-10-0287 (from 2025-06). The idea comes from
 vrraiv/sixfigures PR #105 (reimplemented: that repository has no licence file).
@@ -25,6 +25,7 @@ def _member(mid, name, **extra):
     return {
         "memberId": mid,
         "memberNameEn": name,
+        "memberNameFr": {"Food": "Aliments", "All-items": "Ensemble"}.get(name, name),
         "terminated": 0,
         "memberUomCode": None,
         "vintage": None,
@@ -44,6 +45,7 @@ CUBE = {
         {
             "dimensionPositionId": 1,
             "dimensionNameEn": "Geography",
+            "dimensionNameFr": "Géographie",
             "hasUom": False,
             "member": [
                 _member(1, "Canada", vintage=2016, geoLevel=0, classificationCode="11124"),
@@ -55,6 +57,7 @@ CUBE = {
         {
             "dimensionPositionId": 2,
             "dimensionNameEn": "Products",
+            "dimensionNameFr": "Produits",
             "hasUom": True,
             # Listed out of id order: the CSV follows this order, not the ids.
             "member": [
@@ -66,21 +69,23 @@ CUBE = {
 }
 
 CODES = {
-    "uom": [{"memberUomCode": 17, "memberUomEn": "2002=100"}],
-    "scalar": [{"scalarFactorCode": 0, "scalarFactorDescEn": "units"}],
+    "uom": [{"memberUomCode": 17, "memberUomEn": "2002=100", "memberUomFr": "2002=100"}],
+    "scalar": [{"scalarFactorCode": 0, "scalarFactorDescEn": "units", "scalarFactorDescFr": "unités"}],
     "status": [
-        {"statusCode": "0", "statusRepresentationEn": None},
-        {"statusCode": "1", "statusRepresentationEn": ".."},
+        {"statusCode": "0", "statusRepresentationEn": None, "statusRepresentationFr": None},
+        {"statusCode": "1", "statusRepresentationEn": "..", "statusRepresentationFr": ".."},
     ],
     "symbol": [
-        {"symbolCode": "0", "symbolRepresentationEn": None},
-        {"symbolCode": "1", "symbolRepresentationEn": "p"},
+        {"symbolCode": "0", "symbolRepresentationEn": None, "symbolRepresentationFr": None},
+        {"symbolCode": "1", "symbolRepresentationEn": "p", "symbolRepresentationFr": "p"},
     ],
     "securityLevel": [
-        {"securityLevelCode": 0, "securityLevelRepresentationEn": None},
-        {"securityLevelCode": 1, "securityLevelRepresentationEn": "x"},
+        {"securityLevelCode": 0, "securityLevelRepresentationEn": None,
+         "securityLevelRepresentationFr": None},
+        {"securityLevelCode": 1, "securityLevelRepresentationEn": "x",
+         "securityLevelRepresentationFr": "x"},
     ],
-}
+}  # fmt: skip
 
 
 def _point(month, value, status=0, symbol=0, secret=0, released: str | None = "2026-04-15T08:30"):
@@ -141,7 +146,7 @@ async def test_a_rebuild_past_the_limit_has_no_script(cube, monkeypatch):
     assert "over the limit" in client._rebuild_notes(rebuild, "en")[0]
 
 
-def test_the_script_writes_statcans_csv_layout_with_its_code_sets(httpx_mock, tmp_path):
+def _mock_wds(httpx_mock):
     httpx_mock.add_response(
         url=f"{WDS}getCubeMetadata", json=[{"status": "SUCCESS", "object": CUBE}]
     )
@@ -161,14 +166,21 @@ def test_the_script_writes_statcans_csv_layout_with_its_code_sets(httpx_mock, tm
             ),
         ],
     )
+
+
+def _run(script: str, output: Path) -> str:
     namespace: dict = {"__name__": "rebuild"}
-    exec(wds_table.rebuild_script(99100001), namespace)  # noqa: S102
-    namespace["OUTPUT"] = tmp_path / "table.csv"
-    namespace["main"]()
+    exec(script, namespace)  # noqa: S102
+    namespace["wds_rebuild"](output)
+    return output.read_bytes().decode("utf-8")
+
+
+def test_the_script_writes_statcans_csv_layout_with_its_code_sets(httpx_mock, tmp_path):
+    _mock_wds(httpx_mock)
+    text = _run(wds_table.rebuild_script(99100001), tmp_path / "table.csv")
     request = json.loads(httpx_mock.get_requests()[-1].content)
     assert [r["coordinate"] for r in request][:2] == ["1.7.0.0.0.0.0.0.0.0", "1.2.0.0.0.0.0.0.0.0"]
     assert {r["latestN"] for r in request} == {4}
-    text = Path(namespace["OUTPUT"]).read_bytes().decode("utf-8")
     assert text.startswith("﻿")
     h = '"REF_DATE","GEO","DGUID","Products","UOM","UOM_ID","SCALAR_FACTOR","SCALAR_ID",'
     h += '"VECTOR","COORDINATE","VALUE","STATUS","SYMBOL","TERMINATED","DECIMALS"'
@@ -195,3 +207,70 @@ def test_periods_to_ask_reads_every_ref_date_form(start, expected):
     """A bare year raised ValueError from wds_get_full_table_download until 2026-11-20."""
     monthly = {"cubeStartDate": "1976-01-01", "cubeEndDate": "2026-10-01", "frequencyCode": 6}
     assert wds_table.periods_to_ask(monthly, start) == expected
+
+
+def test_the_french_edition_uses_french_code_sets_names_and_separator(httpx_mock, tmp_path):
+    # Checked live 2026-11-20 against StatCan's French files (17-10-0009 whole, and
+    # 18-10-0004 and 14-10-0287 slices): ";" between fields, "." in numbers.
+    httpx_mock.add_response(
+        url=f"{WDS}getCubeMetadata", json=[{"status": "SUCCESS", "object": CUBE}]
+    )
+    httpx_mock.add_response(url=f"{WDS}getCodeSets", json={"status": "SUCCESS", "object": CODES})
+    httpx_mock.add_response(
+        url=f"{WDS}getDataFromCubePidCoordAndLatestNPeriods",
+        json=[
+            {"status": "FAILED", "object": {"coordinate": "5.2.0.0.0.0.0.0.0.0"}},
+            _series("1.2.0.0.0.0.0.0.0.0", 102, [_point(1, None, status=1), _point(2, 25.0)]),
+        ],
+    )
+    script = wds_table.rebuild_script(99100001, {"Produits": ["Aliments"]}, lang="fr")
+    assert 'OUTPUT = Path("data/raw/99100001-fra-wds.csv")' in script
+    lines = _run(script, tmp_path / "table.csv")[1:].split("\n")
+    assert lines[0].startswith('"PÉRIODE DE RÉFÉRENCE";"GÉO";"DGUID";"Produits";"UNITÉ DE MESURE"')
+    assert lines[0].endswith('"SYMBOLE";"TERMINÉ";"DÉCIMALES"')
+    request = json.loads(httpx_mock.get_requests()[-1].content)
+    # French member names pick the same members (Food is member 2).
+    assert [r["coordinate"] for r in request] == ["1.2.0.0.0.0.0.0.0.0", "5.2.0.0.0.0.0.0.0.0"]
+    assert lines[2] == (
+        '"2026-02";"Canada";"2016A000011124";"Aliments";"2002=100";"17";"unités";"0";'
+        '"v102";"1.2";"25.0";"";"";"";"1"'
+    )
+
+
+@pytest.mark.parametrize(
+    ("code", "point", "expected"),
+    [
+        (6, {"refPer": "2026-01-01"}, "2026-01"),
+        (9, {"refPer": "2026-04-01"}, "2026-04"),
+        (12, {"refPer": "2025-01-01"}, "2025"),
+        # Occasional (2,585 tables) writes a year; 11-10-0016, checked 2026-11-20.
+        (18, {"refPer": "1999-01-01"}, "1999"),
+        # Occasional daily: 17-10-0009's quarterly estimates write the whole date.
+        (21, {"refPer": "1946-01-01"}, "1946-01-01"),
+        (1, {"refPer": "2026-11-19"}, "2026-11-19"),
+        # Two ends: a fiscal year (35-10-0044) or a five-year span (13-10-0064).
+        (12, {"refPer": "1991-04-01", "refPer2": "1992-03-31"}, "1991/1992"),
+        (16, {"refPer": "1994-01-01", "refPer2": "1998-12-31"}, "1994/1998"),
+    ],
+)
+def test_ref_date_takes_the_form_statcans_csv_writes(code, point, expected):
+    namespace: dict = {"__name__": "rebuild"}
+    exec(wds_table.rebuild_script(99100001), namespace)  # noqa: S102
+    assert namespace["wds_ref_date"](point, code) == expected
+
+
+async def test_members_may_be_named_in_french(cube):
+    rebuild, scripts = await client._rebuild(
+        99100001, {"Géographie": ["Canada"], "produits": ["aliments"]}, None, None, "fr"
+    )
+    assert rebuild is not None and rebuild.combinations == 1
+    assert "LANG = 'fr'" in scripts[0].code
+
+
+def test_occasional_daily_and_biweekly_tables_ask_for_enough_periods():
+    # 17-10-0009 (occasional daily, 21): a period can fall on any day. Biweekly (4):
+    # 26 a year. Before 2026-11-20 both were counted as monthly.
+    daily = {"cubeStartDate": "2026-01-01", "cubeEndDate": "2026-07-01", "frequencyCode": 21}
+    assert wds_table.periods_to_ask(daily, None) == 183
+    biweekly = {"cubeStartDate": "2025-01-01", "cubeEndDate": "2025-12-01", "frequencyCode": 4}
+    assert wds_table.periods_to_ask(biweekly, None) == 27
