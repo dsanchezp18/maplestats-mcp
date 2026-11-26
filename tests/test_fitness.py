@@ -18,12 +18,13 @@ import pytest
 from maplestats_mcp.catalogue import CATALOGUE_PATH
 from maplestats_mcp.modules.planner import resources
 from maplestats_mcp.modules.planner.client import plan
-from maplestats_mcp.shared.fitness import notes_for, product_ids_in, rules_for
+from maplestats_mcp.shared.fitness import notes_for, product_ids_in, rules_for, short_notes
 from maplestats_mcp.shared.fitness_rules import RULES
 from maplestats_mcp.shared.i18n import NBSP
 
 # productId -> title, from getCubeMetadata on 2026-10-27 (2026-11-02 for 11100190,
-# 11100238, 11100239, 18100005, 34100127, 34100130, 34100133). A new id in a rule
+# 11100238, 11100239, 18100005, 34100127, 34100130, 34100133; 2026-11-26 for 14100371,
+# 14100432). A new id in a rule
 # must be checked live the same way and added here.
 VERIFIED_TABLES = {
     11100066: "Market Basket Measure (MBM) thresholds for the reference family by MBM region, "
@@ -46,6 +47,10 @@ VERIFIED_TABLES = {
     14100223: "Employment and average weekly earnings ... by province and territory, monthly, SA",
     14100287: "Labour force characteristics, monthly, seasonally adjusted and trend-cycle",
     14100288: "Employment by class of worker, monthly, seasonally adjusted and unadjusted",
+    14100371: "Job vacancies, payroll employees, and job vacancy rate by provinces and "
+    "territories, monthly, unadjusted for seasonality",
+    14100432: "Job vacancies, payroll employees, and job vacancy rate by provinces and "
+    "territories, monthly, adjusted for seasonality",
     14100296: "Labour force characteristics by occupation, monthly, unadjusted, inactive (NOC 2016)",
     14100355: "Employment by industry, monthly, SA and unadjusted, and trend-cycle, last 5 months",
     14100416: "Labour force characteristics by occupation, annual",
@@ -285,3 +290,39 @@ def test_every_rule_has_a_short_form_shorter_than_its_note():
         assert brief_en and brief_fr, rule.key
         assert len(brief_en) <= max(len(rule.note_en), 300), rule.key
         assert len(brief_fr) <= max(len(rule.note_fr), 330), rule.key
+
+
+def test_job_vacancy_tables_point_to_the_seasonally_adjusted_one():
+    # Maple Test C-05: answers read 14-10-0371 and said no adjusted version exists.
+    for pid in (14100371, 14100432):
+        assert "job-vacancy-adjustment" in _keys(
+            "wds_get_data_from_cube_coord", {"product_id": pid}
+        )
+    (short,) = [n for n in short_notes().values() if n.startswith("Job vacancies:")]
+    assert "14-10-0432 is seasonally adjusted" in short
+
+
+def test_lfs_results_point_to_the_published_lfs_count():
+    # Maple Test M-15: a 2021 Census labour force times a 2026 rate, the LFS count not given.
+    assert "lfs-counts-not-census-base" in _keys(
+        "wds_get_data_from_cube_coord", {"product_id": 14100287}
+    )
+    # Not on Census Profile calls: there it reached household-income plans as noise.
+    assert "lfs-counts-not-census-base" not in _keys("statcan_census_profile_get_data", {})
+
+
+def test_the_income_note_names_the_median_member():
+    # Maple Test A-03: the average without the median.
+    notes = " ".join(notes_for("wds_get_data_from_cube_coord", {"product_id": 11100239}, "en"))
+    assert "'Median income (excluding zeros)'" in notes
+
+
+def test_a_rule_about_reading_a_result_stays_out_of_plans():
+    # The LFS count note is about where the count sits in a result; in plans it pushed
+    # plan_query past its size baseline (tests/test_planner_calls.py).
+    args = {"product_id": 14100287}
+    lfs = "L'EPA publie ses effectifs"
+    assert any(n.startswith(lfs) for n in notes_for("wds_get_data_from_cube_coord", args, "fr"))
+    in_plan = notes_for("wds_get_data_from_cube_coord", args, "fr", in_plan=True)
+    assert in_plan and not any(n.startswith(lfs) for n in in_plan)
+    assert not any(n.startswith(lfs) for n in notes_for("plan_query", args, "fr"))

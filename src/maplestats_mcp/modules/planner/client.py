@@ -378,7 +378,7 @@ def _add_fitness_notes(plan_out: QueryPlan, lang: str) -> QueryPlan:
         if rank == 0:
             calls.append(("", {"question": plan_out.question}))
         for tool, arguments in calls:
-            for note in notes_for(tool, arguments, lang):
+            for note in notes_for(tool, arguments, lang, in_plan=True):
                 if note not in seen and note not in topic.caveats:
                     topic.caveats.append(note)
                 seen.add(note)

@@ -240,6 +240,13 @@ FRESH_MOVED_TO_DEV: dict[str, str] = {
         "rotation rule 3: motivated eccc_query_items' climate-stations note for an empty "
         "station query (2026-11-10)"
     ),
+    # Answered correctly by the hosted run of 2026-11-10, but the local run of 2026-11-21
+    # first called the dollar "weakened" (results_v4.md, Pipeworx too); the fix is
+    # MapleStats', so the question moves.
+    "N-13": (
+        "rotation rule 3: motivated the boc_ exchange-rate direction note (which way the "
+        "Canadian dollar moved) (2026-11-26)"
+    ),
 }
 
 # The fresh test set: written and keyed on 2026-11-09 (build_key_v4_test.py), before any

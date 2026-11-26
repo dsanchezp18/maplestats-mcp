@@ -67,6 +67,7 @@ from maplestats_mcp.shared.errors import (
 )
 from maplestats_mcp.shared.http import api_get, api_post, get_raw
 from maplestats_mcp.shared.json_utils import list_or_empty
+from maplestats_mcp.shared.models import Provenance
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 CodeSetCategory = Literal[
@@ -304,6 +305,23 @@ def _pad_coordinate(coordinate: str) -> str:
 _REAL_TIME = re.compile(r"real[- ]time|vintages? of releases", re.IGNORECASE)
 
 
+# A table's releaseTime moves with every release or revision, so it is not when a
+# reference period was first published. In the Maple Test (R-03, 2026-11-10 and
+# 2026-11-21) both MapleStats answers gave 36-10-0711's releaseTime, 2026-11-05, as the
+# date 2025 provincial GDP by industry came out; The Daily published it on 2026-05-01, and
+# statcan_daily_search_archive finds that release (checked 2026-11-26). The schema says so,
+# but a model reads the result, not the schema, so the result says it too.
+def _with_release_time_note(provenance: Provenance) -> Provenance:
+    note = _m(
+        "release_time is a table's latest release or revision, not when a reference period "
+        "was first published: statcan_daily_search_archive gives a release's date.",
+        "release_time est la dernière diffusion ou révision du tableau, pas la date où une "
+        "période de référence a d'abord été publiée : statcan_daily_search_archive donne la "
+        "date d'une diffusion.",
+    )
+    return provenance.model_copy(update={"caveats": [*provenance.caveats, note]})
+
+
 def _cube_summary_from_json(obj: dict[str, Any]) -> CubeSummary:
     return CubeSummary(
         product_id=int(obj["productId"]),
@@ -355,13 +373,15 @@ async def get_all_cubes_list(*, lite: bool = True) -> CubeSummaryList:
         cubes=list(cubes),
         total_count=len(cubes),
         returned_count=len(cubes),
-        provenance=make_provenance(
-            source="statcan-wds",
-            url=f"{constants.BASE_URL}{method}",
-            cached=was_cached,
-            schema_name="statcan.wds.CubeSummaryList",
-            freshness=_m("daily at 8:30am ET", "chaque jour à 8 h 30, HE"),
-            lang=_LANG.get(),
+        provenance=_with_release_time_note(
+            make_provenance(
+                source="statcan-wds",
+                url=f"{constants.BASE_URL}{method}",
+                cached=was_cached,
+                schema_name="statcan.wds.CubeSummaryList",
+                freshness=_m("daily at 8:30am ET", "chaque jour à 8 h 30, HE"),
+                lang=_LANG.get(),
+            )
         ),
     )
 
@@ -490,16 +510,18 @@ async def search_cubes(
         total_count=len(matches),
         returned_count=len(page),
         offset=offset,
-        provenance=make_provenance(
-            source="statcan-wds",
-            url=f"{constants.BASE_URL}{method}",
-            cached=was_cached,
-            schema_name="statcan.wds.CubeSummaryList",
-            freshness=_m("daily at 8:30am ET", "chaque jour à 8 h 30, HE"),
-            coverage=note
-            or _m(f"{len(cubes)} tables searched", f"{len(cubes)} tableaux parcourus"),
-            limits=limits,
-            lang=_LANG.get(),
+        provenance=_with_release_time_note(
+            make_provenance(
+                source="statcan-wds",
+                url=f"{constants.BASE_URL}{method}",
+                cached=was_cached,
+                schema_name="statcan.wds.CubeSummaryList",
+                freshness=_m("daily at 8:30am ET", "chaque jour à 8 h 30, HE"),
+                coverage=note
+                or _m(f"{len(cubes)} tables searched", f"{len(cubes)} tableaux parcourus"),
+                limits=limits,
+                lang=_LANG.get(),
+            )
         ),
     )
 
@@ -670,13 +692,15 @@ async def get_cube_metadata(
         footnotes=footnotes,
         footnote_count=len(all_footnotes),
         dimensions=dimensions,
-        provenance=make_provenance(
-            source="statcan-wds",
-            url=f"{constants.BASE_URL}getCubeMetadata",
-            cached=was_cached,
-            schema_name="statcan.wds.CubeMetadata",
-            limits=limits,
-            lang=_LANG.get(),
+        provenance=_with_release_time_note(
+            make_provenance(
+                source="statcan-wds",
+                url=f"{constants.BASE_URL}getCubeMetadata",
+                cached=was_cached,
+                schema_name="statcan.wds.CubeMetadata",
+                limits=limits,
+                lang=_LANG.get(),
+            )
         ),
     )
 

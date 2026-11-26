@@ -36,6 +36,10 @@ class FitnessRule:
     # ("statcan_census_profile_archive_" under "statcan_census_profile_").
     exclude_prefixes: tuple[str, ...] = ()
     product_ids: tuple[int, ...] = ()
+    # False for a rule about reading a result (where a figure sits in it) rather than
+    # choosing one: plans leave it out (shared/fitness.notes_for), which keeps plan_query
+    # within its size baseline (tests/test_planner_calls.py).
+    in_plans: bool = True
 
 
 _LFS_TABLES = (14100287, 14100355, 14100288)
@@ -683,7 +687,8 @@ RULES: tuple[FitnessRule, ...] = (
             "median total income of household (2020 income, raised by pandemic benefits) and "
             "this table's figure as the recent alternative, naming each. Incomes are skewed, "
             "so the median is the typical income: asked for 'average income', give the median "
-            "beside the average (these tables have both) and say which is which."
+            "beside the average (11-10-0239: 'Median income (excluding zeros)') and say which is "
+            "which."
         ),
         note_fr=(
             "Le tableau 11-10-0190 est en dollars constants de sa dernière année de revenu "
@@ -700,7 +705,8 @@ RULES: tuple[FitnessRule, ...] = (
             "prestations liées à la pandémie) et le chiffre de ce tableau comme solution plus "
             "récente, en nommant chacun. Les revenus sont asymétriques, la médiane est donc le "
             "revenu typique : si l'on demande le « revenu moyen », donnez la médiane à côté de "
-            "la moyenne (ces tableaux ont les deux) et dites laquelle est laquelle."
+            "la moyenne (11-10-0239 : « Revenu médian (excluant les zéros) ») et dites laquelle "
+            "est laquelle."
         ),
         sources=(
             "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110019001",
@@ -1008,6 +1014,73 @@ RULES: tuple[FitnessRule, ...] = (
         ),
         tool_prefixes=("ircc_monthly_",),
     ),
+    FitnessRule(
+        key="job-vacancy-adjustment",
+        title_en="Job vacancies: seasonally adjusted or not",
+        title_fr="Postes vacants : désaisonnalisés ou non",
+        note_en=(
+            "Job vacancies are published monthly in two tables with the same dimensions: "
+            "14-10-0432 is adjusted for seasonality and 14-10-0371 is not. For a month's job "
+            "vacancy rate and number of vacancies, report the seasonally adjusted 14-10-0432 "
+            "and say so; the unadjusted figures are a different series, not a substitute."
+        ),
+        note_fr=(
+            "Les postes vacants sont publiés chaque mois dans deux tableaux aux mêmes "
+            "dimensions : 14-10-0432 est désaisonnalisé, 14-10-0371 ne l'est pas. Pour le taux "
+            "de postes vacants et le nombre de postes vacants d'un mois, donnez le tableau "
+            "désaisonnalisé 14-10-0432 et dites-le; les chiffres non désaisonnalisés forment une "
+            "autre série, pas un substitut."
+        ),
+        sources=(
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201",
+            "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410037101",
+        ),
+        checked=(
+            "WDS getCubeMetadata 2026-11-26: 14-10-0371 'Job vacancies, payroll employees, and "
+            "job vacancy rate by provinces and territories, monthly, unadjusted for "
+            "seasonality'; 14-10-0432 the same title ending 'adjusted for seasonality'; both "
+            "with Geography and Statistics (Job vacancies, Payroll employees, Job vacancy rate) "
+            "dimensions, from 2015-04. August 2026, Canada: 507,220 vacancies and 2.8% in "
+            "14-10-0432 (v1481212145, v1481212147) against 529,415 and 2.9% in 14-10-0371 "
+            "(v1212389364, v1212389365). In the Maple Test (C-05) answers read 14-10-0371 and "
+            "said no seasonally adjusted version exists."
+        ),
+        product_ids=(14100371, 14100432),
+    ),
+    FitnessRule(
+        key="lfs-counts-not-census-base",
+        title_en="Labour Force Survey counts, not a rate applied to a Census count",
+        title_fr="Effectifs de l'EPA, et non un taux appliqué à un effectif du Recensement",
+        note_en=(
+            "The LFS publishes its counts beside its rates in 14-10-0287 ('Labour force', "
+            "'Employment', 'Unemployment', in thousands): give the published count, not an "
+            "LFS rate applied to a 2021 Census count or another base. Asked for that "
+            "calculation, say first that it mixes sources and years."
+        ),
+        note_fr=(
+            "L'EPA publie ses effectifs à côté de ses taux dans le tableau 14-10-0287 "
+            "(« Population active », « Emploi », « Chômage », en milliers) : donnez l'effectif "
+            "publié, et non un taux de l'EPA appliqué à un effectif du Recensement de 2021 ou à "
+            "une autre base. Si l'on demande ce calcul, dites d'abord qu'il mêle sources et "
+            "années."
+        ),
+        sources=("https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410028701",),
+        checked=(
+            "WDS getCubeMetadata 2026-11-26: 14-10-0287 'Labour force characteristics, "
+            "monthly, seasonally adjusted and trend-cycle'; its 'Labour force characteristics' "
+            "dimension holds the counts Population, Labour force, Employment, Full-time "
+            "employment, Part-time employment and Unemployment (one unit code) beside the "
+            "Unemployment, Participation and Employment rates (another). Unemployment, Canada, "
+            "seasonally adjusted, September 2026: 1,474.9 thousand (v2062814, released "
+            "2026-11-06; the Maple Test v1 key). In the Maple Test (M-15) answers multiplied "
+            "the 2021 Census labour force by the September 2026 rate before warning, and did "
+            "not give this count."
+        ),
+        # On the LFS table only, where the count is: on every Census Profile call it reached
+        # household-income plans, where it is noise. It is about the result, so not in plans.
+        product_ids=(14100287,),
+        in_plans=False,
+    ),
 )
 
 # Short forms of the notes, for brief results (shared/brief.py): the instruction a
@@ -1211,13 +1284,13 @@ BRIEF_NOTES: dict[str, tuple[str, str]] = {
         (
             "11-10-0190 is in constant dollars (real growth). Name the unit (family vs "
             "person); 'household' income is the Census unit. Give the median beside any"
-            " average and say which is which."
+            " average ('Median income (excluding zeros)' in 11-10-0239), saying which is which."
         ),
         (
             "11-10-0190 est en dollars constants (croissance réelle). Nommez l'unité "
             "(famille ou personne); le revenu des « ménages » est l'unité du "
-            "Recensement. Donnez la médiane à côté de toute moyenne et dites laquelle "
-            "est laquelle."
+            "Recensement. Donnez la médiane à côté de toute moyenne (« Revenu médian "
+            "(excluant les zéros) » dans 11-10-0239) et dites laquelle est laquelle."
         ),
     ),
     "trade-basis": (
@@ -1307,6 +1380,28 @@ BRIEF_NOTES: dict[str, tuple[str, str]] = {
             "IRCC compte des admissions et des permis, pas des personnes qui vivent au "
             "Canada. Pour la population ou le nombre de résidents temporaires, prenez "
             "17-10-0009, 17-10-0040 et 17-10-0121."
+        ),
+    ),
+    "job-vacancy-adjustment": (
+        (
+            "Job vacancies: 14-10-0432 is seasonally adjusted, 14-10-0371 unadjusted (same "
+            "dimensions). For a month's rate and number of vacancies, report 14-10-0432 and "
+            "say so."
+        ),
+        (
+            "Postes vacants : 14-10-0432 est désaisonnalisé, 14-10-0371 non (mêmes "
+            "dimensions). Pour le taux et le nombre de postes vacants d'un mois, donnez "
+            "14-10-0432 et dites-le."
+        ),
+    ),
+    "lfs-counts-not-census-base": (
+        (
+            "LFS counts (in thousands) are in 14-10-0287 beside its rates: give the count, "
+            "not a rate applied to a 2021 Census count."
+        ),
+        (
+            "Les effectifs de l'EPA (en milliers) sont dans 14-10-0287 à côté des taux : "
+            "donnez l'effectif, et non un taux appliqué à un effectif du Recensement de 2021."
         ),
     ),
 }

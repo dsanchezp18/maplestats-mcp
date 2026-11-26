@@ -219,8 +219,19 @@ async def test_observations_of_fx_rates_carry_the_caveat_once(httpx_mock):
     result = await client.get_observations(["FXUSDCAD", "FXEURCAD"], recent=1)
     assert result.series["FXUSDCAD"].status == "active"
     assert result.series["FXUSDCAD"].note is None  # said once, in provenance.caveats
-    assert len(result.provenance.caveats) == 1
-    assert "16:30 ET" in result.provenance.caveats[0]
+    # The indicative-rate caveat once; then each series' reading (test_fx_direction.py).
+    caveats = result.provenance.caveats
+    assert [c for c in caveats if "16:30 ET" in c] == [caveats[0]]
+    assert caveats[1:] == [
+        (
+            "FXUSDCAD is Canadian dollars per USD: a lower value means a stronger Canadian "
+            "dollar against USD."
+        ),
+        (
+            "FXEURCAD is Canadian dollars per EUR: a lower value means a stronger Canadian "
+            "dollar against EUR."
+        ),
+    ]
 
 
 async def test_observations_ended_before_today_reuse_the_newer_data_request(httpx_mock):

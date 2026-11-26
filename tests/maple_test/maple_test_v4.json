@@ -1595,6 +1595,77 @@
    }
   },
   {
+   "id": "N-13",
+   "category": "Markets",
+   "group": "boc",
+   "eval_type": "comparison",
+   "answer_regex": "(?:dollar|CAD|loonie)[^.]{0,60}\\b(?:strengthen\\w*|appreciat\\w*|rose|gained)\\b|\\b(?:strengthen\\w*|appreciat\\w*)\\b[^.]{0,40}(?:dollar|CAD)",
+   "alternatives": [
+    {
+     "label": "yen per Canadian dollar",
+     "expected": {
+      "yen_per_cad_2026_10_01": 110.86,
+      "yen_per_cad_2026_10_30": 112.74
+     }
+    }
+   ],
+   "question": "Between October 1 and October 30, 2026, did the Canadian dollar strengthen or weaken against the Japanese yen, by the Bank of Canada's daily exchange rates? Give the rate on both days.",
+   "expected": {
+    "jpycad_2026_10_01": 0.00902,
+    "jpycad_2026_10_30": 0.00887
+   },
+   "headline": [
+    "jpycad_2026_10_01",
+    "jpycad_2026_10_30"
+   ],
+   "tolerances": {
+    "jpycad_2026_10_01": 5e-07,
+    "jpycad_2026_10_30": 5e-07,
+    "yen_per_cad_2026_10_01": 0.06,
+    "yen_per_cad_2026_10_30": 0.06
+   },
+   "tolerance": "0.00902 and 0.00887 CAD per yen (FXJPYCAD): the yen bought fewer Canadian dollars, so the dollar strengthened.",
+   "grading": {
+    "correct": "Both rates and the call: the Canadian dollar strengthened.",
+    "partial": "Both rates with no call, or the call with one rate.",
+    "hallucinated": "The opposite call, or rates from another source given as the Bank's.",
+    "referral": "No rates, only a link to the Bank's exchange-rate page."
+   },
+   "citations": [
+    {
+     "table_id": "Valet",
+     "vector_id": "FXJPYCAD",
+     "series_title": "JPY/CAD",
+     "reference_period": "2026-10-01",
+     "value": 0.00902,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/FXJPYCAD/json?start_date=2026-10-01&end_date=2026-10-30"
+    },
+    {
+     "table_id": "Valet",
+     "vector_id": "FXJPYCAD",
+     "series_title": "JPY/CAD",
+     "reference_period": "2026-10-30",
+     "value": 0.00887,
+     "release_or_revision_date": null,
+     "url": "https://www.bankofcanada.ca/valet/observations/FXJPYCAD/json?start_date=2026-10-01&end_date=2026-10-30"
+    }
+   ],
+   "traps": [
+    "FXJPYCAD is Canadian dollars per yen: a higher value means a weaker Canadian dollar."
+   ],
+   "source_version": "v4-test",
+   "source": "boc",
+   "qtype": "comparison",
+   "split": "dev",
+   "extra_passes": false,
+   "in_sample_for": [
+    "maplestats"
+   ],
+   "why_kept": "fresh test question (build_key_v4_test.py); rotation rule 3: motivated the boc_ exchange-rate direction note (which way the Canadian dollar moved) (2026-11-26)",
+   "item": null
+  },
+  {
    "id": "T-12",
    "category": "Discontinued series",
    "group": "boc",
@@ -3633,75 +3704,6 @@
    "source_version": "v4-test",
    "source": "boc",
    "qtype": "figure",
-   "split": "test",
-   "extra_passes": false,
-   "in_sample_for": [],
-   "why_kept": "fresh test question (build_key_v4_test.py)",
-   "item": null
-  },
-  {
-   "id": "N-13",
-   "category": "Markets",
-   "group": "boc",
-   "eval_type": "comparison",
-   "answer_regex": "(?:dollar|CAD|loonie)[^.]{0,60}\\b(?:strengthen\\w*|appreciat\\w*|rose|gained)\\b|\\b(?:strengthen\\w*|appreciat\\w*)\\b[^.]{0,40}(?:dollar|CAD)",
-   "alternatives": [
-    {
-     "label": "yen per Canadian dollar",
-     "expected": {
-      "yen_per_cad_2026_10_01": 110.86,
-      "yen_per_cad_2026_10_30": 112.74
-     }
-    }
-   ],
-   "question": "Between October 1 and October 30, 2026, did the Canadian dollar strengthen or weaken against the Japanese yen, by the Bank of Canada's daily exchange rates? Give the rate on both days.",
-   "expected": {
-    "jpycad_2026_10_01": 0.00902,
-    "jpycad_2026_10_30": 0.00887
-   },
-   "headline": [
-    "jpycad_2026_10_01",
-    "jpycad_2026_10_30"
-   ],
-   "tolerances": {
-    "jpycad_2026_10_01": 5e-07,
-    "jpycad_2026_10_30": 5e-07,
-    "yen_per_cad_2026_10_01": 0.06,
-    "yen_per_cad_2026_10_30": 0.06
-   },
-   "tolerance": "0.00902 and 0.00887 CAD per yen (FXJPYCAD): the yen bought fewer Canadian dollars, so the dollar strengthened.",
-   "grading": {
-    "correct": "Both rates and the call: the Canadian dollar strengthened.",
-    "partial": "Both rates with no call, or the call with one rate.",
-    "hallucinated": "The opposite call, or rates from another source given as the Bank's.",
-    "referral": "No rates, only a link to the Bank's exchange-rate page."
-   },
-   "citations": [
-    {
-     "table_id": "Valet",
-     "vector_id": "FXJPYCAD",
-     "series_title": "JPY/CAD",
-     "reference_period": "2026-10-01",
-     "value": 0.00902,
-     "release_or_revision_date": null,
-     "url": "https://www.bankofcanada.ca/valet/observations/FXJPYCAD/json?start_date=2026-10-01&end_date=2026-10-30"
-    },
-    {
-     "table_id": "Valet",
-     "vector_id": "FXJPYCAD",
-     "series_title": "JPY/CAD",
-     "reference_period": "2026-10-30",
-     "value": 0.00887,
-     "release_or_revision_date": null,
-     "url": "https://www.bankofcanada.ca/valet/observations/FXJPYCAD/json?start_date=2026-10-01&end_date=2026-10-30"
-    }
-   ],
-   "traps": [
-    "FXJPYCAD is Canadian dollars per yen: a higher value means a weaker Canadian dollar."
-   ],
-   "source_version": "v4-test",
-   "source": "boc",
-   "qtype": "comparison",
    "split": "test",
    "extra_passes": false,
    "in_sample_for": [],

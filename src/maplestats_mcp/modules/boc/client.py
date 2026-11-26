@@ -453,6 +453,124 @@ def fx_note(name: str, lang: str = "en") -> str | None:
     return None
 
 
+# Which way the Canadian dollar moved. An FX{A}{B} series is B per unit of A: Valet's
+# metadata.unit says "Canadian dollars per Japanese yen" for FXJPYCAD, the same for its
+# monthly average FXMJPYCAD, and "US dollars per Canadian dollar" for FXCADUSD (checked
+# live 2026-11-26). So the Canadian dollar strengthens when FX{ccy}CAD falls and when
+# FXCAD{ccy} rises. In the Maple Test (2026-11-21) an answer read FXJPYCAD's fall from
+# 0.00902 to 0.00887 as the dollar weakening; another server's answer did the same. The
+# note states the reading, and for a short result the move itself, so the answer does
+# not have to work out the inversion.
+_FX_PAIR = re.compile(r"^FX[AM]?([A-Z]{3})([A-Z]{3})$")
+# More exchange-rate series than this in one result (FX_RATES_DAILY has 26) get the
+# general reading only, not a sentence per currency.
+_FX_DIRECTION_MAX_SERIES = 3
+_FX_READING_NOTE = (
+    "Reading Bank of Canada exchange rates: FX{ccy}CAD is Canadian dollars per unit of the "
+    "other currency, so a lower value means a stronger Canadian dollar; FXCAD{ccy} is the "
+    "other currency per Canadian dollar, so a higher value means a stronger Canadian dollar."
+)
+_FX_READING_NOTE_FR = (
+    "Lecture des taux de change de la Banque du Canada : FX{ccy}CAD est en dollars canadiens "
+    "par unité de l'autre devise, donc une valeur plus basse signifie un dollar canadien plus "
+    "fort; FXCAD{ccy} est en unités de l'autre devise par dollar canadien, donc une valeur "
+    "plus haute signifie un dollar canadien plus fort."
+)
+
+
+def _fx_pair(name: str) -> tuple[str, bool] | None:
+    """(other currency, whether CAD is the unit) for an FX* rate against CAD, else None."""
+    if not (_FX_DAILY.match(name) or _FX_AVERAGE.match(name)):
+        return None
+    match = _FX_PAIR.match(name)
+    if match is None:
+        return None
+    base, unit = match.groups()
+    if unit == "CAD" and base != "CAD":
+        return base, True
+    if base == "CAD" and unit != "CAD":
+        return unit, False
+    return None
+
+
+def _fx_number(value: float, lang: str) -> str:
+    text = f"{value:g}"
+    return text.replace(".", ",") if lang == "fr" else text
+
+
+def fx_direction(name: str, observations: Sequence[Observation], lang: str = "en") -> str | None:
+    """How to read an exchange rate against CAD, and how the dollar moved over the rows.
+
+    The move compares the first and last dated values of `name` in `observations`; with
+    fewer than two, only the reading is given. None for a series that is not an FX* rate
+    against the Canadian dollar.
+    """
+    pair = _fx_pair(name)
+    if pair is None:
+        return None
+    other, cad_is_unit = pair
+    fr = lang == "fr"
+    if cad_is_unit:
+        reading = (
+            f"{name} est en dollars canadiens par {other} : plus la valeur est basse, plus le "
+            "dollar canadien est fort face à cette devise."
+            if fr
+            else f"{name} is Canadian dollars per {other}: a lower value means a stronger "
+            f"Canadian dollar against {other}."
+        )
+    else:
+        reading = (
+            f"{name} est en {other} par dollar canadien : plus la valeur est haute, plus le "
+            "dollar canadien est fort face à cette devise."
+            if fr
+            else f"{name} is {other} per Canadian dollar: a higher value means a stronger "
+            f"Canadian dollar against {other}."
+        )
+    points = sorted(
+        (o.ref_date, value) for o in observations if (value := o.values.get(name)) is not None
+    )
+    move = ""
+    if len(points) >= 2 and points[0][0] != points[-1][0]:
+        (start, first), (end, last) = points[0], points[-1]
+        a, b = _fx_number(first, lang), _fx_number(last, lang)
+        if first == last:
+            move = (
+                f" Elle était de {a} le {start} comme le {end} : sans changement."
+                if fr
+                else f" It was {a} on both {start} and {end}: no change."
+            )
+        else:
+            stronger = (last < first) if cad_is_unit else (last > first)
+            if fr:
+                went = "a baissé" if last < first else "a augmenté"
+                dollar = "s'est raffermi" if stronger else "s'est affaibli"
+                move = (
+                    f" Du {start} ({a}) au {end} ({b}), elle {went} : le dollar canadien "
+                    f"{dollar} face à {other}."
+                )
+            else:
+                went = "fell" if last < first else "rose"
+                dollar = "strengthened" if stronger else "weakened"
+                move = (
+                    f" From {start} ({a}) to {end} ({b}) it {went}: the Canadian dollar "
+                    f"{dollar} against {other}."
+                )
+    text = reading + move
+    return french_spacing(text) if fr else text
+
+
+def _fx_direction_notes(
+    codes: Sequence[str], observations: Sequence[Observation], lang: str
+) -> list[str]:
+    """One direction note per FX* series, or the general reading when there are many."""
+    fx = [c for c in codes if _fx_pair(c)]
+    if not fx:
+        return []
+    if len(fx) > _FX_DIRECTION_MAX_SERIES:
+        return [french_spacing(_FX_READING_NOTE_FR) if lang == "fr" else _FX_READING_NOTE]
+    return [n for c in fx if (n := fx_direction(c, observations, lang))]
+
+
 def _stale_after(frequency: str | None) -> int | None:
     word = (frequency or "").lower()
     for words, days in _STALE_AFTER_DAYS:
@@ -1345,13 +1463,19 @@ async def get_observations(
         series=series,
         observations=kept,
         transformed=transformed,
-        provenance=_with_fx_caveats(provenance, list(series), lang),
+        provenance=_with_fx_caveats(provenance, list(series), lang, kept),
     )
 
 
-def _with_fx_caveats(provenance: Provenance, codes: list[str], lang: str) -> Provenance:
-    """provenance with the indicative-rate caveat of any FX* series among `codes`."""
+def _with_fx_caveats(
+    provenance: Provenance,
+    codes: list[str],
+    lang: str,
+    observations: Sequence[Observation] = (),
+) -> Provenance:
+    """provenance with the indicative-rate caveat and the direction of any FX* series."""
     notes = [n for n in dict.fromkeys(fx_note(c, lang) for c in codes) if n]
+    notes += _fx_direction_notes(codes, observations, lang)
     if not notes:
         return provenance
     caveats = list(dict.fromkeys([*provenance.caveats, *notes]))
@@ -1525,5 +1649,6 @@ async def get_group_observations(
             ),
             list(series),
             lang,
+            kept,
         ),
     )

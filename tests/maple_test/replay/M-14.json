@@ -2,7 +2,7 @@
  "question_id": "M-14",
  "version": "v1",
  "recorded_on": "2026-11-16",
- "server_commit": "5c52b1b",
+ "server_commit": "bf38911",
  "tool": "boc_get_observations",
  "arguments": {
   "series_names": [
@@ -59,7 +59,8 @@
    "licence": "Bank of Canada Terms of Use (https://www.bankofcanada.ca/terms/): attribute the Bank of Canada as the source and indicate if changes were made, without implying the Bank endorses the use; content passed on through paid services must be identified as obtained from the Bank's website.",
    "commercial_use": "allowed",
    "caveats": [
-    "Indicative rate: one Bank of Canada daily average per currency, published by about 16:30 ET each business day. It is not a transactional rate; banks and dealers trade at their own rates."
+    "Indicative rate: one Bank of Canada daily average per currency, published by about 16:30 ET each business day. It is not a transactional rate; banks and dealers trade at their own rates.",
+    "FXUSDCAD is Canadian dollars per USD: a lower value means a stronger Canadian dollar against USD. From 2026-10-30 (1.396) to 2026-11-02 (1.3978) it rose: the Canadian dollar weakened against USD."
    ],
    "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
   }

@@ -129,6 +129,35 @@ async def test_get_cube_metadata_parses_real_footnote_shape(httpx_mock):
     assert len(result.footnotes) == 1
     assert result.footnotes[0].text_en == "note en"
     assert result.footnotes[0].text_fr == "note fr"
+    # releaseTime is the latest release or revision; the result says so, because answers
+    # read it as the date a reference period first came out (Maple Test R-03).
+    assert any(
+        c.startswith("release_time is a table's latest release or revision")
+        and "statcan_daily_search_archive" in c
+        for c in result.provenance.caveats
+    )
+
+
+async def test_search_cubes_says_release_time_is_the_latest_release(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{constants.BASE_URL}getAllCubesListLite",
+        json=[
+            {
+                "productId": 36100711,
+                "cubeTitleEn": "Gross domestic product (GDP) at basic prices, by industry, "
+                "provinces and territories",
+                "cubeTitleFr": "Produit intérieur brut (PIB) aux prix de base",
+                "cubeStartDate": "1997-01-01",
+                "cubeEndDate": "2025-01-01",
+                "releaseTime": "2026-11-05T08:30",
+                "archived": "2",
+                "frequencyCode": 12,
+            }
+        ],
+    )
+    result = await client.search_cubes("GDP by industry provinces")
+    assert [c.product_id for c in result.cubes] == [36100711]
+    assert any("statcan_daily_search_archive" in c for c in result.provenance.caveats)
 
 
 async def test_get_cube_metadata_tolerates_null_dimension_and_member_lists(httpx_mock):

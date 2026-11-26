@@ -1202,6 +1202,26 @@ uv run python -m tests.maple_test grade --version v4 --judge \
     tests/maple_test/runs_v4/2026-11-22_*_claude-sonnet-5-5.jsonl
 ```
 
+### After the 2026-11-22 round: N-13 moved to dev, and four dev fixes (2026-11-26)
+
+N-13 (CAD against the yen) prompted a change to MapleStats, so rule 3 moved it to dev
+(`FRESH_MOVED_TO_DEV`); it is in-sample for MapleStats from now on. The test set has 20
+questions, and five replacements are due: the four above and one Bank of Canada comparison.
+
+| ID | Source, kind | What went wrong | What it motivated |
+| :-- | :-- | :-- | :-- |
+| N-13 | BoC, comparison | the local run of 2026-11-21 first called the dollar "weakened" when FXJPYCAD (Canadian dollars per yen) fell; so did Pipeworx | `boc_get_observations` and `boc_get_group_observations` say how to read each FX* rate, and for up to three series which way the Canadian dollar moved between the first and last rows |
+
+Four dev questions were also fixed. Dev is in-sample for MapleStats already, so they move
+nothing:
+
+| ID | What went wrong | What it motivated |
+| :-- | :-- | :-- |
+| R-03 | both runs gave 36-10-0711's `release_time` (2026-11-05, its latest revision) as the date 2025 provincial GDP by industry was published (2026-05-01) | WDS table searches, lists and metadata say in their caveats that `release_time` is the latest release or revision, and that `statcan_daily_search_archive` gives a release's date (it finds 2026-05-01) |
+| A-03 | a pass gave Alberta's average income without the median | the income note names the median's member: 11-10-0239's "Median income (excluding zeros)" |
+| C-05 | passes read the unadjusted 14-10-0371 and said no adjusted version exists | a note on 14-10-0371 and 14-10-0432: report the seasonally adjusted 14-10-0432 |
+| M-15 | answers multiplied the 2021 Census labour force by the 2026 rate before warning, and did not give the LFS count | a note on 14-10-0287 results (not in plans, to keep plan_query within its size baseline): the LFS publishes the counts in thousands beside the rates; say first that the calculation mixes sources and years |
+
 ## Shelf life
 
 Two questions depend on today's calendar: M-13 holds until StatCan publishes Q4 2026 GDP

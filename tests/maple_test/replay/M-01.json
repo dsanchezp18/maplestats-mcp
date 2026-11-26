@@ -2,7 +2,7 @@
  "question_id": "M-01",
  "version": "v1",
  "recorded_on": "2026-11-16",
- "server_commit": "5c52b1b",
+ "server_commit": "bf38911",
  "tool": "wds_get_data_from_vectors",
  "arguments": {
   "vector_ids": [
@@ -285,7 +285,8 @@
    "commercial_use": "allowed",
    "caveats": [
     "LFS and SEPH employment are different measures: do not compare their levels. The LFS is a household survey that counts employed people (a person with two jobs counts once), including the self-employed and agriculture; SEPH counts payroll jobs, so it leaves out the self-employed and agriculture, fishing and trapping, private household services, religious organisations and military personnel of the defence services. LFS estimates carry sampling error; preliminary SEPH estimates are revised. Compare trends over several months, not one month's change. For earnings in a detailed industry, such as provincial and territorial public administration (NAICS 912), use SEPH (14-10-0203 monthly, 14-10-0204 annual) and say why: the LFS wage table 14-10-0064 stops at broad sectors ('Public administration' as a whole).",
-    "LFS figures are survey estimates. Table 14-10-0287 publishes the standard error of each estimate, of its month-to-month change and of its year-over-year change (the Statistics dimension). A change is significant at the 5% level only when the change plus or minus two standard errors excludes zero, which many small monthly moves do not. Statistics Canada releases estimates with a CV up to 16.5% freely, with a warning up to 33.3%, and not above; estimates under a minimum size (1,500 for Canada) are suppressed. Seasonally adjusted series are revised once a year."
+    "LFS figures are survey estimates. Table 14-10-0287 publishes the standard error of each estimate, of its month-to-month change and of its year-over-year change (the Statistics dimension). A change is significant at the 5% level only when the change plus or minus two standard errors excludes zero, which many small monthly moves do not. Statistics Canada releases estimates with a CV up to 16.5% freely, with a warning up to 33.3%, and not above; estimates under a minimum size (1,500 for Canada) are suppressed. Seasonally adjusted series are revised once a year.",
+    "The LFS publishes its counts beside its rates in 14-10-0287 ('Labour force', 'Employment', 'Unemployment', in thousands): give the published count, not an LFS rate applied to a 2021 Census count or another base. Asked for that calculation, say first that it mixes sources and years."
    ],
    "reproduce": "For scripts, call reproduce_code with this tool's name and arguments."
   }

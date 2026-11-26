@@ -118,9 +118,16 @@ def note_text(rule: FitnessRule, lang: str) -> str:
     return french_text(rule.note_fr) if normalize_lang(lang) == "fr" else rule.note_en
 
 
-def notes_for(tool: str, arguments: Mapping[str, Any], lang: str) -> list[str]:
-    """Fitness-for-use notes for one tool call; [] when no rule applies."""
-    return [note_text(rule, lang) for rule in rules_for(tool, arguments)]
+def notes_for(
+    tool: str, arguments: Mapping[str, Any], lang: str, *, in_plan: bool = False
+) -> list[str]:
+    """Fitness-for-use notes for one tool call; [] when no rule applies.
+
+    A plan (`in_plan`, or plan_query's own result) leaves out the rules marked
+    `in_plans=False`: they are about reading a result, which a plan does not hold.
+    """
+    plan = in_plan or tool == "plan_query"
+    return [note_text(r, lang) for r in rules_for(tool, arguments) if r.in_plans or not plan]
 
 
 def short_notes() -> dict[str, str]:
