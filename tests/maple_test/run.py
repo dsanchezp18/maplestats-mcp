@@ -52,7 +52,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from tests.maple_test.grade import SUITES, load_key
+from tests.maple_test import inputs
+from tests.maple_test.grade import SUITES, load_key, load_runs
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -350,6 +351,8 @@ class Answer:
     # grade.py report that share per arm, so a regression shows. Runs before
     # 2026-11-24 have no such list.
     routed_calls: list[dict[str, Any]] = field(default_factory=list)
+    # Present only for runs with a sidecar written before their first model call.
+    manifest_sha256: str | None = None
 
 
 # The code ErrorHintMiddleware puts first on every MapleStats tool error.
@@ -388,7 +391,13 @@ def routed_calls(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def ask(
-    arm: str, model: str, question: dict[str, Any], config: Path | None, version: str = "v1"
+    arm: str,
+    model: str,
+    question: dict[str, Any],
+    config: Path | None,
+    version: str = "v1",
+    *,
+    system_prompt: str | None = None,
 ) -> Answer:
     started = datetime.now(UTC)
     command = [
@@ -397,7 +406,9 @@ def ask(
         "--model",
         model,
         "--system-prompt",
-        PROMPTS[version].format(today=started.date().isoformat()),
+        system_prompt
+        if system_prompt is not None
+        else PROMPTS[version].format(today=started.date().isoformat()),
         "--tools",
         "",
         "--strict-mcp-config",
@@ -521,16 +532,19 @@ def run(
     pause: float = 0.0,
     resume: bool = False,
 ) -> Path:
+    started_at = datetime.now(UTC).isoformat(timespec="seconds")
+    key = json.loads(SUITES[version].key.read_text(encoding="utf-8"))
     questions = [
         q
-        for q in load_key(version)
+        for q in key["questions"]
         if (not only or q["id"] in only) and split in ("all", q.get("split", "all"))
     ]
     runs = SUITES[version].runs
     runs.mkdir(exist_ok=True)
     name = label or arm
-    out = runs / f"{datetime.now(UTC).date().isoformat()}_{name}_{model}.jsonl"
+    out = runs / f"{started_at[:10]}_{name}_{model}.jsonl"
     recorded: set[tuple[str, int]] = set()
+    rows: list[dict[str, Any]] = []
     if resume:
         # --resume: carry on in the newest run file of this name and model, whatever day it
         # was started (a session restart stopped the 2026-11-22 runs), asking only what it
@@ -540,10 +554,7 @@ def run(
         )
         if earlier:
             out = earlier[-1]
-            for line in out.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    row = json.loads(line)
-                    recorded.add((row["question_id"], row.get("repeat", 0)))
+            rows = load_runs([out])
     # A run is evidence: never overwrite one (a retry gets its own --label).
     elif out.exists():
         raise SystemExit(f"{out.name} exists; pass --label to keep both runs, or --resume")
@@ -553,6 +564,7 @@ def run(
     if workers > MAX_WORKERS.get(arm, workers):
         print(f"{arm}: --workers {workers} lowered to {MAX_WORKERS[arm]}", file=sys.stderr)
         workers = MAX_WORKERS[arm]
+    workers = max(1, workers)
     if workers > 1 and arm not in HOSTED_ARMS:
         # Each answer starts its own server: several at once compete for this machine and,
         # for MapleStats, for the publishers' rate limits.
@@ -560,24 +572,77 @@ def run(
             f"{arm} starts a local server per answer; --workers {workers} may slow it",
             file=sys.stderr,
         )
+    saved = inputs.read_manifest(out, version) if out.exists() else None
+    inputs.validate_rows(out, rows, saved)
+    if out.exists() and resume and saved is None:
+        raise ValueError(
+            "Cannot resume a legacy run without recorded inputs; keep it intact and use a new --label"
+        )
+    planned = jobs(questions, repeat, extra_passes)
+    source = None
+    if arm == "maplestats":
+        source = inputs.checkout(server_dir, ("src", "pyproject.toml", "uv.lock"))
+    elif alts is not None and arm in ("openmcp", "candata_mcp", "canada_data_agent", "opencanada"):
+        folders = {"candata_mcp": "candata", "canada_data_agent": "gcode33_canada-data-agent"}
+        source = inputs.checkout(alts / folders.get(arm, arm))
+    record = inputs.make_manifest(
+        out,
+        version=version,
+        created_at=saved["created_at"] if saved else started_at,
+        key=key,
+        prompt_template=PROMPTS[version],
+        settings={
+            "arm": arm,
+            "label": name,
+            "model": model,
+            "only": sorted(set(only)) if only else None,
+            "split": split,
+            "repeat": repeat,
+            "extra_passes": extra_passes,
+            "workers": workers,
+            "pause_seconds": pause,
+            "max_turns": MAX_TURNS,
+            "answer_timeout_seconds": TIMEOUT_S,
+            "connect_retries": CONNECT_RETRIES,
+            "mcp_timeout_ms": 180000,
+            "enable_tool_search": False,
+            "built_in_tools": [],
+            "setting_sources": [],
+            "temperature": None,
+            "seed": None,
+        },
+        planned_jobs=[(q["id"], r) for q, r in planned],
+        execution={
+            "environment": inputs.environment(REPO),
+            "servers": inputs.public_configuration(config_servers),
+            "source_checkout": source,
+        },
+    )
+    if saved:
+        inputs.check_resume(saved, record)
+        recorded = {(row["question_id"], row.get("repeat", 0)) for row in rows}
+    else:
+        inputs.write_manifest(out, record)
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         config = None
         if config_servers:
             config = Path(tmp) / "mcp.json"
             config.write_text(json.dumps({"mcpServers": config_servers}))
         lock = threading.Lock()
-        with out.open("a" if resume else "w", encoding="utf-8") as fh:
+        with out.open("a" if saved else "x", encoding="utf-8") as fh:
 
             def one(job: tuple[dict[str, Any], int]) -> None:
                 q, r = job
-                answer = ask(arm, model, q, config, version)
+                answer = ask(arm, model, q, config, version, system_prompt=record["system_prompt"])
                 # A server that did not connect is not an answer: ask again, up to
                 # CONNECT_RETRIES times (the hosted server missed some starts with four
                 # sessions at once, 2026-11-09). v2 re-asked these by hand.
                 for _ in range(CONNECT_RETRIES):
                     if not answer.response.startswith(NOT_CONNECTED):
                         break
-                    answer = ask(arm, model, q, config, version)
+                    answer = ask(
+                        arm, model, q, config, version, system_prompt=record["system_prompt"]
+                    )
                 while USAGE_LIMIT.search(answer.response) and answer.duration_s < 60:
                     wait = limit_wait(answer.response)
                     print(
@@ -585,8 +650,11 @@ def run(
                         file=sys.stderr,
                     )
                     time.sleep(wait)
-                    answer = ask(arm, model, q, config, version)
+                    answer = ask(
+                        arm, model, q, config, version, system_prompt=record["system_prompt"]
+                    )
                 answer.arm, answer.repeat = name, r
+                answer.manifest_sha256 = record["manifest_sha256"]
                 with lock:
                     fh.write(json.dumps(asdict(answer), ensure_ascii=False) + "\n")
                     fh.flush()
@@ -600,11 +668,7 @@ def run(
 
             # Whole passes, not each question three times in a row: a source that is down
             # for a minute then costs one answer per pass, not three of one question.
-            todo = [
-                j
-                for j in jobs(questions, repeat, extra_passes)
-                if (j[0]["id"], j[1]) not in recorded
-            ]
+            todo = [j for j in planned if (j[0]["id"], j[1]) not in recorded]
             with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
                 list(pool.map(one, todo))
     return out
