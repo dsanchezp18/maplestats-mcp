@@ -5,11 +5,12 @@ Toronto (16) with it returns a partial result or StatCan's empty document."""
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from maplestats_mcp.modules.statcan.sdmx import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import NotFound
+from maplestats_mcp.shared.errors import NotFound, UpstreamUnavailable
 
 
 @pytest.fixture(autouse=True)
@@ -179,3 +180,34 @@ async def test_empty_combination_in_french(httpx_mock):
     # French text gets a no-break space before the colon.
     assert "Geography n'a de séries que pour : 2 (Canada)" in message
     assert "aucun membre de Products_and_product_groups" in message
+
+
+async def test_empty_document_without_structure_says_statcan_did_not_answer(httpx_mock):
+    # From Azure on 2026-11-24 near midnight Eastern, StatCan answered "2.2" (Canada,
+    # all-items, which exists) with an empty document while its metadata timed out.
+    # The error must not tell a user that a published series is not published.
+    httpx_mock.add_response(
+        url=f"{_DATA_URL}2.2?lastNObservations=1", content=_NO_MATCH_XML.encode()
+    )
+    for _ in range(3):
+        httpx_mock.add_exception(httpx.ConnectTimeout("timed out"), url=_STRUCTURE_URL)
+    with pytest.raises(UpstreamUnavailable) as exc_info:
+        await client.get_data(18100004, "2.2", last_n_observations=1)
+    message = str(exc_info.value)
+    assert "StatCan did not answer the request for the table's structure" in message
+    assert "Try again in a few minutes" in message
+    assert "does not publish this combination" not in message
+    # No probe either: an outage would answer it with another empty document.
+    assert all("/data/" not in str(r.url) or "2.2" in str(r.url) for r in httpx_mock.get_requests())
+
+
+async def test_empty_document_without_structure_in_french(httpx_mock):
+    httpx_mock.add_response(
+        url=f"{_DATA_URL}2.2?lastNObservations=1", content=_NO_MATCH_XML.encode()
+    )
+    httpx_mock.add_response(url=_STRUCTURE_URL, status_code=403)
+    with pytest.raises(UpstreamUnavailable) as exc_info:
+        await client.get_data(18100004, "2.2", last_n_observations=1, lang="fr")
+    message = str(exc_info.value)
+    assert "Statistique Canada n'a pas répondu à la demande de structure" in message
+    assert "ne publie pas cette combinaison" not in message

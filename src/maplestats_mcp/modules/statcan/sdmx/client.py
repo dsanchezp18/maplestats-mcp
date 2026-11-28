@@ -808,16 +808,49 @@ async def _probe_members(product_id: int, segments: list[list[str]], index: int)
     }
 
 
-async def _no_series_message(product_id: int, key: str, lang: str) -> str:
-    """The NotFound text for a key matching no series, naming what was asked.
+async def _no_series_error(product_id: int, key: str, lang: str) -> NotFound | UpstreamUnavailable:
+    """The error for a key matching no series: NotFound naming what was asked,
+    or UpstreamUnavailable when the table's structure did not load either.
 
     Seen live 2026-11-09 on 18100004: key "16.85" (Toronto, mortgage
     interest cost) matches nothing because that product is published for
     Canada only; probing with the geography wildcarded (".85") finds Canada
     alone, which is the hint a caller needs to pick a key that exists.
+
+    Seen from Azure on 2026-11-24 near midnight Eastern: StatCan answered
+    "2.2" (Canada, all-items, which exists) with the same empty document
+    while getCubeMetadata timed out. An empty document is only evidence when
+    StatCan is answering, so without the structure the error says StatCan did
+    not answer instead of saying the combination is not published.
     """
+    try:
+        _, loaded, _ = await _load_structure(product_id, lang)
+    except (UpstreamError, UpstreamUnavailable, DataLocked):
+        return UpstreamUnavailable(
+            _say(
+                lang,
+                f"Key {key!r} returned no series in table {product_id} (StatCan sent an empty "
+                "document), and StatCan did not answer the request for the table's structure, "
+                "so this cannot tell a combination StatCan does not publish from a StatCan "
+                "outage. Try again in a few minutes.",
+                f"La clé {key!r} n'a renvoyé aucune série du tableau {product_id} (Statistique "
+                "Canada a envoyé un document vide), et Statistique Canada n'a pas répondu à la "
+                "demande de structure du tableau : impossible de distinguer une combinaison non "
+                "publiée d'une panne de Statistique Canada. Réessayez dans quelques minutes.",
+            )
+        )
+    except (_BadBodyError, InvalidInput, NotFound):
+        dimensions = None
+    else:
+        dimensions = sorted(loaded, key=lambda d: d.position)
+    return NotFound(await _no_series_message(product_id, key, dimensions, lang))
+
+
+async def _no_series_message(
+    product_id: int, key: str, dimensions: list[SdmxDimension] | None, lang: str
+) -> str:
+    """The NotFound text for a key matching no series, naming what was asked."""
     segments = _key_segments(key)
-    dimensions = await _structure_or_none(product_id, lang)
     sentences: list[str] = []
     if dimensions is not None and len(segments) != len(dimensions):
         sentences.append(
@@ -1233,7 +1266,7 @@ async def get_data(
         except _BadBodyError as exc:
             # Confirmed live: a key matching no series answers HTTP 200 with a
             # GenericData document whose only Series tag is a stray closing one.
-            raise NotFound(await _no_series_message(product_id, key, lang)) from exc
+            raise await _no_series_error(product_id, key, lang) from exc
         except CloudflareChallenge:
             # StatCan's captcha on SDMX (since 2026-11): read the same series from WDS.
             return None, False

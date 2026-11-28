@@ -57,6 +57,14 @@ class Step:
     # against; a brief one writes six or more rows as CSV text and leaves out
     # null fields. `brief=True` checks the brief form itself.
     brief: bool = False
+    # When set, a result it returns true for says the source did not answer (a
+    # result, not an error): a skip, like an [upstream_unavailable] error.
+    source_down: Check | None = None
+
+
+def _not_reread(data: Any) -> bool:
+    """check_answer could not re-read a figure because its source did not answer."""
+    return any("not re-read" in note for note in data.get("notes", []))
 
 
 def _non_empty(key: str) -> Check:
@@ -1567,6 +1575,7 @@ STEPS: list[Step] = [
             ],
         },
         lambda data: data["problems"] == [] and data["checked"] == 1,
+        source_down=_not_reread,
     ),
     Step(
         "answer_check",
@@ -1578,6 +1587,9 @@ STEPS: list[Step] = [
             ],
         },
         lambda data: [p["check"] for p in data["problems"]] == ["not_published"],
+        # Seen on Azure 2026-11-24 near midnight Eastern: WDS timed out, so the
+        # figure was not re-read and no problem could be found.
+        source_down=_not_reread,
     ),
     # Bug-report drafts: no upstream; checks the live server fills in the bug form,
     # removes an email address and keeps the link within the length GitHub accepts.
@@ -2153,6 +2165,10 @@ async def main(modules: set[str], url: str | None = None) -> int:
                 print(f"FAIL {label} {args}: {text[:300]}")
                 continue
             data = json.loads(text)
+            if step.source_down is not None and step.source_down(data):
+                skipped.append(label)
+                print(f"SKIP {label}: the source did not answer: {text[:200]}")
+                continue
             ctx[step.tool] = data
             try:
                 passed = step.check(data)
