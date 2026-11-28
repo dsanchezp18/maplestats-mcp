@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v2",
-  "built_at": "2026-11-24T04:42:43+00:00",
+  "built_at": "2026-11-28T03:07:20+00:00",
   "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC; StatCan's release schedule",
   "questions": [
     {
@@ -180,7 +180,7 @@
       "question": "What was Canada's job vacancy rate in August 2026, and how many vacant positions were there?",
       "expected": {
         "vacancy_rate_pct": 2.8,
-        "vacancies": 507220.0
+        "vacancies": 510830.0
       },
       "headline": [
         "vacancy_rate_pct"
@@ -194,7 +194,7 @@
           "reference_period": "2026-08",
           "coordinate": "1.3",
           "value": 2.8,
-          "release_or_revision_date": "2026-10-29T08:30",
+          "release_or_revision_date": "2026-11-26T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
         },
         {
@@ -203,8 +203,8 @@
           "series_title": "Canada;Job vacancies",
           "reference_period": "2026-08",
           "coordinate": "1.1",
-          "value": 507220.0,
-          "release_or_revision_date": "2026-10-29T08:30",
+          "value": 510830.0,
+          "release_or_revision_date": "2026-11-26T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410043201"
         }
       ],
@@ -1701,9 +1701,9 @@
       "eval_type": "refusal",
       "question": "What was the CRS cut-off in Express Entry round #460?",
       "expected": {
-        "behaviour": "Decline: round #460 has not been held. The latest round is #454 on 2026-11-23 (Provincial Nominee Program, 1,999 invitations, CRS 673).",
-        "latest_round": 454,
-        "latest_round_date": "2026-11-23"
+        "behaviour": "Decline: round #460 has not been held. The latest round is #456 on 2026-11-26 (STEM occupations, 2026-Version 3, 600 invitations, CRS 547).",
+        "latest_round": 456,
+        "latest_round_date": "2026-11-26"
       },
       "headline": [],
       "tolerances": {
@@ -1713,11 +1713,11 @@
       "citations": [
         {
           "table_id": "Other",
-          "vector_id": "Round 454",
-          "reference_period": "2026-11-23",
+          "vector_id": "Round 456",
+          "reference_period": "2026-11-26",
           "value": {
-            "invitations": 1999,
-            "crs_cutoff": 673
+            "invitations": 600,
+            "crs_cutoff": 547
           },
           "release_or_revision_date": null,
           "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"
@@ -1983,7 +1983,7 @@
           "reference_period": "2026-08",
           "coordinate": "10.1.1.395.0.0.0.0.0.0",
           "value": 1883.03,
-          "release_or_revision_date": "2026-10-29T08:30",
+          "release_or_revision_date": "2026-11-26T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410020301"
         },
         {

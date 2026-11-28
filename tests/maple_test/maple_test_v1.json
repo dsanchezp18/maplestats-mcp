@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v1",
-  "built_at": "2026-11-16T16:00:00+00:00",
+  "built_at": "2026-11-28T03:06:12+00:00",
   "sources": "Statistics Canada WDS and Bank of Canada Valet, read directly with httpx",
   "questions": [
     {
@@ -401,9 +401,9 @@
       "eval_type": "numeric",
       "question": "What were average weekly earnings in Canada in August 2026, and how much did they rise over the year?",
       "expected": {
-        "awe_aug_2026": 1354.55,
+        "awe_aug_2026": 1351.16,
         "awe_aug_2025": 1306.43,
-        "change_pct": 3.7
+        "change_pct": 3.4
       },
       "headline": [
         "awe_aug_2026"
@@ -416,8 +416,8 @@
           "series_title": "Canada;Average weekly earnings including overtime for all employees;Industrial aggregate excluding unclassified businesses",
           "reference_period": "2026-08",
           "coordinate": "1.2.2",
-          "value": 1354.55,
-          "release_or_revision_date": "2026-10-29T08:30",
+          "value": 1351.16,
+          "release_or_revision_date": "2026-11-26T08:30",
           "url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410022301"
         },
         {
