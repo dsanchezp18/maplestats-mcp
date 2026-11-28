@@ -449,6 +449,30 @@ sécurité"), and reports it.
 | `MAPLE_DELTA_MAX_SCAN_MB` / `MAPLE_DELTA_MAX_SCAN_SECONDS` | `400` / `75` | How much of a Delta File one `statcan_delta_read_table` call streams (seconds kept 30 under the tool timeout) |
 | `MAPLE_DELTA_INDEX_DIR` | system temp | Saved Delta File resume points (a few MB per day); `off` keeps them in memory only |
 
+## Citing MapleStats and its data
+
+Use [`CITATION.cff`](CITATION.cff) for the software's author, title and
+repository. Record the release tag or full commit used in your methods,
+with a link to that version. For the hosted service, also record the
+retrieval date and the server version reported by the connection. The
+project citation describes the software; the release or commit identifies
+the code used in an analysis.
+
+Cite the data publishers separately. Preserve each table or dataset
+identifier, source URL, reference period, release or revision date where
+available, and retrieval date. The dataset's own licence and attribution
+requirements still apply. A live query can return revised values, so
+retrieving the same series again need not reproduce an earlier result.
+
+A paper's replication package should identify the exact software release,
+dependency lock, inputs and permitted outputs used for its tables and
+figures. [Zenodo's release archival guide](https://help.zenodo.org/docs/github/archive-software/github-upload/)
+describes one way to preserve a GitHub release. Check the deposited files
+and version before citing its DOI; add the real archive identifier and
+release metadata to the citation file when that record exists. For
+benchmark inputs and grading, see the
+[Maple Test instructions](tests/maple_test/README.md).
+
 ## License
 
 MIT. Third-party notices are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

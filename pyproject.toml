@@ -105,11 +105,11 @@ build-backend = "hatchling.build"
 packages = ["src/maplestats_mcp"]
 exclude = ["**/__tests__/**", "**/test_*.py", "**/conftest.py"]
 
-# The sdist carries the package and its own tests, not the website, docs,
-# scripts or CI config (hatchling adds pyproject.toml, the readme and the
-# license files by itself).
+# The sdist carries the package, its own tests and citation metadata, not
+# the website, docs, scripts or CI config (hatchling adds pyproject.toml,
+# the readme and the license files by itself).
 [tool.hatch.build.targets.sdist]
-include = ["/src/maplestats_mcp", "/server.json"]
+include = ["/src/maplestats_mcp", "/server.json", "/CITATION.cff"]
 
 [dependency-groups]
 dev = [

@@ -16,7 +16,7 @@ from typing import Any
 
 import pytest
 
-from tests.maple_test import run
+from tests.maple_test import inputs, run
 
 LIMIT = "You've hit your 5-hour limit · resets 6:30am (UTC)"
 
@@ -55,13 +55,23 @@ def _answer(question: dict[str, Any], response: str, duration: float = 12.0) -> 
 @pytest.fixture
 def harness(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[str]:
     """Two questions, no model: `ask` replies from a script and logs what it was asked."""
-    monkeypatch.setitem(run.SUITES, "v1", replace(run.SUITES["v1"], runs=tmp_path))
-    monkeypatch.setattr(run, "load_key", lambda version: [{"id": "Q-1"}, {"id": "Q-2"}])
+    key = tmp_path / "key.json"
+    key.write_text(json.dumps({"questions": [{"id": "Q-1"}, {"id": "Q-2"}]}))
+    monkeypatch.setitem(run.SUITES, "v1", replace(run.SUITES["v1"], runs=tmp_path, key=key))
+    monkeypatch.setattr(inputs, "environment", lambda repo: {"python": "test"})
     monkeypatch.setattr(run, "limit_wait", lambda message, now=None: 0.0)
     asked: list[str] = []
     replies = {"Q-1": ["The answer is 1."], "Q-2": [LIMIT, LIMIT, "The answer is 2."]}
 
-    def ask(arm: str, model: str, question: dict[str, Any], config: Any, version: str = "v1"):
+    def ask(
+        arm: str,
+        model: str,
+        question: dict[str, Any],
+        config: Any,
+        version: str = "v1",
+        *,
+        system_prompt: str | None = None,
+    ):
         asked.append(question["id"])
         text = replies[question["id"]].pop(0)
         return _answer(question, text, 3.0 if text == LIMIT else 12.0)
@@ -84,22 +94,45 @@ def test_a_usage_limit_reply_is_asked_again_not_recorded(harness: list[str]):
     assert harness == ["Q-1", "Q-2", "Q-2", "Q-2"]
 
 
-def test_resume_asks_only_what_the_newest_run_file_lacks(harness: list[str], tmp_path: Path):
+def test_resume_asks_only_what_the_newest_run_file_lacks(
+    harness: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
     # Started on an earlier day under the same name and model; another arm's file whose name
     # ends the same way must not be picked up.
+    class EarlierDay(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 11, 21, tzinfo=UTC)
+
+    ask = run.ask
+
+    def interrupted(arm, model, question, config, version="v1", *, system_prompt=None):
+        if question["id"] == "Q-2":
+            raise RuntimeError("session interrupted")
+        return ask(arm, model, question, config, version, system_prompt=system_prompt)
+
+    monkeypatch.setattr(run, "datetime", EarlierDay)
+    monkeypatch.setattr(run, "ask", interrupted)
+    with pytest.raises(RuntimeError, match="session interrupted"):
+        run.run("no_tools", "m", run.REPO, None, "", version="v1")
+    monkeypatch.setattr(run, "datetime", datetime)
+    monkeypatch.setattr(run, "ask", ask)
+    harness.clear()
     started = tmp_path / "2026-11-21_no_tools_m.jsonl"
-    started.write_text(
-        json.dumps({"question_id": "Q-1", "repeat": 0, "response": "kept"}) + "\n",
-        encoding="utf-8",
-    )
+    before = started.read_bytes()
     (tmp_path / "2026-11-22_other_no_tools_m.jsonl").write_text("", encoding="utf-8")
     out = run.run("no_tools", "m", run.REPO, None, "", version="v1", resume=True)
     assert out == started
     assert [(r["question_id"], r["response"]) for r in _rows(out)] == [
-        ("Q-1", "kept"),
+        ("Q-1", "The answer is 1."),
         ("Q-2", "The answer is 2."),
     ]
     assert "Q-1" not in harness
+    assert started.read_bytes().startswith(before)
+    record = inputs.read_manifest(started, "v1")
+    assert record is not None and "2026-11-21" in record["system_prompt"]
 
 
 def test_without_resume_an_existing_run_file_is_never_overwritten(harness: list[str]):
