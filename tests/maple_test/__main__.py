@@ -139,7 +139,7 @@ def main() -> int:
     if args.version == "v4":
         from tests.maple_test import judge, review
 
-        questions = {q["id"]: q for q in grade.load_key("v4")}
+        questions = {q["id"]: q for q in report["questions"]}
         texts = {review.ref({"run": r}): r["response"] for r in grade.load_runs(paths)}
         if args.judge:
             overrides = (

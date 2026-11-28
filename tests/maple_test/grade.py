@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import json
 import re
+import warnings
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
@@ -39,6 +40,7 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
+from tests.maple_test import inputs
 from tests.maple_test.citations import Cache, CitationCheck
 
 HERE = Path(__file__).resolve().parent
@@ -588,11 +590,57 @@ def load_runs(paths: list[Path]) -> list[dict[str, Any]]:
 
 def grade_runs(paths: list[Path], version: str = "v1", verify: bool = False) -> dict[str, Any]:
     suite = SUITES[version]
-    questions = {q["id"]: q for q in load_key(version)}
+    runs: list[dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
+    key: dict[str, Any] | None = None
+    legacy: list[str] = []
+    for path in sorted(paths):
+        record = inputs.read_manifest(path, version)
+        rows = load_runs([path])
+        inputs.validate_rows(path, rows, record)
+        run_key = record["key"] if record else json.loads(suite.key.read_text(encoding="utf-8"))
+        # Build dates may differ without changing a question. Different values, wording,
+        # tolerances or splits must not be pooled into one comparison or judge key.
+        if key is not None and key["questions"] != run_key["questions"]:
+            raise ValueError("Run files use different answer keys; grade each key separately")
+        key = run_key if key is None else key
+        runs.extend(rows)
+        records.append(
+            {
+                "run_file": path.name,
+                "manifest_sha256": record["manifest_sha256"] if record else None,
+                "key_sha256": inputs.digest(run_key),
+                "key_source": "recorded manifest" if record else "current working key (legacy run)",
+            }
+        )
+        if record is None:
+            legacy.append(path.name)
+    if key is None:
+        key = json.loads(suite.key.read_text(encoding="utf-8"))
+    if not isinstance(key, dict):
+        raise TypeError("The answer key must be a JSON object containing questions")
+    notes = [
+        (
+            "Recorded runs use their saved questions, values and splits, including the LLM judge. "
+            "A recorded test split does not make an exposed question held out again."
+        ),
+        (
+            "Overrides and the citation cache are current working files, identified by their hashes. "
+            "Run manifests do not archive adjudication, source responses or the grading environment."
+        ),
+    ]
+    if legacy:
+        note = (
+            "Legacy runs have no recorded inputs and use the current working key: "
+            + ", ".join(legacy)
+            + ". Their historical key, prompt and environment were not reconstructed."
+        )
+        notes.append(note)
+        warnings.warn(note, RuntimeWarning, stacklevel=2)
+    questions = {q["id"]: q for q in key["questions"]}
     overrides = (
         json.loads(suite.overrides.read_text(encoding="utf-8")) if suite.overrides.exists() else {}
     )
-    runs = load_runs(paths)
     cache = Cache(suite.citation_cache)
     if verify:
         cache.fetch([r["response"] for r in runs])
@@ -633,6 +681,15 @@ def grade_runs(paths: list[Path], version: str = "v1", verify: bool = False) -> 
         )
     return {
         "benchmark": f"maple_test_{version}",
+        "questions": key["questions"],
+        "input_provenance": {
+            "runs": records,
+            "key_sha256": inputs.digest(key),
+            "overrides_sha256": inputs.file_digest(suite.overrides),
+            "citation_cache_sha256": inputs.file_digest(suite.citation_cache),
+            "grader_sha256": inputs.file_digest(Path(__file__)),
+            "notes": notes,
+        },
         "answers": rows,
         "summary": summarise(rows),
         "retired_questions": retired,
@@ -789,7 +846,11 @@ def _thousands(value: float | None) -> str:
     return "–" if value is None else f"{value / 1000:.1f}k"
 
 
-def cost_per_question(answers: list[dict[str, Any]], version: str = "v1") -> list[str]:
+def cost_per_question(
+    answers: list[dict[str, Any]],
+    version: str = "v1",
+    questions: list[dict[str, Any]] | None = None,
+) -> list[str]:
     """Markdown: mean cost (USD) and input tokens of each question's answers, by arm.
 
     `answers` are run records (an Answer as written to a run file), or graded rows
@@ -808,7 +869,7 @@ def cost_per_question(answers: list[dict[str, Any]], version: str = "v1") -> lis
         "| Question | " + " | ".join(arms) + " |",
         "| :-- |" + " --: |" * len(arms),
     ]
-    for q in load_key(version):
+    for q in questions if questions is not None else load_key(version):
         row = []
         for arm in arms:
             costs, tokens = cells.get((arm, q["id"]), ([], []))
@@ -830,6 +891,9 @@ IN_SAMPLE = (
 
 
 def render(report: dict[str, Any], version: str = "v1") -> str:
+    questions = report.get("questions")
+    if questions is None:
+        questions = load_key(version)
     summary = report["summary"]
     repeated = any(s["repeats"] > 1 for s in summary)
     group_names = sorted({g for s in summary for g in s.get("groups", {})})
@@ -974,7 +1038,7 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         "| Question | " + " | ".join(arms) + " |",
         "| :-- |" + " :-: |" * len(arms),
     ]
-    for q in load_key(version):
+    for q in questions:
         cells = [" / ".join(outcomes.get((arm, q["id"]), ["–"])) for arm in arms]
         lines.append(f"| {q['id']} {q['category']} | " + " | ".join(cells) + " |")
     lines += ["", "`*` re-graded by hand (see the overrides file)."]
@@ -984,7 +1048,7 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
         "",
         "Mean USD per answer, with the input tokens read in brackets where the run recorded them.",
         "",
-        *cost_per_question(report["answers"], version),
+        *cost_per_question(report["answers"], version, questions),
     ]
     claims = [r for r in report["answers"] if r["false_claim"]]
     if claims:
@@ -993,6 +1057,7 @@ def render(report: dict[str, Any], version: str = "v1") -> str:
             f"- {r['run']['arm']} {r['run']['question_id']}: {r['false_claim']}" for r in claims
         ]
     lines += review_direction(report)
+    lines += inputs.report_notes(report)
     return "\n".join(lines) + "\n"
 
 

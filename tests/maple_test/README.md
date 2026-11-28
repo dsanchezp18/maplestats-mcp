@@ -49,6 +49,74 @@ uv run python -m tests.maple_test grade                 # writes results.md and 
 uv run pytest tests/test_maple_test.py                  # offline checks of the key and grader
 ```
 
+### Recorded inputs for new runs
+
+New `run` and `run-many` calls write a readable `.manifest.json` beside each
+`.jsonl` file, before asking the first question. Keep the two files together.
+The manifest records:
+
+- the complete answer key, including question wording, expected values,
+  tolerances, citations, dev/test assignments and exposure annotations;
+- the prompt template and the exact system prompt sent to the model;
+- the selected questions and passes, model requested, turn and timeout limits,
+  effective worker count, pause and connection retry settings;
+- the harness commit and relevant file hashes, Python/platform and Claude CLI
+  version where available, public server launch arguments and local source
+  checkout identifiers where available.
+
+Each answer records the manifest's SHA-256. The sidecar and its answers are
+checked before resuming or grading, so a missing sidecar, an edited key, a
+different run's sidecar, a duplicate answer or an unplanned question fails
+clearly. These hashes detect inconsistent files; they are not a signature or
+independent verification of an experiment.
+
+Credentials are omitted: header values and environment values outside an
+explicit allowlist are not copied, and URL credentials, queries and fragments
+are removed. For each locally launched server, the allowlist records source
+switches, response and query budgets, cache controls and semantic/OCR paths,
+with generated MCP environment overrides taking precedence over inherited
+values. An unset option uses the recorded source version's default. This is
+partial environment coverage; local settings do not describe a hosted
+server's configuration. Temperature and seed are `null` because the harness
+does not set them through Claude Code;
+they do not represent measured model defaults. Model IDs resolved by the CLI
+remain in each answer. A hosted server's deployed code version and an unpinned
+`npx` or `uvx` package version are not inferred. Local checkout information
+covers the commit, tracked changes and lock file, not untracked source files
+or every installed dependency.
+
+`--resume` keeps the original system prompt, including its date. It requires
+the same key, prompt template, settings and recorded execution identifiers
+and asks only the remaining planned passes. Changed inputs require restoring
+the original setup or starting a new `--label`. A legacy file without a
+manifest cannot be resumed: appending would mix answers whose original inputs
+were not recorded. No manifest is manufactured for an old run.
+If a crash leaves a manifest before the answer file is created, preserve the
+sidecar and start a new label; the harness will not overwrite it.
+
+`grade` keeps its existing command syntax. For a recorded run it uses the
+saved key for deterministic grading, the v4 judge, review queue and report,
+even if the working key has since changed. A report may combine files only
+when their question keys agree, including values and splits. Different keys
+must be graded separately before making a comparison. Legacy files remain
+gradeable with the current working key, accompanied by a warning in stderr
+and the report. Their original key, prompt and environment are unknown.
+
+The JSON report identifies every run manifest and key hash, the grader's
+hash, and the hashes of the **current** overrides and citation cache used.
+The Markdown report repeats the grading-input hashes and limitations. This
+freezes run inputs, not a complete publication archive: adjudication and
+citation checks can still change as those working files change; the judge's
+rubric and environment must also be retained for a final replication package.
+Live source responses can be revised during or between runs. `--frozen` still
+has its separate cassette rules and applies only to MapleStats.
+
+A saved `split: test` records the original assignment. It does not make a
+question held out again after its answers have informed a change. Preserve
+the exposure history and use fresh questions for the next evaluation.
+The experiment's record also needs to identify its reviewers, exposure
+history and adjudication. A saved key alone provides no independent validation.
+
 ### On every pull request and on a schedule
 
 A run needs a model and the live sources, so two cheaper checks stand in for it:

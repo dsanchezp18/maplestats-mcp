@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+type: software
+title: "MapleStats MCP"
+message: >-
+  If you use MapleStats MCP in research, cite the software and record the
+  release or commit used. Cite each underlying dataset separately using
+  its publisher's attribution requirements.
+authors:
+  - family-names: "Sánchez Pazmiño"
+    given-names: "Daniel"
+repository-code: "https://github.com/dsanchezp18/maplestats-mcp"
+url: "https://maplestats.danielstats.io/"
+license: MIT
+abstract: >-
+  MapleStats MCP provides access to Canadian public statistics and open
+  data through the Model Context Protocol. It combines source-specific
+  data retrieval with bilingual tool discovery, source metadata and
+  reproducible analytical workflows.
+keywords:
+  - "Canadian public data"
+  - "official statistics"
+  - "Model Context Protocol"
+  - "reproducible research"

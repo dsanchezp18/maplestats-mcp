@@ -23,7 +23,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from tests.maple_test import judge
+from tests.maple_test import inputs, judge
 
 HERE = Path(__file__).resolve().parent
 QUEUE = HERE / "v4" / "review_queue.md"
@@ -141,8 +141,9 @@ def render(report: dict[str, Any]) -> str:
         "",
         (
             "**Correct** is the share of questions answered correctly, each question weighted "
-            "once (a question asked three times counts its share of correct passes). Dev is the "
-            "public set, test the held-out one (README, 'Version 4')."
+            "once (a question asked three times counts its share of correct passes). Dev and "
+            "test follow the key used for grading; a test label does not establish that a "
+            "question remains held out (Grading inputs and README, 'Version 4')."
         ),
         "",
         (
@@ -212,6 +213,7 @@ def render(report: dict[str, Any]) -> str:
             f"{verdict} | {'open' if r['needs_review'] else 'settled' if r.get('flagged') else ''} |"
         )
     lines += ["", "`*` settled by a person (overrides_v4.json)."]
+    lines += inputs.report_notes(report)
     return "\n".join(lines) + "\n"
 
 
