@@ -15,7 +15,7 @@ from openpyxl import Workbook
 
 from maplestats_mcp.modules.mb_stats import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 HEADER = (
     "Id,Title,Category,Reference Period,Value,Data Type,Change,chgDirection,chgContext,"
@@ -158,3 +158,32 @@ async def test_read_file_refuses_an_unlisted_file(bureau):
         await client.read_file(url=constants.PUBLICATIONS_URL + "unlisted.xlsx")
     with pytest.raises(InvalidInput):
         await client.read_file(url=RETAIL_URL, sheet="nope")
+
+
+_OUTAGE_PAGE = "<!DOCTYPE html><html><body><h1>Service unavailable</h1></body></html>"
+
+
+async def test_a_web_page_in_place_of_a_file_is_an_upstream_error_and_not_cached(httpx_mock):
+    # An outage page served with HTTP 200 was cached as the file, then reported as
+    # NotFound on every call until the cache expired, after the site had recovered.
+    httpx_mock.add_response(url=constants.REPORTS_URL, content=REPORTS.encode(), is_reusable=True)
+    httpx_mock.add_response(url=RETAIL_URL, text=_OUTAGE_PAGE)
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.read_file(url=RETAIL_URL)
+    httpx_mock.add_response(url=RETAIL_URL, content=_retail())
+    result = await client.read_file(url=RETAIL_URL, header_rows=3)
+    assert result.rows[0][:2] == ["Retail trade", "2309.883"]
+
+
+async def test_a_web_page_in_place_of_the_catalogue_is_not_cached(httpx_mock):
+    httpx_mock.add_response(url=constants.REPORTS_URL, text=_OUTAGE_PAGE)
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.list_files()
+    httpx_mock.add_response(url=constants.REPORTS_URL, content=REPORTS.encode())
+    assert (await client.list_files()).total_files == 2
+
+
+async def test_the_web_page_error_is_in_french_with_lang_fr(httpx_mock):
+    httpx_mock.add_response(url=constants.REPORTS_URL, text=_OUTAGE_PAGE)
+    with pytest.raises(UpstreamError, match="a renvoyé une page Web"):
+        await client.list_files(lang="fr")

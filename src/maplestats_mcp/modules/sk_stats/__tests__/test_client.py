@@ -15,7 +15,7 @@ from openpyxl import Workbook
 
 from maplestats_mcp.modules.sk_stats import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _PRODUCT = re.compile(r".*/api/v1/products/\d+$")
 
@@ -146,3 +146,35 @@ async def test_read_file_names_an_unknown_id(httpx_mock):
     _serve_products(httpx_mock)
     with pytest.raises(NotFound, match="sk_stats_list_files"):
         await client.read_file(424242)
+
+
+_OUTAGE_PAGE = "<!DOCTYPE html><html><body><h1>Service unavailable</h1></body></html>"
+
+
+async def test_a_web_page_in_place_of_the_file_is_refused_and_not_cached(httpx_mock):
+    _serve_products(httpx_mock)
+    download = re.compile(r".*/formats/153159/download$")
+    httpx_mock.add_response(url=download, text=_OUTAGE_PAGE)
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.read_file(153159)
+    # The portal recovers: the file is downloaded again, not the cached page.
+    httpx_mock.add_response(url=download, content=_workbook())
+    listing = await client.read_file(153159)
+    assert [s.name for s in listing.sheets] == ["index", "1.1"]
+
+
+async def test_a_csv_in_place_of_the_workbook_is_refused_and_not_cached(httpx_mock):
+    _serve_products(httpx_mock)
+    download = re.compile(r".*/formats/153159/download$")
+    httpx_mock.add_response(url=download, content=b"year,value\n2024,1\n2025,2\n")
+    with pytest.raises(UpstreamError, match="did not return an Excel workbook"):
+        await client.read_file(153159, lang="en")
+    httpx_mock.add_response(url=download, content=_workbook())
+    assert (await client.read_file(153159)).sheets
+
+
+async def test_the_web_page_error_is_in_french_with_lang_fr(httpx_mock):
+    _serve_products(httpx_mock)
+    httpx_mock.add_response(url=re.compile(r".*/formats/153159/download$"), text=_OUTAGE_PAGE)
+    with pytest.raises(UpstreamError, match="n'est pas un classeur Excel lisible"):
+        await client.read_file(153159, lang="fr")

@@ -256,6 +256,62 @@ async def test_a_list_missing_the_identification_table_is_skipped_not_pinned(htt
     assert "resource_id=2024-Identification" in str(request.url)
 
 
+async def test_discovery_reads_every_page_of_the_search(httpx_mock):
+    # The search is ranked by relevance, not by year, and one page holds 100
+    # packages: the newest list can sit on a later page and was never seen.
+    def page(packages):
+        return {"success": True, "result": {"count": 2, "results": packages}}
+
+    httpx_mock.add_response(
+        url=re.compile(r".*package_search\?.*start=0(&.*)?$"),
+        json=page([_package(2022, _ALL_TABLES)]),
+    )
+    httpx_mock.add_response(
+        url=re.compile(r".*package_search\?.*start=1(&.*)?$"),
+        json=page([_package(2025, _ALL_TABLES)]),
+    )
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([_ROW]))
+    result = await client.search_charities("red cross")
+    assert result.list_year == 2025
+    assert "resource_id=2025-Identification" in str(httpx_mock.get_requests()[-1].url)
+
+
+async def test_discovery_asks_newest_first_and_stops_at_the_page_cap(httpx_mock):
+    # The page loop is bounded by the search's own count alone; a huge or wrong count
+    # must not turn one discovery into hundreds of requests. Newest first puts the
+    # newest list on page one, so the cap rarely matters.
+    for start, year in enumerate(range(2019, 2024)):
+        httpx_mock.add_response(
+            url=re.compile(rf".*package_search\?.*start={start}(&.*)?$"),
+            json={
+                "success": True,
+                "result": {"count": 10_000, "results": [_package(year, [])]},
+            },
+        )
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([_ROW]))
+    result = await client.search_charities("red cross")
+    searches = [r for r in httpx_mock.get_requests() if "package_search" in str(r.url)]
+    assert len(searches) == constants.DISCOVERY_MAX_PAGES == 5
+    assert all(r.url.params["sort"] == "metadata_created desc" for r in searches)
+    # No list read had the tables, so the existing fallback note stands.
+    assert result.list_year == constants.FALLBACK_YEAR
+    assert "(lists found: 2023, 2022, 2021, 2020, 2019)" in (result.provenance.limits or "")
+
+
+async def test_two_lists_of_one_year_do_not_break_the_fallback_note(httpx_mock):
+    # The note sorted (year, package) pairs, which compares the packages when two
+    # share a year (a republished list) and raised TypeError.
+    packages = [_package(2025, []), {**_package(2025, []), "id": "republished"}]
+    httpx_mock.add_response(
+        url=re.compile(r".*package_search.*"),
+        json={"success": True, "result": {"results": packages}},
+    )
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([_ROW]))
+    result = await client.search_charities("red cross")
+    assert result.list_year == constants.FALLBACK_YEAR
+    assert "(lists found: 2025, 2025)" in (result.provenance.limits or "")
+
+
 def test_business_numbers_accept_ascii_digits_only():
     assert client.normalize_bn("119-219-814") == "119219814RR0001"
     arabic_indic = "١٢٣٤٥٦٧٨٩"

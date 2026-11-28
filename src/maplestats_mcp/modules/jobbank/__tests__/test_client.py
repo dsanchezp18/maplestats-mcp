@@ -472,3 +472,28 @@ async def test_ckan_error_envelope_is_typed(httpx_mock):
     )
     with pytest.raises(UpstreamError):
         await client.search_occupations("software")
+
+
+async def test_release_named_only_by_its_translated_english_name_is_found(httpx_mock):
+    # `next(match(n) for n in names)` returned the first candidate's match even when it was
+    # None, so name_translated["en"] was never tried and 2026 was skipped for 2025.
+    package = {
+        "success": True,
+        "result": {
+            "id": constants.PACKAGE_ID,
+            "resources": [
+                *_PACKAGE["result"]["resources"],
+                {
+                    "id": "res-2026",
+                    "name": "Salaires 2026 (version provisoire)",
+                    "name_translated": {"en": "2026 Wages", "fr": "Salaires de 2026"},
+                    "datastore_active": True,
+                },
+            ],
+        },
+    }
+    _mock(httpx_mock, package=package)
+    result = await client.search_occupations("software engineer")
+    assert result.release.release_year == 2026
+    assert result.release.resource_id == "res-2026"
+    assert result.release.available_years == [2026, 2025, 2024, 2023]

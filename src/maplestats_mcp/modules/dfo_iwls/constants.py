@@ -28,6 +28,12 @@ SEARCH_LIMIT_MAX = 200
 # Series whose values are tide events, not a regular time grid.
 EVENT_SERIES = frozenset({"wlp-hilo"})
 
+# Observed series stop at the present, so their default window is the last 24 h:
+# 'wlo' is the only one seen live (2026-09-23). Every other series ('wlp',
+# 'wlp-hilo', and any predicted or forecast code not listed here) reaches ahead
+# of now and defaults to now to +24 h; the past window would be the wrong one for it.
+OBSERVED_SERIES = frozenset({"wlo"})
+
 # Minute series over a week are large (wlo for 7 days was 767 KB live,
 # 2026-10-03), so a window over one day defaults to hourly points.
 LONG_WINDOW_RESOLUTION = "SIXTY_MINUTES"

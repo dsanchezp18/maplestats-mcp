@@ -147,24 +147,56 @@ _STOPWORDS = frozenset(
 )  # fmt: skip
 
 
-def _query_word(word: str) -> str:
-    """A plural query word cut to the stem its singular shares, e.g. 'arachides' -> 'arachide'.
+# Endings of a word less "es" that mark an -es plural ("boxes", "glasses", "watches",
+# "batches"); "ch" alone is not one, as "aches" is "ache" plus s.
+_ES_STEM_ENDINGS = ("ss", "x", "sh", "zz", "tch", "nch", "rch")
+# Singulars ending in a single s, which no ending above tells from "-se" words.
+_ES_SINGULARS = frozenset({"lens"})
 
-    Words match as substrings, so the stem finds both numbers: live,
-    "arachides" matched 211 French notices and "arachide" 237, "jouets"
-    758 and "jouet" 770. An -aux word keeps its "a" ("animaux" becomes
-    "anima", which also finds "animal"); -eux and -oux drop the x.
+
+def _query_word(word: str) -> tuple[str, ...]:
+    """The stems a query word may be found under; a notice needs to carry one of them.
+
+    Words match as substrings, so a plural is cut to a stem its singular shares, e.g.
+    'arachides' -> 'arachide': live, "arachides" matched 211 French notices and
+    "arachide" 237, "jouets" 758 and "jouet" 770. An -aux word keeps its "a" ("animaux"
+    becomes "anima", which also finds "animal"); -eux and -oux drop the x.
+
+    English plurals whose singular is not the word less its "s" get a second stem,
+    because "batteries" cut to "batterie" never finds "battery" ("candies", "boxes" and
+    "tomatoes" were cut to "candie", "boxe" and "tomatoe" likewise): -ies also tries -y,
+    and -es also tries the word less "es" where its stem ends in ss, x, sh, zz, tch, nch,
+    rch, or in o after four letters, or is "lens". A singular -y word tries its -ies
+    stem, so "battery" finds "batteries".
+
+    Every other -es word loses only the "s", as before. Singulars in -se and -che are
+    common ("nurse", "house", "purse", "cause", "course", "horse", "ache"), and their
+    stems without "es" are pieces of other words ("nurs" in nursing, "hous" in
+    household, "purs" in pursuant, "caus" in caustic, "ach" in spinach), so those
+    second stems are not offered; the first stem ("nurse") still finds both numbers.
     """
     if len(word) > 4 and word.endswith("aux"):
-        return word[:-2]
+        return (word[:-2],)
     if len(word) > 4 and word.endswith(("eux", "oux")):
-        return word[:-1]
+        return (word[:-1],)
+    if len(word) > 4 and word.endswith("ies"):
+        return (word[:-1], word[:-3] + "y")
+    if len(word) > 4 and word.endswith("es"):
+        stem = word[:-2]
+        if (
+            stem.endswith(_ES_STEM_ENDINGS)
+            or stem in _ES_SINGULARS
+            or (stem.endswith("o") and len(stem) >= 5)
+        ):
+            return (word[:-1], stem)
     if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
-        return word[:-1]
-    return word
+        return (word[:-1],)
+    if len(word) > 3 and word.endswith("y") and word[-2] not in "aeiou":
+        return (word, word[:-1] + "ie")
+    return (word,)
 
 
-def _query_words(query: str | None) -> list[str]:
+def _query_words(query: str | None) -> list[tuple[str, ...]]:
     words = re.findall(r"\w+", _fold(query or ""))
     kept = [w for w in words if len(w) > 1 and w not in _STOPWORDS]
     # A query made only of such words still filters on them.
@@ -494,7 +526,7 @@ def _filter(
             record.recall_class and wanted_class <= _class_parts(record.recall_class)
         ):
             continue
-        if words and not all(word in record.haystack for word in words):
+        if words and not all(any(stem in record.haystack for stem in stems) for stems in words):
             continue
         matched.append(record)
     return matched

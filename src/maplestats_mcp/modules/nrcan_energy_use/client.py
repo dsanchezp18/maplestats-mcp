@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from collections.abc import Callable
 from typing import NoReturn
 from urllib.parse import parse_qsl, urlencode, urlparse
 
@@ -106,7 +107,47 @@ async def _check_reachable(lang: str = "en") -> None:
     writer.close()
 
 
-async def _html(url: str, ttl: int, lang: str = "en") -> tuple[str, bool]:
+# What marks a page as the site's own, not a bare error or maintenance page: the WET
+# main-heading id (`<h1 id="wb-cont">`, on the table page recorded live 2026-11-07)
+# and a link into the database's own section (the menu links recorded live, whose
+# paths are the two roots in constants.py). It is a heuristic: a maintenance page
+# drawn in the site's own template would pass it too.
+_SITE_PAGE = re.compile(
+    r"""id=["']wb-cont["']"""
+    r"""|href=["'](?:https://oee\.nrcan\.gc\.ca)?"""
+    r"""/(?:corporate/statistics/neud|organisme/statistiques/bnce)/""",
+    re.IGNORECASE,
+)
+
+
+def _has_table(html: str) -> bool:
+    return BeautifulSoup(html, "html.parser").find("table") is not None
+
+
+def _has_table_links(html: str) -> bool:
+    return bool(_parse_menu(html))
+
+
+def _has_comprehensive_menus(html: str) -> bool:
+    return _MENU.search(html) is not None
+
+
+async def _html(
+    url: str,
+    ttl: int,
+    lang: str = "en",
+    *,
+    expect: Callable[[str], bool] | None = None,
+    site_page_is_answer: bool = False,
+) -> tuple[str, bool]:
+    """The page text, cached; `expect` says whether the text is the kind of page wanted.
+
+    A page that fails `expect` is an upstream error and is not cached, unless
+    `site_page_is_answer` is set and the page carries the site's own markers: then it
+    is the site saying there is no such table or menu, and it is returned as before
+    (the caller raises NotFound).
+    """
+
     async def fetch() -> str:
         global _down_until
         if time.monotonic() < _down_until:
@@ -138,6 +179,26 @@ async def _html(url: str, ttl: int, lang: str = "en") -> tuple[str, bool]:
         except (httpx.HTTPError, TimeoutError) as exc:
             _down_until = time.monotonic() + constants.DOWN_RETRY_SECONDS
             raise _unreachable(url, lang) from exc
+        # Checked inside the fetch so a page of the wrong kind is never cached. This
+        # host answers maintenance and error pages with HTTP 200; they used to be kept
+        # for 24 h (tables) or 7 days (menus) and then read as "no data table" (NotFound)
+        # or as a survey with no tables, until the entry expired. A page that is the
+        # site's own, with no table, is a table that does not exist (NotFound).
+        if (
+            expect is not None
+            and not expect(response.text)
+            and not (site_page_is_answer and _SITE_PAGE.search(response.text))
+        ):
+            raise _error(
+                UpstreamUnavailable,
+                f"nrcan_energy_use: {url} answered with a page that is not the expected "
+                "content (no data table or table links: an error or maintenance page?); "
+                "try again later.",
+                f"nrcan_energy_use : {url} a répondu par une page qui n'est pas le contenu "
+                "attendu (ni tableau de données ni liens vers des tableaux : page d'erreur ou "
+                "de maintenance ?) ; réessayez plus tard.",
+                lang,
+            )
         return response.text
 
     return await cached_fetch(f"nrcan-energy-use:{url}", ttl, fetch)
@@ -172,7 +233,10 @@ async def list_products(lang: str = "en") -> ProductList:
     unreachable: str | None = None
     try:
         html, cached = await _html(
-            constants.EN_ROOT + constants.COMPREHENSIVE_LIST, constants.CACHE_TTL_MENU_SECONDS, lang
+            constants.EN_ROOT + constants.COMPREHENSIVE_LIST,
+            constants.CACHE_TTL_MENU_SECONDS,
+            lang,
+            expect=_has_comprehensive_menus,
         )
     except UpstreamUnavailable as exc:
         html, cached, unreachable = "", False, str(exc)
@@ -270,7 +334,13 @@ async def list_tables(
             lang,
         )
     url = constants.EN_ROOT + path
-    html, cached = await _html(url, constants.CACHE_TTL_MENU_SECONDS, lang)
+    html, cached = await _html(
+        url,
+        constants.CACHE_TTL_MENU_SECONDS,
+        lang,
+        expect=_has_table_links,
+        site_page_is_answer=True,
+    )
     tables = _parse_menu(html)
     if not tables:
         _raise(
@@ -334,6 +404,8 @@ def _parse_table(
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table")
     if not isinstance(table, Tag):
+        # _html lets a page of the site's own with no table through: that is a table
+        # number that does not exist (a page without the site's markers never gets here).
         _raise(
             NotFound,
             "nrcan_energy_use: the page has no data table.",
@@ -383,7 +455,9 @@ async def get_table(table_key: str, lang: str = "en") -> EnergyTable:
     key = _validated_key(table_key, lang)
     root = constants.FR_ROOT if lang == "fr" else constants.EN_ROOT
     url = f"{root}showTable.cfm?{key}"
-    html, cached = await _html(url, constants.CACHE_TTL_TABLE_SECONDS, lang)
+    html, cached = await _html(
+        url, constants.CACHE_TTL_TABLE_SECONDS, lang, expect=_has_table, site_page_is_answer=True
+    )
     title, header_rows, rows, notes = _parse_table(html, lang)
     return EnergyTable(
         table_key=key,

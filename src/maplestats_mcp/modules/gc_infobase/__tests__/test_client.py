@@ -159,3 +159,31 @@ async def test_query_validates_inputs(httpx_mock):
     httpx_mock.add_response(url=_PACKAGE_SHOW, json=_PACKAGE)
     with pytest.raises(NotFound):
         await client.query("missing")
+
+
+_FR_DOWNLOAD = _DOWNLOAD.replace("_en", "_fr")  # the URL _PACKAGE gives r-fr
+_FR_CSV = (
+    "﻿"
+    '"fy_ef","org_id","org_name","voted_or_statutory","description","authorities","expenditures"\n'
+    '"2023-24",15,"Santé Canada",1,"Fonctionnement",1000.00,900.00\n'
+    '"2023-24",46,"Agence du revenu du Canada",1,"Fonctionnement",5000.00,4900.00\n'
+).encode()
+
+
+async def test_organization_filter_ignores_accents_and_case(httpx_mock):
+    # "Sante Canada" found no row of "Santé Canada" and answered matching_rows=0 as a success.
+    httpx_mock.add_response(url=_PACKAGE_SHOW, json=_PACKAGE)
+    httpx_mock.add_response(url=_FR_DOWNLOAD, content=_FR_CSV)
+    plain = await client.query("r-fr", organization="SANTE canada", lang="fr")
+    assert plain.matching_rows == 1
+    assert plain.rows[0]["org_name"] == "Santé Canada"
+    accented = await client.query("r-fr", organization="santé", lang="fr")
+    assert accented.matching_rows == 1
+
+
+async def test_list_files_query_ignores_accents(httpx_mock):
+    httpx_mock.add_response(url=_PACKAGE_SHOW, json=_PACKAGE)
+    found = await client.list_files("DEPENSES par credit", lang="fr")
+    assert [f.resource_id for f in found.files] == ["r-fr"]
+    accented = await client.list_files("dépenses", lang="fr")
+    assert [f.resource_id for f in accented.files] == ["r-fr"]

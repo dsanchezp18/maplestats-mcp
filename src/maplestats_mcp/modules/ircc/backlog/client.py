@@ -209,7 +209,7 @@ async def _download(lang: str) -> str:
     return response.content.decode("utf-8", errors="replace")
 
 
-def _parse_bound(value: str | None, name: str) -> date | None:
+def _parse_bound(value: str | None, name: str, lang: str = "en") -> date | None:
     """'2024-06' or '2024-06-15' -> the first day of that month."""
     if value is None:
         return None
@@ -219,10 +219,16 @@ def _parse_bound(value: str | None, name: str) -> date | None:
     try:
         return date.fromisoformat(text).replace(day=1)
     except ValueError:
-        raise InvalidInput(f"{name} must be a month like 2024-06, got {value!r}.") from None
+        pass
+    raise_localized(
+        InvalidInput,
+        f"{name} must be a month like 2024-06, got {value!r}.",
+        f"{name} doit être un mois comme 2024-06, reçu {value!r}.",
+        lang,
+    )
 
 
-def _program_ids(program: str | None) -> list[str]:
+def _program_ids(program: str | None, lang: str = "en") -> list[str]:
     ids = [p[0] for p in constants.PROGRAMS]
     if program is None:
         return ids
@@ -234,8 +240,16 @@ def _program_ids(program: str | None) -> list[str]:
         if folded in _fold(f"{p[1]} {p[2]} {p[0].replace('_', ' ')}")
     ]
     if len(matches) != 1:
-        kind = "matches several programs" if matches else "matches no program"
-        raise InvalidInput(f"program {program!r} {kind}; use one of: {', '.join(ids)}.")
+        kind_en = "matches several programs" if matches else "matches no program"
+        kind_fr = (
+            "correspond à plusieurs programmes" if matches else "ne correspond à aucun programme"
+        )
+        raise_localized(
+            InvalidInput,
+            f"program {program!r} {kind_en}; use one of: {', '.join(ids)}.",
+            f"program {program!r} {kind_fr} ; utilisez l'un de : {', '.join(ids)}.",
+            lang,
+        )
     return matches
 
 
@@ -245,9 +259,9 @@ async def get_backlog(
     until: str | None = None,
     lang: str = "en",
 ) -> BacklogResult:
-    ids = _program_ids(program)
-    start = _parse_bound(since, "since")
-    end = _parse_bound(until, "until")
+    ids = _program_ids(program, lang)
+    start = _parse_bound(since, "since", lang)
+    end = _parse_bound(until, "until", lang)
 
     async def fetch() -> dict[str, list[BacklogRow]]:
         return parse_page(await _download(lang), lang)

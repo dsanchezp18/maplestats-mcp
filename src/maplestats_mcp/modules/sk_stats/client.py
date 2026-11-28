@@ -271,11 +271,38 @@ async def _find(format_id: int, lang: Lang) -> FileEntry:
     )
 
 
-async def _download(url: str, lang: Lang) -> tuple[bytes, bool]:
-    async def fetch() -> bytes:
-        return (await _get(url, constants.MAX_FILE_BYTES, lang)).content
+def _workbook_format(body: bytes, url: str, lang: Lang) -> tables.FileFormat:
+    try:
+        fmt = tables.detect_format(body, None)
+    except UpstreamError as exc:
+        _fail(
+            UpstreamError,
+            f"{url}: {exc}",
+            f"{url} n'est pas un classeur Excel lisible ({exc})",
+            lang,
+        )
+    if fmt == "csv":
+        _fail(
+            UpstreamError,
+            f"{url} did not return an Excel workbook.",
+            f"{url} n'a pas renvoyé de classeur Excel.",
+            lang,
+        )
+    return fmt
 
-    return await cached_fetch(f"sk_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch)
+
+async def _download(url: str, lang: Lang) -> tuple[bytes, tables.FileFormat, bool]:
+    async def fetch() -> tuple[bytes, tables.FileFormat]:
+        body = (await _get(url, constants.MAX_FILE_BYTES, lang)).content
+        # Sniffed before it is cached: a web page in place of the file (an outage
+        # or error page served with HTTP 200) was stored, then rejected on every
+        # call for the whole cache window, after the site had recovered.
+        return body, _workbook_format(body, url, lang)
+
+    (body, fmt), cached = await cached_fetch(
+        f"sk_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch
+    )
+    return body, fmt, cached
 
 
 async def read_file(
@@ -315,23 +342,7 @@ async def read_file(
             f"seuls les fichiers Excel sont lus. Son lien : {entry.url}",
             lang,
         )
-    body, cached = await _download(entry.url, lang)
-    try:
-        fmt = tables.detect_format(body, None)
-    except UpstreamError as exc:
-        _fail(
-            UpstreamError,
-            f"{entry.url}: {exc}",
-            f"{entry.url} n'est pas un classeur Excel lisible ({exc})",
-            lang,
-        )
-    if fmt == "csv":
-        _fail(
-            UpstreamError,
-            f"{entry.url} did not return an Excel workbook.",
-            f"{entry.url} n'a pas renvoyé de classeur Excel.",
-            lang,
-        )
+    body, fmt, cached = await _download(entry.url, lang)
     sizes = await run_parse(tables.sheet_sizes, body, fmt)
     if not sizes:
         _fail(

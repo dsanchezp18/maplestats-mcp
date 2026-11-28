@@ -120,7 +120,16 @@ async def _raise_if_unknown(year: str, service: str, layer_id: int) -> None:
     real outage, so check the service and layer listings before blaming the
     caller. If the listings fail too, the caller keeps the original error.
     """
-    services = await list_services(year)
+    call_lang = current_lang()
+    try:
+        services = await list_services(year)
+    finally:
+        # list_services starts with use_lang(None), which resets the call's
+        # language to English. Left alone, a lang='fr' call got the NotFound
+        # below in English whenever a 500 sent it through here. Restored even
+        # when the listing itself fails, so the reset cannot leak into what
+        # the caller does after this check.
+        use_lang(call_lang)
     if service not in {s.name.rsplit("/", 1)[-1] for s in services.services}:
         raise NotFound(
             say(
@@ -183,6 +192,22 @@ async def get_layer_detail(year: str, service: str, layer_id: int) -> GeoLayerDe
             schema_name="statcan_geo.GeoLayerDetail",
             lang=current_lang(),
         ),
+    )
+
+
+def _exceeded_transfer_limit(body: dict) -> bool:
+    """Whether the layer had more features than this page returned.
+
+    These queries ask for f=geojson, and an ArcGIS server then puts the flag
+    under a top-level "properties" object instead of at the root of the body
+    (recorded live from Alberta Wildfire's FeatureServer, see
+    ab_wildfire/__tests__/test_client.py). Reading only the root made a full
+    page look like the last one, so a caller never paged on. The f=json
+    position is kept for a server that still sends it there.
+    """
+    properties = body.get("properties")
+    return bool(body.get("exceededTransferLimit")) or (
+        isinstance(properties, dict) and bool(properties.get("exceededTransferLimit"))
     )
 
 
@@ -268,7 +293,7 @@ async def query_layer_features(
         GeoFeature(attributes=f.get("properties", {}), geometry=f.get("geometry"))
         for f in list_or_empty(body, "features")
     ]
-    exceeded = bool(body.get("exceededTransferLimit"))
+    exceeded = _exceeded_transfer_limit(body)
     return GeoQueryResult(
         year=year,
         service=service,
@@ -681,7 +706,7 @@ async def query_spatial_layer(
         GeoFeature(attributes=f.get("properties", {}), geometry=f.get("geometry"))
         for f in list_or_empty(body, "features")
     ]
-    exceeded = bool(body.get("exceededTransferLimit"))
+    exceeded = _exceeded_transfer_limit(body)
     return GeoSpatialQueryResult(
         dataset=dataset,
         layer_id=layer_id,

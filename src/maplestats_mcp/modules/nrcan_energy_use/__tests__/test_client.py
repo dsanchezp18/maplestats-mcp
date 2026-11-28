@@ -95,14 +95,44 @@ async def test_get_table_parses_headers_rows_and_notes_in_french(httpx_mock):
     assert table.notes[-1] == "Source:2019 Survey of Household Energy Use"
 
 
-async def test_get_table_rejects_foreign_keys_and_missing_table(httpx_mock):
+async def test_get_table_rejects_foreign_keys(httpx_mock):
     with pytest.raises(InvalidInput):
         await client.get_table("type=SH&rn=1&url=http://evil")
     with pytest.raises(InvalidInput):
         await client.get_table("type=SH&rn=1/../x")
-    httpx_mock.add_response(text="<html><body>no table</body></html>")
-    with pytest.raises(NotFound):
-        await client.get_table("type=SH&rn=999")
+
+
+_ERROR_PAGE = "<html><body><h1>Maintenance</h1><a href='/home.cfm'>Home</a></body></html>"
+
+# A normal page of the site (its WET main heading and a link into the database's own
+# section, as on the recorded live pages) that holds no table or table links: what
+# the site very likely answers for a table or menu that does not exist.
+_SITE_PAGE_NO_TABLE = (
+    '<html><body><nav id="wb-bc"><a href="/corporate/statistics/neud/dpa/home.cfm">Home</a>'
+    '</nav><h1 id="wb-cont">National Energy Use Database</h1><p>No data.</p></body></html>'
+)
+
+
+async def test_get_table_that_does_not_exist_is_not_found(httpx_mock):
+    # The site's own page with no table is a table that does not exist, not an outage.
+    key = "type=SH&sector=aaa&juris=ca&year=2035&rn=999&page=1"
+    httpx_mock.add_response(url=f"{constants.EN_ROOT}showTable.cfm?{key}", text=_SITE_PAGE_NO_TABLE)
+    with pytest.raises(NotFound, match="no data table"):
+        await client.get_table(key)
+
+
+async def test_get_table_error_page_is_unavailable_and_not_cached(httpx_mock):
+    # A 200 page with no table used to be cached for 24 h and reported as NotFound
+    # ("the page has no data table") on every call until then.
+    key = "type=SH&sector=aaa&juris=ca&year=2019&rn=1&page=1"
+    url = f"{constants.EN_ROOT}showTable.cfm?{key}"
+    httpx_mock.add_response(url=url, text=_ERROR_PAGE)
+    httpx_mock.add_response(url=url, text=_TABLE)
+    with pytest.raises(UpstreamUnavailable, match="not the expected content"):
+        await client.get_table(key)
+    table = await client.get_table(key)
+    assert table.rows[0][0] == "Number of households"
+    assert len(httpx_mock.get_requests()) == 2
 
 
 # oee.nrcan.gc.ca refused or timed out every connection from here on 2026-10-03
@@ -154,15 +184,44 @@ async def test_connection_failures_become_upstream_unavailable(httpx_mock):
     assert "not loaded" in (products.provenance.limits or "")
 
 
-async def test_menu_page_without_table_links_is_not_found(httpx_mock):
+async def test_menu_page_without_table_links_is_unavailable_and_not_cached(httpx_mock):
     # A maintenance or redesigned page answers 200 with no showTable.cfm links; an
-    # empty TableList would read as "this survey has no tables".
-    httpx_mock.add_response(
-        url=_MENU_URL,
-        text='<html><body><h1>Maintenance</h1><a href="/home.cfm">Home</a></body></html>',
-    )
+    # empty TableList would read as "this survey has no tables", and the page used to
+    # be kept for seven days (and reported as NotFound until then).
+    httpx_mock.add_response(url=_MENU_URL, text=_ERROR_PAGE)
+    httpx_mock.add_response(url=_MENU_URL, text=_MENU)
+    with pytest.raises(UpstreamUnavailable, match="not the expected content"):
+        await client.list_tables("sheu_2019")
+    result = await client.list_tables("sheu_2019")
+    assert [t.table_number for t in result.tables] == ["Table 1.1a"]
+    assert len(httpx_mock.get_requests()) == 2
+
+
+async def test_menu_page_of_the_site_without_table_links_is_not_found(httpx_mock):
+    # A site page with no showTable.cfm links is a menu with no tables, as before.
+    httpx_mock.add_response(url=_MENU_URL, text=_SITE_PAGE_NO_TABLE)
     with pytest.raises(NotFound, match="No tables listed"):
         await client.list_tables("sheu_2019")
+
+
+async def test_list_page_without_menus_is_unavailable_even_on_a_site_page(httpx_mock):
+    # The list page exists to list the menus, so one with none is not "no such menu".
+    url = constants.EN_ROOT + constants.COMPREHENSIVE_LIST
+    httpx_mock.add_response(url=url, text=_SITE_PAGE_NO_TABLE)
+    result = await client.list_products()
+    assert result.comprehensive == []
+    assert "not loaded" in (result.provenance.limits or "")
+
+
+async def test_product_menu_error_page_leaves_the_menus_out_and_is_not_cached(httpx_mock):
+    url = constants.EN_ROOT + constants.COMPREHENSIVE_LIST
+    httpx_mock.add_response(url=url, text=_ERROR_PAGE)
+    httpx_mock.add_response(url=url, text=_LIST)
+    down = await client.list_products()
+    assert down.comprehensive == []
+    assert "not loaded" in (down.provenance.limits or "")
+    up = await client.list_products()
+    assert len(up.comprehensive) == 2
 
 
 async def test_get_table_normalises_key_order_and_serves_repeat_from_cache(httpx_mock):

@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from maplestats_mcp.modules.nwt_stats import client, constants
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _HERE = Path(__file__).parent
 _CENSUS = "https://www.statsnwt.ca/en/Canadian-Census"
@@ -100,6 +100,54 @@ async def test_search_skips_a_failing_page_and_says_so(httpx_mock):
     assert "Mother Tongue (2 Excel Tables)" in [f.title for f in result.files]
     assert {f.topic for f in result.files} == {"census"}
     assert result.provenance.limits and "did not answer" in result.provenance.limits
+
+
+# Drupal's maintenance page keeps the site name in its title, so the title says
+# nothing; its body has no node class and no article.
+_MAINTENANCE = (
+    "<!DOCTYPE html><html><head><title>Site under maintenance | NWT Bureau of Statistics"
+    '</title></head><body class="maintenance-page in-maintenance"><main><h1>Site under '
+    "maintenance</h1><p>We will be back shortly.</p></main></body></html>"
+)
+
+
+async def test_an_error_page_served_with_200_is_not_cached_as_an_empty_topic(httpx_mock):
+    httpx_mock.add_response(url=_GDP_PAGE, text=_MAINTENANCE)
+    with pytest.raises(UpstreamError, match="did not return a topic page"):
+        await client.list_files(topic="gdp")
+    # The site recovers: the page is read again, not served from the cache.
+    httpx_mock.add_response(url=_GDP_PAGE, text=_text("gdp.html"))
+    result = await client.list_files(topic="gdp")
+    assert result.total_files > 0
+
+
+async def test_a_topic_page_error_is_in_french_with_lang_fr(httpx_mock):
+    httpx_mock.add_response(url=_GDP_PAGE, text=_MAINTENANCE)
+    with pytest.raises(UpstreamError, match="n'a pas renvoyé de page thématique"):
+        await client.list_files(topic="gdp", lang="fr")
+
+
+async def test_search_names_a_topic_whose_page_is_not_a_topic_page(httpx_mock):
+    for topic, (path, _, _) in constants.TOPICS.items():
+        url = constants.SITE + path
+        if topic == "census":
+            httpx_mock.add_response(url=url, text=_text("census.html"))
+        else:
+            httpx_mock.add_response(url=url, text=_MAINTENANCE, is_reusable=True)
+    result = await client.search_files("mother tongue")
+    assert {f.topic for f in result.files} == {"census"}
+    limits = result.provenance.limits or ""
+    assert "did not answer" in limits and "gdp" in limits and "census" not in limits
+
+
+async def test_a_web_page_instead_of_a_file_is_not_cached(httpx_mock):
+    httpx_mock.add_response(url=_GDP, text=_MAINTENANCE)
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.read_file(_GDP)
+    # The portal recovers: the file is downloaded again, not the cached page.
+    httpx_mock.add_response(url=_GDP, content=_bytes("gdp_by_industry.xlsx"))
+    data = await client.read_file(_GDP, contains="All industries", limit=1)
+    assert data.rows[0]["column_1"] == "All industries (NAICS 2017)"
 
 
 async def test_unknown_topic_and_empty_query_are_refused():

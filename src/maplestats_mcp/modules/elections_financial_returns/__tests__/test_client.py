@@ -150,6 +150,62 @@ async def test_search_candidates_truncates_and_sets_coverage(httpx_mock, monkeyp
     assert not second.has_more
 
 
+# The fixture's list plus one entry that is not "Last, First / Party / District" (only the
+# three-part form was confirmed live, so it is not read as a candidate).
+_ODD_ENTRY = '<option value="59001">Moreau, Jean / Cardigan</option>\n'
+_CANDIDATES_WITH_ODD_ENTRY = _CANDIDATES_HTML.replace(
+    "</select>\n</body>", f"{_ODD_ENTRY}</select>\n</body>"
+)
+
+
+async def test_search_candidates_says_how_many_entries_it_could_not_read(httpx_mock):
+    # The entry was skipped with nothing said, though total_found still counted it.
+    _mock_events(httpx_mock)
+    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
+    httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_WITH_ODD_ENTRY)
+    result = await client.search_candidates("62")
+    assert [c.client_id for c in result.candidates] == ["56932", "58701"]
+    note = result.provenance.coverage or ""
+    assert "(portal entries: 1)" in note
+    assert "59001: Moreau, Jean / Cardigan" in note
+
+
+def test_the_note_on_unread_entries_is_french_and_keeps_the_portals_text():
+    odd = [FilterOption(id=str(n), label=f"Entry {n} / Somewhere") for n in range(1, 6)]
+    note = client._unparsed_note(odd, "fr") or ""
+    assert "(entrées du portail\xa0: 5)\xa0:" in note
+    assert "1: Entry 1 / Somewhere; 2: Entry 2 / Somewhere; 3: Entry 3 / Somewhere; ..." in note
+    assert client._unparsed_note([], "fr") is None
+
+
+def test_the_note_on_unread_entries_cuts_each_label_to_about_100_characters():
+    # The label is the portal's text, whatever its length; the note carries a short piece.
+    long = [FilterOption(id="1", label="Moreau, Jean / " + "x" * 300)]
+    note = client._unparsed_note(long, "en") or ""
+    assert "x" * 85 + "..." in note
+    assert "x" * 86 not in note
+    short = [FilterOption(id="2", label="Moreau, Jean / Cardigan")]
+    assert "2: Moreau, Jean / Cardigan;" in (client._unparsed_note(short, "en") or "")
+
+
+async def test_search_candidates_reports_nothing_when_every_entry_reads(httpx_mock):
+    _mock_events(httpx_mock)
+    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
+    httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_HTML)
+    result = await client.search_candidates("62")
+    assert result.provenance.coverage is None
+
+
+async def test_a_candidate_entry_it_cannot_read_still_ran_in_the_election(httpx_mock):
+    # get_financial_return_part checks the client id against the election's candidates, and
+    # an entry left out of the parsed list answered "did not run in election".
+    httpx_mock.add_response(url=_SEARCH_URL, html="<html></html>")
+    httpx_mock.add_response(url=_SEARCH_URL, method="POST", html=_CANDIDATES_WITH_ODD_ENTRY)
+    await client._check_candidate_in_election("59001", "62", "C76", "1", "en")
+    with pytest.raises(NotFound, match="did not run"):
+        await client._check_candidate_in_election("59999", "62", "C76", "1", "en")
+
+
 async def test_search_candidates_unknown_election_is_not_found(httpx_mock):
     _mock_events(httpx_mock)
     with pytest.raises(NotFound, match="9999"):

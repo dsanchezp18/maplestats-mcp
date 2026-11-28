@@ -271,6 +271,25 @@ def check_file_url(url: str, lang: str = "en") -> None:
         )
 
 
+def _require_xlsx(body: bytes, url: str, lang: str) -> None:
+    """Refuse a body that is not an Excel workbook; every .xlsx is a zip archive ("PK")."""
+    if body.startswith(b"PK"):
+        return
+    if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
+        raise_localized(
+            UpstreamError,
+            f"bc_stats: {url} returned a web page, not an Excel file.",
+            f"bc_stats : {url} a renvoyé une page Web, pas un fichier Excel.",
+            lang,
+        )
+    raise_localized(
+        UpstreamError,
+        f"bc_stats: {url} did not return an Excel (.xlsx) file.",
+        f"bc_stats : {url} n'a pas renvoyé de fichier Excel (.xlsx).",
+        lang,
+    )
+
+
 async def _body(url: str, size_hint: int | None, lang: str = "en") -> tuple[bytes, bool]:
     if size_hint and size_hint > constants.MAX_FILE_BYTES:
         raise_localized(
@@ -286,7 +305,7 @@ async def _body(url: str, size_hint: int | None, lang: str = "en") -> tuple[byte
     async def fetch() -> file_download.Downloaded:
         # Streamed under the cap: a declared Content-Length above it is refused
         # before the body is read, an undeclared one stops at the cap.
-        return await file_download.download(
+        downloaded = await file_download.download(
             url,
             allow_host=lambda host: host == constants.DOMAIN,
             limiter_for=lambda _host: _LIMITER,
@@ -294,21 +313,23 @@ async def _body(url: str, size_hint: int | None, lang: str = "en") -> tuple[byte
             context="bc_stats",
             timeout=180.0,
         )
+        # Checked here, inside the function the cache calls, so a body of the wrong
+        # kind is never stored: an error page answered with HTTP 200 used to sit in
+        # the shared byte cache for six hours (under the key other modules read this
+        # URL with) and be reported as NotFound on every call until it expired.
+        _require_xlsx(downloaded.body, url, lang)
+        return downloaded
 
     # The same key ckan_read_resource (portal "bc") uses for this URL, so one
     # copy of the file sits in the shared byte budget.
     downloaded, cached = await file_download.cached_download(
         file_download.cache_key(url), constants.CACHE_TTL_FILE_SECONDS, fetch
     )
-    body = downloaded.body
-    if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
-        raise_localized(
-            NotFound,
-            f"bc_stats: {url} returned a web page, not an Excel file.",
-            f"bc_stats : {url} a renvoyé une page Web, pas un fichier Excel.",
-            lang,
-        )
-    return body, cached
+    # Checked again on what the cache returns: that key is shared, and another
+    # reader of this URL (ckan_read_resource) stores whatever it downloaded, with no
+    # check that it is a workbook.
+    _require_xlsx(downloaded.body, url, lang)
+    return downloaded.body, cached
 
 
 async def _sheets(url: str, body: bytes, lang: str = "en") -> list[SheetInfo]:

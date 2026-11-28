@@ -153,6 +153,53 @@ async def test_sea_landings_can_drop_totals_and_filter_by_group(httpx_mock):
     assert [r.species for r in result.rows] == ["Lobster"]
 
 
+# The same lobster figure for two provinces, the Atlantic sum and Canada: adding the
+# rows of all four counts it three times (the provinces, then each sum on top).
+SEA_REGIONS = (
+    "Year,Province,Species Group,Species,Quantity (kgs),Value (CAD)\r\n"
+    '2024,Nova Scotia,Shellfish,Lobster,"44,521,929","961,890,880"\r\n'
+    '2024,New Brunswick,Shellfish,Lobster,"20,000,000","500,000,000"\r\n'
+    '2024,Atlantic,Shellfish,Lobster,"64,521,929","1,461,890,880"\r\n'
+    '2024,Canada,Shellfish,Lobster,"70,000,000","1,500,000,000"\r\n'
+).encode("cp1252")
+
+
+async def test_include_totals_false_leaves_out_region_totals_too(httpx_mock):
+    _packages(httpx_mock)
+    httpx_mock.add_response(url=SEA_EN_URL, content=SEA_REGIONS)
+    everything = await client.get_landings(year=2024, species="lobster")
+    assert {r.region: r.is_total for r in everything.rows} == {
+        "Nova Scotia": False,
+        "New Brunswick": False,
+        "Atlantic": True,
+        "Canada": True,
+    }
+    detail = await client.get_landings(year=2024, species="lobster", include_totals=False)
+    assert [r.region for r in detail.rows] == ["Nova Scotia", "New Brunswick"]
+    assert detail.rows_matched == 2
+    # The result says what was left out, so an empty answer is not read as no landings.
+    assert "left out 2 total rows" in (detail.provenance.limits or "")
+    assert "left out" not in (everything.provenance.limits or "")
+
+
+def test_french_region_totals_are_flagged():
+    text = (
+        "Année,Province,Groupe d'espèces,Espèces,Quantité (kg),Valeur (CAD)\r\n"
+        "2024,Atlantique,Mollusques et crustacés,Homard,64521929,1461890880\r\n"
+        "2024,Canada,Mollusques et crustacés,Homard,70000000,1500000000\r\n"
+        "2024,Nouvelle-Écosse,Mollusques et crustacés,Homard,44521929,961890880\r\n"
+    )
+    rows, _ = client.parse_sea_csv(text)
+    assert [r["is_total"] for r in rows] == [True, True, False]
+
+
+async def test_freshwater_include_totals_false_leaves_out_canada(httpx_mock):
+    _packages(httpx_mock)
+    httpx_mock.add_response(url=FW_URL.format(year=2019), content=FW_2019)
+    result = await client.get_landings("freshwater", year=2019, include_totals=False)
+    assert [(r.region, r.species) for r in result.rows] == [("Manitoba", "Yellow Pickerel")]
+
+
 async def test_french_reads_the_french_file(httpx_mock):
     _packages(httpx_mock)
     httpx_mock.add_response(url=SEA_FR_URL, content=SEA_FR)

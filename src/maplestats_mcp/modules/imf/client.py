@@ -42,8 +42,10 @@ Requests are spaced and cached; `get_raw` retries a 429 or 5xx up to three times
 
 from __future__ import annotations
 
+import math
 import re
 import unicodedata
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any, NoReturn
 
@@ -645,9 +647,14 @@ def _parse_data(content: bytes, dims: list[sdmx.Dim]) -> _Parsed:
             if not period or raw in (None, ""):
                 continue
             try:
-                observations.append((period, float(raw), obs.get("OBS_STATUS") or None))
+                value = float(raw)
             except ValueError:
                 continue
+            # float() accepts "NaN" and "inf": such a value is a missing observation. Kept,
+            # it would become the series' latest value (and a null in a float field).
+            if not math.isfinite(value):
+                continue
+            observations.append((period, value, obs.get("OBS_STATUS") or None))
         if not observations:
             continue
         observations.sort(key=lambda o: o[0])
@@ -801,8 +808,10 @@ async def get_data(
     total_rows = sum(len(s.observations) for s in fetched)
     if total_rows > constants.MAX_ROWS:
         keep = max(1, constants.MAX_ROWS // len(fetched))
-        for s in fetched:
-            del s.observations[:-keep]
+        # The series came from the cache, which hands every caller the same objects: cut
+        # copies, never the series themselves, or a repeat call would find them already
+        # short, see the rows under the cap and drop the note on the cut history.
+        fetched = [replace(s, observations=s.observations[-keep:]) for s in fetched]
         limits.append(
             pick(
                 lang,

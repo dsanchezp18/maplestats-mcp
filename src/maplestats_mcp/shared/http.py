@@ -139,6 +139,19 @@ def is_recording() -> bool:
 _track = upstream_wait.track
 
 
+def breaker_key(host: str, path: str) -> str:
+    """The breaker's key: the host, or host/group for a StatCan host whose paths fail apart.
+
+    www150 serves WDS, SDMX, CIMT, The Daily and the file downloads, and its paths time
+    out independently (checked live 2026-11-27: vectors, SDMX and CIMT timed out while
+    metadata, Daily and the indicators answered). One breaker for the host let the slow
+    paths pause the healthy ones, so each group gets its own. The groups are the fixed
+    ones in path_health.PATHS, never a caller's text.
+    """
+    group = path_health.path_key(host, path)
+    return f"{host}/{group}" if group else host
+
+
 class BreakerClient(httpx.AsyncClient):
     """An AsyncClient whose every request passes the host's circuit breaker.
 
@@ -151,21 +164,22 @@ class BreakerClient(httpx.AsyncClient):
 
     async def send(self, request: httpx.Request, *args: Any, **kwargs: Any) -> httpx.Response:
         host = request.url.host
-        probe = BREAKER.before_request(host)
+        key = breaker_key(host, request.url.path)
+        probe = BREAKER.before_request(key)
         _track(1)
         try:
             response = await super().send(request, *args, **kwargs)
         except httpx.TimeoutException:
             _track(-1)
-            BREAKER.record_failure(host, "timeout", probe=probe)
+            BREAKER.record_failure(key, "timeout", probe=probe)
             raise
         except (httpx.NetworkError, httpx.RemoteProtocolError):
             _track(-1)
-            BREAKER.record_failure(host, "network", probe=probe)
+            BREAKER.record_failure(key, "network", probe=probe)
             raise
         except BaseException:
             _track(-1)
-            BREAKER.release(host, probe=probe)
+            BREAKER.release(key, probe=probe)
             raise
         if kwargs.get("stream"):
             # A streamed body is read after send returns: the wait lasts until the
@@ -184,16 +198,16 @@ class BreakerClient(httpx.AsyncClient):
         else:
             _track(-1)
         if response.headers.get("cf-mitigated", "").lower() == "challenge":
-            BREAKER.record_failure(host, "cloudflare", probe=probe)
+            BREAKER.record_failure(key, "cloudflare", probe=probe)
             path_health.record_challenge(host, request.url.path)
         elif is_failure_status(response.status_code):
-            BREAKER.record_failure(host, "server_error", probe=probe)
+            BREAKER.record_failure(key, "server_error", probe=probe)
         elif response.status_code == 403:
             # Neither: Cloudflare's challenge without its header is only known
             # once the body is read (raise_if_cloudflare_challenge counts it).
-            BREAKER.release(host, probe=probe)
+            BREAKER.release(key, probe=probe)
         else:
-            BREAKER.record_success(host)
+            BREAKER.record_success(key)
             path_health.record_answer(host, request.url.path)
         return response
 
@@ -366,7 +380,10 @@ def raise_if_cloudflare_challenge(response: httpx.Response) -> None:
         host = response.request.url.host
         # BreakerClient counted the challenges that carry Cf-Mitigated already.
         if response.headers.get("cf-mitigated", "").lower() != "challenge":
-            BREAKER.record_failure(host, "cloudflare")
+            BREAKER.record_failure(
+                breaker_key(host, response.request.url.path),
+                "cloudflare",
+            )
         path_health.record_challenge(host, response.request.url.path)
         # The publisher's own context and the closest route still open, when known.
         note = challenge_notes.note_for(host, response.request.url.path)

@@ -34,7 +34,7 @@ from maplestats_mcp.shared.executor import check_deadline, run_parse
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.licences import licence_for
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.xlsx_sheets import open_workbook
+from maplestats_mcp.shared.xlsx_sheets import fix_dimensions, open_workbook
 
 Lang = Literal["en", "fr"]
 Geography = Literal["ontario", "region", "census_division", "public_health_unit", "mccss_region"]
@@ -133,6 +133,10 @@ def parse_workbook(body: bytes, keep: Any = None) -> Sheet:
     workbook = open_workbook(body)
     try:
         sheet = workbook.worksheets[0]
+        # A sheet declared as just A1 yields one row, so the header is never found;
+        # an inflated declared size pads every row and runs into the parse deadline
+        # (xlsx_sheets.fix_dimensions, both writer bugs confirmed live).
+        fix_dimensions(sheet)
         result = Sheet()
         band_row: list[Any] = []
         header_at: int | None = None

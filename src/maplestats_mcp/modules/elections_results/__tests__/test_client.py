@@ -162,3 +162,88 @@ async def test_table_redirect_to_another_host_is_refused(httpx_mock):
     with pytest.raises(UpstreamError, match="evil.example"):
         await client.get_table(45, "candidates")
     assert [r.url.host for r in httpx_mock.get_requests()] == ["www.elections.ca"]
+
+
+# Rows in the shape of candidates_45.csv for provinces its first rows do not reach.
+_ELSEWHERE = (
+    '"Alberta/Alberta","Calgary Centre","48001","Ann Smith Liberal/Libéral",'
+    '"Calgary, Alta./Alb.","Teacher/Enseignant",100,50,10,5\r\n'
+    '"Ontario/Ontario","Ajax","35001","Raj Patel Conservative/Conservateur",'
+    '"Ajax, Ont.","Lawyer/Avocat",100,50,10,5\r\n'
+    '"Yukon/Yukon","Yukon","60001","Dana Fox NDP-New Democratic Party/NPD-Nouveau Parti '
+    'démocratique","Whitehorse, Y.T./Yn","Nurse/Infirmier",100,50,10,5\r\n'
+    '"Northwest Territories/Territoires du Nord-Ouest","Northwest Territories","61001",'
+    '"Lee Wong Liberal/Libéral","Yellowknife, N.W.T./T.N.-O.","Pilot/Pilote",100,50,10,5\r\n'
+)
+
+
+async def test_province_filter_takes_codes_and_whole_names(httpx_mock):
+    # province="AB" used to be a substring of "Labrador" and returned Newfoundland and
+    # Labrador; "ON" matched Yukon, "NT" matched Ontario, and "NL" and "YT" matched nothing.
+    httpx_mock.add_response(
+        url=_url(45, 12), content=_bytes("candidates_45.csv") + _ELSEWHERE.encode()
+    )
+
+    async def provinces(given: str) -> set[str]:
+        result = await client.get_table(45, "candidates", province=given)
+        return {r["Province"].split("/")[0] for r in result.rows}
+
+    nl = "Newfoundland and Labrador"
+    assert await provinces("AB") == {"Alberta"}
+    assert await provinces("ON") == {"Ontario"}
+    assert await provinces("NT") == {"Northwest Territories"}
+    assert await provinces("NL") == {nl}
+    assert await provinces("yt") == {"Yukon"}
+    assert await provinces("48") == {"Alberta"}
+    assert await provinces("10") == {nl}
+    assert await provinces("Terre-Neuve-et-Labrador") == {nl}
+    assert await provinces("Territoires du Nord-Ouest") == {"Northwest Territories"}
+    assert await provinces("Alberta") == {"Alberta"}
+
+
+# Candidates whose surnames are words of a party's name, in a province the fixture lacks.
+_LOOKALIKES = (
+    '"Alberta/Alberta","Calgary Centre","48001","Gail Greenwood Liberal/Libéral",'
+    '"Calgary, Alta./Alb.","Teacher/Enseignant",100,50,10,5\r\n'
+    '"Alberta/Alberta","Calgary Centre","48001","Tim Green Liberal/Libéral",'
+    '"Calgary, Alta./Alb.","Teacher/Enseignant",100,50,10,5\r\n'
+)
+
+
+async def test_party_filter_reads_the_party_not_the_candidates_name(httpx_mock):
+    # The candidate cell holds the name and the party ("Tim Green Liberal/Libéral"), so a
+    # party="Green" filter on the whole cell also returned every Green, Greene and
+    # Greenwood who ran for another party.
+    httpx_mock.add_response(
+        url=_url(45, 12), content=_bytes("candidates_45.csv") + _LOOKALIKES.encode()
+    )
+
+    async def names(given: str) -> list[str]:
+        result = await client.get_table(45, "candidates", party=given)
+        return [r["Candidate/Candidat"] for r in result.rows]
+
+    assert await names("Green") == ["Kaelem Tingate Green Party/Parti Vert"]
+    assert len(await names("Liberal")) == 5
+    assert len(await names("Libéral")) == 5
+    assert len(await names("Conservative")) == 3
+    # The French name of the party is searched too.
+    assert await names("Parti Vert") == ["Kaelem Tingate Green Party/Parti Vert"]
+
+
+async def test_party_filter_reads_the_elected_candidate_cell(httpx_mock):
+    greenwood = (
+        '"Alberta/Alberta","Calgary Centre",48001,100000,80000,200,50000,99,500,1,50500,63,'
+        '"Greenwood, Gail Liberal/Libéral"\r\n'
+    )
+    httpx_mock.add_response(
+        url=_url(45, 11), content=_bytes("district_45.csv") + greenwood.encode()
+    )
+    green = await client.get_table(45, "district_results", party="Green")
+    assert green.total_rows == 0
+    liberal = await client.get_table(45, "district_results", party="Liberal")
+    assert {r["Electoral District Name/Nom de circonscription"] for r in liberal.rows} == {
+        "Avalon",
+        "Cape Spear",
+        "Labrador",
+        "Calgary Centre",
+    }

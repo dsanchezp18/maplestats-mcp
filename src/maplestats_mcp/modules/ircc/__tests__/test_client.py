@@ -308,3 +308,22 @@ async def test_malformed_feed_is_typed_upstream_error(httpx_mock):
     httpx_mock.add_response(url=constants.BASE_URL_EN, text="not json")
     with pytest.raises(UpstreamError):
         await client.list_express_entry_rounds()
+
+
+async def test_an_empty_rounds_list_is_an_outage_not_a_success_and_is_not_cached(httpx_mock):
+    # An outage stub answering {"rounds": []} passed the shape check and was cached for
+    # six hours, so ircc_list_express_entry_rounds returned 0 rounds as a success.
+    httpx_mock.add_response(url=constants.BASE_URL_EN, json={"classes": "wb-tables", "rounds": []})
+    with pytest.raises(UpstreamError, match="no rounds"):
+        await client.list_express_entry_rounds()
+    # The failed fetch was not cached: the next call asks IRCC again and gets the real feed.
+    httpx_mock.add_response(url=constants.BASE_URL_EN, json=_EN_FEED)
+    result = await client.list_express_entry_rounds()
+    assert result.total_matching == len(_EN_FEED["rounds"])
+    assert len(httpx_mock.get_requests()) == 2
+
+
+async def test_an_empty_french_feed_is_reported_in_french(httpx_mock):
+    httpx_mock.add_response(url=constants.BASE_URL_FR, json={"rounds": []})
+    with pytest.raises(UpstreamError, match="aucune ronde"):
+        await client.get_latest_express_entry_round(lang="fr")

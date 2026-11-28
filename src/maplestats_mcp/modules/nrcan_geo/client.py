@@ -407,6 +407,23 @@ async def search_names(
         )
         for item in raw.get("items") or []
     ]
+    # The service sends no total (the live answer has only "links" and "items"), so a
+    # page as long as `num` is the only sign that places were left out.
+    full_page_note = None
+    if len(names) >= limit:
+        # At LIMIT_MAX there is no larger limit to offer, so the note only says to narrow.
+        can_raise = limit < constants.LIMIT_MAX
+        full_page_note = (
+            french_spacing(
+                f"Le service a renvoyé {len(names)} lieux, soit la limite demandée : il peut y en "
+                "avoir d'autres ; précisez la recherche (province, type d'entité, zone)"
+                + (f" ou augmentez limit (jusqu'à {constants.LIMIT_MAX})." if can_raise else ".")
+            )
+            if lang == "fr"
+            else f"The service returned {len(names)} places, the limit asked: more may exist; "
+            "narrow the search (province, feature type, area)"
+            + (f" or raise limit (up to {constants.LIMIT_MAX})." if can_raise else ".")
+        )
     return PlaceNameResult(
         names=names,
         returned_count=len(names),
@@ -415,7 +432,9 @@ async def search_names(
             url=url,
             cached=cached,
             schema_name="nrcan_geo.PlaceNameResult",
-            limits=join_limits(_FR_NAMES_NOTE if lang == "fr" else None, radius_note),
+            limits=join_limits(
+                _FR_NAMES_NOTE if lang == "fr" else None, radius_note, full_page_note
+            ),
             lang=lang,
         ),
     )

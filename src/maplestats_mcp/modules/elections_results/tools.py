@@ -56,8 +56,11 @@ async def elections_results_get_table(
     the general election number (45 = April 28, 2025, 44 = 2021, 43 = 2019,
     42 = 2015, 41 = 2011, 40 = 2008, 39 = 2006, 38 = 2004). `province`,
     `district` (name in either language, or riding number) and `party` are
-    accent-insensitive substring filters; a filter needs a matching column in
-    that table. Rows are text exactly as published, in English and French.
+    accent-insensitive substring filters; `province` also takes a code ("AB",
+    "48"), and in the candidates and district_results tables `party` reads the
+    party part of the cell, not the candidate's name (the whole cell for a
+    party with one candidate). A filter needs a matching column in that table.
+    Rows are text exactly as published, in English and French.
     Keywords: election results, riding, electoral district, candidate, votes,
     winner, elected, MP, party, Liberal, Conservative, NDP, Bloc, Green,
     seats, turnout, federal, Elections Canada.

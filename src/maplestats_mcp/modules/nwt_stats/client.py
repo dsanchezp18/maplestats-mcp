@@ -55,6 +55,12 @@ _GENERIC_LINK = re.compile(r"^(?:downloaded|download|here|click|excel|xlsx?|file
 # "( Excel )", "(Excel File)" after a title taken from the text around a link.
 _EXCEL_NOTE = re.compile(r"\s*\(\s*excel(?: file)?\s*\)", re.IGNORECASE)
 _HEADINGS = ("h2", "h3", "h4", "h5", "strong", "b")
+# What marks a real topic page: Drupal puts the class `path-node` on the <body> of
+# a node page and renders its content as <article class="node ...">. Both are in
+# the census and GDP pages saved in __tests__ (2026-10-26); a maintenance or error
+# page served with HTTP 200 has neither, and used to parse to no files.
+_NODE_BODY = re.compile(r'<body\b[^>]*\bclass="[^"]*(?<![\w-])path-node(?![\w-])', re.IGNORECASE)
+_NODE_ARTICLE = re.compile(r'<article\b[^>]*\bclass="[^"]*(?<![\w-])node(?![\w-])', re.IGNORECASE)
 # Characters kept as-is when a link is percent-encoded; '%' keeps an already
 # encoded link unchanged.
 _PATH_SAFE = "/%:@&=+$,;~-._!'()"
@@ -232,6 +238,19 @@ async def _page(url: str, lang: Lang = "en") -> tuple[str, bool]:
                 UpstreamUnavailable,
                 f"nwt_stats: {url} did not respond in time.",
                 f"nwt_stats : {url} n'a pas répondu à temps.",
+                lang,
+            )
+        # Checked inside the cached fetch so that a page that is not a topic page is
+        # never cached: it would parse to an empty list, and nwt_stats_list_files
+        # would report "no files" as a success for 6 hours (search would skip the
+        # topic without a word).
+        if not (_NODE_BODY.search(response.text) and _NODE_ARTICLE.search(response.text)):
+            raise_localized(
+                UpstreamError,
+                f"nwt_stats: {url} did not return a topic page (an error or maintenance page, "
+                "or the site's layout has changed); try again shortly.",
+                f"nwt_stats : {url} n'a pas renvoyé de page thématique (page d'erreur ou de "
+                "maintenance, ou mise en page du site modifiée) ; réessayez sous peu.",
                 lang,
             )
         return response.text
@@ -457,15 +476,32 @@ def _allowed(host: str) -> bool:
     return host.lower() in constants.HOSTS
 
 
-async def _download(url: str) -> tuple[file_download.Downloaded, bool]:
+def _workbook_format(body: bytes, url: str, lang: Lang) -> tables.FileFormat:
+    try:
+        return tables.detect_format(body, None)
+    except UpstreamError as exc:
+        raise_localized(
+            UpstreamError,
+            f"nwt_stats: {url}: {exc}",
+            f"nwt_stats : {url} n'est pas un classeur Excel lisible ({exc})",
+            lang,
+        )
+
+
+async def _download(url: str, lang: Lang = "en") -> tuple[file_download.Downloaded, bool]:
     async def fetch() -> file_download.Downloaded:
-        return await file_download.download(
+        downloaded = await file_download.download(
             url,
             allow_host=_allowed,
             limiter_for=lambda _host: _LIMITER,
             max_bytes=constants.MAX_FILE_BYTES,
             context="nwt_stats_read_file",
         )
+        # A web page in place of the file (an outage or error page served with 200)
+        # is refused before cached_download stores it: stored, it was rejected on
+        # every call for the whole cache window, after the site had recovered.
+        _workbook_format(downloaded.body, url, lang)
+        return downloaded
 
     return await file_download.cached_download(
         f"nwt_stats:file:{url}", constants.CACHE_TTL_FILE_SECONDS, fetch
@@ -527,17 +563,9 @@ async def read_file(
             f"nwt_stats_list_files) ; reçu {url!r}.",
             lang,
         )
-    downloaded, cached = await _download(url)
+    downloaded, cached = await _download(url, lang)
     body = downloaded.body
-    try:
-        fmt = tables.detect_format(body, None)
-    except UpstreamError as exc:
-        raise_localized(
-            UpstreamError,
-            f"nwt_stats: {url}: {exc}",
-            f"nwt_stats : {url} n'est pas un classeur Excel lisible ({exc})",
-            lang,
-        )
+    fmt = _workbook_format(body, url, lang)
     sizes = await run_parse(tables.sheet_sizes, body, fmt)
     if not sizes:
         raise_localized(

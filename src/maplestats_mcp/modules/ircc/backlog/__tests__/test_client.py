@@ -139,3 +139,16 @@ async def test_get_backlog_upstream_5xx_is_unavailable(httpx_mock) -> None:
     _mock(httpx_mock, "down", status=503)
     with pytest.raises(UpstreamUnavailable):
         await client.get_backlog()
+
+
+@pytest.mark.asyncio
+async def test_get_backlog_argument_errors_are_french_for_a_french_call() -> None:
+    # _parse_bound and _program_ids raised English-only messages whatever `lang` said.
+    with pytest.raises(InvalidInput, match="Entrée invalide.*since doit être un mois"):
+        await client.get_backlog(since="last year", lang="fr")
+    with pytest.raises(InvalidInput, match="Entrée invalide.*until doit être un mois"):
+        await client.get_backlog(until="2024-13", lang="fr")
+    with pytest.raises(InvalidInput, match="Entrée invalide.*correspond à plusieurs programmes"):
+        await client.get_backlog("permit", lang="fr")
+    with pytest.raises(InvalidInput, match="Entrée invalide.*ne correspond à aucun programme"):
+        await client.get_backlog("zzz", lang="fr")

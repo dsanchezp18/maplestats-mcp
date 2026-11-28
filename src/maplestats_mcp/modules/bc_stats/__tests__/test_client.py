@@ -224,16 +224,50 @@ async def test_unlisted_file_is_not_found(httpx_mock, catalogue):
         await client.read_file(url)
 
 
-async def test_html_page_and_http_404_are_not_found(httpx_mock, catalogue):
+async def test_html_page_is_an_upstream_error_and_not_cached(httpx_mock, catalogue):
+    # A 200 error page used to be kept in the shared file cache for six hours and
+    # then reported as NotFound ("returned a web page") on every call until then.
     url = _by_name("cpidata.xlsx")
     httpx_mock.add_response(url=url, content=b"<!DOCTYPE html><html>Error</html>")
-    with pytest.raises(NotFound, match="web page"):
+    httpx_mock.add_response(url=url, content=_bytes("cpidata.xlsx"))
+    with pytest.raises(UpstreamError, match="web page"):
         await client.read_file(url)
-    cache_module._caches.clear()
-    file_download.clear_cache()
+    data = await client.read_file(url)
+    assert data.sheets
+    assert len([r for r in httpx_mock.get_requests() if str(r.url) == url]) == 2
+
+
+async def test_body_that_is_not_an_xlsx_archive_is_not_cached(httpx_mock, catalogue):
+    # Not HTML either (a JSON or plain-text error); every .xlsx is a zip archive.
+    url = _by_name("cpidata.xlsx")
+    httpx_mock.add_response(url=url, content=b'{"error": "try again later"}')
+    httpx_mock.add_response(url=url, content=_bytes("cpidata.xlsx"))
+    with pytest.raises(UpstreamError, match="not return an Excel"):
+        await client.read_file(url)
+    assert (await client.read_file(url)).sheets
+
+
+async def test_a_bad_page_stored_by_another_reader_is_still_refused(httpx_mock, catalogue):
+    # ckan_read_resource (portal "bc") stores what it downloads under the same
+    # file_download.cache_key(url) and has no .xlsx check: a web page it stored must
+    # not reach the workbook reader as if it were the file.
+    url = _by_name("cpidata.xlsx")
+
+    async def another_reader() -> file_download.Downloaded:
+        return file_download.Downloaded(
+            body=b"<!DOCTYPE html><html>Error</html>", final_url=url, content_type="text/html"
+        )
+
+    await file_download.cached_download(file_download.cache_key(url), 3600, another_reader)
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.read_file(url)
+    # Nothing was requested for the file: the stored copy was what answered.
+    assert [r for r in httpx_mock.get_requests() if str(r.url) == url] == []
+
+
+async def test_http_404_is_not_found(httpx_mock, catalogue):
     other = _by_name("econ_bankruptcies_quarterly.xlsx")
     httpx_mock.add_response(url=other, status_code=404)
-    httpx_mock.add_response(url=_SEARCH, content=_bytes("package_search_bc_stats.json"))
     with pytest.raises(NotFound, match="no file"):
         await client.read_file(other)
 

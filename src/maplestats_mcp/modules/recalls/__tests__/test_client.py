@@ -296,11 +296,94 @@ async def test_french_query_plurals_stopwords_and_apostrophes(httpx_mock):
 
 
 def test_query_words():
-    assert client._query_words("Biscuits aux ARACHIDES") == ["biscuit", "arachide"]
-    assert client._query_words("E. coli") == ["coli"]
-    assert client._query_words("glass lens bus") == ["glass", "len", "bus"]
-    assert client._query_words("cheveux") == ["cheveu"]
-    assert client._query_words("de la") == ["de", "la"]
+    assert client._query_words("Biscuits aux ARACHIDES") == [("biscuit",), ("arachide",)]
+    assert client._query_words("E. coli") == [("coli",)]
+    assert client._query_words("glass lens bus") == [("glass",), ("len",), ("bus",)]
+    assert client._query_words("cheveux") == [("cheveu",)]
+    assert client._query_words("de la") == [("de",), ("la",)]
+
+
+def test_english_plurals_and_singulars_share_a_stem():
+    # Each word is looked for under every stem a notice might carry it as: "batteries" is
+    # "batterie" in the plural's own letters and "battery" in the singular's.
+    assert client._query_word("batteries") == ("batterie", "battery")
+    assert client._query_word("battery") == ("battery", "batterie")
+    assert client._query_word("candies") == ("candie", "candy")
+    assert client._query_word("boxes") == ("boxe", "box")
+    assert client._query_word("glasses") == ("glasse", "glass")
+    assert client._query_word("lenses") == ("lense", "lens")
+    assert client._query_word("batches") == ("batche", "batch")
+    assert client._query_word("watches") == ("watche", "watch")
+    assert client._query_word("benches") == ("benche", "bench")
+    assert client._query_word("churches") == ("churche", "church")
+    assert client._query_word("dishes") == ("dishe", "dish")
+    assert client._query_word("quizzes") == ("quizze", "quizz")
+    assert client._query_word("tomatoes") == ("tomatoe", "tomato")
+    # Plurals that only lose the s, and words with a vowel before the y, stay as before.
+    assert client._query_word("cookies") == ("cookie", "cooky")
+    assert client._query_word("cases") == ("case",)
+    assert client._query_word("shoes") == ("shoe",)
+    assert client._query_word("toys") == ("toy",)
+    assert client._query_word("toy") == ("toy",)
+
+
+def test_the_shorter_es_stem_is_not_offered_where_it_would_find_other_words():
+    # Singulars in -se and -che lose only the s: the stem without "es" is a piece of other
+    # words ("nurs" in nursing, "hous" in household, "purs" in pursuant, "caus" in caustic,
+    # "ach" in spinach).
+    for word, singular in (
+        ("nurses", "nurse"),
+        ("houses", "house"),
+        ("purses", "purse"),
+        ("causes", "cause"),
+        ("courses", "course"),
+        ("horses", "horse"),
+        ("aches", "ache"),
+    ):
+        assert client._query_word(word) == (singular,)
+
+
+async def test_search_does_not_cut_a_plural_into_a_piece_of_another_word(httpx_mock):
+    rows = [
+        _en("91001", "Nursing bottle warmer recalled", "Consumer product safety", "Household"),
+        _en("91002", "Nurse call button may fail", "Consumer product safety", "Household"),
+        _en("91003", "Spinach may contain Listeria", "CFIA", "Food"),
+        _en("91004", "Heat patch for aches recalled", "Consumer product safety", "Household"),
+    ]
+    _dump(httpx_mock, rows)
+
+    async def ids(query: str) -> set[int]:
+        return {r.recall_id for r in (await client.search(query, limit=50)).recalls}
+
+    # "nurses" was also cut to "nurs" (nursing) and "aches" to "ach" (spinach).
+    assert await ids("nurses") == {91002}
+    assert await ids("aches") == {91004}
+
+
+async def test_search_finds_the_singular_and_the_plural_of_english_words(httpx_mock):
+    # recalls_search("batteries") cut the word to "batterie" and missed every notice that
+    # says "battery", and "candies" and "boxes" were cut to "candie" and "boxe".
+    rows = [
+        _en("90001", "Power bank battery may overheat", "Consumer product safety", "Electronics"),
+        _en("90002", "Lithium batteries may overheat", "Consumer product safety", "Electronics"),
+        _en("90003", "Fruit candy recalled for undeclared milk", "CFIA", "Candy"),
+        _en("90004", "Gift boxes of chocolates recalled", "CFIA", "Food"),
+        _en("90005", "Gift box of chocolates recalled", "CFIA", "Food"),
+        _en("90006", "Oat cookies recalled", "CFIA", "Food"),
+        _en("90007", "Cooking oil may contain glass", "CFIA", "Food"),
+    ]
+    _dump(httpx_mock, rows)
+
+    async def ids(query: str) -> set[int]:
+        return {r.recall_id for r in (await client.search(query, limit=50)).recalls}
+
+    assert await ids("batteries") == {90001, 90002}
+    assert await ids("battery") == {90001, 90002}
+    assert await ids("candies") == {90003}
+    assert await ids("boxes") == {90004, 90005}
+    assert await ids("box") == {90004, 90005}
+    # "cookies" is not cut to "cook", which would also find the cooking oil.
+    assert await ids("cookies") == {90006}
 
 
 async def test_rows_without_a_numeric_id_are_counted(httpx_mock):

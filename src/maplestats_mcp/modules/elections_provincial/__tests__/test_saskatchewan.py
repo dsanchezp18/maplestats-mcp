@@ -8,9 +8,12 @@ of votes workbook, one with the source's 'Sasktoon' misspelling, polls cut to fo
 
 from __future__ import annotations
 
+import io
+import warnings
 from pathlib import Path
 
 import pytest
+from openpyxl import load_workbook
 
 from maplestats_mcp.modules.elections_provincial import client, constants, saskatchewan
 from maplestats_mcp.shared import cache as cache_module
@@ -90,6 +93,27 @@ def test_2011_workbook_sums_the_poll_rows_and_fixes_the_misspelled_sheet():
     assert athabasca.candidates[0].elected and athabasca.valid_votes == 131
 
 
+def test_2011_workbook_keeps_two_candidates_with_one_party_code():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)  # the workbook's print-area names
+        workbook = load_workbook(io.BytesIO(_bytes("sk_2011.xlsx")))
+    # One column per candidate, with the party code in row 5 under the name: giving the
+    # Green candidate the Saskatchewan Party's code makes two columns with one code, as
+    # two independents would have. The totals and names were keyed by code, so the two
+    # became one candidate with both columns' votes and the second one's name.
+    workbook["Athabasca"]["F5"] = "SP"
+    saved = io.BytesIO()
+    workbook.save(saved)
+    athabasca = saskatchewan.parse_xlsx(saved.getvalue())[0]
+    assert [(c.name, c.party_code, c.votes) for c in athabasca.candidates] == [
+        ("Buckley Belanger", "NDP", 71),
+        ("Bobby Woods", "SP", 49),
+        ("George A. Durocher", "SP", 11),
+    ]
+    assert athabasca.valid_votes == 131
+    assert [c.elected for c in athabasca.candidates] == [True, False, False]
+
+
 def test_unreadable_files_raise():
     with pytest.raises(UpstreamError, match="expected columns"):
         saskatchewan.parse_csv(b"a,b\n1,2\n")
@@ -120,3 +144,23 @@ async def test_2011_workbook_is_read_through_the_client(httpx_mock):
     result = await client.get_results("sk", "2011", party="sp")
     assert {r.district for r in result.rows} == {"Athabasca", "Saskatoon Nutana"}
     assert all(r.party_code == "SP" for r in result.rows)
+
+
+async def test_party_filter_matches_a_whole_code_not_a_piece_of_one(httpx_mock):
+    # The 2024 file has a Saskatchewan Progress Party column (SPP) beside the Saskatchewan
+    # Party's (SP); party="SP" used to be a piece of "SPP" and returned both candidates.
+    header = _bytes("sk_2024.csv").splitlines()[0]
+    row = (
+        b"1,ATHABASCA,1,ATH,1,Ben McIntyre School Gym,,54,0,0,9,0,0,8,3,0,0,,,"
+        b'"Laliberte, Leroy",,,"Lemaigre, Jim","Progress, Sam",\r\n'
+    )
+    httpx_mock.add_response(url=constants.SK_FILES["2024"], content=header + b"\r\n" + row)
+
+    async def codes(party: str) -> list[str | None]:
+        result = await client.get_results("sk", "2024", party=party)
+        return [r.party_code for r in result.rows]
+
+    assert await codes("SP") == ["SP"]
+    assert await codes("spp") == ["SPP"]
+    # A piece of a party's name still finds it.
+    assert await codes("progress") == ["SPP"]

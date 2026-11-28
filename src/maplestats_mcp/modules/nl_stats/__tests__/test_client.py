@@ -9,6 +9,8 @@ population_quarterly.xlsx and migration_quarterly.xls are the live files
 from __future__ import annotations
 
 import io
+import re
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
@@ -144,6 +146,44 @@ async def test_date_only_cells_read_as_dates_not_midnight_timestamps(httpx_mock)
     httpx_mock.add_response(url=_XLSX, content=out.getvalue())
     data = await client.read_file(_XLSX)
     assert [row[0] for row in data.rows[-2:]] == ["2026-01-01", "2026-02-01 08:30:00"]
+
+
+def _declared_a1(body: bytes) -> bytes:
+    """The same workbook with the sheet's <dimension> cut to A1, as one writer leaves it."""
+    out = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(body)) as source,
+        zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as target,
+    ):
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename == "xl/worksheets/sheet1.xml":
+                data = re.sub(rb'<dimension ref="[^"]*"', b'<dimension ref="A1"', data)
+            target.writestr(item, data)
+    return out.getvalue()
+
+
+async def test_sheet_declared_as_a1_is_still_read_whole(httpx_mock):
+    # Confirmed live on other agencies' workbooks (shared/xlsx_sheets.fix_dimensions):
+    # a sheet declaring its size as just A1 made openpyxl yield one row, which was
+    # reported as the whole sheet with no note.
+    workbook = Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    sheet.append(["Year", "Quarter", "Population"])
+    for year in range(2020, 2025):
+        sheet.append([year, 1, 500_000 + year])
+    out = io.BytesIO()
+    workbook.save(out)
+    declared = _declared_a1(out.getvalue())
+    assert b'<dimension ref="A1"' in zipfile.ZipFile(io.BytesIO(declared)).read(
+        "xl/worksheets/sheet1.xml"
+    )
+    httpx_mock.add_response(url=_XLSX, content=declared)
+    data = await client.read_file(_XLSX)
+    assert data.header == ["Year", "Quarter", "Population"]
+    assert data.total_rows == 5
+    assert data.rows[-1] == ["2024", "1", "502024"]
 
 
 async def test_unknown_sheet_and_paging(httpx_mock):

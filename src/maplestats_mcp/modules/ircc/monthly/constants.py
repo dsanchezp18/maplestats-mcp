@@ -37,6 +37,42 @@ MONTHS = {
     )
 }
 
+# Every spelling of a month the files or their French twins use, accents removed and
+# lower-cased (see client._fold): English and French names, with the abbreviations IRCC
+# uses ('Jan', 'sept.', 'févr.'). The EN_MONTH column is 'Jan'...'Dec' in every file
+# checked live 2026-09-25; the longer forms are accepted so a renamed export is still read
+# instead of being pooled into one row with no period.
+_MONTH_NAMES = (
+    ("jan", "january", "janv", "janvier"),
+    ("feb", "february", "fev", "fevr", "fevrier"),
+    ("mar", "march", "mars"),
+    ("apr", "april", "avr", "avril"),
+    ("may", "mai"),
+    ("jun", "june", "juin"),
+    ("jul", "july", "juil", "juillet"),
+    ("aug", "august", "aout"),
+    ("sep", "sept", "september", "septembre"),
+    ("oct", "october", "octobre"),
+    ("nov", "november", "novembre"),
+    ("dec", "december", "decembre"),
+)
+MONTH_LOOKUP = {name: i for i, names in enumerate(_MONTH_NAMES, start=1) for name in names}
+MONTH_ABBR_EN = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+MONTH_ABBR_FR = (
+    "janv.",
+    "févr.",
+    "mars",
+    "avr.",
+    "mai",
+    "juin",
+    "juil.",
+    "août",
+    "sept.",
+    "oct.",
+    "nov.",
+    "déc.",
+)
+
 ROUNDING_NOTE = (
     "IRCC rounds every count to a multiple of 5 and shows counts from 1 to 4 "
     "as '--' (suppressed); its files say 'not for calculations'. Sums of "

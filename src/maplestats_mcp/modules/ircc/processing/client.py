@@ -15,7 +15,7 @@ import json
 import re
 import unicodedata
 from datetime import UTC, date, datetime
-from typing import Any, NoReturn
+from typing import Any, NamedTuple, NoReturn
 
 import httpx
 
@@ -96,10 +96,33 @@ _QUALIFIERS: dict[str, Qualifier] = {
     "less than": "less_than",
     "moins de": "less_than",
 }
-_DURATION = re.compile(
-    r"(?:(?P<q>about|environ|more than|plus de|less than|moins de)\s+)?"
-    r"(?P<n>\d+(?:[.,]\d+)?)\s*(?P<u>[a-z]+)\b"
+_QUALIFIER_BEFORE = re.compile(r"(about|environ|more than|plus de|less than|moins de)[^a-z0-9]*$")
+# A number as IRCC writes it: "6", "1.5", "1,5" (French decimal comma) or "1,234" and
+# "10 000" (thousands groups of exactly three digits). The text is read before its
+# punctuation is folded away, which used to turn 1,234 into 234 and 1.5 into "1 5".
+_AMOUNT = re.compile(
+    r"(?<!part )(?<!partie )(?<!\d)(?P<whole>\d{1,3}(?:[, ]\d{3})+|\d+)(?:[.,](?P<decimal>\d+))?(?!\d)"
 )
+# The word after a number; "business"/"working"/"calendar" before it are skipped, so
+# "10 business days" reads like "10 jours ouvrables" (days, not converted to calendar days).
+_UNIT_AFTER = re.compile(r"\s*(?:(?:business|working|calendar)\s+)?([a-z]+)\b")
+# What can sit between two numbers of one duration: nothing, a comma or "and" ("1 year
+# 6 months"), or, between a range's bounds, "to", "a" (de 3 à 6), "through" or a dash.
+_JOINS = re.compile(r"(?:,?\s*(?:and|et))?,?")
+_RANGE_JOINS = re.compile(r"to|a|through|-|–|—")
+_RANGE_JOINS_BARE = re.compile(r"to|a|through|and|et|or|ou|-|–|—")
+_UNIT_ORDER: tuple[TimeUnit, ...] = ("minutes", "hours", "days", "weeks", "months", "years")
+
+
+class _Item(NamedTuple):
+    """A number in a time text: where it sits, its value, and the unit written after it."""
+
+    start: int
+    end: int
+    value: float
+    unit: TimeUnit | None
+
+
 _NUMBER = re.compile(r"\d[\d,\s  ]*")
 
 
@@ -110,6 +133,12 @@ def _fold(text: str) -> str:
     decomposed = unicodedata.normalize("NFKD", text)
     stripped = "".join(c for c in decomposed if not unicodedata.combining(c))
     return " ".join(re.sub(r"[^0-9a-z]+", " ", stripped.casefold()).split())
+
+
+def _plain(text: str) -> str:
+    """Lower case without accents, keeping punctuation (_fold drops it)."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
 
 
 def _clean(value: Any) -> str:
@@ -124,24 +153,69 @@ def parse_time(raw: Any) -> ProcessingTime:
         return ProcessingTime(text=text, status="no_time_available")
     if "not enough data" in folded or "pas assez de donnees" in folded:
         return ProcessingTime(text=text, status="not_enough_data")
-    # "Part 1: 4 months" (citizenship for adopted persons): the duration is the
-    # last number in the text, so the part number is skipped.
-    matches = list(_DURATION.finditer(folded.replace(" part ", " ")))
-    for match in reversed(matches):
-        unit = _UNITS.get(match.group("u"))
-        if unit is None:
-            continue
-        amount = float(match.group("n").replace(",", "."))
-        qualifier = _QUALIFIERS.get(match.group("q") or "")
-        return ProcessingTime(
-            text=text,
-            status="available",
-            amount=amount,
-            unit=unit,
-            qualifier=qualifier,
-            approx_days=round(amount * constants.DAYS_PER_UNIT[unit], 4),
-        )
-    return ProcessingTime(text=text, status="unparsed")
+    duration = _duration(_plain(text))
+    if duration is None:
+        return ProcessingTime(text=text, status="unparsed")
+    qualifier, amount, unit, days = duration
+    return ProcessingTime(
+        text=text,
+        status="available",
+        amount=amount,
+        unit=unit,
+        qualifier=_QUALIFIERS.get(qualifier),
+        approx_days=days,
+    )
+
+
+def _duration(plain: str) -> tuple[str, float, TimeUnit, float] | None:
+    """(qualifier text, amount, unit, days) of the duration a time text ends with.
+
+    Numbers with a unit are found first; the last one is the duration, so the part number
+    of "Part 1: 4 months" (citizenship for adopted persons) is skipped. A number joined to
+    it by "to", "-" or "and" is a range, and the range's upper bound is kept. A number with
+    a unit joined to it by nothing, a comma or "and", in falling unit order ("1 year 6
+    months"), is added to it: the amount is then in the finest unit named, and approx_days
+    is the sum. The sort by approx_days read a compound as its last pair ("6 months").
+    """
+    found: list[_Item] = []
+    for match in _AMOUNT.finditer(plain):
+        number = match.group("whole").replace(",", "").replace(" ", "")
+        if match.group("decimal"):
+            number += "." + match.group("decimal")
+        after = _UNIT_AFTER.match(plain, match.end())
+        unit = _UNITS.get(after.group(1)) if after else None
+        end = after.end() if after and unit else match.end()
+        found.append(_Item(match.start(), end, float(number), unit))
+    last = next((i for i in range(len(found) - 1, -1, -1) if found[i].unit is not None), None)
+    unit = found[last].unit if last is not None else None
+    if last is None or unit is None:
+        return None
+    amount = found[last].value
+    days = amount * constants.DAYS_PER_UNIT[unit]
+    first = last
+    if last > 0:
+        left = found[last - 1]
+        join = plain[left.end : found[last].start].strip()
+        if (_RANGE_JOINS_BARE if left.unit is None else _RANGE_JOINS).fullmatch(join):
+            first = last - 1
+        else:
+            i = last
+            while i > 0:
+                left, right = found[i - 1], found[i]
+                if left.unit is None or right.unit is None:
+                    break
+                if not _JOINS.fullmatch(plain[left.end : right.start].strip()):
+                    break
+                # Falling units only, so "4 months, 3 months" is not "7 months".
+                if _UNIT_ORDER.index(left.unit) <= _UNIT_ORDER.index(right.unit):
+                    break
+                days += left.value * constants.DAYS_PER_UNIT[left.unit]
+                i -= 1
+            if i != last:
+                first = i
+                amount = round(days / constants.DAYS_PER_UNIT[unit], 4)
+    before = _QUALIFIER_BEFORE.search(plain[: found[first].start])
+    return (before.group(1) if before else "", amount, unit, round(days, 4))
 
 
 def parse_people(raw: Any) -> int | None:

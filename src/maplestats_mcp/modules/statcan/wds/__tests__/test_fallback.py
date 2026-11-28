@@ -74,7 +74,7 @@ def _block(httpx_mock, cloudflare_challenge) -> None:
 
 def _open_breaker() -> None:
     for _ in range(config.get_breaker_failures()):
-        BREAKER.record_failure(WWW150, "server_error")
+        BREAKER.record_failure(f"{WWW150}/wds", "server_error")
 
 
 # ------------------------------------------------------------------ CCEI mocks

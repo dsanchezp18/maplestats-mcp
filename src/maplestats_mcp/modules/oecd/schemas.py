@@ -114,6 +114,11 @@ class DataResult(BaseModel):
 class Observation(BaseModel):
     period: str
     value: float
+    status: str | None = Field(
+        default=None,
+        description="Observation status as the OECD labels it (e.g. Estimated value); null "
+        "when the OECD gives none.",
+    )
 
 
 class CountrySeries(BaseModel):

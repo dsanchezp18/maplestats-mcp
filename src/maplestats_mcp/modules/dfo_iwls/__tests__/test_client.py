@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -150,6 +151,98 @@ async def test_window_over_seven_days_is_rejected_before_calling(httpx_mock):
     httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
     with pytest.raises(InvalidInput, match="7 days"):
         await client.get_water_levels("07120", "wlp", start="2026-09-01", end="2026-09-30")
+
+
+async def test_end_alone_returns_the_24_hours_up_to_it(httpx_mock):
+    # An `end` in the past with no `start` used to fall back to a start of "now",
+    # so the call was refused with "end must be after start".
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    result = await client.get_water_levels("07120", "wlo", end="2026-10-03T12:00:00Z")
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    assert params["from"] == ["2026-10-02T12:00:00Z"]
+    assert params["to"] == ["2026-10-03T12:00:00Z"]
+    assert result.start.isoformat() == "2026-10-02T12:00:00+00:00"
+
+
+async def test_date_only_end_alone_returns_that_whole_day(httpx_mock):
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    await client.get_water_levels("07120", "wlp", end="2026-10-03", resolution="SIXTY_MINUTES")
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    assert params["from"] == ["2026-10-03T00:00:00Z"]
+    assert params["to"] == ["2026-10-04T00:00:00Z"]
+
+
+async def test_observed_series_default_to_the_last_24_hours(httpx_mock, monkeypatch):
+    # Observed levels (wlo) do not exist yet for "now to +24 h": that window came
+    # back with no points and no note.
+    monkeypatch.setattr(client, "_now", lambda: datetime(2026, 10, 3, 15, 47, 30, tzinfo=UTC))
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    await client.get_water_levels("07120", "wlo", resolution="SIXTY_MINUTES")
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    # The end is floored to the 10-minute cache step (see the next test).
+    assert params["from"] == ["2026-10-02T15:40:00Z"]
+    assert params["to"] == ["2026-10-03T15:40:00Z"]
+
+
+async def test_observed_default_window_is_stable_within_the_cache_step(httpx_mock, monkeypatch):
+    # An end at the current minute changed the cache key (it holds from and to) every
+    # minute, so each default call stored a new day-long series for its 10 minutes.
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    for minute in (41, 49):
+        monkeypatch.setattr(
+            client, "_now", lambda minute=minute: datetime(2026, 10, 3, 15, minute, tzinfo=UTC)
+        )
+        await client.get_water_levels("07120", "wlo", resolution="SIXTY_MINUTES")
+    data_requests = [r for r in httpx_mock.get_requests() if "/data" in str(r.url)]
+    assert len(data_requests) == 1
+
+
+async def test_predicted_series_keep_now_to_plus_24_hours(httpx_mock, monkeypatch):
+    monkeypatch.setattr(client, "_now", lambda: datetime(2026, 10, 3, 15, 42, 30, tzinfo=UTC))
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA])
+    httpx_mock.add_response(json=[])
+    httpx_mock.add_response(json=[])
+    await client.get_water_levels("07120", "wlp-hilo")
+    await client.get_water_levels("07120", "wlp", resolution="SIXTY_MINUTES")
+    for request in httpx_mock.get_requests()[-2:]:
+        params = parse_qs(urlparse(str(request.url)).query)
+        assert params["from"] == ["2026-10-03T15:00:00Z"]
+        assert params["to"] == ["2026-10-04T15:00:00Z"]
+
+
+async def test_series_not_known_to_be_observed_keep_now_to_plus_24_hours(httpx_mock, monkeypatch):
+    # Only "wlo" is confirmed as an observed series; any other series (a forecast, a
+    # predicted current) must not get the past window, which for it is zero points
+    # and no note. "wcsp1" stands for a code this module has never listed.
+    monkeypatch.setattr(client, "_now", lambda: datetime(2026, 10, 3, 15, 42, 30, tzinfo=UTC))
+    other = {**_VICTORIA, "timeSeries": [{"code": "wcsp1", "nameEn": "Predicted current"}]}
+    httpx_mock.add_response(url=_STATIONS_URL, json=[other])
+    httpx_mock.add_response(json=[])
+    await client.get_water_levels("07120", "wcsp1", resolution="SIXTY_MINUTES")
+    params = parse_qs(urlparse(str(httpx_mock.get_requests()[-1].url)).query)
+    assert params["from"] == ["2026-10-03T15:00:00Z"]
+    assert params["to"] == ["2026-10-04T15:00:00Z"]
+
+
+async def test_search_folds_accents_and_pads_codes(httpx_mock):
+    # "pointe-au-pere" missed "Pointe-au-Père", and "7120" missed "07120" although
+    # get_station pads the same code.
+    pointe = {
+        "code": "03360",
+        "id": "5cebf1df3d0f4a073c4bbd99",
+        "officialName": "Pointe-au-Père",
+        "operating": True,
+        "timeSeries": [],
+    }
+    httpx_mock.add_response(url=_STATIONS_URL, json=[_VICTORIA, pointe])
+    assert [s.code for s in (await client.search_stations("pointe-au-pere")).stations] == ["03360"]
+    assert [s.code for s in (await client.search_stations("POINTE-AU-PÈRE")).stations] == ["03360"]
+    assert [s.code for s in (await client.search_stations("7120")).stations] == ["07120"]
+    assert [s.code for s in (await client.search_stations(" 07120 ")).stations] == ["07120"]
 
 
 async def test_unknown_series_and_station(httpx_mock):

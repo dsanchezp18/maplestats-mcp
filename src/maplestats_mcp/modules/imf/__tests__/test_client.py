@@ -262,6 +262,62 @@ async def test_rows_over_the_cap_keep_the_last_of_each_series(httpx_mock, monkey
     assert any("only the last 1 of each series" in n for n in result.notes)
 
 
+async def test_a_cut_history_keeps_its_note_on_a_repeat_call(httpx_mock, monkeypatch):
+    # get_data cut the series it got from the cache in place, so a second call inside
+    # the cache time saw series already short enough, found the rows under the cap and
+    # dropped the "only the last N" note: a silently cut history.
+    _mock(httpx_mock)
+    monkeypatch.setattr(constants, "MAX_ROWS", 1)
+    first = await client.get_data("CPI", KEY, last_n=2)
+    second = await client.get_data("CPI", KEY, last_n=2)
+    assert len(_data_requests(httpx_mock)) == 1  # the second answer came from the cache
+    for result in (first, second):
+        assert [r.period for r in result.rows] == ["2026-M09"]
+        assert any("only the last 1 of each series" in n for n in result.notes)
+        assert result.provenance.limits is not None
+    # The cut is on the answer, not on the cached series: a caller with room to spare
+    # still gets both rows from the same cached answer.
+    monkeypatch.setattr(constants, "MAX_ROWS", 100)
+    full = await client.get_data("CPI", KEY, last_n=2)
+    assert [r.period for r in full.rows] == ["2026-M08", "2026-M09"]
+    assert not any("only the last" in n for n in full.notes)
+
+
+def _data_xml(*observations: str) -> bytes:
+    obs = "".join(f"<Obs {o}/>" for o in observations)
+    return (
+        "<?xml version='1.0'?><message:StructureSpecificData "
+        'xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message">'
+        '<message:DataSet UPDATE_DATE="2026-11-18T07:43:27Z">'
+        '<Series COUNTRY="CAN" INDEX_TYPE="CPI" COICOP_1999="_T" '
+        f'TYPE_OF_TRANSFORMATION="IX" FREQUENCY="M">{obs}</Series>'
+        "</message:DataSet></message:StructureSpecificData>"
+    ).encode()
+
+
+async def test_a_nan_observation_is_no_value_not_the_latest_value(httpx_mock):
+    # float("NaN") parses, so an observation written OBS_VALUE="NaN" became the latest
+    # value: latest_period moved to the empty period and the value went out as null.
+    _mock(httpx_mock, data=False)
+    httpx_mock.add_response(
+        url=CPI_DATA,
+        content=_data_xml(
+            'TIME_PERIOD="2026-M08" OBS_VALUE="169.8"',
+            'TIME_PERIOD="2026-M09" OBS_VALUE="170"',
+            'TIME_PERIOD="2026-M10" OBS_VALUE="NaN"',
+            'TIME_PERIOD="2026-M11" OBS_VALUE="inf"',
+        ),
+    )
+    result = await client.get_data("CPI", KEY, last_n=4)
+    assert [(r.period, r.value) for r in result.rows] == [("2026-M08", 169.8), ("2026-M09", 170.0)]
+    series = result.series[0]
+    assert (series.latest_period, series.latest_value, series.observation_count) == (
+        "2026-M09",
+        170.0,
+        2,
+    )
+
+
 # ------------------------------------------------------------ search_series
 
 

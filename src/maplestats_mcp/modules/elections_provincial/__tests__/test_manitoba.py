@@ -203,3 +203,44 @@ async def test_seats_and_results_carry_the_terms_notice(httpx_mock):
     results = await client.get_results("mb", "2023", party="liberal")
     assert {r.party_code for r in results.rows} == {"MLP"}
     assert results.districts[0].electors == 13366
+
+
+async def test_party_filter_matches_a_whole_code_not_a_piece_of_one(httpx_mock):
+    # Brandon West in 1999 had a PC and a CPC-M candidate; party="PC" used to be a piece
+    # of "CPC-M" and returned both.
+    files = constants.MB_FILES["37"]
+    httpx_mock.add_response(url=files.votes, content=_bytes("mb_1999_votes.xls"))
+    httpx_mock.add_response(url=files.summary, content=_bytes("mb_1999_summary.xls"))
+
+    async def codes(party: str) -> list[str | None]:
+        result = await client.get_results("mb", "1999", district="Brandon West", party=party)
+        return [r.party_code for r in result.rows]
+
+    assert await codes("PC") == ["PC"]
+    assert await codes("cpc-m") == ["CPC-M"]
+    assert await codes("communist") == ["CPC-M"]
+    assert await codes("lib") == ["Lib."]
+
+
+async def test_party_filter_by_a_code_leaves_out_parties_that_only_contain_it(httpx_mock):
+    # "lib" is the Liberals' own code in the 1999 file; the 6 Libertarian Party (LPM)
+    # candidates carry it only in their name and used to come back with the 50 Liberals.
+    files = constants.MB_FILES["37"]
+    httpx_mock.add_response(url=files.votes, content=_bytes("mb_1999_votes.xls"))
+    httpx_mock.add_response(url=files.summary, content=_bytes("mb_1999_summary.xls"))
+    result = await client.get_results("mb", "1999", party="lib", limit=100)
+    assert result.total_rows == 50
+    assert {r.party_code for r in result.rows} == {"Lib."}
+    libertarians = await client.get_results("mb", "1999", party="libertarian", limit=100)
+    assert {r.party_code for r in libertarians.rows} == {"LPM"}
+
+
+async def test_voting_area_party_filter_matches_a_whole_code(httpx_mock):
+    httpx_mock.add_response(url=_2023.votes, content=_bytes("mb_2023_votes.xlsx"))
+    httpx_mock.add_response(url=_2023.summary, content=_bytes("mb_2023_summary.xlsx"))
+    httpx_mock.add_callback(_serve(_bytes("mb_43ge.zip")), url=_2023.by_area, is_reusable=True)
+    liberal = await client.get_voting_areas("mb", "agassiz", "2023", voting_area="1", party="MLP")
+    assert [r.party_code for r in liberal.rows] == ["MLP"]
+    # "LP" is a piece of "MLP", not a code.
+    piece = await client.get_voting_areas("mb", "agassiz", "2023", voting_area="1", party="LP")
+    assert piece.rows == []

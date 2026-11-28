@@ -100,6 +100,11 @@ class DataResult(BaseModel):
 class Observation(BaseModel):
     period: str
     value: float
+    status: str | None = Field(
+        default=None,
+        description="Observation status as the ABS labels it (e.g. an estimate); null when the "
+        "ABS gives none.",
+    )
 
 
 class IndicatorResult(BaseModel):

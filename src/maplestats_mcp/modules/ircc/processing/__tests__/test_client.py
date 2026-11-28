@@ -253,3 +253,61 @@ async def test_urls_follow_lang(httpx_mock):
     await client.get_processing_time("cec", lang="fr")
     urls = {str(r.url) for r in httpx_mock.get_requests()}
     assert all(re.search(r"-fr\.json$", u) for u in urls)
+
+
+@pytest.mark.parametrize(
+    ("text", "amount", "unit", "days", "qualifier"),
+    [
+        # "," and "." were folded to spaces first: 1,234 read as 234 and no decimal matched.
+        ("About 1,234 days", 1234, "days", 1234, "about"),
+        ("10 000 jours", 10000, "days", 10000, None),
+        ("10 000 jours", 10000, "days", 10000, None),
+        ("1 234 days", 1234, "days", 1234, None),
+        ("1.5 years", 1.5, "years", 547.875, None),
+        ("Environ 1,5 an", 1.5, "years", 547.875, "about"),
+        # A compound duration was read as its last pair ("6 months"): now summed, and
+        # stated in the finest unit named so the amount and unit still read as one time.
+        ("1 year 6 months", 18, "months", 547.875, None),
+        ("1 an et 6 mois", 18, "months", 547.875, None),
+        ("More than 2 weeks, 3 days", 17, "days", 17, "more_than"),
+        # A range keeps its upper bound, as before.
+        ("3 to 6 months", 6, "months", 182.625, None),
+        ("3-6 months", 6, "months", 182.625, None),
+        ("De 3 à 6 mois", 6, "months", 182.625, None),
+        ("3 months to 6 months", 6, "months", 182.625, None),
+        ("Between 3 and 6 months", 6, "months", 182.625, None),
+        # business and working days are read as days, like jours ouvrables.
+        ("10 business days", 10, "days", 10, None),
+        ("10 working days", 10, "days", 10, None),
+        ("10 jours ouvrables", 10, "days", 10, None),
+        # The part number of a citizenship text is still skipped.
+        ("Part 1: 4 months", 4, "months", 121.75, None),
+        # A part number is not the first group of a thousands separator.
+        ("Part 1 100 days", 100, "days", 100, None),
+    ],
+)
+def test_parse_time_separators_compounds_ranges_and_business_days(
+    text, amount, unit, days, qualifier
+):
+    parsed = client.parse_time(text)
+    assert parsed.status == "available"
+    assert (parsed.unit, parsed.qualifier) == (unit, qualifier)
+    assert parsed.amount == pytest.approx(amount)
+    assert parsed.approx_days == pytest.approx(days, abs=1e-3)
+
+
+async def test_by_country_sort_uses_the_whole_duration(httpx_mock):
+    # approx_days feeds the longest-first sort, so a misread amount moves the country.
+    times = {
+        "work": {
+            "AF": "1 year 6 months",
+            "IN": "About 1,234 days",
+            "CA": "9 months",
+            "GL": "10 business days",
+            "NG": "5 days",
+            "lastupdated": "October 29, 2026",
+        }
+    }
+    _mock(httpx_mock, {"data-ptime-en": times})
+    result = await client.get_processing_time("work")
+    assert [c.country_code for c in result.countries] == ["IN", "AF", "CA", "GL", "NG"]

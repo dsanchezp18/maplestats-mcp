@@ -8,6 +8,7 @@ from datetime import date
 
 import pytest
 import yaml
+from bs4 import BeautifulSoup, Tag
 
 from maplestats_mcp.modules.pbo import client, constants
 from maplestats_mcp.shared import cache as cache_module
@@ -96,6 +97,135 @@ async def test_french_labels(httpx_mock):
     result = await client.get_publication("LEG-2526-012-S", lang="fr")
     assert result.tables[0].columns == ["Exercice", "Coût total"]
     assert result.publication.title.startswith("Déduction")
+
+
+def _publication_with(*slices: dict) -> dict:
+    document = {**_PBOML, "slices": list(slices)}
+    dumped = yaml.safe_dump(document, sort_keys=False, allow_unicode=True)
+    encoded = base64.b64encode(dumped.encode()).decode()
+    return {**_RECORD, "pboml_document": {"data-url": "data:text/yaml;base64," + encoded}}
+
+
+async def test_variables_with_the_same_label_keep_their_own_column(httpx_mock):
+    # Rows were keyed by label, so two variables both labelled "2025-26" (one per
+    # scenario) collapsed into one key and the later value overwrote the earlier.
+    slice_ = {
+        "type": "table",
+        "variables": {
+            "item": {"label": {"en": "Item"}, "is_descriptive": True},
+            "baseline": {"label": {"en": "2025-26"}},
+            "downside": {"label": {"en": "2025-26"}},
+            "third": {"label": {"en": "2025-26"}},
+            # A label already shaped like a numbered one is not reused for another column.
+            "literal": {"label": {"en": "2025-26 (2)"}},
+        },
+        "content": [{"item": "GDP", "baseline": 1.7, "downside": 0.9, "third": 0.5, "literal": 4}],
+    }
+    httpx_mock.add_response(url=_url("publications/LEG-2526-012-S"), json=_publication_with(slice_))
+    table = (await client.get_publication("LEG-2526-012-S")).tables[0]
+    assert table.columns == ["Item", "2025-26", "2025-26 (3)", "2025-26 (4)", "2025-26 (2)"]
+    assert table.rows == [
+        {
+            "Item": "GDP",
+            "2025-26": 1.7,
+            "2025-26 (3)": 0.9,
+            "2025-26 (4)": 0.5,
+            "2025-26 (2)": 4,
+        }
+    ]
+
+
+async def test_html_tables_expand_colspan_and_rowspan(httpx_mock):
+    # Cells were listed as written, so a header over two columns or a label spanning two
+    # rows left the header cells short of the data under them.
+    html = (
+        '<table><tr><th rowspan="2">Item</th><th colspan="2">2025-26</th></tr>'
+        "<tr><th>Low</th><th>High</th></tr>"
+        "<tr><td>GDP</td><td>1.7</td><td>2.1</td></tr>"
+        '<tr><td colspan="x">Note</td><td colspan="0">kept</td></tr></table>'
+    )
+    httpx_mock.add_response(
+        url=_url("publications/LEG-2526-012-S"),
+        json=_publication_with({"type": "html", "content": {"en": html}}),
+    )
+    table = (await client.get_publication("LEG-2526-012-S")).tables[0]
+    assert table.cells == [
+        ["Item", "2025-26", "2025-26"],
+        ["Item", "Low", "High"],
+        ["GDP", "1.7", "2.1"],
+        ["Note", "kept"],
+    ]
+
+
+async def test_a_rowspan_cell_keeps_its_column_when_a_later_row_ends_before_it(httpx_mock):
+    # A cell carried down past the end of a row's own cells was added only when it came
+    # right after them, so with a gap in between (the row ends at column 0, the carried
+    # "c" sits at column 2) it was dropped from the rows below.
+    html = (
+        '<table><tr><th rowspan="2">a</th><th>b</th><th rowspan="3">c</th></tr>'
+        "<tr><td>1</td></tr><tr><td>2</td></tr></table>"
+    )
+    httpx_mock.add_response(
+        url=_url("publications/LEG-2526-012-S"),
+        json=_publication_with({"type": "html", "content": {"en": html}}),
+    )
+    table = (await client.get_publication("LEG-2526-012-S")).tables[0]
+    assert table.cells == [["a", "b", "c"], ["a", "1", "c"], ["2", "", "c"]]
+
+
+def _grid(html: str) -> list[list[str]]:
+    table = BeautifulSoup(html, "html.parser").find("table")
+    assert isinstance(table, Tag)
+    return client._html_grid(table)
+
+
+def test_spans_are_counts_a_table_cannot_turn_into_millions_of_cells():
+    cell = BeautifulSoup('<td colspan="100000000" rowspan="x">c</td>', "html.parser").td
+    assert cell is not None
+    # Browsers read at most 1000 columns; a rowspan is cut to the rows the table has left.
+    assert client._span(cell, "colspan", constants.HTML_MAX_COLSPAN) == 1000
+    assert client._span(cell, "rowspan", 5) == 1
+    for raw, expected in [
+        ("3", 3),
+        ("0", 1),
+        ("-2", 1),
+        (" 4 ", 4),
+        ("9" * 10, 5),
+        ("9" * 5000, 5),
+    ]:
+        cell = BeautifulSoup(f'<td rowspan="{raw}">c</td>', "html.parser").td
+        assert cell is not None
+        assert client._span(cell, "rowspan", 5) == min(expected, 5), raw
+    # "²" is a digit to str.isdigit() but not to int(), which would raise.
+    cell = BeautifulSoup('<td colspan="²">c</td>', "html.parser").td
+    assert cell is not None
+    assert client._span(cell, "colspan", 1000) == 1
+
+
+def test_html_grid_caps_a_colspan_and_survives_a_number_too_long_for_int():
+    assert [len(row) for row in _grid('<table><tr><td colspan="5000">x</td></tr></table>')] == [
+        1000
+    ]
+    long_number = "9" * 5000
+    assert [
+        len(row) for row in _grid(f'<table><tr><td colspan="{long_number}">x</td></tr></table>')
+    ] == [1000]
+
+
+def test_spans_past_the_cell_budget_are_not_expanded(monkeypatch):
+    # Cells that each span many rows and columns would expand to rows x columns entries
+    # apiece; past the budget a span counts as 1.
+    monkeypatch.setattr(constants, "HTML_MAX_SPAN_CELLS", 4)
+    html = (
+        '<table><tr><td colspan="4">a</td><td rowspan="3">b</td></tr>'
+        "<tr><td>z</td></tr><tr><td>y</td></tr></table>"
+    )
+    assert _grid(html) == [["a", "a", "a", "a", "b"], ["z"], ["y"]]
+    # A rowspan is counted as the rows the table has left (2 more here), not as written.
+    html = (
+        '<table><tr><td rowspan="65534">r</td></tr><tr><td>z</td></tr><tr><td>y</td></tr></table>'
+    )
+    assert _grid(html) == [["r"], ["r", "z"], ["r", "y"]]
 
 
 async def test_archived_publication_has_no_structure(httpx_mock):
@@ -238,6 +368,25 @@ async def test_information_request_register_filters_and_counts(httpx_mock, monke
 
     dated = await client.search_information_requests(since="2025", until="2026-01")
     assert [r.id for r in dated.requests] == ["IR0889", "IR0816"]
+
+
+async def test_french_department_count_falls_back_to_the_english_acronym(httpx_mock):
+    # request_summary shows the English acronym when a department has no French one,
+    # but the count by department used the French key alone and filed it as "unknown".
+    ndb = {
+        "name_en": "Federal Economic Development Agency",
+        "name_fr": "Agence fédérale de développement économique",
+        "acronym_en": "FedDev",
+        "acronym_fr": None,
+    }
+    register = [_request(1, "IR0001", department=ndb), _request(2, "IR0002", department=ndb)]
+    httpx_mock.add_response(
+        url=_url("information-requests?page=1"),
+        json={"data": register, "meta": {"current_page": 1, "last_page": 1, "total": 2}},
+    )
+    result = await client.search_information_requests(lang="fr")
+    assert [r.department_acronym for r in result.requests] == ["FedDev", "FedDev"]
+    assert result.by_department == {"FedDev": 2}
 
 
 async def test_information_request_letters(httpx_mock):

@@ -147,22 +147,28 @@ def parse_csv(body: bytes) -> list[District]:
             if name:
                 candidates[district].setdefault(party, _person(name))
 
-    return _build(votes, candidates, rejected, codes)
+    # The CSV has one column per party, so a party is one candidate here.
+    ran = {
+        district: [
+            (candidates[district].get(code), code, total) for code, total in by_party.items()
+        ]
+        for district, by_party in votes.items()
+    }
+    return _build(ran, rejected, codes)
 
 
 def _build(
-    votes: dict[str, dict[str, int]],
-    candidates: dict[str, dict[str, str]],
+    ran: dict[str, list[tuple[str | None, str, int]]],
     rejected: dict[str, int],
     codes: dict[str, str],
 ) -> list[District]:
+    """Districts from each one's candidates as (name, party code, votes), one per candidate."""
     built: list[District] = []
-    for name, by_party in votes.items():
+    for name, entries in ran.items():
         district = District(
             name=name, number=codes.get(name) or None, rejected_ballots=rejected.get(name)
         )
-        for code, total in by_party.items():
-            person = candidates[name].get(code)
+        for person, code, total in entries:
             # A party column with no candidate name and no votes means it ran nobody here.
             if person is None and total == 0:
                 continue
@@ -186,8 +192,7 @@ def _build(
 def parse_xlsx(body: bytes) -> list[District]:
     """Districts from the 2011 poll results workbook (one sheet per constituency)."""
     workbook = open_workbook(body)
-    votes: dict[str, dict[str, int]] = {}
-    candidates: dict[str, dict[str, str]] = {}
+    ran: dict[str, list[tuple[str | None, str, int]]] = {}
     rejected: dict[str, int] = {}
     try:
         for sheet in workbook:
@@ -215,8 +220,9 @@ def parse_xlsx(body: bytes) -> list[District]:
             # Candidates run from column E up to the "Total Counted" column; the rejected
             # ballots column follows it.
             end = next(i for i, c in enumerate(names) if c and "counted" in str(c).lower())
-            party_totals: dict[str, int] = defaultdict(int)
-            people: dict[str, str] = {}
+            # One total per candidate column. Two columns can carry one party code (two
+            # independents), so the totals and names are kept by column, not by code.
+            totals = [0] * end
             rejected_total = 0
             for row in rows[header + 2 :]:
                 if str(row[1]).strip() == "Totals":
@@ -224,14 +230,15 @@ def parse_xlsx(body: bytes) -> list[District]:
                 if row[0] is None:
                     continue
                 for i in range(4, end):
-                    party_totals[str(codes[i]).strip()] += _count(row[i])
+                    totals[i] += _count(row[i])
                 rejected_total += _count(row[end + 1])
-            for i in range(4, end):
-                people[str(codes[i]).strip()] = _person(str(names[i]))
-            votes[name], candidates[name], rejected[name] = party_totals, people, rejected_total
+            ran[name] = [
+                (_person(str(names[i])), str(codes[i]).strip(), totals[i]) for i in range(4, end)
+            ]
+            rejected[name] = rejected_total
     finally:
         workbook.close()
-    return _build(votes, candidates, rejected, {})
+    return _build(ran, rejected, {})
 
 
 async def fetch(year: str) -> list[District]:

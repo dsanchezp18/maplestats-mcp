@@ -30,6 +30,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, NoReturn
@@ -93,6 +94,9 @@ class _Row:
     month: int | None
     labels: tuple[str, ...]
     value: int | None
+    # The first non-blank time cell that could not be read ('' when none), kept so a
+    # query can quote it in the note about rows whose period is unreadable.
+    unread_time: str = ""
 
 
 @dataclass
@@ -235,6 +239,31 @@ def _key(column: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", column.removeprefix("EN_").lower()).strip("_")
 
 
+def _fold(text: str) -> str:
+    """Lower case, accents and a trailing full stop removed: 'Févr.' -> 'fevr'."""
+    plain = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in plain if not unicodedata.combining(c)).lower().strip().rstrip(".")
+
+
+def _month_of(text: str) -> int | None:
+    """1-12 from 'Jan', 'January', 'janv.', 'août' or '7'; None when it is none of them."""
+    key = _fold(text)
+    if key.isdigit():
+        return int(key) if 1 <= int(key) <= 12 else None
+    # The old rule (first three letters, English) stays as the fallback, so a spelling that
+    # was read before is still read.
+    return constants.MONTH_LOOKUP.get(key) or constants.MONTHS.get(key[:3].title())
+
+
+_QUARTER = re.compile(r"(?<![a-z0-9])(?:[qt]|quarter|trimestre)\s*([1-4])(?!\d)")
+
+
+def _quarter_of(text: str) -> int | None:
+    """1-4 from 'Q1', 'Q1 2024', '2024-Q1', 'T2' (French) or 'Quarter 3'."""
+    found = _QUARTER.search(_fold(text))
+    return int(found.group(1)) if found else None
+
+
 def _count(cell: str) -> tuple[int | None, bool]:
     """(count, readable). A suppressed or blank cell is (None, True); a cell that is
     not a number is (None, False), so one odd cell does not fail a 30 MB table."""
@@ -321,11 +350,21 @@ def parse_table(body: bytes, lang: str = "en") -> ParsedTable:
                 # One English label, several French ones: fall back to English.
                 dim.fr[label] = label
         year_text = cell(time_index.get("year"))
-        month = constants.MONTHS.get(cell(time_index.get("month"))[:3].title())
+        month_text = cell(time_index.get("month"))
+        month = _month_of(month_text)
         quarter_text = cell(time_index.get("quarter"))
-        quarter = int(quarter_text[1]) if re.fullmatch(r"Q[1-4]", quarter_text) else None
+        quarter = _quarter_of(quarter_text)
         if quarter is None and month is not None:
             quarter = (month - 1) // 3 + 1
+        # A cell that is there but unreadable is told apart from a blank one, because
+        # both give a row with no period and only the first is a surprise.
+        unread = ""
+        if year_text and not year_text.isdigit():
+            unread = year_text
+        elif month_text and month is None:
+            unread = month_text
+        elif quarter_text and quarter is None:
+            unread = quarter_text
         value, readable = _count(cells[value_index])
         if not readable:
             unreadable.append(cells[value_index].strip())
@@ -336,6 +375,7 @@ def parse_table(body: bytes, lang: str = "en") -> ParsedTable:
                 month=month,
                 labels=tuple(labels),
                 value=value,
+                unread_time=unread,
             )
         )
 
@@ -405,15 +445,128 @@ def _label(dim: _Dimension, english: str, lang: str) -> str:
     return (dim.fr.get(english) or english) if lang == "fr" else english
 
 
-def _provenance(table: IrccTable, cached: bool, schema: str, lang: str) -> Any:
+def _provenance(table: IrccTable, cached: bool, schema: str, lang: str, extra: str = "") -> Any:
     return make_provenance(
         source=constants.RATE_LIMIT_SOURCE,
         url=table.csv_url,
         cached=cached,
         schema_name=f"ircc_monthly.{schema}",
         freshness=_fr(constants.FRESHNESS, constants.FRESHNESS_FR, lang),
-        limits=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang),
+        limits=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang) + extra,
         lang=lang,
+    )
+
+
+# How many finer units make up one coarser period.
+_UNITS_IN = {("month", "year"): 12, ("month", "quarter"): 3, ("quarter", "year"): 4}
+_PARTIAL_LISTED = 5
+
+
+def _unit_name(finest: str, unit: int, lang: str) -> str:
+    if finest == "month":
+        return (constants.MONTH_ABBR_FR if lang == "fr" else constants.MONTH_ABBR_EN)[unit - 1]
+    return f"T{unit}" if lang == "fr" else f"Q{unit}"
+
+
+def _units_text(finest: str, units: list[int], lang: str) -> str:
+    """'Jan to Jul' for a run of units, a comma list for a run with a gap."""
+    names = [_unit_name(finest, u, lang) for u in units]
+    if len(units) > 1 and units == list(range(units[0], units[-1] + 1)):
+        return f"{names[0]} {'à' if lang == 'fr' else 'to'} {names[-1]}"
+    return ", ".join(names)
+
+
+def _coverage(parsed: ParsedTable, grain: Period) -> dict[str, set[int]]:
+    """The finer units (months, or quarters) the whole table has, per period of `grain`.
+
+    Counted over every row, not the filtered ones: a province with no rows in a month
+    does not make that month missing from the file.
+    """
+    finest = parsed.periods[0]
+    seen: dict[str, set[int]] = defaultdict(set)
+    for row in parsed.rows:
+        unit = row.month if finest == "month" else row.quarter
+        label = _period_label(row, grain)
+        if label is not None and unit is not None:
+            seen[label].add(unit)
+    return seen
+
+
+def _partial_note(parsed: ParsedTable, grain: Period | None, periods: list[str], lang: str) -> str:
+    """Names the periods summed from fewer months (or quarters) than a full period has.
+
+    The files grow a month at a time, so summing to year or quarter makes the latest period
+    the total of the months published so far, which reads as a sharp drop next to full ones.
+    The first period can be partial too, when a table starts mid-year. The sums are not
+    changed; only the reader is told.
+    """
+    if grain is None or not parsed.periods or grain == parsed.periods[0]:
+        return ""
+    finest = parsed.periods[0]
+    expected = _UNITS_IN.get((finest, grain))
+    if expected is None or not periods:
+        return ""
+    seen = _coverage(parsed, grain)
+    partial = [(p, sorted(seen[p])) for p in periods if p in seen and len(seen[p]) < expected]
+    if not partial:
+        return ""
+    listed = partial[:_PARTIAL_LISTED]
+    more = len(partial) - len(listed)
+    units_en, units_fr = ("months", "mois") if finest == "month" else ("quarters", "trimestres")
+    en = "; ".join(
+        f"{p} has {len(u)} of {expected} {units_en} ({_units_text(finest, u, 'en')})"
+        for p, u in listed
+    )
+    fr = " ; ".join(
+        f"{p} compte {len(u)} {units_fr} sur {expected} ({_units_text(finest, u, 'fr')})"
+        for p, u in listed
+    )
+    many = len(partial) > 1
+    more_en = f"; {more} more" if more else ""
+    more_fr = f" ; {more} de plus" if more else ""
+    return _fr(
+        f" Partial {'periods' if many else 'period'}: {en}{more_en}. A partial period sums "
+        f"only the {units_en} present, so it is not comparable with a full one.",
+        f" {'Périodes partielles' if many else 'Période partielle'} : {fr}{more_fr}. "
+        f"Une période partielle ne somme que les {units_fr} présents ; elle n'est pas "
+        "comparable à une période complète.",
+        lang,
+    )
+
+
+def _unread_period_note(count: int, example: str, lang: str) -> str:
+    """Says how many matched rows had no readable period and were pooled into one row."""
+    if not count:
+        return ""
+    en_example = f" (for example {example!r})" if example else " (blank)"
+    fr_example = f" (par exemple {example!r})" if example else " (vide)"
+    verb_en = "row has" if count == 1 else "rows have"
+    subject_fr = "ligne retenue n'a" if count == 1 else "lignes retenues n'ont"
+    return _fr(
+        f" {count:,} matched {verb_en} no readable period"
+        f"{en_example}; they are summed into one row whose period is null.",
+        f" {fr_number(count)} {subject_fr} pas de période lisible{fr_example} ; elles sont "
+        "additionnées dans une seule ligne dont la période est nulle.",
+        lang,
+    )
+
+
+def _cut_period_note(rows: list[IrccRow], shown: list[IrccRow], lang: str) -> str:
+    """Says so when `limit` cuts through the earliest period of a chronological result."""
+    earliest = shown[0].period if shown else None
+    if earliest is None:
+        return ""
+    total = sum(1 for r in rows if r.period == earliest)
+    in_view = sum(1 for r in shown if r.period == earliest)
+    if in_view >= total:
+        return ""
+    return _fr(
+        f" The earliest period shown, {earliest}, lists {in_view} of its {total} rows because "
+        f"of `limit`; raise `limit` (maximum {constants.ROWS_MAX}) or add filters to see them all.",
+        f" La période la plus ancienne affichée, {earliest}, ne montre que {in_view} de ses "
+        f"{total} lignes à cause de `limit` ; augmentez `limit` (maximum {constants.ROWS_MAX}) "
+        "ou ajoutez des filtres pour les voir toutes.",
+        lang,
     )
 
 
@@ -546,6 +699,10 @@ async def query_table(
 
     sums: dict[tuple[str | None, tuple[str, ...]], list[int]] = defaultdict(lambda: [0, 0, 0])
     matched_cells = 0
+    # Matched rows with no readable period all land in the one period=None row; counted
+    # here so the note can say how many instead of leaving them pooled without a word.
+    unread_periods = 0
+    unread_example = ""
     for row in parsed.rows:
         if any(row.labels[i] != v for i, v in wanted.items()):
             continue
@@ -554,7 +711,11 @@ async def query_table(
         if year_to is not None and (row.year is None or row.year > year_to):
             continue
         matched_cells += 1
-        slot = sums[(_period_label(row, grain), tuple(row.labels[i] for i in kept))]
+        label = _period_label(row, grain)
+        if grain is not None and label is None:
+            unread_periods += 1
+            unread_example = unread_example or row.unread_time
+        slot = sums[(label, tuple(row.labels[i] for i in kept))]
         slot[1] += 1
         if row.value is None:
             slot[2] += 1
@@ -581,6 +742,13 @@ async def query_table(
         # Chronological, keeping the most recent `limit` rows.
         rows.sort(key=lambda r: (_period_sort(r.period), sorted(r.dimensions.values())))
         shown = rows[-limit:]
+    extra = (
+        _partial_note(
+            parsed, grain, sorted({r.period for r in shown if r.period is not None}), lang
+        )
+        + _unread_period_note(unread_periods, unread_example, lang)
+        + (_cut_period_note(rows, shown, lang) if sort == "period" else "")
+    )
     return IrccQueryResult(
         table_id=table.table_id,
         title=table.title,
@@ -593,6 +761,7 @@ async def query_table(
         period=grain,
         value_column=parsed.value_column,
         note=_fr(constants.ROUNDING_NOTE, constants.ROUNDING_NOTE_FR, lang)
-        + _unreadable_note(parsed, lang),
-        provenance=_provenance(table, cached, "IrccQueryResult", lang),
+        + _unreadable_note(parsed, lang)
+        + extra,
+        provenance=_provenance(table, cached, "IrccQueryResult", lang, extra),
     )

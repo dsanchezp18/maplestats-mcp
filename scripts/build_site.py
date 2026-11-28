@@ -2959,6 +2959,20 @@ def month_name(iso: str, lang: Lang) -> str:
     return f"{months[int(iso[5:7]) - 1]} {iso[:4]}"
 
 
+# The Government of Canada's French abbreviations: cutting a name to four letters gives
+# "avri.", "octo.", "mars." and the same three letters for juin and juillet.
+MONTHS_FR_SHORT = (
+    *("janv.", "févr.", "mars", "avr.", "mai", "juin"),
+    *("juill.", "août", "sept.", "oct.", "nov.", "déc."),
+)
+
+
+def month_abbr(iso: str, lang: Lang) -> str:
+    """Jan / janv.: the month of an ISO date as a chart's axis label."""
+    month = int(iso[5:7]) - 1
+    return MONTHS_EN[month][:3] if lang == "en" else MONTHS_FR_SHORT[month]
+
+
 def basis_points(value: float, lang: Lang) -> str:
     """-123 bp as '−123 bp' (a real minus sign); a value that rounds to zero is '0 bp', not '-0 bp'."""
     whole = round(value)
@@ -3186,17 +3200,30 @@ SQUARE_ORDER = ("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "PE", "NL", "YT"
 
 
 def _city(name: str) -> str:
-    """'City of Red Deer ArcGIS Hub' -> 'Red Deer': the place a portal serves."""
+    """'City of Red Deer ArcGIS Hub' -> 'Red Deer': the place a portal serves.
+
+    Checked against every portal and municipal source name: 'Open Data Kingston' ->
+    'Kingston', 'City of Nanaimo GIS Open Data Portal' -> 'Nanaimo', 'City of Calgary:
+    building permits and community populations' -> 'Calgary', 'City of Toronto open data'
+    -> 'Toronto' (tests/test_review4_site.py).
+    """
     name = re.sub(r"\s*\(.*?\)", "", name)
-    name = re.sub(r"^(City|Town|County|Region) of |^Open ", "", name)
+    name = re.sub(r":.*$", "", name)
+    name = re.sub(r"^(City|Town|County|Region) of |^Open (?:Data )?", "", name)
     for _ in range(2):
         name = re.sub(
-            r"\s+(Open Data.*|Data Catalogue|Data Catalog|Data Hub|GeoHub|ArcGIS Hub|"
-            r"Atlas|Regional Municipality|Portal|Region|County)$",
+            r"\s+((?i:Open Data).*|Data Catalogue|Data Catalog|Data Hub|GeoHub|ArcGIS Hub|"
+            r"Atlas|GIS|Regional Municipality|Portal|Region|County)$",
             "",
             name,
         )
     return name.strip()
+
+
+# A body that publishes data about a place without being it: a police service, a transit
+# system, a water utility, a conservation authority, a regional board. Its place has a
+# portal of its own, so the name is left out of the list of places.
+_NOT_A_PLACE = re.compile(r"\b(?:Police|Transit|Conservation|Authority|Board|EPCOR)\b")
 
 
 def alphabetical(name: str) -> str:
@@ -3205,9 +3232,20 @@ def alphabetical(name: str) -> str:
 
 
 def square_places(lang: Lang) -> list[str]:
-    """Every province and city with a local source, grouped west to east."""
+    """Every province and city with a local source, grouped west to east.
+
+    Each name stands once (the city and the county of Grande Prairie, or the two Waterloo
+    portals, are one place). Names are compared whole: Niagara Falls is a city beside
+    Niagara, not part of it.
+    """
     provinces: set[str] = set()
     cities: dict[str, set[str]] = {}
+
+    def add_city(code: str, label: str) -> None:
+        city = _city(label)
+        if not _NOT_A_PLACE.search(city):
+            cities.setdefault(code, set()).add(city)
+
     families = {"ckan": CKAN_PORTALS, "arcgis_hub": ARCGIS_PORTALS, "socrata": SOCRATA_PORTALS}
     for family, portals in families.items():
         for key, portal in portals.items():
@@ -3215,23 +3253,21 @@ def square_places(lang: Lang) -> list[str]:
             if level == "provincial":
                 provinces.add(place)
             elif level == "municipal":
-                cities.setdefault(place, set()).add(_city(portal.name_en))
+                add_city(place, portal.name_en)
     for source in SOURCES.values():
         for place in source.places:
             if source.level == "municipal" or source.en.startswith("City of"):
-                cities.setdefault(place, set()).add(_city(source.en))
+                add_city(place, source.en)
             elif source.level in ("provincial", "catalogue"):
                 provinces.add(place)
-    # A longer name that contains a city already listed is that city's: EPCOR,
-    # the police, transit and the metropolitan board are all Edmonton's.
-    for place, group in cities.items():
-        short = {c for c in group if len(c.split()) <= 2}
-        cities[place] = {next((k for k in short if k in c and k != c), c) for c in group}
     names: list[str] = []
     for code in SQUARE_ORDER:
         if code in provinces:
             names.append(PLACES[code][1 if lang == "en" else 2])
-        names.extend(sorted((place_name(c, lang) for c in cities.get(code, ())), key=alphabetical))
+        # The name breaks a tie between two that sort alike, so the order never depends on
+        # the order a set was read in.
+        shown = {place_name(c, lang) for c in cities.get(code, ())}
+        names.extend(sorted(shown, key=lambda name: (alphabetical(name), name)))
     return names
 
 
@@ -3241,11 +3277,14 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
     en = lang == "en"
     prompts = {call["name"]: call["response"] for call in load_case("prompts")["calls"]}
 
+    # These strings reach the page as JSON in a script element, which
+    # french_typography() skips, so every French string is spaced here instead
+    # (the typography pass below) and the units already carry their no-break space.
     def fee(value: float) -> str:
-        return f"${number(value, lang, 2)}" if en else f"{number(value, lang, 2)} $"
+        return f"${number(value, lang, 2)}" if en else f"{number(value, lang, 2)}{NBSP}$"
 
     def pct(value: float) -> str:
-        return f"{number(value, lang, 2)}%" if en else f"{number(value, lang, 2)} %"
+        return percent(value, lang, 2)
 
     def rows(pairs: list[tuple[str, str]]) -> str:
         return chr(10).join(f"{a}  {b}" for a, b in pairs)
@@ -3307,7 +3346,7 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
         draw_html = (
             f"Le {long_date(rnd['draw_date'], lang)}, IRCC a invité <strong>"
             f"{number(rnd['invitations_issued'], lang)} candidats</strong> lors d'un tirage "
-            f"« {esc(rnd['draw_name'])} », avec un score SGC minimal de "
+            f"« {en_span(esc(rnd['draw_name']), lang)} », avec un score SGC minimal de "
             f"{number(rnd['crs_cutoff'], lang)}."
         )
 
@@ -3318,18 +3357,37 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
         (r["sdg7j"], float(str(r["Budgetary balance"]).replace(chr(92) + "-", "-")))
         for r in table["rows"]
     ]
-    this_year = next(b for b in balance if b[0] == "2026-2027")
-    title = outlook["publication"]["title"].replace("\u2013", "-")
+    # "This year" is the federal fiscal year (1 April to 31 March) that held the day
+    # the call was recorded. The newest row of the table is the end of the projection
+    # (2030-2031), not this year, and a literal year would name a past one once the
+    # capture ages; the question below carries the year for the same reason.
+    taken = date.fromisoformat(load_case("prompts")["captured"][:10])
+    first = taken.year if taken.month >= 4 else taken.year - 1
+    fiscal_year = f"{first}-{first + 1}"
+    at = next((i for i, row in enumerate(balance) if row[0] == fiscal_year), None)
+    if at is None:
+        raise SystemExit(
+            f"the recorded outlook has no row for {fiscal_year}, the fiscal year of the "
+            "capture; capture the prompts again (scripts/capture_cases.py)"
+        )
+    this_year = balance[at]
+    # The title ends in its month and year ("... Outlook - June 2026"); French names the
+    # month in French, with "d'" for "de" before a vowel (avril, août, octobre).
+    published = re.search(r"([A-Za-z]+) (\d{4})\s*$", outlook["publication"]["title"])
+    if not published or published.group(1) not in MONTHS_EN:
+        raise SystemExit("the recorded outlook's title no longer ends in a month and a year")
+    outlook_month = month(f"{published.group(2)}-{MONTHS_EN.index(published.group(1)) + 1:02d}")
     if en:
         budget_html = (
-            f"In its {esc(title.split(' - ')[-1])} outlook the Parliamentary Budget Officer projects "
+            f"In its {outlook_month} outlook the Parliamentary Budget Officer projects "
             f"a deficit of <strong>${number(abs(this_year[1]), lang, 1)} billion</strong> "
             f"for {this_year[0]}."
         )
     else:
+        of = "d'" if outlook_month[0] in "aeiouàâéèêîôû" else "de "
         budget_html = (
-            f"Dans ses perspectives de {esc(title.split(' - ')[-1])}, le directeur parlementaire "
-            f"du budget prévoit un déficit de <strong>{number(abs(this_year[1]), lang, 1)} G$</strong> "
+            f"Dans ses perspectives {of}{outlook_month}, le directeur parlementaire "
+            f"du budget prévoit un déficit de <strong>{number(abs(this_year[1]), lang, 1)}{NBSP}G$</strong> "
             f"pour {this_year[0]}."
         )
 
@@ -3384,23 +3442,35 @@ def chat_demo_context(lang: Lang) -> dict[str, str]:
         {
             "label": "Federal budget" if en else "Budget fédéral",
             "client": "Claude Code",
-            "user": "What deficit does the Parliamentary Budget Officer expect this year?"
+            "user": f"What deficit does the Parliamentary Budget Officer expect for {fiscal_year}?"
             if en
-            else "Quel déficit le directeur parlementaire du budget prévoit-il cette année ?",
+            else "Quel déficit le directeur parlementaire du budget prévoit-il pour "
+            f"{fiscal_year} ?",
             "tool": "pbo_get_publication",
             "html": budget_html,
+            # The year before the one asked about, that year, and the year after.
             "code": rows(
-                [
-                    (year, f"{number(value, lang, 1)}")
-                    for year, value in balance
-                    if year in ("2025-2026", "2026-2027", "2027-2028")
-                ]
+                [(year, number(value, lang, 1)) for year, value in balance[max(at - 1, 0) : at + 2]]
             ),
             "cite": "source · Parliamentary Budget Officer"
             if en
             else "source · Directeur parlementaire du budget",
         },
     ]
+    if not en:
+        # french_typography() skips <script> content, and site.js puts these strings on
+        # the page as they are (text and innerHTML), so they are spaced before they are
+        # serialised. Only the strings a reader sees: not the tool name or the client.
+        examples = [
+            {
+                **ex,
+                "user": french_punctuation(ex["user"]),
+                "html": french_fragment(ex["html"]),
+                "code": french_punctuation(ex["code"]),
+                "cite": french_punctuation(ex["cite"]),
+            }
+            for ex in examples
+        ]
     payload = json.dumps(examples, ensure_ascii=False).replace("</", "<" + chr(92) + "/")
     calling = "calling" if en else "appel de"
     heading = "MapleStats MCP"
@@ -3762,6 +3832,13 @@ def _more_fields(count: int, lang: Lang) -> str:
     if lang == "en":
         return f"+ {count} more {'field' if count == 1 else 'fields'}"
     return f"+ {count} autre{'s' if count > 1 else ''} champ{'s' if count > 1 else ''}"
+
+
+def _more_items(count: int, lang: Lang) -> str:
+    """The comment a trimmed list ends on: '3 more' / '3 autres' ('1 autre')."""
+    if lang == "en":
+        return f"{_MORE}{count} more"
+    return f"{_MORE}{count} autre{'s' if count > 1 else ''}"
 
 
 def _excerpt(code: str, start: str, end: str | tuple[str, ...]) -> str:
@@ -4142,8 +4219,7 @@ def toronto_context(modules: list[ModuleDoc], lang: Lang) -> dict[str, str]:
     package_shown[_MORE] = _more_fields(len(package) - len(keep), lang)
     others = search["response"]["returned_count"] - 1
     search_shown = {
-        "packages": [package_shown]
-        + ([f"{_MORE}{others} more" if en else f"{_MORE}{others} autre"] if others else []),
+        "packages": [package_shown] + ([_more_items(others, lang)] if others else []),
         "total_count": search["response"]["total_count"],
         "provenance": search["response"]["provenance"],
     }
@@ -4182,20 +4258,10 @@ def toronto_context(modules: list[ModuleDoc], lang: Lang) -> dict[str, str]:
                 ],
                 "fields_total": current["fields_total"],
             },
-            f"{_MORE}{len(doc['data_dictionary']) - 1} more"
-            if en
-            else f"{_MORE}{len(doc['data_dictionary']) - 1} autre",
+            _more_items(len(doc["data_dictionary"]) - 1, lang),
         ],
         "documents": [{k: d[k] for k in ("title", "url", "kind")} for d in doc["documents"][:2]]
-        + (
-            [
-                f"{_MORE}{len(doc['documents']) - 2} more"
-                if en
-                else f"{_MORE}{len(doc['documents']) - 2} autre"
-            ]
-            if len(doc["documents"]) > 2
-            else []
-        ),
+        + ([_more_items(len(doc["documents"]) - 2, lang)] if len(doc["documents"]) > 2 else []),
         "notes": doc["notes"],
         "provenance": doc["provenance"],
     }
@@ -4639,9 +4705,7 @@ def pulse_context(lang: Lang) -> dict[str, str]:
     )
 
     jobs_shown = emp_changes[-13:]
-    cats = [month_name(d, lang)[:3] + " " + d[2:4] for d, _ in jobs_shown]
-    if not en:
-        cats = [f"{MONTHS_FR[int(d[5:7]) - 1][:4].rstrip('.')}. {d[2:4]}" for d, _ in jobs_shown]
+    cats = [f"{month_abbr(d, lang)} {d[2:4]}" for d, _ in jobs_shown]
     jobs_series: list[tuple[str, list[float | None]]] = [
         ("Employment change" if en else "Variation de l'emploi", [v for _, v in jobs_shown])
     ]
@@ -4711,7 +4775,7 @@ def pulse_context(lang: Lang) -> dict[str, str]:
             label=ten_label,
             value_format=rate,
             x_tick_format=lambda iso: (
-                (month_name(iso, lang)[:3] + " " + iso[:4]) if iso[5:7] in ("01", "07") else None
+                f"{month_abbr(iso, lang)} {iso[:4]}" if iso[5:7] in ("01", "07") else None
             ),
             date_format=tip_d,
         ),
@@ -5115,6 +5179,14 @@ def french_typography(html_text: str) -> str:
             pos = end
     out.append(html_text[pos:])
     return "".join(out)
+
+
+def french_fragment(fragment: str) -> str:
+    """french_typography() on a piece of HTML that is not in a page yet, such as an
+    answer the home page's script inserts later: it is read as French, and returned
+    without the element that says so."""
+    opening, closing = '<span lang="fr">', "</span>"
+    return french_typography(opening + fragment + closing)[len(opening) : -len(closing)]
 
 
 def render(template: str, lang: Lang, context: dict[str, str]) -> str:

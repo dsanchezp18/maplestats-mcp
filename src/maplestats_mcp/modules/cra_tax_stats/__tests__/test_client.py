@@ -14,7 +14,7 @@ import httpx
 import pytest
 
 from maplestats_mcp.modules.cra_tax_stats import client, constants
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _BASE = "https://www.canada.ca/content/dam/cra-arc/prog-policy/stats"
 
@@ -284,6 +284,51 @@ async def test_get_t1_table_missing_file_is_not_found(httpx_mock):
     _mock_package(httpx_mock, "t1_final", 2024, [_resource("t1", _t1_url(2024, "tbl1_ac_en.csv"))])
     with pytest.raises(NotFound, match="no readable CSV for table 5"):
         await client.get_t1_table(2024, 5)
+
+
+async def test_html_page_is_an_upstream_error_and_not_cached(httpx_mock):
+    # A 200 error page used to be kept in the shared file cache for 24 hours and then
+    # reported as NotFound ("returned a web page") on every call until it expired.
+    _mock_package(httpx_mock, "t1_final", 2022, [_resource("t2", _t1_url(2022, "tbl2_ac.csv"))])
+    httpx_mock.add_response(
+        url=_t1_url(2022, "tbl2_ac.csv"), content=b"<!DOCTYPE html><html>Maintenance</html>"
+    )
+    httpx_mock.add_response(url=_t1_url(2022, "tbl2_ac.csv"), content=_T2_2022)
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.get_t1_table(2022, 2)
+    result = await client.get_t1_table(2022, 2)
+    assert result.total_rows > 0
+
+
+async def test_web_page_error_is_in_french_on_request(httpx_mock):
+    # The web-page error was English only; the module's other errors follow `lang`.
+    _mock_package(httpx_mock, "t1_final", 2022, [_resource("t2", _t1_url(2022, "tbl2_ac.csv"))])
+    httpx_mock.add_response(url=_t1_url(2022, "tbl2_ac.csv"), content=b"<html>Maintenance</html>")
+    with pytest.raises(UpstreamError, match="page Web, pas un fichier CSV"):
+        await client.get_t1_table(2022, 2, lang="fr")
+    # The parser's own check (a bad body reaching it without the download's check).
+    with pytest.raises(UpstreamError, match="page Web, pas un fichier CSV"):
+        client.parse_t1(b"<!doctype html><html></html>", 2022, "https://x", lang="fr")
+    with pytest.raises(UpstreamError, match="web page, not a CSV file"):
+        client.parse_fsa(b"<!doctype html><html></html>", 2021, "https://x")
+
+
+async def test_get_t1_series_does_not_read_an_error_page_as_a_missing_year(httpx_mock):
+    # The NotFound a web page raised was caught as "no file for that year", so the
+    # outage came back as missing_years / "no matching row in 2024".
+    _mock_package(httpx_mock, "t1_final", 2024, [_resource("b", _t1_url(2024, "tbl1_ac_en.csv"))])
+    httpx_mock.add_response(url=_t1_url(2024, "tbl1_ac_en.csv"), content=b"<html>Error</html>")
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.get_t1_series(1, "Total income assessed", from_year=2024)
+
+
+async def test_fsa_error_page_is_not_cached(httpx_mock):
+    _mock_package(httpx_mock, "fsa", 2021, [_resource("a", _fsa_url(2021, "tbl1a-en.csv"))])
+    httpx_mock.add_response(url=_fsa_url(2021, "tbl1a-en.csv"), content=b"  <!doctype html>...")
+    httpx_mock.add_response(url=_fsa_url(2021, "tbl1a-en.csv"), content=_FSA_2021)
+    with pytest.raises(UpstreamError, match="web page"):
+        await client.get_fsa_table(2021, "1a")
+    assert (await client.get_fsa_table(2021, "1a", fsa=["T5K"])).total_rows == 4
 
 
 async def test_get_t1_table_checks_arguments():

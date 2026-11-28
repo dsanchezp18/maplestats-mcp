@@ -59,12 +59,12 @@ async def elections_provincial_get_results(
     by party in an Alberta electoral division (the winner is named), district
     electors, turnout and rejected ballots where published. `province` is qc, ab,
     bc, sk or mb; `election` is the polling day (2022-10-03) or just its year
-    (2022), and defaults to the latest. `district` (name or number or code), `party`
-    (name or abbreviation, e.g. CAQ, UCP, NDP, PC) and `candidate` are
-    accent-insensitive substring filters. Ontario is not available. By-elections
-    are not included. District, party and candidate names are given as
-    each source publishes them (English except for Quebec); `lang="fr"`
-    gives errors, notes, attribution and provenance in French.
+    (2022), and defaults to the latest. `district` (name or number or code) and
+    `candidate` are accent-insensitive substring filters; `party` is a piece of
+    the party's name or its whole abbreviation (CAQ, UCP, NDP, PC). Ontario is
+    not available. By-elections are not included. District, party and candidate
+    names are given as each source publishes them (English except for Quebec);
+    `lang="fr"` gives errors, notes, attribution and provenance in French.
     Keywords: provincial election results, riding, electoral district,
     electoral division, candidate, votes, winner, elected, MLA, MNA, party, CAQ,
     Parti Quebecois, Liberal, UCP, NDP, BC NDP, Saskatchewan Party, Sask Party,

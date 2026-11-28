@@ -16,7 +16,12 @@ import pytest
 
 from maplestats_mcp.modules.oecd import client, constants
 from maplestats_mcp.shared import cache as cache_module
-from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamUnavailable
+from maplestats_mcp.shared.errors import (
+    InvalidInput,
+    NotFound,
+    UpstreamError,
+    UpstreamUnavailable,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -214,6 +219,40 @@ async def test_no_records_is_not_found(httpx_mock):
         await client.get_data("DSD_EO@DF_EO", "CAN.GDPV_ANNPCT.A", start_period="2040")
 
 
+@pytest.mark.parametrize(
+    ("body", "match"),
+    [
+        (
+            "<html><body>Service temporarily unavailable</body></html>",
+            "unexpected SDMX-CSV columns|colonnes",
+        ),
+        ("", "empty body"),
+        ("  \n", "empty body"),
+    ],
+)
+async def test_a_200_that_is_not_sdmx_csv_is_an_error_and_is_not_cached(httpx_mock, body, match):
+    # The body was cached before it was read, so an outage page or an empty answer sent
+    # with HTTP 200 was replayed for twelve hours without spending a download, and a
+    # retry could not reach the source again.
+    _mock_eo(httpx_mock, csv_name=None)
+    httpx_mock.add_response(url=EO_DATA, text=body)
+    with pytest.raises(UpstreamError, match=match):
+        await client.get_data("DSD_EO@DF_EO", "CAN.GDPV_ANNPCT.A", start_period="2024")
+    httpx_mock.add_response(url=EO_DATA, text=_text("data_eo_en.csv"))
+    result = await client.get_data("DSD_EO@DF_EO", "CAN.GDPV_ANNPCT.A", start_period="2024")
+    assert len(result.rows) > 0 and not result.provenance.cached
+    assert len(_data_requests(httpx_mock)) == 2
+
+
+async def test_a_header_with_no_rows_is_still_no_values(httpx_mock):
+    # A well-formed answer with nothing in it stays "no values" (and may be cached).
+    _mock_eo(httpx_mock, csv_name=None)
+    header = _text("data_eo_en.csv").splitlines()[0] + "\n"
+    httpx_mock.add_response(url=EO_DATA, text=header)
+    with pytest.raises(NotFound, match="has no values for key"):
+        await client.get_data("DSD_EO@DF_EO", "CAN.GDPV_ANNPCT.A", start_period="2024")
+
+
 async def test_last_n_refused_on_large_datasets(httpx_mock):
     _mock_eo(httpx_mock, csv_name=None)
     httpx_mock.add_response(url=EO_DATA, status_code=413, text="Request Entity Too Large")
@@ -274,6 +313,27 @@ async def test_compare_puts_canada_first_and_ranks(httpx_mock):
     assert any("NZL" in n and "OECD" in n for n in result.notes)
     assert any("projections" in n for n in result.notes)
     assert result.dataset_name == "Economic Outlook 119"
+
+
+async def test_compare_keeps_the_status_of_an_estimated_value(httpx_mock):
+    # get_data keeps each observation's status; the comparison rebuilt its observations
+    # as (period, value) and an estimated figure looked like any other.
+    _mock_eo(httpx_mock, csv_name=None)
+    text = _text("data_eo_en.csv")
+    row = "A: Annual,2027,1.6865854732046,,PA: Percent per annum"
+    assert text.count(row) == 1
+    httpx_mock.add_response(
+        url=EO_DATA,
+        text=text.replace(
+            row, "A: Annual,2027,1.6865854732046,E: Estimated value,PA: Percent per annum"
+        ),
+    )
+    result = await client.compare_countries("real_gdp_growth", ["GB", "us"])
+    canada = result.countries[0]
+    assert canada.area_code == "CAN"
+    by_period = {o.period: o.status for o in canada.observations}
+    assert by_period["2027"] == "Estimated value"
+    assert by_period["2026"] is None
 
 
 async def test_compare_rejects_unknown_input(httpx_mock):

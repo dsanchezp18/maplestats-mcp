@@ -44,7 +44,7 @@ async def ised_ip_horizons_list_files(
     live search of individual trademarks use ised_cipo_search_trademarks.
     Resource names on open.canada.ca are inconsistent, so table and
     range come from each download URL. Both languages share one file
-    set, so `lang` has no effect.
+    set; `lang` sets the language of the notes, links and errors.
     Keywords: IP Horizons, CIPO, patent data, bulk download, industrial
     design, trademark data, intellectual property, inventor, applicant,
     IPC classification, patent claims, researcher dataset.
@@ -53,8 +53,7 @@ async def ised_ip_horizons_list_files(
     propriété intellectuelle, inventeur, demandeur, classification CIB,
     revendications.
     """
-    del lang
-    return await client.list_files(ip_type, table=table, latest_only=latest_only)
+    return await client.list_files(ip_type, table=table, latest_only=latest_only, lang=lang)
 
 
 @tool
@@ -71,7 +70,7 @@ async def ised_ip_horizons_get_dictionary(
     (e.g. patent 'main', 'interested_party', 'ipc_classification'),
     plus coverage-period, delimiter and encoding notes. CIPO publishes
     no dictionary for the trademark files. Every field carries both
-    languages, so `lang` has no effect.
+    languages; `lang` sets the language of the notes and errors.
     Keywords: IP Horizons, CIPO, data dictionary, codebook, patent
     variables, industrial design, column definitions, field
     descriptions, metadata, schema.
@@ -79,8 +78,7 @@ async def ised_ip_horizons_get_dictionary(
     codes, variables des brevets, dessin industriel, définitions des
     colonnes, description des champs, métadonnées.
     """
-    del lang
-    return await client.get_dictionary(ip_type, table=table)
+    return await client.get_dictionary(ip_type, table=table, lang=lang)
 
 
 @tool
@@ -99,8 +97,8 @@ async def ised_ip_horizons_get_patent(
     when checked on 2026-10-03; release_date and provenance.as_of give
     it), not live. The first call downloads the needed table (tens to hundreds of
     MB) into a local cache; if it times out, the download continues and
-    a retry a few minutes later answers from the cache. `lang` has no
-    effect: titles come in both languages.
+    a retry a few minutes later answers from the cache. Titles come in
+    both languages; `lang` sets the language of the notes and errors.
     Keywords: patent lookup, patent number, Canadian patent, CIPO, IP
     Horizons, patent owner, inventor, applicant, filing date, grant
     date, IPC class, intellectual property.
@@ -108,8 +106,9 @@ async def ised_ip_horizons_get_patent(
     OPIC, Horizons PI, titulaire du brevet, inventeur, demandeur, date
     de dépôt, date d'octroi, classe CIB, propriété intellectuelle.
     """
-    del lang
-    return await client.get_patent(patent_number, include_classifications=include_classifications)
+    return await client.get_patent(
+        patent_number, include_classifications=include_classifications, lang=lang
+    )
 
 
 @tool
@@ -139,8 +138,8 @@ async def ised_ip_horizons_search_patents(
     local cache on first use; the IPC table is ~740 MB and can take many
     minutes, so a first call may time out while the download continues
     in the background; retry later. Follow up with
-    ised_ip_horizons_get_patent for parties and classes. `lang` has no
-    effect.
+    ised_ip_horizons_get_patent for parties and classes. `lang` sets the
+    language of the notes and errors.
     Keywords: patent search, Canadian patents, patent owner, assignee,
     inventor, company patents, IPC classification, technology class,
     filing date, CIPO, IP Horizons, innovation.
@@ -148,7 +147,6 @@ async def ised_ip_horizons_search_patents(
     cessionnaire, inventeur, brevets d'une entreprise, classification
     CIB, domaine technologique, date de dépôt, OPIC, Horizons PI.
     """
-    del lang
     return await client.search_patents(
         party_name=party_name,
         party_type=party_type,
@@ -157,4 +155,5 @@ async def ised_ip_horizons_search_patents(
         filed_from=filed_from,
         filed_to=filed_to,
         limit=limit,
+        lang=lang,
     )

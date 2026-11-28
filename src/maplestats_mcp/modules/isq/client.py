@@ -56,6 +56,9 @@ _LIMITER = get_limiter(
 _LOC = re.compile(r"<loc>([^<]+)</loc>")
 _NEXT_DATA = re.compile(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', re.DOTALL)
 _NUMBER = re.compile(r"^-?\d+(,\d+)?$")
+# A leading zero followed by another digit ("01", "007", "01,5") is a code, not
+# a quantity; "0" and "0,5" are plain numbers.
+_ZERO_PADDED = re.compile(r"^-?0\d")
 _SPACES = re.compile(r"[\s  ]")
 
 
@@ -99,6 +102,49 @@ async def _sitemap(lang: str = "en") -> tuple[list[str], bool]:
     return await cached_fetch("isq:sitemap", constants.SITEMAP_TTL_SECONDS, fetch)
 
 
+def _eau(word: str) -> str:
+    """ "niveal" (the shared fold of "niveaux") -> "niveau"; other words unchanged.
+
+    shared/search.py folds "-aux" to "-al" for every word, "-eaux" included, so the
+    plural "niveaux" is "niveal" while the singular "niveau" stays whole. A word of
+    five or more letters ending in "-eal" is taken as that fold; the same rewrite
+    on both sides makes it harmless for a word that really ends in "-eal".
+    """
+    return word[:-3] + "eau" if len(word) > 4 and word.endswith("eal") else word
+
+
+def _singular(word: str) -> str:
+    """The word without a final plural "s", or "x" after eu, au or ou ("emplois" -> "emploi").
+
+    A final "x" is a plural only in French "-eux", "-aux" and "-oux"; stripping it
+    elsewhere made "inde" meet "index" and "pri" meet "prix", words that are not plurals.
+    """
+    if len(word) > 3 and word.endswith(("s", "eux", "aux", "oux")):
+        return word[:-1]
+    return word
+
+
+def _word_in(word: str, slug_words: set[str]) -> bool:
+    """Whether a query word is one of a slug's words, in either number.
+
+    shared/search.py's tokenizer keeps French words ending in -is or -us whole
+    ("emplois", "revenus"), and folds "-eaux" to "-eal" but not "-eau"
+    ("niveaux" -> "niveal"), and the slug is the table's title, so a plural
+    query met a singular slug, and the reverse, on nothing: every word must
+    match, so "revenus disponibles" found no table whose slug says "revenu
+    disponible", nor "niveau de vie" one that says "niveaux de vie". The
+    tokenizer is shared with the website's own JS copy and stays as it is; this
+    module rewrites "-eal" to "-eau" and tries one plural ending off either side.
+    """
+    word = _eau(word)
+    slug_forms = {_eau(w) for w in slug_words}
+    return (
+        word in slug_forms
+        or _singular(word) in slug_forms
+        or any(_singular(form) == word for form in slug_forms)
+    )
+
+
 def _hit(url: str) -> IsqTableHit:
     slug = url.rstrip("/").rsplit("/", 1)[-1]
     lang = "fr" if "/fr/" in url else "en"
@@ -133,7 +179,7 @@ async def search_tables(
         if lang != "all" and f"/{lang}/" not in url:
             continue
         slug_words = set(tokenize(url.rsplit("/", 1)[-1].replace("-", " ")))
-        if not all(w in slug_words for w in words):
+        if not all(_word_in(w, slug_words) for w in words):
             continue
         # Many English pages reuse the French slug (the sitemap lists
         # /fr/ and /en/ .../revenu-disponible-composantes-mrc-ensemble-quebec):
@@ -220,6 +266,9 @@ class _Column:
     # Field whose per-row text titles this column's header (e.g. lbl_2024 =
     # "2024ᵖ"); a trailing superscript there is the cell's flag.
     mark_field: str | None = None
+    # True for a value leaf the header types "data"; label and code columns
+    # (Code, MRC, Composantes) carry no type.
+    is_data: bool = False
 
 
 def split_mark(text: str) -> tuple[str, str]:
@@ -283,7 +332,7 @@ def columns_from_tree(
             label = " / ".join(p for p in [*path, title] if p) or constants.FIELD_LABELS.get(
                 name, name
             )
-            out.append(_Column(name, label, mark_field=mark))
+            out.append(_Column(name, label, mark_field=mark, is_data=node.get("type") == "data"))
             fields_out.add(name)
 
     walk(tree, [], None)
@@ -297,11 +346,25 @@ def columns_from_tree(
     return out
 
 
-def parse_value(cell: str) -> Value:
+def _is_zero_padded(compact: str) -> bool:
+    return bool(_NUMBER.match(compact) and _ZERO_PADDED.match(compact))
+
+
+def parse_value(cell: str, *, as_text: bool = False, padded_as_text: bool = True) -> Value:
+    """A cell as a number, or as text when it is not one.
+
+    A zero-padded code ("01") stays text: read as a number it came back as 1,
+    and table 4948's region and MRC codes lost the leading zero they are
+    published with (checked 2026-10-03 on the "Code" column). `as_text` keeps
+    a whole column as text (see `parse_rows`); `padded_as_text=False` is for a
+    value column, whose "05" is the number 5.
+    """
     text = _text(cell)
     if text == "":
         return None
     compact = _SPACES.sub("", text)
+    if as_text or (padded_as_text and _is_zero_padded(compact)):
+        return text
     if _NUMBER.match(compact):
         number = float(compact.replace(",", "."))
         return int(number) if "," not in compact else number
@@ -311,15 +374,31 @@ def parse_value(cell: str) -> Value:
 def parse_rows(
     body: str, columns: list[_Column]
 ) -> tuple[list[dict[str, Value]], list[dict[str, str]]]:
-    reader = csv.DictReader(io.StringIO(body), delimiter=";")
+    records = list(csv.DictReader(io.StringIO(body), delimiter=";"))
+    # A label or code column with any zero-padded cell ("01" ... "09", then "10")
+    # is text throughout: parsing cell by cell gave "01" but 10, and a column of
+    # mixed types does not join or sort. Value columns are never affected.
+    code_fields = {
+        column.field
+        for column in columns
+        if not column.is_data
+        and any(
+            _is_zero_padded(_SPACES.sub("", _text(record.get(column.field) or "")))
+            for record in records
+        )
+    }
     rows, flags = [], []
-    for record in reader:
+    for record in records:
         row: dict[str, Value] = {}
         flag: dict[str, str] = {}
         for column in columns:
             if column.field in constants.LAYOUT_FIELDS:
                 continue
-            row[column.label] = value = parse_value(record.get(column.field) or "")
+            row[column.label] = value = parse_value(
+                record.get(column.field) or "",
+                as_text=column.field in code_fields,
+                padded_as_text=not column.is_data,
+            )
             mark = _text(record.get(column.flag_field) or "") if column.flag_field else ""
             if not mark and column.mark_field and value is not None:
                 # No sign: the flag is the header's superscript ("2024ᵖ").
@@ -407,6 +486,31 @@ async def _page(url: str, lang: str = "en") -> dict[str, Any]:
     return data
 
 
+def _check_rows_body(body: str, fields: str, number: int, lang: str) -> None:
+    """Refuse a p_retrn_data answer that is not the table's delimited rows.
+
+    The engine answers a failure with HTTP 200 and no rows or a web page. An
+    empty body read as a table of zero rows, and an HTML page as one row per
+    line of markup with every value None, both cached for six hours. The first
+    line of a real answer is the requested field list, ';'-separated (checked
+    live 2026-09-26 on 26 tables, and in the 2026-10-03 table 4948 and 4074
+    recordings), so it must be non-empty, not a page, and name a requested field.
+    """
+    head = body.lstrip("\ufeff \t\r\n")
+    names = next(csv.reader(io.StringIO(head), delimiter=";"), []) if head else []
+    wanted = {name for name in fields.split(",") if name}
+    if not head or head.startswith("<") or not wanted.intersection(n.strip() for n in names):
+        raise_localized(
+            UpstreamError,
+            f"isq: table {number}: the data request did not return the table's rows "
+            "(empty or a web page instead of delimited data); try again later.",
+            f"isq : tableau {number} : la requête de données n'a pas renvoyé les lignes du "
+            "tableau (réponse vide ou page web au lieu de données délimitées) ; réessayez "
+            "plus tard.",
+            lang,
+        )
+
+
 async def _dynamic(number: int, lang: str = "en") -> tuple[dict[str, Any], bool]:
     async def fetch() -> dict[str, Any]:
         header = json.loads(await _get(constants.KEN + "p_retrn_header", {"p_id_tabl": number}))
@@ -429,10 +533,14 @@ async def _dynamic(number: int, lang: str = "en") -> tuple[dict[str, Any], bool]
         if group:
             tree.insert(0, {"field": group})
             tree = [n for n in tree if not (n.get("type") == "group" and n.get("field") == group)]
+        title = _text(await _get(constants.KEN + "p_retrn_titre", {"p_id_tabl": number}))
+        data = await _get(constants.KEN + "p_retrn_data", params)
+        # Inside the cached fetch: a bad answer raises here and is not cached.
+        _check_rows_body(data, fields, number, lang)
         return {
-            "title": _text(await _get(constants.KEN + "p_retrn_titre", {"p_id_tabl": number})),
+            "title": title,
             "tree": tree,
-            "data": await _get(constants.KEN + "p_retrn_data", params),
+            "data": data,
             # The engine is French only: p_lang=en returned the same French
             # notes on 7 of 7 tables with an English page, and p_retrn_titre
             # or p_retrn_header with p_lang answer 404 (checked 2026-10-03).
