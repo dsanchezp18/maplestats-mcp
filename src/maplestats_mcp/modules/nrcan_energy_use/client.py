@@ -111,13 +111,29 @@ async def _check_reachable(lang: str = "en") -> None:
 # main-heading id (`<h1 id="wb-cont">`, on the table page recorded live 2026-11-07)
 # and a link into the database's own section (the menu links recorded live, whose
 # paths are the two roots in constants.py). It is a heuristic: a maintenance page
-# drawn in the site's own template would pass it too.
+# drawn in the site's own template would pass it too, which is why a page that passes
+# it without the content wanted is never cached (_SiteAnswer, below).
 _SITE_PAGE = re.compile(
     r"""id=["']wb-cont["']"""
     r"""|href=["'](?:https://oee\.nrcan\.gc\.ca)?"""
     r"""/(?:corporate/statistics/neud|organisme/statistiques/bnce)/""",
     re.IGNORECASE,
 )
+
+
+class _SiteAnswer(Exception):
+    """A page in the site's own template without the content wanted.
+
+    Raised inside the fetch so `cached_fetch` stores nothing (it never caches a fetcher
+    that raises) and `_html` hands the text back. The page is either the site saying
+    there is no such table or menu, or a maintenance notice in the same template, and
+    nothing on the page tells the two apart: kept for 24 h (tables) or seven days
+    (menus) it would hold a table back long after the site was back.
+    """
+
+    def __init__(self, text: str) -> None:
+        super().__init__(text)
+        self.text = text
 
 
 def _has_table(html: str) -> bool:
@@ -144,8 +160,9 @@ async def _html(
 
     A page that fails `expect` is an upstream error and is not cached, unless
     `site_page_is_answer` is set and the page carries the site's own markers: then it
-    is the site saying there is no such table or menu, and it is returned as before
-    (the caller raises NotFound).
+    is taken as the site saying there is no such table or menu, and it is returned
+    (the caller raises NotFound), but not cached either: a maintenance page in the
+    site's own template looks the same, and a cached copy would outlive the outage.
     """
 
     async def fetch() -> str:
@@ -183,12 +200,11 @@ async def _html(
         # host answers maintenance and error pages with HTTP 200; they used to be kept
         # for 24 h (tables) or 7 days (menus) and then read as "no data table" (NotFound)
         # or as a survey with no tables, until the entry expired. A page that is the
-        # site's own, with no table, is a table that does not exist (NotFound).
-        if (
-            expect is not None
-            and not expect(response.text)
-            and not (site_page_is_answer and _SITE_PAGE.search(response.text))
-        ):
+        # site's own, with no table, is read as a table that does not exist (NotFound),
+        # but is passed up without being cached, as it may be a maintenance notice.
+        if expect is not None and not expect(response.text):
+            if site_page_is_answer and _SITE_PAGE.search(response.text):
+                raise _SiteAnswer(response.text)
             raise _error(
                 UpstreamUnavailable,
                 f"nrcan_energy_use: {url} answered with a page that is not the expected "
@@ -201,7 +217,10 @@ async def _html(
             )
         return response.text
 
-    return await cached_fetch(f"nrcan-energy-use:{url}", ttl, fetch)
+    try:
+        return await cached_fetch(f"nrcan-energy-use:{url}", ttl, fetch)
+    except _SiteAnswer as answer:
+        return answer.text, False
 
 
 def _clean(text: str) -> str:
@@ -404,8 +423,9 @@ def _parse_table(
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table")
     if not isinstance(table, Tag):
-        # _html lets a page of the site's own with no table through: that is a table
-        # number that does not exist (a page without the site's markers never gets here).
+        # _html lets a page of the site's own with no table through (uncached): that is
+        # a table number that does not exist, or a maintenance notice in the site's own
+        # template (a page without the site's markers never gets here).
         _raise(
             NotFound,
             "nrcan_energy_use: the page has no data table.",

@@ -255,11 +255,13 @@ def _month_of(text: str) -> int | None:
     return constants.MONTH_LOOKUP.get(key) or constants.MONTHS.get(key[:3].title())
 
 
-_QUARTER = re.compile(r"(?<![a-z0-9])(?:[qt]|quarter|trimestre)\s*([1-4])(?!\d)")
+# A digit may come right before the letter ("2024Q1"); a letter may not, so the "t" ending a
+# word is no quarter ("Dept2").
+_QUARTER = re.compile(r"(?<![a-z])(?:[qt]|quarter|trimestre)\s*([1-4])(?!\d)")
 
 
 def _quarter_of(text: str) -> int | None:
-    """1-4 from 'Q1', 'Q1 2024', '2024-Q1', 'T2' (French) or 'Quarter 3'."""
+    """1-4 from 'Q1', 'Q1 2024', '2024-Q1', '2024Q1', 'T2' (French) or 'Quarter 3'."""
     found = _QUARTER.search(_fold(text))
     return int(found.group(1)) if found else None
 

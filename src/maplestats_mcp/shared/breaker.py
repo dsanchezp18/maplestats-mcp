@@ -1,8 +1,10 @@
 """Per-host circuit breaker for upstream requests, and the per-host error counts /stats shows.
 
-The key is the host, except for StatCan's www150, whose path groups (WDS, SDMX, CIMT, The
-Daily, files) fail independently: shared/http.py keys those as "host/group", so a slow
-group pauses only itself. Below, "host" means that key.
+The key is the host, except for StatCan's www150 and www12, whose path groups fail
+independently: shared/http.py keys those as "host/group" (www150: wds, sdmx, cimt, rss,
+files, daily, pages, pub, pub_zip, and the bare "www150.statcan.gc.ca" for any other path;
+www12: census), so a slow group pauses only itself. The groups are path_health.PATHS.
+Below, "host" means that key.
 
 Every client shared/http.py creates sends through it, so a host that keeps
 failing stops costing each caller its full timeout. After
@@ -22,9 +24,10 @@ failure resets the count, so a host that fails now and then
 (geo.statcan.gc.ca answered 6 of 10 requests on 2026-09-27) is never cut off
 by its bad moments alone.
 
-The state is per process and in memory. It holds host names only, never
-paths, query strings or anything a caller typed beyond the host its tool
-reaches; tools that take a URL accept only their publisher's hosts.
+The state is per process and in memory. A key is a host name, or a host plus one of
+those fixed group names. No path, query string or text a caller typed enters a key
+beyond the host its tool reaches (tools that take a URL accept only their publisher's
+hosts): the group is looked up in path_health's own list, never taken from the request.
 """
 
 from __future__ import annotations

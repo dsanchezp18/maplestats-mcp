@@ -55,12 +55,36 @@ def test_brief_search_keeps_the_signature(client: Client, server: FakeServer) ->
     assert found["input_schema"].is_null().all()
 
 
-# What a server that does not know `detail` says: the project's own wording,
-# and the one a bare validator uses.
+# What a server that does not know `detail` says, word for word: the project's own
+# validation message, as the v0.5.0 server gave it (a call_tool error names the inner
+# tool and lists that tool's parameters), in English and in French.
 OLD_SERVER_ERRORS = [
     "detail is not a parameter of this tool; parameters: query",
-    "Unexpected argument: detail",
+    (
+        "[invalid_input] Invalid input: boc_get_observations: detail is not a "
+        "parameter of this tool; parameters: aggregation, lang, recent, series_names "
+        "Fix: correct the argument named above."
+    ),
     "detail n'est pas un paramètre de cet outil; paramètres : query",
+    (
+        "[invalid_input] Entrée invalide\xa0: boc_get_observations\xa0: detail "
+        "n'est pas un paramètre de cet outil; paramètres\xa0: lang, recent, "
+        "series_names Solution\xa0: corrigez l'argument nommé ci-dessus."
+    ),
+]
+
+# Errors that mention `detail` or an unknown argument without being that refusal: a
+# current server's invalid-arguments error quotes a tool's parameters (one is called
+# "details"), and the earlier loose wording ("Unexpected argument: detail").
+NOT_THE_REFUSAL = [
+    (
+        "Invalid input: some_tool: kind is not a parameter of this tool; "
+        "parameters: details, lang"
+    ),
+    "Invalid input: some_tool: detail must be one of 'brief' or 'full' (got 'x')",
+    "Unexpected argument: detail",
+    "Unknown series: detail",
+    "No detail found for FXUSDCAD.",
 ]
 
 
@@ -130,19 +154,54 @@ def test_data_calls_fall_back_on_a_server_without_detail(
     assert raw["provenance"]["source"] == "boc"
 
 
+@pytest.mark.parametrize("message", NOT_THE_REFUSAL)
 def test_an_error_that_only_mentions_detail_is_not_repeated(
-    client: Client, server: FakeServer
+    client: Client, server: FakeServer, message: str
 ) -> None:
     # The tool's own error, not a refusal of the argument: one call, and it raises.
     server.override = lambda request: (
-        error_reply(json.loads(request.content)["id"], "No detail found for FXUSDCAD.")
+        error_reply(json.loads(request.content)["id"], message)
         if json.loads(request.content)["method"] == "tools/call"
         else None
     )
-    with pytest.raises(MapleStatsError, match="No detail found"):
+    with pytest.raises(MapleStatsError):
         client.call_tool("boc_get_observations", series_names=["FXUSDCAD"], recent=3)
+    with pytest.raises(MapleStatsError):
+        client.get_data("boc_get_observations", series_names=["FXUSDCAD"], recent=3)
+    calls = [b for b in server.bodies() if b["method"] == "tools/call"]
+    assert len(calls) == 2  # one per call above, none repeated
+
+
+@pytest.mark.parametrize("message", NOT_THE_REFUSAL)
+def test_a_search_error_that_only_mentions_detail_is_not_repeated(
+    client: Client, server: FakeServer, message: str
+) -> None:
+    server.override = lambda request: (
+        error_reply(json.loads(request.content)["id"], message)
+        if json.loads(request.content)["method"] == "tools/call"
+        else None
+    )
+    with pytest.raises(MapleStatsError):
+        client.search_tools("bank of canada exchange rate")
     calls = [b for b in server.bodies() if b["method"] == "tools/call"]
     assert len(calls) == 1
+
+
+def test_the_repeat_without_detail_is_made_once(
+    client: Client, server: FakeServer
+) -> None:
+    # A server that refuses `detail` and then fails the repeat too: two calls, then
+    # the error reaches the caller.
+    server.override = lambda request: (
+        error_reply(json.loads(request.content)["id"], OLD_SERVER_ERRORS[0])
+        if json.loads(request.content)["method"] == "tools/call"
+        else None
+    )
+    with pytest.raises(MapleStatsError, match="detail is not a parameter"):
+        client.get_data("boc_get_observations", series_names=["FXUSDCAD"], recent=3)
+    calls = [b["params"] for b in server.bodies() if b["method"] == "tools/call"]
+    assert len(calls) == 2
+    assert "detail" in calls[0]["arguments"] and "detail" not in calls[1]["arguments"]
 
 
 def test_the_raw_call_passes_detail_to_the_servers_own_tools(

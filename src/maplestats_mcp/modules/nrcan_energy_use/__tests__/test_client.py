@@ -121,6 +121,21 @@ async def test_get_table_that_does_not_exist_is_not_found(httpx_mock):
         await client.get_table(key)
 
 
+async def test_a_site_page_without_a_table_is_not_kept_in_the_cache(httpx_mock):
+    # The site's own template can carry a maintenance notice, so a table page with no table
+    # is NotFound but must not be stored for 24 h: the next call reads the page again and
+    # gets the table once the site is back.
+    key = "type=SH&sector=aaa&juris=ca&year=2019&rn=1&page=1"
+    url = f"{constants.EN_ROOT}showTable.cfm?{key}"
+    httpx_mock.add_response(url=url, text=_SITE_PAGE_NO_TABLE)
+    httpx_mock.add_response(url=url, text=_TABLE)
+    with pytest.raises(NotFound, match="no data table"):
+        await client.get_table(key)
+    table = await client.get_table(key)
+    assert table.rows[0][0] == "Number of households"
+    assert len(httpx_mock.get_requests()) == 2
+
+
 async def test_get_table_error_page_is_unavailable_and_not_cached(httpx_mock):
     # A 200 page with no table used to be cached for 24 h and reported as NotFound
     # ("the page has no data table") on every call until then.
@@ -202,6 +217,17 @@ async def test_menu_page_of_the_site_without_table_links_is_not_found(httpx_mock
     httpx_mock.add_response(url=_MENU_URL, text=_SITE_PAGE_NO_TABLE)
     with pytest.raises(NotFound, match="No tables listed"):
         await client.list_tables("sheu_2019")
+
+
+async def test_a_site_menu_page_without_table_links_is_not_kept_in_the_cache(httpx_mock):
+    # Same for a menu, which used to be kept for seven days.
+    httpx_mock.add_response(url=_MENU_URL, text=_SITE_PAGE_NO_TABLE)
+    httpx_mock.add_response(url=_MENU_URL, text=_MENU)
+    with pytest.raises(NotFound, match="No tables listed"):
+        await client.list_tables("sheu_2019")
+    result = await client.list_tables("sheu_2019")
+    assert [t.table_number for t in result.tables] == ["Table 1.1a"]
+    assert len(httpx_mock.get_requests()) == 2
 
 
 async def test_list_page_without_menus_is_unavailable_even_on_a_site_page(httpx_mock):

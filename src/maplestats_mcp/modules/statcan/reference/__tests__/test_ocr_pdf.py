@@ -419,13 +419,16 @@ async def test_ocr_that_cannot_start_in_the_time_left_says_so(monkeypatch):
     )
 
 
-async def _scan_two_pages(monkeypatch, *, spent: float, lang: str, stop_at: int | None = None):
+async def _scan_two_pages(
+    monkeypatch, *, spent: float, lang: str, stop_at: int | None = None, in_page: bool = True
+):
     monkeypatch.setattr(ocr, "status", lambda lang="en": ocr.Status(ENGINE))
 
     def read(body, number, engine, dpi, wait, memory_mb):
         if number == stop_at:
-            # The budget ended while this page was being read.
-            raise ocr._Stop("time")
+            # The budget ended while this page was being read, or (in_page False) before
+            # the work on it began.
+            raise ocr._Stop("time", in_page=in_page)
         return ocr._Recognised(f"Compte rendu page {number}", 90.0, dpi)
 
     monkeypatch.setattr(ocr, "_read_page", read)
@@ -467,6 +470,28 @@ async def test_the_same_in_french(monkeypatch):
     note = result.limits[0]
     assert "n'a pas démarré" not in note
     assert "page 1" in note and "40 s" in note and "pages=" in note
+    assert result.cached is False
+
+
+async def test_a_budget_gone_before_the_first_page_began_does_not_say_it_was_reading_it(
+    monkeypatch,
+):
+    # The wait for the engine used the time: page 1 was never drawn or read.
+    result = await _scan_two_pages(monkeypatch, spent=0.0, lang="en", stop_at=1, in_page=False)
+    assert result.ocr_pages == []
+    note = result.limits[0]
+    assert "while it was reading" not in note and "did not start" not in note
+    assert "ran out before it could start reading page 1" in note
+    assert "40 s" in note and "pages=" in note
+    assert result.cached is False
+
+
+async def test_the_same_before_the_first_page_began_in_french(monkeypatch):
+    result = await _scan_two_pages(monkeypatch, spent=0.0, lang="fr", stop_at=1, in_page=False)
+    note = result.limits[0].replace(" ", " ")
+    assert "pendant la lecture" not in note and "n'a pas démarré" not in note
+    assert "avant qu'elle puisse commencer la lecture de la page 1" in note
+    assert "40 s" in note and "pages=" in note
     assert result.cached is False
 
 

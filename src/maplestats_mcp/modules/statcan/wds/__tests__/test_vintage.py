@@ -355,3 +355,158 @@ async def test_the_candidates_are_listed_in_french_for_a_french_call(httpx_mock)
     assert "11 (« Autres », sous « Biens »)" in message
     assert "12 (« Autres », sous « Biens »)" in message
     assert "Other" not in message and "Goods" not in message and "under" not in message
+
+
+def _coded(member_id, name, code, parent=None):
+    return {**_member(member_id, name), "parentMemberId": parent, "classificationCode": code}
+
+
+def _two_others_with_codes():
+    """'Other' under Goods (code A1) and under Services (code B2) in the regular table; the
+    real-time table words the two parents differently."""
+    regular_dims = [
+        _dimension(
+            1,
+            "Sector",
+            [
+                _member(1, "Goods"),
+                _member(2, "Services"),
+                _coded(3, "Other", "A1", 1),
+                _coded(4, "Other", "B2", 2),
+            ],
+        )
+    ]
+    return regular_dims
+
+
+async def test_a_parent_worded_differently_is_decided_by_the_classification_code(httpx_mock):
+    # "Goods" is "Goods-producing industries" in the real-time table, so no "Other" sits
+    # under a parent of the same name; exactly one of them has the code A1.
+    rt_dims = [
+        _dimension(
+            1,
+            "Sector",
+            [
+                _member(10, "Goods-producing industries"),
+                _member(11, "Service-producing industries"),
+                _coded(12, "Other", "B2", 11),
+                _coded(13, "Other", "A1", 10),
+            ],
+        ),
+        _release_dimension(2),
+    ]
+    _serve_metadata(httpx_mock, _two_others_with_codes(), rt_dims)
+    _data_response(httpx_mock, "13.112.0.0.0.0.0.0.0.0")
+
+    result = await vintage.get_series_as_of(18100256, "3", "2026-03-20", latest_n=1)
+
+    assert result.real_time_coordinate == "13.112.0.0.0.0.0.0.0.0"
+
+
+async def test_a_parent_worded_differently_and_no_matching_code_is_still_refused(httpx_mock):
+    rt_dims = [
+        _dimension(
+            1,
+            "Sector",
+            [
+                _member(10, "Goods-producing industries"),
+                _member(11, "Service-producing industries"),
+                _coded(12, "Other", "Z8", 11),
+                _coded(13, "Other", "Z9", 10),
+            ],
+        ),
+        _release_dimension(2),
+    ]
+    _serve_metadata(httpx_mock, _two_others_with_codes(), rt_dims)
+
+    with pytest.raises(InvalidInput, match="12.*13"):
+        await vintage.get_series_as_of(18100256, "3", "2026-03-20")
+
+
+async def _in_french(call):
+    token = vintage._LANG.set("fr")
+    try:
+        await call
+    finally:
+        vintage._LANG.reset(token)
+
+
+def _no_french(member_id, name, parent=None):
+    """A member as WDS sometimes sends it: no French name at all."""
+    return {"memberId": member_id, "memberNameEn": name, "parentMemberId": parent}
+
+
+async def test_a_shared_name_without_a_french_name_is_refused_in_french(httpx_mock):
+    regular_dims = [
+        {
+            "dimensionPositionId": 1,
+            "dimensionNameEn": "Sector",
+            "member": [_no_french(1, "Goods"), _no_french(3, "Other", 1)],
+        }
+    ]
+    rt_dims = [
+        {
+            "dimensionPositionId": 1,
+            "dimensionNameEn": "Sector",
+            "member": [
+                _no_french(10, "Goods"),
+                _no_french(11, "Other", 10),
+                _no_french(12, "Other", 10),
+            ],
+        },
+        _release_dimension(2),
+    ]
+    _serve_metadata(httpx_mock, regular_dims, rt_dims)
+
+    with pytest.raises(InvalidInput, match="nom partagé") as raised:
+        await _in_french(vintage.get_series_as_of(18100256, "3", "2026-03-20"))
+
+    # The English names stand in for the missing French ones.
+    assert "« Other » (Sector)" in str(raised.value).replace(" ", " ")
+
+
+async def test_a_member_the_real_time_table_lacks_is_explained_without_a_french_name(httpx_mock):
+    regular_dims = [
+        {
+            "dimensionPositionId": 1,
+            "dimensionNameEn": "Sector",
+            "member": [_no_french(1, "Goods"), _no_french(2, "Only here")],
+        }
+    ]
+    rt_dims = [
+        {
+            "dimensionPositionId": 1,
+            "dimensionNameEn": "Sector",
+            "member": [_no_french(10, "Goods")],
+        },
+        _release_dimension(2),
+    ]
+    _serve_metadata(httpx_mock, regular_dims, rt_dims)
+
+    with pytest.raises(NotFound, match="n'a pas d'historique") as raised:
+        await _in_french(vintage.get_series_as_of(18100256, "2", "2026-03-20"))
+    assert "« Only here » (Sector)" in str(raised.value).replace(" ", " ")
+
+    with pytest.raises(NotFound, match="n'a pas de membre 9") as raised:
+        await _in_french(vintage.get_series_as_of(18100256, "9", "2026-03-20"))
+    assert "dimension 1 (Sector)" in str(raised.value)
+
+
+async def test_two_dimensions_that_cannot_be_told_apart_are_explained_without_a_french_name(
+    httpx_mock,
+):
+    def dim(position, name):
+        return {
+            "dimensionPositionId": position,
+            "dimensionNameEn": name,
+            "member": [_no_french(1, "Rate")],
+        }
+
+    # Regular dimension 3 is "Measure"; the real-time table has two of them, at 1 and 4.
+    regular_dims = [dim(1, "Measure"), dim(2, "Geography"), dim(3, "Measure")]
+    rt_dims = [dim(1, "Measure"), dim(2, "Geography"), dim(4, "Measure"), _release_dimension(5)]
+    _serve_metadata(httpx_mock, regular_dims, rt_dims)
+
+    with pytest.raises(InvalidInput, match="2 dimensions") as raised:
+        await _in_french(vintage.get_series_as_of(18100256, "1.1.1", "2026-03-20"))
+    assert "nommées 'Measure'" in str(raised.value)

@@ -34,6 +34,7 @@ from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, 
 from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import fr_number
+from maplestats_mcp.shared.limits import join_limits
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -46,6 +47,14 @@ _SKIP_DATA = (
     "classification", "readme", "thumbs", "note", "validation",
 )  # fmt: skip
 _DATA_EXTENSIONS = (".geojson", ".gpkg", ".csv")
+
+
+class NotLodePage(UpstreamError):
+    """A page that answered 200 but is neither the LODE page asked for nor a usable one.
+
+    A subclass so that list_databases can leave one database without releases when its own
+    page is refused, while every other failure (a 404, a 5xx, a timeout) still ends the call.
+    """
 
 
 def _database(key: str) -> Database:
@@ -104,7 +113,7 @@ async def _page(url: str, kind: Literal["landing", "product"]) -> str:
             pages.is_landing_page(text) if kind == "landing" else pages.is_product_page(text, url)
         )
         if not real:
-            raise UpstreamError(
+            raise NotLodePage(
                 say(
                     f"statcan_lode: {url} is not a LODE page (a maintenance or empty page?); "
                     "it was not kept.",
@@ -133,6 +142,7 @@ async def list_databases(lang: str = "en") -> LodeDatabaseList:
     landing = pages.parse_landing(await _page(landing_url, "landing"))
     by_url = {entry.page_url.rstrip("/"): entry for entry in landing}
     databases: list[LodeDatabase] = []
+    refused: list[str] = []
     for db in constants.DATABASES:
         page_url = db.page_en if lang == "en" else db.page_fr
         entry = by_url.get(page_url.rstrip("/"))
@@ -140,11 +150,19 @@ async def list_databases(lang: str = "en") -> LodeDatabaseList:
         description = db.description_en if lang == "en" else db.description_fr
         if not entry:
             # Accessibility products and the NAR are not on the landing page;
-            # their product page carries the release date.
-            product = pages.parse_product(await _page(page_url, "product"), page_url)
-            if product.release_date:
-                label = f"{product.release_date}"
-                releases = [LodeRelease(date=product.release_date, version=None, label=label)]
+            # their product page carries the release date. A page with neither a ZIP
+            # link nor a release date (a maintenance page, or a layout this parser does
+            # not know) is refused, never kept, and leaves this one database without
+            # releases, as every database was before pages were checked; the call says so.
+            release_date: str | None = None
+            try:
+                product = pages.parse_product(await _page(page_url, "product"), page_url)
+                release_date = product.release_date
+            except NotLodePage:
+                refused.append(db.key)
+            if release_date:
+                label = f"{release_date}"
+                releases = [LodeRelease(date=release_date, version=None, label=label)]
         dates = sorted((r.date for r in releases if r.date), reverse=True)
         licence, licence_url = _licence(db)
         databases.append(
@@ -163,6 +181,21 @@ async def list_databases(lang: str = "en") -> LodeDatabaseList:
                 queryable=db.queryable,
             )
         )
+    limits: str | None = say(
+        "descriptions are summaries; formats are as last verified",
+        "les descriptions sont des résumés ; les formats sont ceux de la dernière vérification",
+    )
+    if refused:
+        limits = join_limits(
+            limits,
+            say(
+                f"the page of {', '.join(refused)} was not a LODE product page (no ZIP link or "
+                "release date: an error or maintenance page?), so no release is listed for it",
+                f"la page de {', '.join(refused)} n'est pas une page de produit LODE (ni lien "
+                "ZIP ni date de diffusion : page d'erreur ou d'entretien ?) ; aucune diffusion "
+                "n'est donc listée",
+            ),
+        )
     return LodeDatabaseList(
         databases=databases,
         landing_url=landing_url,
@@ -176,11 +209,7 @@ async def list_databases(lang: str = "en") -> LodeDatabaseList:
                 "pages de Statistique Canada, en cache 1 jour ; les bases de données paraissent "
                 "de façon ponctuelle",
             ),
-            limits=say(
-                "descriptions are summaries; formats are as last verified",
-                "les descriptions sont des résumés ; les formats sont ceux de la dernière "
-                "vérification",
-            ),
+            limits=limits,
             lang=lang,
         ),
     )

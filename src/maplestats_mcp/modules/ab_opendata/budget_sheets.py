@@ -18,6 +18,7 @@ from __future__ import annotations
 import io
 import itertools
 import re
+import unicodedata
 import warnings
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -33,6 +34,13 @@ _YEAR_MIN, _YEAR_MAX = 1900, 2100
 _SPACES = re.compile(r"\s+")
 _YEARISH = re.compile(r"^\d{4}(?:-\d{2,4})?[a-z]?$")
 _PLACEHOLDERS = frozenset({"n/a", "na", "-", "–", "—", "..", "...", "x", "nil"})
+# Words that name a table of years rather than a line item ("Calendar Year
+# Assumptions", "Fiscal year", "Hypothèses par année civile", "Exercice"). Matched as
+# word starts, accents removed: the live workbooks leave a footnote letter on the
+# label ("Fiscal Year Assumptionsa").
+_HEADER_WORDS = re.compile(
+    r"\b(?:year|fiscal|calendar|assumption|period|annee|exercice|civil|hypothese|periode)"
+)
 
 
 @dataclass
@@ -176,23 +184,38 @@ def _label_column(grid: list[list[Value | None]]) -> int:
     return min(counts, key=lambda i: (-counts[i], i)) if counts else 0
 
 
+def _header_wording(label: str | None) -> bool:
+    """Whether a row label reads like the name of a table of years, in English or French."""
+    if not label:
+        return False
+    plain = unicodedata.normalize("NFD", label.lower())
+    return bool(_HEADER_WORDS.search("".join(c for c in plain if not unicodedata.combining(c))))
+
+
+def _names_years(row: list[Value | None]) -> bool:
+    return any(_is_year(v) or (isinstance(v, str) and _YEARISH.match(v) is not None) for v in row)
+
+
 def _header_like(
     values: list[Value | None],
     *,
-    labelled: bool,
+    label: str | None,
     seen_data: bool,
     header_line_below: bool,
+    years_above: bool,
 ) -> bool:
     """No figures, or a row of years (a year row over the columns).
 
     Whole numbers between 1900 and 2100 are also what a line item in $ millions
     looks like (1950, 1980, 2020, 2075), so a row of them is a header only on
-    evidence that it is one. A row with no line-item label, or with a line of
-    header text (Actual, Budget, Forecast) right under it, is a header whatever
-    the gaps between its years (2017, 2019, 2025 once hidden columns are shown;
-    2025, 2030, 2035). A labelled row with no header line under it must have the
-    years one after another and come before the first data row. Anything else is
-    data and keeps its label and values.
+    evidence that it is one. A row with no line-item label, with header wording in
+    its label ("Calendar Year Assumptions"), or with a line of header text (Actual,
+    Budget, Forecast) right under it, is a header whatever the gaps between its
+    years (2017, 2019, 2025 once hidden columns are shown; 2025, 2030, 2035). A
+    labelled row with none of those must have the years one after another (years do
+    step by exactly one; amounts rarely do), come before the first data row, and
+    not sit under header rows that already hold the years. Anything else is data and
+    keeps its label and values.
     """
     filled = [v for v in values if v is not None]
     # A forecaster with no figure for any year ("n/a" in every column, Benchmark
@@ -204,9 +227,10 @@ def _header_like(
         return True
     if not all(_is_year(v) for v in numbers):
         return False
-    # A label-less row, or one with a header line under it, is the header of a table
-    # (a second one too: Key Assumptions has calendar years under the fiscal years).
-    evidence = not labelled or header_line_below
+    # A label-less row, one named like a table of years, or one with a header line
+    # under it is the header of a table (a second one too: Key Assumptions has
+    # calendar years under the fiscal years).
+    evidence = label is None or header_line_below or _header_wording(label)
     # Years typed as numbers beside years typed as text ('2025', 2026, '2027' on
     # the capital assets schedule).
     if any(isinstance(v, str) and _YEARISH.match(v) for v in filled):
@@ -215,7 +239,9 @@ def _header_like(
     if len(years) < 2 or not all(a < b for a, b in itertools.pairwise(years)):
         return False
     consecutive = all(b - a == 1 for a, b in itertools.pairwise(years))
-    return evidence or (consecutive and not seen_data)
+    # Header rows above that already name the columns by year leave no work for
+    # this row: a line item such as "Roads" 2020, 2021, 2022 is data.
+    return evidence or (consecutive and not seen_data and not years_above)
 
 
 def _numbering(values: list[Value | None]) -> bool:
@@ -326,9 +352,10 @@ def parse_sheet(body: bytes, name: str) -> ParsedSheet:
             continue
         is_header = _header_like(
             values,
-            labelled=label is not None,
+            label=label,
             seen_data=seen_data,
             header_line_below=label is not None and _header_line_below(grid, index, label_col),
+            years_above=any(_names_years(row) for row in block),
         )
         if is_header:
             if seen_data and not block:

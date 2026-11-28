@@ -92,6 +92,64 @@ def test_a_plain_number_stays_a_number():
     assert _body(rows) == ["-12.5", "7", "0", "1e-7", "-12.5", "+3", "-0.5e3", "-.5", "", ""]
 
 
+def test_a_number_written_for_reading_stays_a_number():
+    # Thousands commas in groups of three, a decimal part and a percent sign. A cell with a
+    # comma is quoted, which is the CSV's business, not the apostrophe's.
+    rows = [
+        ["-1,234.5"],
+        ["-5%"],
+        ["-1,234,567"],
+        ["-12.5%"],
+        ["-.5%"],
+        ["+1,000"],
+        ["1,234.5%"],
+        ["-0%"],
+    ]
+    assert _body(rows) == [
+        '"-1,234.5"',
+        "-5%",
+        '"-1,234,567"',
+        "-12.5%",
+        "-.5%",
+        '"+1,000"',
+        '"1,234.5%"',
+        "-0%",
+    ]
+
+
+def test_anything_else_that_starts_like_a_number_is_still_neutralized():
+    rows = [
+        ["-Infinity"],
+        ["+Infinity"],
+        ["-1+2"],
+        ["-1,23"],
+        ["-1,2345"],
+        ["-1,234.5+1"],
+        ["-5%+1"],
+        ["-%"],
+        ["-,5"],
+        ["-1,234.5 USD"],
+        ["=1%"],
+        ["@5%"],
+        ["-5%\t"],
+    ]
+    assert _body(rows) == [
+        "'-Infinity",
+        "'+Infinity",
+        "'-1+2",
+        '"\'-1,23"',
+        '"\'-1,2345"',
+        '"\'-1,234.5+1"',
+        "'-5%+1",
+        "'-%",
+        '"\'-,5"',
+        '"\'-1,234.5 USD"',
+        "'=1%",
+        "'@5%",
+        "'-5%\t",
+    ]
+
+
 def test_text_that_only_contains_a_formula_character_is_left_alone():
     rows = [["Mean = 5"], ["x-1"], ["a@b.ca"], [" =1"], ["Chômage"]]
     assert _body(rows) == ["Mean = 5", "x-1", "a@b.ca", " =1", "Chômage"]

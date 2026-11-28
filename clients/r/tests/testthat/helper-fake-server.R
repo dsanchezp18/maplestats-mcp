@@ -139,12 +139,37 @@ error_response <- function(request_id, text) {
   ))
 }
 
-# What a server that does not know `detail` says: the project's own wording,
-# the one a bare validator uses, and the French one.
+# What a server that does not know `detail` says, word for word: the project's
+# own validation message, as the v0.5.0 server gave it (a call_tool error names
+# the inner tool and lists that tool's parameters), in English and in French.
 old_server_errors <- c(
   "detail is not a parameter of this tool; parameters: query",
+  paste(
+    "[invalid_input] Invalid input: boc_get_observations: detail is not a",
+    "parameter of this tool; parameters: aggregation, lang, recent,",
+    "series_names Fix: correct the argument named above."
+  ),
+  "detail n'est pas un paramètre de cet outil; paramètres : query",
+  paste0(
+    "[invalid_input] Entrée invalide\u00a0: boc_get_observations\u00a0: ",
+    "detail n'est pas un paramètre de cet outil; paramètres\u00a0: lang, ",
+    "recent, series_names Solution\u00a0: corrigez l'argument nommé ci-dessus."
+  )
+)
+
+# Errors that mention `detail` or an unknown argument without being that
+# refusal: a current server's invalid-arguments error quotes a tool's
+# parameters (one is called "details"), and the earlier loose wording
+# ("Unexpected argument: detail").
+not_the_refusal <- c(
+  paste(
+    "Invalid input: some_tool: kind is not a parameter of this tool;",
+    "parameters: details, lang"
+  ),
+  "Invalid input: some_tool: detail must be one of 'brief' or 'full' (got 'x')",
   "Unexpected argument: detail",
-  "detail n'est pas un paramètre de cet outil; paramètres : query"
+  "Unknown series: detail",
+  "No detail found for FXUSDCAD."
 )
 
 search_columns <- c("name", "description", "arguments", "input_schema")

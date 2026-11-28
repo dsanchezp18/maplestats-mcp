@@ -327,8 +327,13 @@ async def _body(url: str, size_hint: int | None, lang: str = "en") -> tuple[byte
     )
     # Checked again on what the cache returns: that key is shared, and another
     # reader of this URL (ckan_read_resource) stores whatever it downloaded, with no
-    # check that it is a workbook.
-    _require_xlsx(downloaded.body, url, lang)
+    # check that it is a workbook. A bad shared copy is dropped as it is refused, so
+    # the next call downloads the file again instead of failing until it expires.
+    try:
+        _require_xlsx(downloaded.body, url, lang)
+    except UpstreamError:
+        file_download.forget(file_download.cache_key(url))
+        raise
     return downloaded.body, cached
 
 

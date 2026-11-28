@@ -323,7 +323,9 @@ async def read_scans(
 def _nothing_read_note(run: ocr.OcrRun, lang: str) -> str:
     """Why OCR read no page. The run reads none only when the time ran out (stopped
     "time"): before the first page began, when reading the PDF's text had used the
-    allowance (no stopped_page), or inside the first page (stopped_page names it)."""
+    allowance (no stopped_page); before the first page's own work began, when the wait for
+    the engine had (stopped_page, not stopped_in_page); or inside the first page
+    (stopped_page, stopped_in_page), after its drawing or reading had begun."""
     budget = f"{constants.PDF_EXTRACT_SECONDS:.0f}"
     if run.stopped_page is None:
         return say(
@@ -331,6 +333,15 @@ def _nothing_read_note(run: ocr.OcrRun, lang: str) -> str:
             "with pages= for these pages.",
             f"La reconnaissance optique n'a pas démarré : la lecture du texte du PDF a "
             f"utilisé les {budget} s allouées. Redemandez, avec pages= pour ces pages.",
+            lang,
+        )
+    if not run.stopped_in_page:
+        return say(
+            f"OCR read no page: the {budget} s allowed ran out before it could start reading "
+            f"page {run.stopped_page}. Ask again, with pages= for these pages.",
+            f"La reconnaissance optique n'a lu aucune page : les {budget} s allouées se sont "
+            f"écoulées avant qu'elle puisse commencer la lecture de la page {run.stopped_page}. "
+            "Redemandez, avec pages= pour ces pages.",
             lang,
         )
     return say(

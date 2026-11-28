@@ -50,8 +50,18 @@ def failing_hosts(exc: BaseException) -> list[str]:
         item = item.__cause__ or item.__context__
     if hosts:
         return sorted(hosts)
+    # The breaker keys StatCan's www150 and www12 by path group ("www150.statcan.gc.ca/wds"),
+    # and a CircuitOpen carries no request to name its host. check_skipped_hosts counts the
+    # scripts per host, so reduce each key to its host: a whole-host outage is then one host
+    # (and the previous run's file, keyed by host, still matches), not one per path group.
     counted = BREAKER.snapshot()["hosts"]
-    return sorted(host for host, entry in counted.items() if sum(entry["errors"].values()) > 0)
+    return sorted(
+        {
+            key.split("/", 1)[0]
+            for key, entry in counted.items()
+            if sum(entry["errors"].values()) > 0
+        }
+    )
 
 
 def report_skipped_hosts(script: str, exc: BaseException | None = None) -> None:

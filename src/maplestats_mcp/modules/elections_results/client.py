@@ -112,9 +112,17 @@ def _party_text(cells: list[str]) -> dict[str, str]:
     with the party's name in both languages: what follows the last "/" is the French name
     alone, and the English name is the words that end each English half sharing that
     French name (read on the saved 38th and 45th files: "Liberal", "Conservative",
-    "NDP-New Democratic Party"). A party with one candidate has no second cell to compare
-    with, so its whole cell stays searchable as before; two candidates of one party who
-    also share their last name word would make that word part of the party's text.
+    "NDP-New Democratic Party"). That is as far as the format goes: the cell has no mark
+    between the candidate's name and the English party name, and this module has no list of
+    party names to cut it with. So the filter cannot always read the party alone:
+
+    - a party with one candidate in the table has no second cell to compare with, so its
+      whole cell, the candidate's name included, stays searchable (a lone candidate
+      surnamed Green is found by party="Green");
+    - when every candidate of a party shares their last name (two relatives), that name is
+      taken to be part of the party's text.
+
+    get_table says so in the result's limits whenever the party filter reads these cells.
     """
     halves = [cell.rpartition("/") for cell in cells]
     by_french: dict[str, list[list[str]]] = defaultdict(list)
@@ -279,6 +287,7 @@ async def get_table(
             or (number_column is not None and wanted == r.get(number_column, "").strip())
         ]
 
+    party_cell_note: str | None = None
     if party:
         column = _first_column(
             columns, starts=("candidate/", "elected candidate", "political affiliation")
@@ -299,6 +308,18 @@ async def get_table(
             # in all its candidates than in the few left after the other filters.
             party_of = _party_text([r.get(column, "") for r in table_rows])
             rows = [r for r in rows if wanted in party_of[r.get(column, "")]]
+            party_cell_note = fr_or_en(
+                lang,
+                "The party filter reads the party's name at the end of each candidate cell, "
+                "which holds the name and the party as one text. Where a party has only one "
+                "candidate in the table, or all its candidates share a last name, that name is "
+                "searched too: check the party of each row returned",
+                "Le filtre de parti lit le nom du parti à la fin de chaque cellule de "
+                "candidat, qui contient le nom et le parti dans un seul texte. Lorsqu'un parti "
+                "n'a qu'un seul candidat dans le tableau, ou que tous ses candidats ont le même "
+                "nom de famille, ce nom est aussi cherché : vérifiez le parti de chaque ligne "
+                "renvoyée",
+            )
         else:
             rows = [r for r in rows if wanted in _fold(r.get(column, ""))]
 
@@ -376,6 +397,7 @@ async def get_table(
                 if truncated
                 else None,
                 no_match,
+                party_cell_note,
                 # The CSV's own (bilingual) headers and its values are kept as published.
                 "Les en-têtes (bilingues) et les valeurs sont ceux du fichier d'Élections "
                 "Canada, tels que publiés"

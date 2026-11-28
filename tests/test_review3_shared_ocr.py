@@ -107,8 +107,36 @@ async def test_a_page_running_past_the_budget_is_stopped_and_not_an_error(monkey
     run = await _read(build_pdf([scan(), scan()]), [1, 2], seconds=0.5)
     elapsed = time.monotonic() - started
     assert run.pages == [] and run.stopped == "time" and run.unread == [1, 2]
+    # The child was running: the stop is inside page 1, not before it.
+    assert run.stopped_page == 1 and run.stopped_in_page is True
     assert elapsed < 5.5, f"the page ran {elapsed:.1f} s on a 0.5 s budget"
     assert len(created) == 1 and created[0].poll() is not None
+
+
+async def test_a_budget_gone_once_the_engine_is_free_stops_before_the_page_began(monkeypatch):
+    # The engine is free only after the budget has gone (the wait for it used the time): the
+    # page is not drawn, and the stop says the work on it never began, which the note for a
+    # call that read nothing needs to word ("before it could start", not "while reading").
+    class _LateSlot:
+        def acquire(self, timeout: float) -> bool:
+            time.sleep(0.4)
+            return True
+
+        def release(self) -> None:
+            pass
+
+    drawn: list[int] = []
+
+    def render(body, number, dpi):
+        drawn.append(number)
+        return PGM
+
+    monkeypatch.setattr(ocr, "_slot", _LateSlot())
+    monkeypatch.setattr(ocr, "_render_pgm", render)
+    run = await _read(build_pdf([scan(), scan()]), [1, 2], seconds=0.3)
+    assert run.pages == [] and run.stopped == "time" and run.unread == [1, 2]
+    assert run.stopped_page == 1 and run.stopped_in_page is False
+    assert drawn == []
 
 
 async def test_a_budget_spent_mid_run_keeps_the_pages_read_and_names_the_rest(monkeypatch):
@@ -181,3 +209,36 @@ async def test_a_waiter_whose_own_budget_is_spent_stops_at_the_time_limit(monkey
     assert isinstance(owner, ocr.OcrRun) and owner.stopped == "time"
     assert isinstance(waiter, ocr.OcrRun) and waiter.pages == [] and waiter.stopped == "time"
     assert len(reads) == 1
+
+
+# --- the document's hash is not computed on the event loop -------------------------------
+
+
+async def test_the_cache_key_hashes_the_file_off_the_event_loop_and_keeps_its_form(monkeypatch):
+    import hashlib
+
+    keys: list[str] = []
+    hashed_on: list[int] = []
+    real_sha256 = hashlib.sha256
+    body = build_pdf([scan()])
+
+    def spy(data=b"", **kwargs):
+        if data is body:
+            hashed_on.append(threading.get_ident())
+        return real_sha256(data, **kwargs)
+
+    async def fetch(key, ttl, fetcher):
+        keys.append(key)
+        return ocr._Recognised("Page text", 92.0, 200), False
+
+    monkeypatch.setattr(ocr.hashlib, "sha256", spy)
+    monkeypatch.setattr(ocr.cache, "cached_fetch", fetch)
+    run = await _read(body, [1])
+
+    assert [p.number for p in run.pages] == [1]
+    # The hash ran, and in a worker thread, not the one running the event loop.
+    assert len(hashed_on) == 1 and hashed_on[0] != threading.get_ident()
+    # The key is what it was when the hash ran in the loop: 32 hex characters of the file's
+    # SHA-256 between the URL and the page number.
+    digest = real_sha256(body).hexdigest()[:32]
+    assert keys == [f"ocr:{URL}:{digest}:1:{ocr.RENDER_DPI}:{ENGINE.version}:{ENGINE.languages}"]

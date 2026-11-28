@@ -318,6 +318,9 @@ class _ByteCache:
         while sum(len(v.body) for _, v in self._items.values()) > self._budget:
             self._items.popitem(last=False)
 
+    def pop(self, key: str) -> None:
+        self._items.pop(key, None)
+
     def lock(self, key: str) -> asyncio.Lock:
         """The lock for `key`; every call must be paired with release_lock()."""
         lock, users = self._locks.get(key, (asyncio.Lock(), 0))
@@ -343,6 +346,12 @@ _CACHE = _ByteCache(CACHE_BUDGET_BYTES)
 
 def clear_cache() -> None:
     _CACHE.clear()
+
+
+def forget(key: str) -> None:
+    """Drop one stored file, for a reader that finds the shared copy is not what the
+    URL should serve (another module stored it without that reader's check)."""
+    _CACHE.pop(key)
 
 
 def cache_key(url: str) -> str:

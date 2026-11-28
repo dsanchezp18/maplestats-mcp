@@ -487,19 +487,51 @@ async def _tables(
 
 
 _YEAR = re.compile(r"(?:19|20)\d{2}")
+# "Q3 2024", "2024 Q3", "2024-Q3", "T3 2024" (French); read on folded text.
+_QUARTER = re.compile(r"(?<![a-z])[qt]([1-4])(?!\d)")
+_MONTHS = {
+    name: number
+    for number, names in enumerate(
+        (
+            ("january", "jan", "janvier", "janv"),
+            ("february", "feb", "fevrier", "fev", "fevr"),
+            ("march", "mar", "mars"),
+            ("april", "apr", "avril", "avr"),
+            ("may", "mai"),
+            ("june", "jun", "juin"),
+            ("july", "jul", "juillet", "juil"),
+            ("august", "aug", "aout"),
+            ("september", "sep", "sept", "septembre"),
+            ("october", "oct", "octobre"),
+            ("november", "nov", "novembre"),
+            ("december", "dec", "decembre"),
+        ),
+        start=1,
+    )
+    for name in names
+}
 
 
 def _padded(row: list[str], width: int) -> list[str]:
     return row + [""] * (width - len(row))
 
 
-def _period_key(text: str) -> tuple[int, int]:
-    """(newest year, oldest year) a time frame names: "2024–2025" is (2025, 2024).
+def _period_key(text: str) -> tuple[int, int, int]:
+    """(newest year, oldest year, quarter or month) a time frame names.
 
+    "2024–2025" is (2025, 2024, 0). "2024 Q3" and "T3 2024" are (2024, 2024, 3), so the
+    four quarters of a year no longer tie; a month name ("March 2024", "mars 2024")
+    gives its number, and for a span ("April 2023 to March 2024") the last one named.
     A frame with no year ("Not applicable", blank) sorts before every dated one.
     """
     years = [int(y) for y in _YEAR.findall(text)]
-    return (max(years), min(years)) if years else (0, 0)
+    if not years:
+        return (0, 0, 0)
+    folded = _fold(text)
+    marks = [int(q) for q in _QUARTER.findall(folded)] or [
+        _MONTHS[word] for word in re.findall(r"[a-z]+", folded) if word in _MONTHS
+    ]
+    return (max(years), min(years), marks[-1] if marks else 0)
 
 
 async def get_indicator_data(
@@ -588,11 +620,16 @@ async def get_indicator_data(
     period_index = next(
         (by_lower[name] for name in constants.PERIOD_COLUMNS if name in by_lower), None
     )
-    ranked = list(range(len(matching)))
-    if period_index is not None:
-        # Stable: rows of one time frame keep their file order.
-        ranked.sort(key=lambda i: _period_key(matching[i][period_index]))
-    newest_first = ranked[-limit:][::-1]
+    if period_index is None:
+        newest_first = list(range(len(matching)))[-limit:][::-1]
+    else:
+        # reverse=True keeps rows of equal key in file order, so a limit that cuts
+        # inside one time frame keeps that frame's first rows in the file, not its last.
+        newest_first = sorted(
+            range(len(matching)),
+            key=lambda i: _period_key(matching[i][period_index]),
+            reverse=True,
+        )[:limit]
     kept = [matching[i] for i in sorted(newest_first)]
     # Rows carry 33 columns (about 1.35 KB each, live 2026-10-03), many of
     # them blank for a given indicator; pick columns, or drop the blank ones.

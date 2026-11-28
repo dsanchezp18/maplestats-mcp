@@ -158,11 +158,91 @@ async def test_latest_rows_follow_the_french_period_column(httpx_mock):
     french_header = ["Niveau de déclaration", "Lieu ou organisme", "Période", "Taux"]
     httpx_mock.add_response(url=_FR_FILE, content=_workbook(french_header, _by_place_rows()))
     data = await client.get_indicator_data(_SLUG, limit=2, lang="fr")
+    # Three places share the newest time frame: a limit of two keeps the first two in
+    # the file (it kept the last two, an arbitrary end of the alphabet).
     assert [(r["Lieu ou organisme"], r["Période"]) for r in data.rows] == [
+        ("Alberta", "2024–2025"),
         ("Ontario", "2024–2025"),
-        ("Yukon", "2024–2025"),
     ]
     assert data.provenance.coverage == "2 lignes les plus récentes sur 9 correspondantes"
+
+
+def _quarter_rows(frames: tuple[str, ...]) -> list[list[object]]:
+    return [
+        ["Province/territory", place, frame, rate]
+        for place, rate in (("Alberta", 10.0), ("Ontario", 11.0), ("Yukon", 12.0))
+        for frame in frames
+    ]
+
+
+async def test_the_four_quarters_of_a_year_do_not_tie(httpx_mock):
+    # "2024 Q1" to "2024 Q4" all read as 2024, so the newest rows were the last places'
+    # rows of the whole year (Yukon Q3 and Q4), not the fourth quarter.
+    frames = ("2023 Q4", "2024 Q1", "2024 Q2", "2024 Q3", "2024 Q4")
+    httpx_mock.add_response(url=_EN_PAGE_URL, text=_page(_EN_FILE, "30-Day Stroke"))
+    httpx_mock.add_response(url=_EN_FILE, content=_workbook(_HEADER, _quarter_rows(frames)))
+    data = await client.get_indicator_data(_SLUG, limit=3)
+    assert [(r["Place or organization"], r["Time frame"]) for r in data.rows] == [
+        ("Alberta", "2024 Q4"),
+        ("Ontario", "2024 Q4"),
+        ("Yukon", "2024 Q4"),
+    ]
+
+
+async def test_a_limit_inside_the_newest_quarter_keeps_its_first_rows_in_file_order(httpx_mock):
+    frames = ("Q4 2023", "Q1 2024", "Q2 2024")
+    httpx_mock.add_response(url=_EN_PAGE_URL, text=_page(_EN_FILE, "30-Day Stroke"))
+    httpx_mock.add_response(url=_EN_FILE, content=_workbook(_HEADER, _quarter_rows(frames)))
+    data = await client.get_indicator_data(_SLUG, limit=2)
+    assert [(r["Place or organization"], r["Time frame"]) for r in data.rows] == [
+        ("Alberta", "Q2 2024"),
+        ("Ontario", "Q2 2024"),
+    ]
+    assert data.returned_count == 2 and data.matching_rows == 9
+
+
+async def test_months_in_english_and_french_order_within_a_year(httpx_mock):
+    # French files say "T3 2024" and "mars 2024"; both read in order.
+    header = ["Reporting level", "Place or organization", "Période", "Rate"]
+    frames = ("décembre 2023", "mars 2024", "juin 2024", "T4 2024")
+    rows = [["Province/territory", "Alberta", frame, 1.0] for frame in reversed(frames)]
+    httpx_mock.add_response(url=_EN_PAGE_URL, text=_page(_EN_FILE, "30-Day Stroke"))
+    httpx_mock.add_response(url=_EN_FILE, content=_workbook(header, rows))
+    data = await client.get_indicator_data(_SLUG, limit=2)
+    assert [r["Période"] for r in data.rows] == ["T4 2024", "juin 2024"]
+
+
+@pytest.mark.parametrize(
+    ("older", "newer"),
+    [
+        ("2023–2024", "2024–2025"),
+        ("2023-2024", "2024-2025"),
+        ("2023–24", "2024–25"),
+        ("Not applicable", "2019"),
+        ("2024 Q1", "2024 Q2"),
+        ("Q3 2024", "Q4 2024"),
+        ("2024Q1", "2024Q4"),
+        ("2023–2024 Q4", "2024–2025 Q1"),
+        ("T2 2024", "T3 2024"),
+        ("March 2024", "April 2024"),
+        ("mars 2024", "décembre 2024"),
+        ("April 2023 to March 2024", "May 2023 to April 2024"),
+        ("2024", "2024 Q1"),
+        ("décembre 2023", "janvier 2024"),
+    ],
+)
+def test_period_key_orders_every_time_frame_format(older, newer):
+    assert client._period_key(older) < client._period_key(newer)
+
+
+def test_period_key_reads_years_quarters_and_months():
+    assert client._period_key("2024–2025") == (2025, 2024, 0)
+    assert client._period_key("2024-2025") == (2025, 2024, 0)
+    assert client._period_key("2024–25") == (2024, 2024, 0)
+    assert client._period_key("2024 Q3") == (2024, 2024, 3)
+    assert client._period_key("April 2023 to March 2024") == (2024, 2023, 3)
+    assert client._period_key("Not applicable") == (0, 0, 0)
+    assert client._period_key("") == (0, 0, 0)
 
 
 async def test_a_table_without_a_period_column_keeps_the_file_order(httpx_mock):

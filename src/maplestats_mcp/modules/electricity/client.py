@@ -350,7 +350,10 @@ async def _year_rows[T](
     the new file is absent or holds fewer hours than were asked for (the
     current-year file ends about a day behind the clock). The latest `limit`
     hours would then fail with a 404 or come back short, so the year before is
-    read too and the hours are the last of both. That is for a call with no
+    read too and the hours are the last of both. The same happens at any time of
+    the year for a `limit` above the hours so far (2,000 in mid-February reads the
+    year before, a file of about 8 MB): it returns what was asked for, and the
+    limits note says the year before was read. That is for a call with no
     year, no start date and no end date (`latest`) and the year now running only:
     an end date in an earlier year asks for that year's file alone.
     Returns the rows in time order, whether every read came from the cache, and

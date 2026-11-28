@@ -104,6 +104,8 @@ def test_a_path_is_challenged_for_fifteen_minutes_unless_it_answers(now):
         (WWW150, "/t1/cimt/rest/getPeriods", "cimt"),
         (WWW150, "/n1/rss/dai-quo/0-eng.atom", "rss"),
         (WWW150, "/n1/tbl/csv/36100104-eng.zip", "files"),
+        (WWW150, "/delta/20261002.zip", "files"),
+        (WWW150, "/n1/delta/20261002.zip", "files"),
         (WWW150, "/n1/dai-quo/ssi/homepage/ind-hp.json", "daily"),
         (WWW150, "/n1/en/type/data", "pages"),
         (WWW150, "/n1/fr/catalogue/71M0001X", "pages"),
@@ -501,6 +503,17 @@ def test_the_dependencies_match_the_paths_the_tools_read():
     keys = {d.key: d for d in path_health.DEPENDENCIES}
     assert keys["cimt"].prefixes == ("cimt_",)
     assert "statcan_reference_" in keys["pages"].prefixes
+
+
+def test_the_delta_file_url_the_tool_asks_for_is_in_the_files_group():
+    from maplestats_mcp.modules.statcan.delta import archive, constants
+    from maplestats_mcp.shared.http import breaker_key
+
+    # The tool asks for /delta/{date}.zip, which redirects to /n1/delta/: the breaker must
+    # key both as "files", not leave the first one on the bare host's key.
+    for template in (constants.BASE_URL, archive.ARCHIVE_URL):
+        path = template.removeprefix(f"https://{WWW150}").format(date="20261002")
+        assert breaker_key(WWW150, path) == f"{WWW150}/files", template
 
 
 # 6. /stats ----

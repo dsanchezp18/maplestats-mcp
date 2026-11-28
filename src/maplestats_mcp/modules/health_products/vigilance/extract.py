@@ -19,7 +19,6 @@ MedDRA version. Rows come in roughly ascending report id order.
 
 from __future__ import annotations
 
-import re
 import struct
 import time
 import zlib
@@ -30,6 +29,7 @@ from dataclasses import dataclass, field
 import httpx
 
 from maplestats_mcp.modules.health_products.vigilance import constants
+from maplestats_mcp.shared.any_case_bytes import any_case_pattern
 from maplestats_mcp.shared.errors import UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.fr_typography import call_error
@@ -134,28 +134,6 @@ class ZipWalker:
             ) from exc
 
 
-def _utf8_pattern(text: str) -> re.Pattern[bytes]:
-    """`text` as UTF-8 bytes, matching any case of every letter.
-
-    re.IGNORECASE on a bytes pattern folds ASCII letters only: "é" and "É" are
-    two bytes each, and the second byte differs, so "éruption" never matched
-    "Éruption". The line was dropped before the exact test, which does ignore
-    case (casefold). Each non-ASCII letter is spelled out as its lower, upper,
-    title and folded forms, which covers the accented letters of English and
-    French terms (é, ç, œ). A search written with ASCII letters that casefold
-    makes from one letter (ss for ß) is not found by this test.
-    """
-    parts: list[bytes] = []
-    for char in text:
-        if char.isascii():
-            parts.append(re.escape(char.encode("utf-8")))
-            continue
-        forms = {char, char.lower(), char.upper(), char.title(), char.casefold()}
-        spelled = sorted(form.encode("utf-8") for form in forms)
-        parts.append(b"(?:" + b"|".join(re.escape(one) for one in spelled) + b")")
-    return re.compile(b"".join(parts), re.IGNORECASE)
-
-
 @dataclass
 class ReactionMatcher:
     """Collects reactions.txt rows whose term or organ class matches."""
@@ -174,9 +152,9 @@ class ReactionMatcher:
     def __post_init__(self) -> None:
         # The cheap block-level test: a line is parsed only if the block
         # contains the rarer of the two words, in any case of its letters (the
-        # exact test in _line folds with casefold; see _utf8_pattern for what
+        # exact test in _line folds with casefold; see any_case_pattern for what
         # the block-level test covers).
-        self._probe = _utf8_pattern(self.reaction or self.soc)
+        self._probe = any_case_pattern(self.reaction or self.soc)
         self._reaction = self.reaction.casefold()
         self._soc = self.soc.casefold()
 

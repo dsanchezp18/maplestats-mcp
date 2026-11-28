@@ -263,6 +263,11 @@ async def test_a_bad_page_stored_by_another_reader_is_still_refused(httpx_mock, 
         await client.read_file(url)
     # Nothing was requested for the file: the stored copy was what answered.
     assert [r for r in httpx_mock.get_requests() if str(r.url) == url] == []
+    # The refused copy was dropped, so the next call downloads the workbook.
+    httpx_mock.add_response(url=url, content=_bytes("cpidata.xlsx"))
+    result = await client.read_file(url)
+    assert result.sheets
+    assert len([r for r in httpx_mock.get_requests() if str(r.url) == url]) == 1
 
 
 async def test_http_404_is_not_found(httpx_mock, catalogue):

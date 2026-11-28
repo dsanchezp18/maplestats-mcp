@@ -28,10 +28,10 @@ from maplestats_mcp.modules.cra_charities.schemas import (
     CharityRecord,
     CharitySearchResult,
 )
-from maplestats_mcp.shared.cache import cached_fetch
+from maplestats_mcp.shared.cache import cached_fetch, forget
 from maplestats_mcp.shared.ckan import CkanConfig, action
 from maplestats_mcp.shared.envelope import make_provenance, raise_localized
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.json_utils import get_or, list_or_empty
 from maplestats_mcp.shared.licences import OGL_CANADA
@@ -48,6 +48,7 @@ _TITLE = re.compile(constants.DATASET_TITLE_PATTERN)
 _BN_NINE = re.compile(r"[0-9]{9}")
 _BN_FULL = re.compile(r"[0-9]{9}RR[0-9]{4}")
 _PROVINCE = re.compile(r"^[A-Z]{2}$")
+_DISCOVERY_KEY = "cra-charities:discovery"
 
 
 def _text(value: Any) -> str | None:
@@ -99,8 +100,9 @@ def _bad_bn(raw: str, lang: str) -> NoReturn:
 async def _list_resources(
     lang: str, needed: tuple[str, ...]
 ) -> tuple[int, str, dict[str, str], str | None]:
-    """(year, package id, DataStore resource ids by name, fallback note) of the newest
-    list with all `needed`. The note is None unless the pinned list had to be used.
+    """(year, package id, DataStore resource ids by name, note) of the newest list with
+    all `needed`. The note is None unless the pinned list had to be used or the search
+    for the lists was cut short by a failed page.
 
     Each tool names the tables it reads, so a newest list that is still missing one
     (a table not yet DataStore-active) does not hide an older list that has it.
@@ -110,33 +112,57 @@ async def _list_resources(
         # The search is ranked by relevance unless sorted, and a page holds 100
         # packages, so the newest list can sit past the first page. Newest first
         # puts it on page one (`metadata_created` is CKAN's creation-time field; the
-        # federal portal takes `sort` on package_search, as ckan_package_search
-        # documents, but this field was not checked live), and the next pages are
-        # read up to a small cap: the search's own count is the only other bound,
-        # and a wrong one must not mean hundreds of requests.
+        # federal portal accepts it on package_search: checked live 2026-11-28, 43
+        # packages of the organization came back newest creation first, the 2025 list
+        # at the top, all on page one), and the next pages are read up to a small cap:
+        # the search's own count is the only other bound, and a wrong one must not
+        # mean hundreds of requests.
         packages: list[Any] = []
+        cut_short = False
         for _ in range(constants.DISCOVERY_MAX_PAGES):
-            page = await action(
-                _CONFIG,
-                "package_search",
-                {
-                    "q": "List of charities",
-                    "fq": f"organization:{constants.ORGANIZATION}",
-                    "rows": 100,
-                    "start": len(packages),
-                    "sort": "metadata_created desc",
-                },
-                lang=lang,
-            )
+            try:
+                page = await action(
+                    _CONFIG,
+                    "package_search",
+                    {
+                        "q": "List of charities",
+                        "fq": f"organization:{constants.ORGANIZATION}",
+                        "rows": 100,
+                        "start": len(packages),
+                        "sort": "metadata_created desc",
+                    },
+                    lang=lang,
+                )
+            except (InvalidInput, NotFound, UpstreamError, UpstreamUnavailable):
+                # Newest first, so what page one held is the part that matters: a
+                # failure on a later page keeps it, and the answer says it is cut short.
+                # With nothing read yet there is nothing to keep.
+                if not packages:
+                    raise
+                cut_short = True
+                break
             found = list_or_empty(page, "results")
             packages.extend(found)
             if not found or len(packages) >= int(get_or(page, "count", 0) or 0):
                 break
-        return {"results": packages}
+        return {"results": packages, "cut_short": cut_short}
 
-    result, _ = await cached_fetch(
-        "cra-charities:discovery", constants.CACHE_TTL_DISCOVERY_SECONDS, fetch
-    )
+    result, _ = await cached_fetch(_DISCOVERY_KEY, constants.CACHE_TTL_DISCOVERY_SECONDS, fetch)
+    cut_note = None
+    if result.get("cut_short"):
+        # A cut-short search is not kept for the day a complete one is: the next call asks
+        # again, and meanwhile this call says what it could not read.
+        forget(_DISCOVERY_KEY)
+        read = len(list_or_empty(result, "results"))
+        cut_note = pick(
+            lang,
+            "open.canada.ca's search for the lists did not finish (a later page failed), so "
+            f"only the {read} newest packages were read; an older list may be missing from "
+            "the choice of list",
+            "La recherche d'open.canada.ca pour trouver les listes n'a pas pu être lue en "
+            f"entier (une page suivante a échoué) : seuls les {read} paquets les plus récents "
+            "ont été lus ; une liste plus ancienne peut manquer",
+        )
     lists: list[tuple[int, dict[str, Any]]] = []
     for package in list_or_empty(result, "results"):
         title = package.get("title")
@@ -150,7 +176,7 @@ async def _list_resources(
             if isinstance(name, str) and res.get("datastore_active"):
                 by_name.setdefault(name.strip(), res["id"])
         if all(name in by_name for name in needed):
-            return year, package["id"], by_name, None
+            return year, package["id"], by_name, cut_note
     # No published list has every table: the pinned 2024 list, and the response says it is
     # a fallback and why, so an older list is not taken for the newest one.
     # A key, not the tuples: two lists of one year would be compared by their dicts.
@@ -171,7 +197,7 @@ async def _list_resources(
         constants.FALLBACK_YEAR,
         constants.FALLBACK_PACKAGE_ID,
         dict(constants.FALLBACK_RESOURCES),
-        note,
+        join_limits(cut_note, note),
     )
 
 

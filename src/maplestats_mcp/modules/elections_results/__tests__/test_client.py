@@ -230,6 +230,32 @@ async def test_party_filter_reads_the_party_not_the_candidates_name(httpx_mock):
     assert await names("Parti Vert") == ["Kaelem Tingate Green Party/Parti Vert"]
 
 
+# A party with one candidate in the whole table: nothing to compare its cell with, so the
+# candidate's name cannot be told from the party's name (the limit the result's note states).
+_LONE_CANDIDATE = (
+    '"Alberta/Alberta","Calgary Centre","48001","Joe Green Rhinoceros Party/Parti Rhinocéros",'
+    '"Calgary, Alta./Alb.","Teacher/Enseignant",100,50,10,5\r\n'
+)
+
+
+async def test_party_filter_on_a_candidate_cell_states_what_it_cannot_tell_apart(httpx_mock):
+    httpx_mock.add_response(
+        url=_url(45, 12), content=_bytes("candidates_45.csv") + _LONE_CANDIDATE.encode()
+    )
+    result = await client.get_table(45, "candidates", party="Green")
+    names = [r["Candidate/Candidat"] for r in result.rows]
+    # The limit itself: the lone candidate surnamed Green is found beside the Green Party's.
+    assert "Joe Green Rhinoceros Party/Parti Rhinocéros" in names
+    limits = result.provenance.limits or ""
+    assert "only one candidate" in limits
+    assert "share a last name" in limits
+    french = await client.get_table(45, "candidates", party="Vert", lang="fr")
+    assert "qu'un seul candidat" in (french.provenance.limits or "")
+    # No party filter, no note.
+    other = await client.get_table(45, "candidates", province="Newfoundland")
+    assert "only one candidate" not in (other.provenance.limits or "")
+
+
 async def test_party_filter_reads_the_elected_candidate_cell(httpx_mock):
     greenwood = (
         '"Alberta/Alberta","Calgary Centre",48001,100000,80000,200,50000,99,500,1,50500,63,'

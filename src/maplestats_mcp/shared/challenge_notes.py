@@ -99,7 +99,7 @@ NOTES: tuple[ChallengeNote, ...] = (
     ),
     ChallengeNote(
         "www150.statcan.gc.ca",
-        ("/n1/tbl/", "/n1/delta/"),
+        ("/n1/tbl/", "/n1/delta/", "/delta/"),
         "This is a file download: open the link in a web browser, pass the check, and save "
         "the file. For a full table, wds_get_full_table_download also returns a Python script "
         "that rebuilds the same CSV through WDS, which StatCan still serves to scripts, and "

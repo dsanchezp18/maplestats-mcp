@@ -113,12 +113,36 @@ function error_reply(id, text)
     return (200, SSE, "data: $(JSON3.write(reply))\n\n")
 end
 
-# What a server that does not know `detail` says: the project's own wording, the one a
-# bare validator uses, and the French one.
+# What a server that does not know `detail` says, word for word: the project's own
+# validation message, as the v0.5.0 server gave it (a call_tool error names the inner
+# tool and lists that tool's parameters), in English and in French.
 const OLD_SERVER_ERRORS = [
     "detail is not a parameter of this tool; parameters: query",
-    "Unexpected argument: detail",
+    string(
+        "[invalid_input] Invalid input: boc_get_observations: detail is not a ",
+        "parameter of this tool; parameters: aggregation, lang, recent, series_names ",
+        "Fix: correct the argument named above.",
+    ),
     "detail n'est pas un paramètre de cet outil; paramètres : query",
+    string(
+        "[invalid_input] Entrée invalide\u00a0: boc_get_observations\u00a0: detail ",
+        "n'est pas un paramètre de cet outil; paramètres\u00a0: lang, recent, ",
+        "series_names Solution\u00a0: corrigez l'argument nommé ci-dessus.",
+    ),
+]
+
+# Errors that mention `detail` or an unknown argument without being that refusal: a
+# current server's invalid-arguments error quotes a tool's parameters (one is called
+# "details"), and the earlier loose wording ("Unexpected argument: detail").
+const NOT_THE_REFUSAL = [
+    string(
+        "Invalid input: some_tool: kind is not a parameter of this tool; ",
+        "parameters: details, lang",
+    ),
+    "Invalid input: some_tool: detail must be one of 'brief' or 'full' (got 'x')",
+    "Unexpected argument: detail",
+    "Unknown series: detail",
+    "No detail found for FXUSDCAD.",
 ]
 
 methods_sent(server) = [entry.body.method for entry in server.seen]
@@ -210,22 +234,61 @@ end
         end
     end
 
-    @testset "an error that only mentions detail is not repeated" begin
-        # The tool's own error, not a refusal of the argument: one call, and it throws.
+    for message in NOT_THE_REFUSAL
+        @testset "a detail-only error is not repeated: $(message)" begin
+            # The tool's own error, not a refusal of the argument: one call each for
+            # the raw call, the data call and the search, and each throws.
+            server = FakeServer()
+            server.override = function (request)
+                request.method == "tools/call" || return nothing
+                return error_reply(request.id, message)
+            end
+            client = fake_client(server)
+            attempts = [
+                () -> boc(client),
+                () -> get_data(
+                    "boc_get_observations"; client, series_names=["FXUSDCAD"], recent=3
+                ),
+                () -> search_tools("bank of canada exchange rate"; client),
+            ]
+            for attempt in attempts
+                error = try
+                    attempt()
+                    nothing
+                catch caught
+                    caught
+                end
+                @test error isa MapleStatsError
+            end
+            @test count(==("tools/call"), methods_sent(server)) == 3
+        end
+    end
+
+    @testset "the repeat without detail is made once" begin
+        # A server that refuses `detail` and then fails the repeat too: two calls, then
+        # the error reaches the caller.
         server = FakeServer()
-        server.override = function (message)
-            message.method == "tools/call" || return nothing
-            return error_reply(message.id, "No detail found for FXUSDCAD.")
+        server.override = function (request)
+            request.method == "tools/call" || return nothing
+            return error_reply(request.id, OLD_SERVER_ERRORS[1])
         end
         error = try
-            boc(fake_client(server))
+            get_data(
+                "boc_get_observations";
+                client=fake_client(server),
+                series_names=["FXUSDCAD"],
+                recent=3,
+            )
             nothing
         catch caught
             caught
         end
         @test error isa MapleStatsError
-        @test occursin("No detail found", error.message)
-        @test count(==("tools/call"), methods_sent(server)) == 1
+        @test occursin("detail is not a parameter", error.message)
+        calls = [e.body.params for e in server.seen if e.body.method == "tools/call"]
+        @test length(calls) == 2
+        @test haskey(calls[1].arguments, :detail)
+        @test !haskey(calls[2].arguments, :detail)
     end
 
     @testset "the raw call passes detail to the server's own tools" begin

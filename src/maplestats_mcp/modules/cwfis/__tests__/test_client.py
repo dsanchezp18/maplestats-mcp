@@ -710,3 +710,49 @@ def test_province_code_leaves_non_provinces_alone():
     assert client.province_code("TX") is None
     assert client.province_code("Texas") is None
     assert client.province_code("") is None
+
+
+@pytest.mark.parametrize(
+    ("typed", "layer_code"),
+    [
+        ("PEI", "PE"),
+        ("P.E.I.", "PE"),
+        ("IPE", "PE"),
+        ("NWT", "NT"),
+        ("N.W.T.", "NT"),
+        ("TNO", "NT"),
+        ("Nfld", "NF"),
+        ("Nfld & Labrador", "NF"),
+        ("Newfoundland & Labrador", "NF"),
+        ("T.-N.-L.", "NF"),
+        ("Yukon Territory", "YT"),
+        ("Territoire du Yukon", "YT"),
+        ("Nvt", "NU"),
+    ],
+)
+async def test_stations_province_filter_accepts_abbreviations(httpx_mock, typed, layer_code):
+    # "PEI", "NWT" and "Nfld" used to go to the layer as prov = 'PEI' and match nothing,
+    # and the empty answer blamed the fire season.
+    httpx_mock.add_response(url=WFS, json=_collection({"name": "X", "prov": layer_code}))
+    await client.get_stations(province=typed)
+    assert f"prov = '{layer_code}'" in _query(httpx_mock.get_requests()[0])["CQL_FILTER"]
+
+
+@pytest.mark.parametrize("typed", ["Labrador", "Albrta", "Atlantis", "Canada", "XX"])
+async def test_stations_province_that_is_not_a_province_is_refused(httpx_mock, typed):
+    # No request is made (httpx_mock fails on an unexpected one): what matches no
+    # station is an error naming the valid codes, not an empty season-blaming answer.
+    with pytest.raises(InvalidInput, match="province must be") as excinfo:
+        await client.get_stations(province=typed)
+    assert typed in str(excinfo.value)
+    assert "BC, AB, SK, MB, ON, QC, NB, NS, PE, NL, YT, NT, NU" in str(excinfo.value)
+    with pytest.raises(InvalidInput, match="province doit être"):
+        await client.get_stations(province=typed, lang="fr")
+
+
+async def test_stations_province_still_accepts_us_state_codes(httpx_mock):
+    # The station layer's `province` is documented as a code "or a US state".
+    httpx_mock.add_response(url=WFS, json=_collection({"name": "X", "prov": "WA"}))
+    result = await client.get_stations(province="wa")
+    assert "prov = 'WA'" in _query(httpx_mock.get_requests()[0])["CQL_FILTER"]
+    assert result.stations[0].province == "WA"

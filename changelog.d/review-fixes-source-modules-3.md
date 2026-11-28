@@ -5,8 +5,10 @@
   read as a row of years: the line vanished and every later row got column names such as
   "2025-26 Budget 1950". A row of years is now a header when it has no line-item label or
   has a line of header text (Actual, Budget, Forecast) under it, whatever the gaps between
-  its years (2017, 2019, 2025, 2026), and a labelled row with no such line is a header only
-  when its years run one after another and it comes before the first data row.
+  its years (2017, 2019, 2025, 2026), or when its label reads as a header ("Calendar Year
+  Assumptions", "Exercice"). Any other labelled row is a header only when its years run one
+  after another, it comes before the first data row and no header row above already holds
+  years, so a first line item of consecutive figures stays data.
 - `ilo_get_data` and `ilo_compare_countries`: with `last_n` (which `ilo_compare_countries`
   sets itself when no start is given) and an `end_period` in the past, on the route that
   reads ILO's second server, the years were counted back from the current year, so

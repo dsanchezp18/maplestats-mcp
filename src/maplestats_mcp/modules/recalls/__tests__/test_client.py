@@ -327,6 +327,38 @@ def test_english_plurals_and_singulars_share_a_stem():
     assert client._query_word("toy") == ("toy",)
 
 
+def test_plurals_of_a_few_singulars_in_s_and_o_find_the_singular():
+    # "buses" was cut to "buse" and "heroes" to "heroe", which no notice about a bus or a hero
+    # carries; the -es plural of these singulars tries the word less "es" as well.
+    assert client._query_word("buses") == ("buse", "bus")
+    assert client._query_word("gases") == ("gase", "gas")
+    assert client._query_word("heroes") == ("heroe", "hero")
+    assert client._query_word("viruses") == ("viruse", "virus")
+
+
+def test_series_and_species_are_one_word_in_both_numbers():
+    # They were cut to "serie" and "sery" ("sery" is a piece of "nursery" and "misery").
+    assert client._query_word("series") == ("series",)
+    assert client._query_word("species") == ("species",)
+
+
+async def test_search_finds_a_bus_by_buses_and_not_a_nursery_by_series(httpx_mock):
+    rows = [
+        _en("92001", "School bus seat may detach", "Motor vehicle", "Vehicle"),
+        _en("92002", "Natural gas detector may fail", "Consumer product safety", "Household"),
+        _en("92003", "Nursery monitor may overheat", "Consumer product safety", "Household"),
+        _en("92004", "Series of mislabelled juices", "CFIA", "Food"),
+    ]
+    _dump(httpx_mock, rows)
+
+    async def ids(query: str) -> set[int]:
+        return {r.recall_id for r in (await client.search(query, limit=50)).recalls}
+
+    assert await ids("buses") == {92001}
+    assert await ids("gases") == {92002}
+    assert await ids("series") == {92004}
+
+
 def test_the_shorter_es_stem_is_not_offered_where_it_would_find_other_words():
     # Singulars in -se and -che lose only the s: the stem without "es" is a piece of other
     # words ("nurs" in nursing, "hous" in household, "purs" in pursuant, "caus" in caustic,

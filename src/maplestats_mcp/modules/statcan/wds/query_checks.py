@@ -715,10 +715,12 @@ def _evaluate_node(
     if _ADJUSTMENT_MIXES in hits:
         findings.refuse(
             client._m(
-                "mixed_adjustment: seasonally adjusted, unadjusted or trend-cycle values are "
-                f"summed or averaged together in group(s) {groups_of(_ADJUSTMENT_MIXES)}. "
+                "mixed_adjustment: seasonally adjusted, calendar adjusted, unadjusted or "
+                f"trend-cycle values are summed or averaged together in group(s) "
+                f"{groups_of(_ADJUSTMENT_MIXES)}. "
                 "Filter on adjustment (WHERE adjustment = 'seasonally adjusted') or group by it.",
-                "mixed_adjustment : des valeurs désaisonnalisées, brutes ou de tendance-cycle "
+                "mixed_adjustment : des valeurs désaisonnalisées, corrigées des effets de "
+                "calendrier, brutes ou de tendance-cycle "
                 f"sont additionnées ou moyennées ensemble dans le ou les groupes "
                 f"{groups_of(_ADJUSTMENT_MIXES)}. Filtrez sur adjustment (WHERE adjustment = "
                 "'seasonally adjusted') ou groupez par cette colonne.",

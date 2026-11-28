@@ -2,10 +2,12 @@
 
 The check is not host-wide. On 2026-11-18 www150.statcan.gc.ca answered the Web Data
 Service (/t1/wds/rest/) and challenged SDMX (/t1/wds/sdmx/), the CIMT trade API (/t1/cimt/),
-The Daily's RSS feeds and the catalogue pages (shared/challenge_notes.py lists the paths), so
-the circuit breaker, which keeps one state per host, never opens for it (shared/breaker.py)
-and cannot say which tools are down. This keeps the finer fact: for each path group below,
-when a challenge was last seen and whether the path has answered since.
+The Daily's RSS feeds and the catalogue pages (shared/challenge_notes.py lists the paths).
+The circuit breaker (shared/breaker.py) keeps one state per host, or per path group of these two
+StatCan hosts (the groups below, so a slow group pauses only itself), and a challenge never
+opens it: it is counted for /stats only. The breaker therefore cannot say which tools a
+challenge took down. This keeps the finer fact: for each path group below, when a challenge
+was last seen and whether the path has answered since.
 
 Two producers, neither of which sends a request of its own:
 
@@ -44,7 +46,9 @@ PATHS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("sdmx", WWW150, ("/t1/wds/sdmx/",)),
     ("cimt", WWW150, ("/t1/cimt/",)),
     ("rss", WWW150, ("/n1/rss/",)),
-    ("files", WWW150, ("/n1/tbl/", "/n1/delta/")),
+    # Delta files are asked for at /delta/{date}.zip (statcan/delta/constants.py), which
+    # answers 301 to /n1/delta/ (what statcan/delta/archive.py reads directly): both are files.
+    ("files", WWW150, ("/n1/tbl/", "/n1/delta/", "/delta/")),
     ("daily", WWW150, ("/n1/dai-quo/", "/n1/daily-quotidien/")),
     ("pages", WWW150, ("/n1/en/", "/n1/fr/")),
     ("pub", WWW150, ("/n1/pub/",)),

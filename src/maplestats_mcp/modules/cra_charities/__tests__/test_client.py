@@ -9,7 +9,7 @@ from datetime import date
 import pytest
 
 from maplestats_mcp.modules.cra_charities import client, constants
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 _IDENT = "ident-resource"
 _GEN = "general-resource"
@@ -296,6 +296,56 @@ async def test_discovery_asks_newest_first_and_stops_at_the_page_cap(httpx_mock)
     # No list read had the tables, so the existing fallback note stands.
     assert result.list_year == constants.FALLBACK_YEAR
     assert "(lists found: 2023, 2022, 2021, 2020, 2019)" in (result.provenance.limits or "")
+
+
+def _search_page(start: int) -> str:
+    return rf".*package_search\?.*start={start}(&.*)?$"
+
+
+def _cut_short_search(httpx_mock, rounds: int) -> None:
+    """`rounds` discoveries: page one holds the 2025 list and counts 250 packages, and page
+    two fails (a 503 is retried three times first)."""
+    for _ in range(rounds):
+        httpx_mock.add_response(
+            url=re.compile(_search_page(0)),
+            json={
+                "success": True,
+                "result": {"count": 250, "results": [_package(2025, _ALL_TABLES)]},
+            },
+        )
+        for _ in range(3):
+            httpx_mock.add_response(url=re.compile(_search_page(1)), status_code=503, text="down")
+    # The same search is read from the cache the second time.
+    httpx_mock.add_response(url=re.compile(r".*datastore_search.*"), json=_ds([_ROW]))
+
+
+async def test_a_later_discovery_page_that_fails_keeps_what_page_one_held(httpx_mock):
+    # Page one, newest first, already holds the 2025 list: the call answers from it and
+    # says the search was cut short, in both languages.
+    _cut_short_search(httpx_mock, rounds=2)
+    result = await client.search_charities("red cross")
+    assert result.list_year == 2025
+    assert "did not finish" in (result.provenance.limits or "")
+    french = await client.search_charities("red cross", lang="fr")
+    assert french.list_year == 2025
+    assert "pas pu être lue en entier" in (french.provenance.limits or "")
+
+
+async def test_a_cut_short_discovery_is_read_again_on_the_next_call(httpx_mock):
+    # The cut-short result is not kept for the 24 h a complete one is.
+    _cut_short_search(httpx_mock, rounds=2)
+    await client.search_charities("red cross")
+    first = [r for r in httpx_mock.get_requests() if "package_search" in str(r.url)]
+    await client.search_charities("red cross")
+    second = [r for r in httpx_mock.get_requests() if "package_search" in str(r.url)]
+    assert len(second) > len(first)
+
+
+async def test_discovery_that_fails_on_page_one_still_fails(httpx_mock):
+    for _ in range(3):
+        httpx_mock.add_response(url=re.compile(_search_page(0)), status_code=503, text="down")
+    with pytest.raises(UpstreamError, match="HTTP 503"):
+        await client.search_charities("red cross")
 
 
 async def test_two_lists_of_one_year_do_not_break_the_fallback_note(httpx_mock):

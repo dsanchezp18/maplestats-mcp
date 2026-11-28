@@ -128,26 +128,68 @@ for (refusal in old_server_errors) {
   })
 }
 
-test_that("an error that only mentions detail is not repeated", {
+for (message in not_the_refusal) {
+  test_that(paste("a detail-only error is not repeated:", message), {
+    server <- local_fake_server()
+
+    # The tool's own error, not a refusal of the argument: one call each for
+    # the raw call, the data call and the search, and each raises.
+    server$override <- function(request) {
+      body <- sent_body(request)
+      if (identical(body$method, "tools/call")) {
+        return(error_response(body$id, message))
+      }
+      NULL
+    }
+
+    expect_error(boc_call(test_client()), class = "maplestats_error")
+    expect_error(
+      ms_get_data(
+        "boc_get_observations",
+        series_names = I("FXUSDCAD"),
+        recent = 3,
+        client = test_client()
+      ),
+      class = "maplestats_error"
+    )
+    expect_error(
+      ms_search_tools("bank of canada exchange rate", client = test_client()),
+      class = "maplestats_error"
+    )
+    methods <- purrr::map_chr(server$bodies(), "method")
+    expect_equal(sum(methods == "tools/call"), 3)
+  })
+}
+
+test_that("the repeat without detail is made once", {
   server <- local_fake_server()
 
-  # The tool's own error, not a refusal of the argument: one call, and it
-  # raises.
+  # A server that refuses `detail` and then fails the repeat too: two calls,
+  # then the error reaches the caller.
   server$override <- function(request) {
     body <- sent_body(request)
     if (identical(body$method, "tools/call")) {
-      return(error_response(body$id, "No detail found for FXUSDCAD."))
+      return(error_response(body$id, old_server_errors[[1]]))
     }
     NULL
   }
 
   expect_error(
-    boc_call(test_client()),
-    "No detail found",
+    ms_get_data(
+      "boc_get_observations",
+      series_names = I("FXUSDCAD"),
+      recent = 3,
+      client = test_client()
+    ),
+    "detail is not a parameter",
     class = "maplestats_error"
   )
-  methods <- purrr::map_chr(server$bodies(), "method")
-  expect_equal(sum(methods == "tools/call"), 1)
+  calls <- server$bodies() |>
+    purrr::keep(\(body) identical(body$method, "tools/call")) |>
+    purrr::map("params")
+  expect_length(calls, 2)
+  expect_equal(calls[[1]]$arguments$detail, "full")
+  expect_null(calls[[2]]$arguments$detail)
 })
 
 test_that("the raw call passes detail to the server's own tools", {

@@ -316,6 +316,89 @@ def test_an_unlabelled_header_of_years_with_gaps_names_the_columns():
     assert parsed.rows[0].values == {"2025": 4900, "2030": 5300, "2035": 5700}
 
 
+def test_a_labelled_second_header_of_consecutive_years_is_a_header_not_data():
+    # A calendar-year table after a fiscal-year one, with no Actual/Forecast line under
+    # its years: the label ("Calendar Year Assumptions") is the only sign it is a
+    # header. Read as data, the GDP rows under it kept the fiscal-year column names.
+    book = Workbook()
+    sheet = book.active
+    assert sheet is not None
+    sheet.title = "KeyAssumptions"
+    sheet.append(["Key Energy and Economic Assumptions"])
+    sheet.append(["Fiscal Year Assumptionsa", "2024-25", "2025-26", "2026-27"])
+    sheet.append(["WTI (US$/bbl)", 70.1, 61.5, 60.5])
+    sheet.append(["Calendar Year Assumptionsa", 2024, 2025, 2026])
+    sheet.append(["Gross Domestic Product"])
+    sheet.append(["Nominal (billions of dollars)", 410.2, 481.1, 490.3])
+    parsed = budget_sheets.parse_sheet(_bytes(book), "KeyAssumptions")
+    assert [r.label for r in parsed.rows] == ["WTI (US$/bbl)", "Nominal (billions of dollars)"]
+    assert parsed.rows[0].values == {"2024-25": 70.1, "2025-26": 61.5, "2026-27": 60.5}
+    gdp = parsed.rows[1]
+    assert gdp.values == {"2024": 410.2, "2025": 481.1, "2026": 490.3}
+    assert gdp.section == "Gross Domestic Product"
+    assert parsed.columns == ["2024-25", "2025-26", "2026-27", "2024", "2025", "2026"]
+
+
+@pytest.mark.parametrize(
+    "label",
+    ["Calendar Year", "Hypothèses par année civile", "Fiscal assumptions", "Exercice financier"],
+)
+def test_header_wording_in_english_and_french_marks_a_second_header(label):
+    book = Workbook()
+    sheet = book.active
+    assert sheet is not None
+    sheet.title = "Assumptions"
+    sheet.append(["Assumptions"])
+    sheet.append(["Fiscal year", "2024-25", "2025-26", "2026-27"])
+    sheet.append(["Oil", 70, 61, 60])
+    sheet.append([label, 2024, 2025, 2026])
+    sheet.append(["Gas", 2.1, 2.4, 2.9])
+    parsed = budget_sheets.parse_sheet(_bytes(book), "Assumptions")
+    assert [r.label for r in parsed.rows] == ["Oil", "Gas"]
+    assert parsed.rows[1].values == {"2024": 2.1, "2025": 2.4, "2026": 2.9}
+
+
+def test_a_first_data_row_of_consecutive_values_under_the_header_is_data():
+    # Whole numbers rising by exactly one look like years, but the columns already
+    # have their years above (2025-26 ...), so a line-item label with no header
+    # wording and no header line under it is data. It was dropped as a second header.
+    book = Workbook()
+    sheet = book.active
+    assert sheet is not None
+    sheet.title = "Capital plan"
+    sheet.append(["Capital plan"])
+    sheet.append([None, "2025-26", "2026-27", "2027-28"])
+    sheet.append([None, "Budget", "Target", "Target"])
+    sheet.append(["Roads", 2020, 2021, 2022])
+    sheet.append(["Buildings", 100, 200, 300])
+    parsed = budget_sheets.parse_sheet(_bytes(book), "Capital plan")
+    assert parsed.columns == ["2025-26 Budget", "2026-27 Target", "2027-28 Target"]
+    assert [r.label for r in parsed.rows] == ["Roads", "Buildings"]
+    assert parsed.rows[0].values == {
+        "2025-26 Budget": 2020,
+        "2026-27 Target": 2021,
+        "2027-28 Target": 2022,
+    }
+
+
+def test_a_labelled_row_of_years_under_a_header_line_without_years_is_a_header():
+    # The unnamed header line above ("At March 31") holds no year, so the labelled row
+    # of consecutive years under it is what names the columns.
+    book = Workbook()
+    sheet = book.active
+    assert sheet is not None
+    sheet.title = "Position"
+    sheet.append(["Position"])
+    sheet.append([None, "At March 31"])
+    sheet.append(["Item", 2025, 2026, 2027])
+    sheet.append(["Net debt", 10, 12, 14])
+    parsed = budget_sheets.parse_sheet(_bytes(book), "Position")
+    # "At March 31" spans all three columns, as "2025-26" spans Budget and Forecast.
+    names = ["At March 31 2025", "At March 31 2026", "At March 31 2027"]
+    assert parsed.columns == names
+    assert parsed.rows[0].values == dict(zip(names, [10, 12, 14], strict=True))
+
+
 async def test_no_part_lists_the_workbooks(budget):
     result = await client.get_budget_table()
     assert result.edition == 2026 and result.editions == [2026]

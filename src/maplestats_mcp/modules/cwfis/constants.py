@@ -132,3 +132,32 @@ PROVINCE_NAMES = {
     "NT": ("Northwest Territories", "Territoires du Nord-Ouest"),
     "NU": ("Nunavut", "Nunavut"),
 }
+# Other ways a province or territory gets typed: abbreviations, the long form with
+# "Territory", and the French initialisms. Punctuation, accents and case are dropped
+# before matching, so "P.E.I." and "Î.-P.-É." need no entry of their own. No alias folds
+# to a two-letter US state code (TN, NY ...), which the stations filter also accepts.
+PROVINCE_ALIASES = {
+    "BC": ("B.C.",),
+    "AB": ("Alta.",),
+    "SK": ("Sask.",),
+    "MB": ("Man.",),
+    "ON": ("Ont.",),
+    "QC": ("Que.",),
+    "NB": ("N.B.",),
+    "NS": ("N.S.",),
+    "PE": ("PEI", "P.E.I.", "IPE", "Î.-P.-É."),
+    "NL": (
+        "N.L.",
+        "Nfld",
+        "Nfld.",
+        "Nfld & Labrador",
+        "Newfoundland",
+        "Newfoundland & Labrador",
+        "Terre-Neuve",
+        "T.-N.-L.",
+        "TNL",
+    ),
+    "YT": ("Y.T.", "Yukon Territory", "Territoire du Yukon"),
+    "NT": ("NWT", "N.W.T.", "Territoire du Nord-Ouest", "T.N.-O.", "TNO"),
+    "NU": ("Nvt", "Nvt."),
+}

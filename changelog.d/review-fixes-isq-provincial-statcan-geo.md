@@ -10,8 +10,9 @@
 - `isq_search_tables`: a plural query word now finds a singular table name and the reverse
   ("revenus disponibles" finds "revenu disponible ...", "niveau de vie" finds "niveaux de
   vie ..."), including the French words ending in "-us", "-is" and "-eau" that the shared
-  search does not fold. A final "x" counts as a plural only after "eu", "au" or "ou", so
-  "inde" no longer finds "index".
+  search does not fold. The plural matching is limited on purpose: a final "x" counts as a
+  plural only after "eu", "au" or "ou", so "inde" still does not find "index" (nor "pri"
+  "prix"); a query word is still matched as a whole word of the table's name.
 - `statcan_geo_query_layer` and `statcan_geo_query_spatial_layer`: a query that filled its page
   now reports `exceeded_transfer_limit` as true and says to page with `result_offset`. The
   server sends that flag under a top-level `properties` object in GeoJSON answers, where it was

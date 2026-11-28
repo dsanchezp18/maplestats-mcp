@@ -474,14 +474,18 @@ def _fold(text: str) -> str:
 
 
 _PROVINCE_BY_NAME = {
-    _fold(name): code for code, names in c.PROVINCE_NAMES.items() for name in names
-} | {"newfoundland": "NL", "terre neuve": "NL"}
+    _fold(name): code
+    for table in (c.PROVINCE_NAMES, c.PROVINCE_ALIASES)
+    for code, names in table.items()
+    for name in names
+}
 
 
 def province_code(text: str) -> str | None:
     """The standard code (AB, NL) for what a caller typed: a code, the station layer's
-    legacy code (NF, SA) or a province or territory name in English or French, whatever
-    its case and accents; None for anything else, such as a US state.
+    legacy code (NF, SA), a province or territory name in English or French or a common
+    abbreviation of one (PEI, NWT, Nfld), whatever its case and accents; None for
+    anything else, such as a US state.
 
     It reads the `province` argument only. The layer's own `prov` values are codes in
     every response recorded so far (AB, BC, NF, SA), so the filter sends the code and the
@@ -553,8 +557,20 @@ async def get_stations(
     if province:
         # A name ("Alberta", "Colombie-Britannique") is turned into its code: left as
         # typed it became prov = 'ALBERTA', matched nothing and the empty answer blamed
-        # the season. Other codes (a US state) pass through.
+        # the season. Anything that is neither a Canadian province nor a code the
+        # hotspot layer uses outside Canada (a US state, MX) is refused for the same
+        # reason: "Labrador" or a typo would otherwise read as an out-of-season layer.
         code = province_code(province) or province.strip().upper()
+        if code not in c.PROVINCE_NAMES and code not in c.OTHER_HOTSPOT_AGENCIES:
+            raise lang_error(
+                InvalidInput,
+                lang,
+                f"province must be a province or territory (a code: {', '.join(c.PROVINCE_NAMES)}; "
+                f"or its name in English or French) or a US state code, got {province!r}.",
+                f"province doit être une province ou un territoire (un code : "
+                f"{', '.join(c.PROVINCE_NAMES)} ; ou son nom en français ou en anglais) ou un "
+                f"code d'État américain ; reçu {province!r}.",
+            )
         clauses.append(f"prov = {_quote(c.PROVINCE_TO_STATION_CODE.get(code, code))}")
     if name:
         clauses.append(f"strToUpperCase(name) LIKE {_quote('%' + name.upper() + '%')}")

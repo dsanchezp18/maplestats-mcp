@@ -149,8 +149,12 @@ class OcrRun:
     over_cap: list[int]  # asked for beyond MAX_PAGES
     stopped: Stopped | None = None
     # The page a busy, timeout or failed stop happened at, or the page the budget ran out
-    # in the middle of (a "time" stop between pages leaves it None).
+    # at (a "time" stop between pages leaves it None).
     stopped_page: int | None = None
+    # Whether the stop came after the work on stopped_page had begun (it was being drawn or
+    # read), not before (the wait for the engine, or no time left once it was free): a
+    # "time" stop says "while it was reading page N" only when this is True.
+    stopped_in_page: bool = False
     seconds: float = 0.0
 
 
@@ -168,12 +172,17 @@ class _Plan:
 
 
 class _Stop(Exception):
-    """A worker's report that the page was not read: kind, and the program's own words."""
+    """A worker's report that the page was not read: kind, and the program's own words.
 
-    def __init__(self, kind: Stopped, detail: str = "") -> None:
+    `in_page` is False when the stop came before any work on the page began (waiting for
+    the engine, or the budget gone once it was free), True once it was being drawn or read.
+    """
+
+    def __init__(self, kind: Stopped, detail: str = "", *, in_page: bool = True) -> None:
         super().__init__(kind)
         self.kind: Stopped = kind
         self.detail = detail
+        self.in_page = in_page
 
 
 # One page at a time, render and read: PDFium is not thread safe, and one Tesseract
@@ -528,16 +537,22 @@ def parse_tsv(tsv: str) -> tuple[str, float | None]:
     return text, confidence
 
 
-def _budget_left() -> float | None:
+def _budget_left(*, in_page: bool = True) -> float | None:
     """Seconds left of the caller's budget (see _budget_end); None when it set none.
-    `_Stop("time")` when none is left."""
+    `_Stop("time")` when none is left, with `in_page` saying whether work on the page had
+    begun."""
     end = _budget_end.get()
     if end is None:
         return None
     left = end - time.monotonic()
     if left <= 0:
-        raise _Stop("time")
+        raise _Stop("time", in_page=in_page)
     return left
+
+
+def _digest(body: bytes) -> str:
+    """The first 32 hex characters of the file's SHA-256: the cache key's document part."""
+    return hashlib.sha256(body).hexdigest()[:32]
 
 
 def _read_page(
@@ -545,12 +560,12 @@ def _read_page(
 ) -> _Recognised:
     """Render and read one page, holding the one OCR slot. Runs in the parse pool."""
     if not _slot.acquire(timeout=max(0.0, wait)):
-        raise _Stop("busy")
+        raise _Stop("busy", in_page=False)
     try:
         check_deadline()
         # The wait for the slot above used part of the budget: no render for a page
-        # there is no time left to read.
-        _budget_left()
+        # there is no time left to read. The page has not been started, so the stop says so.
+        _budget_left(in_page=False)
         pgm = _render_pgm(body, number, dpi)
         check_deadline()
         text, confidence = parse_tsv(_tesseract(pgm, engine, dpi, memory_mb, _budget_left()))
@@ -638,8 +653,8 @@ async def _read_cached(
                 raise
             if seconds - (time.monotonic() - started) <= 0:
                 # Past this call's own budget too: the time limit, whatever the other
-                # call's stop was called.
-                raise _Stop("time") from None
+                # call's stop was called. This call never began the page.
+                raise _Stop("time", in_page=False) from None
 
 
 async def read_pages(
@@ -656,9 +671,10 @@ async def read_pages(
 
     At most MAX_PAGES pages and `seconds` of work (the wait for the OCR slot included),
     then the pages not reached are returned in `unread` with `stopped` saying why: a
-    cap that ends the run is not an error, whether the budget ends between two pages or
-    in the middle of one (that page is then unread, with no pages read if it was the
-    first). A page that must not be drawn raises InvalidInput before any page is read; a
+    cap that ends the run is not an error, whether the budget ends between two pages, before
+    a page's work begins (the wait for the engine used it) or in the middle of a page (that
+    page is then unread, with no pages read if it was the first; `stopped_in_page` says
+    which). A page that must not be drawn raises InvalidInput before any page is read; a
     first page that cannot be read at all (the engine busy, a crash, a page over
     PAGE_SECONDS) raises too, since there is nothing to return.
     """
@@ -669,8 +685,9 @@ async def read_pages(
     memory_mb = config.get_ocr_memory_mb()
     run = OcrRun(engine, [], [], over_cap)
     total = 0
-    # The document's identity for the cache: the URL can serve another file tomorrow.
-    digest = hashlib.sha256(body).hexdigest()[:32]
+    # The document's identity for the cache: the URL can serve another file tomorrow. Hashed
+    # in the pool: a PDF of many MB would hold the event loop for the length of the hash.
+    digest = await run_parse(_digest, body)
     for index, plan in enumerate(plans):
         remaining = seconds - (time.monotonic() - started)
         if remaining <= 0:
@@ -687,6 +704,7 @@ async def read_pages(
             if not run.pages and stop.kind != "time":
                 raise _stopped_error(stop.kind, plan.number, stop.detail, lang, context) from None
             run.stopped, run.stopped_page = stop.kind, plan.number
+            run.stopped_in_page = stop.in_page
             run.unread = [p.number for p in plans[index:]]
             break
         text, truncated = read.text, False

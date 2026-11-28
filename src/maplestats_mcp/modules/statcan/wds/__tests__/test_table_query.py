@@ -479,14 +479,17 @@ async def test_both_routes_date_a_fiscal_year_alike(fiscal_table, monkeypatch):
 # than INLINE_MAX_OBSERVATIONS observations (coordinates x latest_n), so the rebuild has to
 # size its batches by the periods it asks for, as the script from
 # wds_get_full_table_download does, and not by a fixed 300 coordinates.
-def _wds_series(pid, coordinate, vector, value=1.0, when=date(2026, 1, 1)):
+def _wds_series(pid, coordinate, vector, value=1.0, when=date(2026, 1, 1), periods=1):
+    """A series of `periods` consecutive months from `when`."""
     return VectorSeries(
         product_id=pid,
         coordinate=coordinate,
         vector_id=vector,
         observations=[
             ObservationRow(
-                ref_period=when,
+                ref_period=date(
+                    when.year + (when.month - 1 + n) // 12, (when.month - 1 + n) % 12 + 1, 1
+                ),
                 value=value,
                 decimals=1,
                 scalar_factor_code=0,
@@ -495,6 +498,7 @@ def _wds_series(pid, coordinate, vector, value=1.0, when=date(2026, 1, 1)):
                 status_code=0,
                 security_level_code=0,
             )
+            for n in range(periods)
         ],
     )
 
@@ -616,64 +620,17 @@ async def test_a_slice_with_no_published_series_still_says_so(blocked_table, mon
         )
 
 
-# A daily table from 2000 asks 9,600 periods per series: past QUERY_MAX_LATEST_N, so the
-# rebuild reads one series per call, each with thousands of observations. A slice whose
-# series x periods cannot fit under MAX_ROWS is refused before any call, as the file route
-# refuses it, and a rebuild that runs past the time budget stops with the same "took too
-# long" error the file route gives, not at the tool timeout.
-async def test_a_daily_history_over_the_row_cap_is_refused_before_any_call(
+# The WDS rebuild refuses a slice on the rows it collects, as the file route does, not on an
+# estimate of them: members combine into many more coordinates than the table has series,
+# and a series that starts late holds fewer periods than the table's history asks for.
+async def test_a_sparse_slice_is_not_refused_by_the_upper_bound_on_its_rows(
     blocked_table, monkeypatch
 ):
-    cube = _places_cube(100, "2000-01-01", frequency=1)
-
-    async def cube_metadata(pid):
-        return cube, False
-
-    asked: list[int] = []
-
-    async def coords(pid, coordinates, latest_n):
-        asked.append(len(coordinates))
-        return _wds_data(pid, [_wds_series(pid, c, 1) for c in coordinates])
-
-    monkeypatch.setattr(client, "cube_metadata_raw", cube_metadata)
-    monkeypatch.setattr(client, "get_data_from_cube_pid_coords_and_latest_n_periods", coords)
-
-    # 100 series x about 9,600 days is over the 300,000 rows a slice may hold.
-    with pytest.raises(InvalidInput, match="more than 300,000 rows"):
-        await _query("SELECT count(*) FROM obs")
-    assert asked == []
-
-
-async def test_an_end_period_keeps_a_long_history_under_the_row_cap(blocked_table, monkeypatch):
-    # 1,000 series x 434 monthly periods since 1990 is 434,000, but end_period 1991 leaves
-    # 24 of those periods in the window: the check counts what can be kept.
+    # 1,000 combinations of members x 434 monthly periods since 1990 would be 434,000 rows,
+    # over the 300,000 cap, but the table publishes 150 series (and the helper answers
+    # NotFound for a call with none), so the slice holds 150 rows: read by the file route
+    # without trouble, and refused here before any call until 2026-11-28.
     cube = _places_cube(1000, "1990-01-01")
-
-    async def cube_metadata(pid):
-        return cube, False
-
-    async def coords(pid, coordinates, latest_n):
-        return _wds_data(
-            pid,
-            [
-                _wds_series(pid, c, 1000 + int(c.split(".")[0]), when=date(1991, 1, 1))
-                for c in coordinates
-            ],
-        )
-
-    monkeypatch.setattr(client, "cube_metadata_raw", cube_metadata)
-    monkeypatch.setattr(client, "get_data_from_cube_pid_coords_and_latest_n_periods", coords)
-
-    result = await _query("SELECT count(*) FROM obs", start_period="1990-01", end_period="1991-12")
-
-    assert result.source == "WDS by coordinate"
-    assert result.rows == [[1000]]
-
-
-async def test_a_series_count_the_table_does_not_have_is_not_counted(blocked_table, monkeypatch):
-    # The table has 150 series in all (nbSeriesCube), so 1,000 combinations of members
-    # cannot be 1,000 series: 150 x 434 periods fits under the row cap.
-    cube = {**_places_cube(1000, "1990-01-01"), "nbSeriesCube": 150}
 
     async def cube_metadata(pid):
         return cube, False
@@ -689,7 +646,46 @@ async def test_a_series_count_the_table_does_not_have_is_not_counted(blocked_tab
 
     result = await _query("SELECT count(*) FROM obs")
 
+    assert result.source == "WDS by coordinate"
     assert result.rows == [[150]]
+
+
+async def test_a_slice_over_the_row_cap_is_refused_on_the_rows_collected(
+    blocked_table, monkeypatch
+):
+    # The cap, lowered for the test, is crossed in the third call (10 rows per series, one
+    # series per call): the rebuild stops there, with the file route's message, and not
+    # before the first call or after the last.
+    monkeypatch.setattr(table_query, "MAX_ROWS", 25)
+    monkeypatch.setattr(table_query, "_WDS_BATCH", 1)
+    cube = _places_cube(5, "1990-01-01")
+
+    async def cube_metadata(pid):
+        return cube, False
+
+    asked: list[int] = []
+
+    async def coords(pid, coordinates, latest_n):
+        asked.append(len(coordinates))
+        return _wds_data(pid, [_wds_series(pid, c, 1, periods=10) for c in coordinates])
+
+    monkeypatch.setattr(client, "cube_metadata_raw", cube_metadata)
+    monkeypatch.setattr(client, "get_data_from_cube_pid_coords_and_latest_n_periods", coords)
+
+    with pytest.raises(InvalidInput, match="more than 25 rows"):
+        await _query("SELECT count(*) FROM obs")
+    assert asked == [1, 1, 1]
+
+
+@pytest.mark.parametrize("latest_n", [1, 199, 200, 201, 434, 2999, 3000, 3001, 9600])
+def test_every_rebuild_batch_passes_the_helpers_observation_limit(latest_n):
+    # client.check_coordinates refuses a call of several coordinates over
+    # INLINE_MAX_OBSERVATIONS observations or over QUERY_MAX_LATEST_N periods; a lone
+    # coordinate has no such limit, which is why a longer history is read one per call.
+    step = table_query._batch_size(latest_n)
+    batch = [f"{n}.1.1.0.0.0.0.0.0.0" for n in range(1, step + 1)]
+    assert len(client.check_coordinates(batch, latest_n)) == step
+    assert step <= client.constants.WDS_MAX_LIST
 
 
 async def test_a_rebuild_past_the_time_budget_stops_with_the_took_too_long_error(

@@ -20,12 +20,15 @@
   since 1990 ask 65,100 observations in one call). The rebuild now sizes each call by
   the periods it asks for, so none passes the limit. A call whose combinations are all
   unpublished no longer fails the whole query: the combinations of a table's members are
-  not all series, and the other calls' rows are kept. A slice whose series times periods
-  cannot fit under the 300,000-row cap (a daily history of many series, read one series
-  per call) is now refused before any call, as the file route refuses it, instead of
-  failing slowly; the periods counted stop at `end_period`, and the series at the table's
-  own series count. A rebuild that passes the time budget the file route has stops with
-  the same "took longer than this tool's N s" error. The limits themselves are unchanged.
+  not all series, and the other calls' rows are kept. A slice of more than the 300,000
+  rows the cap allows (a daily history of many series, read one series per call) is
+  refused as the file route refuses it: on the rows the calls actually return, once they
+  pass the cap, not on an estimate of them made before any call, because many member
+  combinations are not series and a series can start long after the table's first
+  period. A sparse slice whose rows are well under the cap is read, whatever its
+  combinations times periods come to. A rebuild that passes the time budget the file
+  route has stops with the same "took longer than this tool's N s" error. The limits
+  themselves are unchanged.
 - `statcan_census_profile_get_data`: a geography and characteristic pair that was asked
   for but that the answer did not carry was left out without a word, so "not published for
   this place" read like "never asked". `provenance.coverage` now says how many pairs came

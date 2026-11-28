@@ -8,7 +8,7 @@ from datetime import date
 
 import pytest
 
-from maplestats_mcp.modules.electricity import client, constants
+from maplestats_mcp.modules.electricity import client, constants, tools
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
@@ -240,6 +240,33 @@ async def test_latest_demand_keeps_one_file_when_it_holds_enough(httpx_mock, mon
     result = await client.get_hourly_demand(limit=1)
     assert [(r.date.year, r.hour_ending) for r in result.rows] == [(2027, 1)]
     assert len(httpx_mock.get_requests()) == 1
+
+
+async def test_a_large_limit_in_mid_february_reads_the_year_before(httpx_mock, monkeypatch):
+    # Not only early January: any `limit` above the hours so far this year tops up
+    # from last year's file (limit 2,000 in February holds about 1,000 hours). The
+    # result still returns what was asked for and the note says so, which is what
+    # the tool descriptions now state.
+    monkeypatch.setattr(client, "ieso_today", lambda: date(2027, 2, 15))
+    httpx_mock.add_response(url=f"{BASE}/Demand/PUB_Demand_2027.csv", text=_DEMAND_2027_START)
+    httpx_mock.add_response(url=f"{BASE}/Demand/PUB_Demand_2026.csv", text=_DEMAND_2026_END)
+    result = await client.get_hourly_demand(limit=2000)
+    assert result.rows_matched == 5 and result.year == 2027
+    assert [r.date.year for r in result.rows][:1] == [2026]
+    assert "The 2027 file held fewer than the 2000 hours asked for" in (
+        result.provenance.limits or ""
+    )
+
+
+def test_the_tool_descriptions_do_not_limit_the_top_up_to_early_january():
+    # The year before is read whenever `limit` exceeds the hours so far this year.
+    for tool_fn in (
+        tools.electricity_ontario_get_hourly_demand,
+        tools.electricity_ontario_get_supply_by_fuel,
+    ):
+        doc = " ".join((tool_fn.__doc__ or "").split())
+        assert "early January" not in doc
+        assert "a `limit` above the hours" in doc and "year before" in doc
 
 
 async def test_an_explicit_year_or_start_date_never_reads_the_year_before(httpx_mock, monkeypatch):

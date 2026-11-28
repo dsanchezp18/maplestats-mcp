@@ -37,6 +37,7 @@ from maplestats_mcp.modules.health_products.lnhpd.schemas import (
     NhpRisk,
     NhpSearchResult,
 )
+from maplestats_mcp.shared.any_case_bytes import any_case_pattern
 from maplestats_mcp.shared.cache import cached_fetch
 from maplestats_mcp.shared.errors import InvalidInput, NotFound
 from maplestats_mcp.shared.fr_typography import call_error
@@ -120,30 +121,11 @@ def _name(fields: list[str]) -> NhpProductName:
     )
 
 
-def _byte_pattern(text: str) -> re.Pattern[bytes]:
-    """A byte pattern for `text` that ignores case, accented letters included.
-
-    re.IGNORECASE on bytes folds ASCII only, so "échinacée" did not find
-    "Échinacée" (different UTF-8 bytes) and the search reported no match, though
-    the casefold check in search_index accepts it. Each non-ASCII character
-    becomes an alternation of its case forms; ASCII keeps IGNORECASE. The whole
-    query still narrows the scan of the 37 MB index to its few candidate lines.
-    """
-    parts = []
-    for char in text:
-        if char.isascii():
-            parts.append(re.escape(char.encode("ascii")))
-            continue
-        forms = {char, char.lower(), char.upper(), char.title(), char.casefold()}
-        parts.append(b"(?:" + b"|".join(re.escape(f.encode("utf-8")) for f in sorted(forms)) + b")")
-    return re.compile(b"".join(parts), re.IGNORECASE)
-
-
 def search_index(
     blob: bytes, *, query: str, company: str, active_only: bool
 ) -> list[NhpProductName]:
     """Product names whose name or NPN contains `query` and company contains `company`."""
-    pattern = _byte_pattern(query or company)
+    pattern = any_case_pattern(query or company)
     q, c = query.casefold(), company.casefold()
     seen: set[int] = set()
     found: list[NhpProductName] = []

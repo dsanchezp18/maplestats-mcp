@@ -150,8 +150,14 @@ _STOPWORDS = frozenset(
 # Endings of a word less "es" that mark an -es plural ("boxes", "glasses", "watches",
 # "batches"); "ch" alone is not one, as "aches" is "ache" plus s.
 _ES_STEM_ENDINGS = ("ss", "x", "sh", "zz", "tch", "nch", "rch")
-# Singulars ending in a single s, which no ending above tells from "-se" words.
-_ES_SINGULARS = frozenset({"lens"})
+# Singulars whose -es plural no ending above tells from a "-se" or "-oe" word ("causes",
+# "houses", "shoes"): "buses" would be cut to "buse" and "heroes" to "heroe", which no
+# notice about a bus or a hero carries. Listed one by one, as the same stems elsewhere
+# ("caus", "hous") are pieces of other words.
+_ES_SINGULARS = frozenset({"lens", "bus", "gas", "hero", "virus"})
+# Words that are the same in both numbers: cut to "serie" and "sery", "series" also found
+# "nursery" and "misery".
+_SAME_BOTH_NUMBERS = frozenset({"series", "species"})
 
 
 def _query_word(word: str) -> tuple[str, ...]:
@@ -166,8 +172,9 @@ def _query_word(word: str) -> tuple[str, ...]:
     because "batteries" cut to "batterie" never finds "battery" ("candies", "boxes" and
     "tomatoes" were cut to "candie", "boxe" and "tomatoe" likewise): -ies also tries -y,
     and -es also tries the word less "es" where its stem ends in ss, x, sh, zz, tch, nch,
-    rch, or in o after four letters, or is "lens". A singular -y word tries its -ies
-    stem, so "battery" finds "batteries".
+    rch, or in o after four letters, or is one of _ES_SINGULARS ("lens", "bus", "gas",
+    "hero", "virus"). A singular -y word tries its -ies stem, so "battery" finds
+    "batteries". "series" and "species" are kept whole.
 
     Every other -es word loses only the "s", as before. Singulars in -se and -che are
     common ("nurse", "house", "purse", "cause", "course", "horse", "ache"), and their
@@ -175,6 +182,8 @@ def _query_word(word: str) -> tuple[str, ...]:
     household, "purs" in pursuant, "caus" in caustic, "ach" in spinach), so those
     second stems are not offered; the first stem ("nurse") still finds both numbers.
     """
+    if word in _SAME_BOTH_NUMBERS:
+        return (word,)
     if len(word) > 4 and word.endswith("aux"):
         return (word[:-2],)
     if len(word) > 4 and word.endswith(("eux", "oux")):

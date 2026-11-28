@@ -84,6 +84,12 @@ def _parent_name(dim: dict[str, Any], member: dict[str, Any]) -> str | None:
     return _fold(parent["memberNameEn"]) if parent is not None else None
 
 
+def _french(item: dict[str, Any], field: str) -> str:
+    """A dimension's or member's French name (field "dimensionName" or "memberName"), or its
+    English one when WDS sends none: a refusal message must not fail on a missing name."""
+    return str(item.get(f"{field}Fr") or item[f"{field}En"])
+
+
 def _describe(dim: dict[str, Any], member: dict[str, Any], fr: bool) -> str:
     """One candidate as the error lists it: id, name, parent and code, in one language."""
     stem = "memberNameFr" if fr else "memberNameEn"
@@ -125,7 +131,7 @@ def _real_time_dimension(
             "cannot be told. Read the real-time table directly with "
             "wds_get_data_from_cube_coord and a Release member.",
             f"Le tableau en temps réel {real_time['productId']} a {len(named)} dimensions "
-            f"nommées {regular_dim['dimensionNameFr']!r} : on ne peut pas dire laquelle "
+            f"nommées {_french(regular_dim, 'dimensionName')!r} : on ne peut pas dire laquelle "
             f"correspond à la dimension {position}. Lisez le tableau en temps réel directement "
             "avec wds_get_data_from_cube_coord et un membre de la dimension Diffusion.",
         )
@@ -157,8 +163,15 @@ def _real_time_member(
     wanted_parent = _parent_name(regular_dim, member)
     narrowed = [m for m in candidates if _parent_name(rt_dim, m) == wanted_parent]
     code = str(member.get("classificationCode") or "").strip()
-    if len(narrowed) > 1 and code:
-        narrowed = [m for m in narrowed if str(m.get("classificationCode") or "").strip() == code]
+    if len(narrowed) != 1 and code:
+        # The two tables can word a parent differently ("Goods" against "Goods-producing
+        # industries"), which leaves no candidate under the parent: the classification
+        # code then picks among all of them, and still refuses unless exactly one matches.
+        narrowed = [
+            m
+            for m in (narrowed or candidates)
+            if str(m.get("classificationCode") or "").strip() == code
+        ]
     if len(narrowed) == 1:
         return narrowed[0]
 
@@ -170,7 +183,8 @@ def _real_time_member(
             f"several members, and neither its parent nor its code tells which member of "
             f"real-time table {real_time_pid} is the same one (candidates: {options_en}). Read the "
             "real-time table directly with wds_get_data_from_cube_coord and a Release member.",
-            f"« {member['memberNameFr']} » ({regular_dim['dimensionNameFr']}) est un nom partagé "
+            f"« {_french(member, 'memberName')} » ({_french(regular_dim, 'dimensionName')}) "
+            "est un nom partagé "
             f"par plusieurs membres, et ni son parent ni son code n'indiquent lequel du tableau "
             f"en temps réel {real_time_pid} est le même membre (candidats : {options_fr}). Lisez le "
             "tableau en temps réel directement avec wds_get_data_from_cube_coord et un membre de "
@@ -197,7 +211,7 @@ def _map_coordinate(
                     f"Table {regular['productId']} has no member {member_id} in dimension "
                     f"{position} ({dim['dimensionNameEn']}).",
                     f"Le tableau {regular['productId']} n'a pas de membre {member_id} dans la "
-                    f"dimension {position} ({dim['dimensionNameFr']}).",
+                    f"dimension {position} ({_french(dim, 'dimensionName')}).",
                 )
             )
         rt_dim = _real_time_dimension(dim, real_time)
@@ -210,7 +224,8 @@ def _map_coordinate(
                     f"{member['memberNameEn']!r} ({dim['dimensionNameEn']}) has no revision "
                     f"history: real-time table {real_time['productId']} does not carry it. Call "
                     f"wds_get_cube_metadata on {real_time['productId']} to see what it covers.",
-                    f"« {member['memberNameFr']} » ({dim['dimensionNameFr']}) n'a pas "
+                    f"« {_french(member, 'memberName')} » ({_french(dim, 'dimensionName')}) "
+                    "n'a pas "
                     f"d'historique des révisions : le tableau en temps réel "
                     f"{real_time['productId']} ne le contient pas. Appelez wds_get_cube_metadata "
                     f"sur {real_time['productId']} pour voir ce qu'il couvre.",

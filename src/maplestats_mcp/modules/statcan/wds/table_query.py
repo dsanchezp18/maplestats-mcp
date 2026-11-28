@@ -454,17 +454,14 @@ async def _from_wds(
         )
     latest_n = wds_table.periods_to_ask(dict(cube), start)
     first, last = _bounds(start, end)
-    # latest_n counts back from the table's last period to `start`, but an earlier `end`
-    # leaves the later ones out of the slice, so only the periods up to it can be rows.
-    in_window = latest_n
-    if last is not None and last < date.fromisoformat(str(cube["cubeEndDate"])[:10]):
-        in_window = wds_table.periods_to_ask({**cube, "cubeEndDate": last.isoformat()}, start)
-    # The table has no more series than nbSeriesCube, whatever members combine to. A slice
-    # that cannot fit under MAX_ROWS is refused as the file route refuses it, before the
-    # calls: a daily history reads one series per call, and would fail at the row cap
-    # after about 23 of them, or at the tool timeout, instead of at once.
-    if min(combinations, int(cube.get("nbSeriesCube") or combinations)) * in_window > MAX_ROWS:
-        raise _TooManyRows
+    # No refusal on an estimate of the rows (combinations or nbSeriesCube times periods):
+    # both factors are upper bounds. Many member combinations are not series, and a
+    # series that starts after cubeStartDate holds fewer than latest_n periods, so 500
+    # combinations of a monthly table from 1976 (about 611 periods each, 305,500) can
+    # hold a few thousand rows, which the file route reads. Metadata gives no lower bound
+    # either, so nothing is refused before a call. _Slice.add refuses on the rows collected,
+    # as the file route does (the same MAX_ROWS), and the time budget below stops a long
+    # run of calls.
     ids = [[str(m["memberId"]) for m in k] for k in kept]
     coordinates = [".".join([*combo, *["0"] * (10 - len(combo))]) for combo in _product(ids)]
     names = {

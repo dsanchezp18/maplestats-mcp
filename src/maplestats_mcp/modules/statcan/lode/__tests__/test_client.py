@@ -196,6 +196,49 @@ async def test_a_maintenance_page_in_place_of_the_landing_page_is_an_error(
     assert (await client.list_databases("en")).databases[0].releases
 
 
+async def test_one_database_page_that_is_not_a_lode_page_does_not_fail_the_listing(
+    httpx_mock: HTTPXMock,
+) -> None:
+    # The landing page lists ODHF; the databases it lacks are read from their own pages.
+    # One of those pages (here the NAR's) answers a maintenance page: that database is
+    # listed without releases and the call says so, instead of failing for all of them.
+    httpx_mock.add_response(url=constants.LANDING_URL["en"], text=LANDING)
+    nar_page = constants.BY_KEY["nar"].page_en
+    httpx_mock.add_response(url=nar_page, text=MAINTENANCE)
+    for db in constants.DATABASES:
+        if db.key not in ("odhf", "nar"):
+            httpx_mock.add_response(
+                url=db.page_en, text="<p>Release date: June 26, 2026</p>", is_optional=True
+            )
+    result = await client.list_databases("en")
+    assert len(result.databases) == len(constants.DATABASES)
+    nar = next(d for d in result.databases if d.key == "nar")
+    assert nar.releases == [] and nar.latest_release is None
+    others = [d for d in result.databases if d.key not in ("odhf", "nar")]
+    assert others and all(d.latest_release == "2026-06-26" for d in others)
+    assert "nar" in (result.provenance.limits or "")
+    assert "not a LODE product page" in (result.provenance.limits or "")
+    # The refused page was not kept: the next call asks for it again and finds the release.
+    httpx_mock.add_response(url=nar_page, text="<p>Release date: July 2, 2026</p>")
+    again = await client.list_databases("en")
+    assert next(d for d in again.databases if d.key == "nar").latest_release == "2026-07-02"
+    assert "not a LODE product page" not in (again.provenance.limits or "")
+
+
+async def test_the_unreadable_database_page_is_named_in_french(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url=constants.LANDING_URL["fr"], text=LANDING)
+    httpx_mock.add_response(url=constants.BY_KEY["nar"].page_fr, text=MAINTENANCE)
+    # The landing page's links are the English ones, so every French page is read here.
+    for db in constants.DATABASES:
+        if db.key != "nar":
+            httpx_mock.add_response(
+                url=db.page_fr, text="<p>Date de diffusion : 26 juin 2026</p>", is_optional=True
+            )
+    result = await client.list_databases("fr")
+    assert "nar" in (result.provenance.limits or "")
+    assert "n'est pas une page de produit LODE" in (result.provenance.limits or "")
+
+
 async def test_the_page_error_is_reported_in_french(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(url=constants.BY_KEY["odhf"].page_en, text=MAINTENANCE)
     with pytest.raises(UpstreamError, match="pas une page LODE"):

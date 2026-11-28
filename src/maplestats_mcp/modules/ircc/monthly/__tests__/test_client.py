@@ -343,6 +343,16 @@ def test_month_and_quarter_cells_in_other_spellings_are_read():
     assert [r.quarter for r in client.parse_table(quarter_only.encode()).rows] == [1, 2, 3, 4, 1]
 
 
+def test_a_quarter_written_right_after_the_year_is_read():
+    # "2024Q1" fell into the unread-period row because a digit before the Q was refused;
+    # a letter before it still is ("Dept2" is not a T2).
+    for text, quarter in (("2024Q1", 1), ("2024q3", 3), ("2025T2", 2), ("2024Quarter 4", 4)):
+        assert client._quarter_of(text) == quarter, text
+    assert client._quarter_of("Dept2") is None
+    assert client._quarter_of("Q12") is None
+    assert client._quarter_of("Q1 2024") == 1
+
+
 async def test_unreadable_periods_are_counted_not_pooled_silently(httpx_mock, catalogue):
     body = (
         b"EN_YEAR\tEN_QUARTER\tEN_MONTH\tEN_PROVINCE_TERRITORY\tTOTAL\n"

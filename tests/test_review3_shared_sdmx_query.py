@@ -63,14 +63,30 @@ async def test_calendar_adjusted_is_its_own_adjustment():
 
 async def test_averaging_calendar_adjusted_with_unadjusted_values_is_refused():
     # Both used to read "unadjusted", so the mix went through unflagged.
-    with pytest.raises(InvalidInput, match="mixed_adjustment"):
+    with pytest.raises(InvalidInput, match="mixed_adjustment") as refused:
         await _run(
             "SELECT period, avg(value) FROM obs WHERE s_adj IN ('NSA', 'CA') GROUP BY period"
         )
+    # The refusal lists the calendar adjustment among the kinds it refuses to mix.
+    assert "calendar adjusted" in str(refused.value)
     outcome = await _run(
         "SELECT period, avg(value) FROM obs WHERE s_adj = 'CA' GROUP BY period ORDER BY period"
     )
     assert outcome.rows == [["2024", 101.0], ["2025", 102.0]]
+
+
+async def test_the_mixed_adjustment_refusal_names_calendar_adjusted_in_french_too():
+    with pytest.raises(InvalidInput, match="mixed_adjustment") as refused:
+        await sdmx_query.run(
+            sql="SELECT period, avg(value) FROM obs WHERE s_adj IN ('NSA', 'CA') GROUP BY period",
+            dataset="namq_10_gdp",
+            dataset_title="PIB",
+            dims=[ADJUSTMENT],
+            series=_series(),
+            lang="fr",
+        )
+    message = str(refused.value).replace(" ", " ")
+    assert "corrigées des effets de calendrier" in message
 
 
 def _fixture_labels() -> dict[str, dict[str, str]]:

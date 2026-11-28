@@ -42,15 +42,18 @@ class RateLimited(MapleStatsError):
         self.retry_after = retry_after
 
 
-# What a server says of an argument it does not know, in English and French
-# ("detail is not a parameter of this tool; parameters: name, arguments").
-_UNKNOWN_ARGUMENT = (
-    "not a parameter",
-    "n'est pas un paramètre",
-    "unexpected",
-    "additional propert",
-    "unrecognized",
-    "unknown",
+# What a server before 0.6.0 (call_tool) or before 2026-11-09 (search_tools) says of
+# `detail`, word for word. Read from the v0.5.0 server called in memory: "Invalid
+# input: boc_get_observations: detail is not a parameter of this tool; parameters:
+# ..." (the list is the inner tool's, not call_tool's) and, with lang="fr", "detail
+# n'est pas un paramètre de cet outil". Nothing looser matches: a current server's
+# invalid-arguments error for another argument quotes the tool's parameters, and a
+# parameter named "details" or an error saying "unknown" or "unexpected" is not
+# this refusal.
+_DETAIL_REFUSED = re.compile(
+    r"\bdetail (?:is not a parameter of this tool"
+    r"|n['’]est pas un param.tre de cet outil)",
+    re.IGNORECASE,
 )
 
 
@@ -60,11 +63,11 @@ def _rejects_detail(error: MapleStatsError) -> bool:
     A server older than the compact search (before 2026-11-09) does this to
     search_tools, and one older than 0.6.0 (2026-11-18) to call_tool. Both
     answer in full anyway, so the call is repeated once without it. The error
-    must also say the argument is unknown: any other error that mentions
-    "detail" is the tool's own, and repeating the call would only hide it.
+    must say it in the old server's own words (see _DETAIL_REFUSED): any other
+    error that mentions "detail" is the tool's own, and repeating the call
+    would only hide it.
     """
-    text = str(error).lower()
-    return "detail" in text and any(marker in text for marker in _UNKNOWN_ARGUMENT)
+    return _DETAIL_REFUSED.search(str(error)) is not None
 
 
 @dataclass

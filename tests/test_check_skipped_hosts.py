@@ -80,6 +80,22 @@ def test_without_either_the_breaker_says_which_hosts_failed():
     assert failing_hosts(UpstreamUnavailable("down")) == []
 
 
+def test_the_breakers_path_groups_come_back_as_one_host():
+    # An error with no request (every CircuitOpen) falls back to the breaker's keys, which
+    # are "host/group" for StatCan's www150. check_skipped_hosts counts scripts per host, so
+    # a whole-host outage has to read as one host, not as one per path group.
+    for key in (f"{WWW150}/wds", f"{WWW150}/sdmx", f"{WWW150}/daily", "www12.statcan.gc.ca/census"):
+        with one_call():
+            BREAKER.record_failure(key, "timeout")
+    with one_call():
+        BREAKER.record_failure("geo.statcan.gc.ca", "timeout")
+    assert failing_hosts(UpstreamUnavailable("down")) == [
+        "geo.statcan.gc.ca",
+        "www12.statcan.gc.ca",
+        WWW150,
+    ]
+
+
 def test_a_skip_remembers_its_hosts_and_a_reload_names_none(capsys):
     skip_outage("StatCan", _outage(f"https://{WWW150}/x"))
     skip_reloading("open.canada.ca", "grants")
