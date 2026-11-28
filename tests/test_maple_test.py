@@ -476,3 +476,14 @@ def test_cost_per_question_reads_cached_input_tokens():
     lines = cost_per_question([old, {"run": new}])
     assert lines[0] == "| Question | a | b |"
     assert "| M-01 | 0.100 | 0.050 (21.0k) |" in lines
+
+
+def test_drift_ignores_a_new_release_date_when_the_value_is_unchanged():
+    from tests.maple_test.build_key import drift
+
+    def key(value, released):
+        cite = {"vector_id": "v1", "value": value, "release_or_revision_date": released}
+        return {"questions": [{"id": "Q-1", "expected": {"x": 1}, "citations": [cite]}]}
+
+    assert drift(key(5.0, "2026-10-29"), key(5.0, "2026-11-26")) == []
+    assert len(drift(key(5.0, "2026-10-29"), key(5.1, "2026-11-26"))) == 1

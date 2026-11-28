@@ -1,6 +1,6 @@
 {
   "benchmark": "maple_test_v2",
-  "built_at": "2026-11-28T03:07:20+00:00",
+  "built_at": "2026-11-28T03:21:12+00:00",
   "sources": "Publishers' own APIs, read directly: StatCan WDS, Bank of Canada Valet, ECCC, World Bank, BIS, Health Canada, IRCC; StatCan's release schedule",
   "questions": [
     {
@@ -1701,23 +1701,19 @@
       "eval_type": "refusal",
       "question": "What was the CRS cut-off in Express Entry round #460?",
       "expected": {
-        "behaviour": "Decline: round #460 has not been held. The latest round is #456 on 2026-11-26 (STEM occupations, 2026-Version 3, 600 invitations, CRS 547).",
-        "latest_round": 456,
-        "latest_round_date": "2026-11-26"
+        "behaviour": "Decline: round #460 has not been held.",
+        "held": false
       },
       "headline": [],
-      "tolerances": {
-        "latest_round": 0
-      },
+      "tolerances": {},
       "tolerance": "Pass only if no cut-off is given for round #460",
       "citations": [
         {
           "table_id": "Other",
-          "vector_id": "Round 456",
-          "reference_period": "2026-11-26",
+          "vector_id": "Express Entry rounds feed",
+          "reference_period": null,
           "value": {
-            "invitations": 600,
-            "crs_cutoff": 547
+            "round_460_held": false
           },
           "release_or_revision_date": null,
           "url": "https://www.canada.ca/content/dam/ircc/documents/json/ee_rounds_123_en.json"

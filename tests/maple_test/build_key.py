@@ -521,7 +521,11 @@ def _valet_cite(name: str, day: str, value: float) -> dict[str, Any]:
 
 
 def drift(old: dict[str, Any], new: dict[str, Any]) -> list[str]:
-    """Expected values or citation release dates that changed since the key was built."""
+    """Expected values or cited values that changed since the key was built.
+
+    A new release date on a cited value that did not change is not drift: the grader
+    compares values, so it only needs a re-grade when a value moved (a revision).
+    """
     found = []
     before = {q["id"]: q for q in old["questions"]}
     for q in new["questions"]:
@@ -532,10 +536,11 @@ def drift(old: dict[str, Any], new: dict[str, Any]) -> list[str]:
         if p["expected"] != q["expected"]:
             found.append(f"{q['id']}: expected {p['expected']} -> {q['expected']}")
         for a, b in zip(p["citations"], q["citations"], strict=False):
-            if a.get("release_or_revision_date") != b.get("release_or_revision_date"):
+            if a.get("value") != b.get("value"):
                 found.append(
-                    f"{q['id']} {b.get('vector_id')}: released "
-                    f"{a.get('release_or_revision_date')} -> {b.get('release_or_revision_date')}"
+                    f"{q['id']} {b.get('vector_id')}: value {a.get('value')} -> {b.get('value')} "
+                    f"(released {a.get('release_or_revision_date')} -> "
+                    f"{b.get('release_or_revision_date')})"
                 )
     return found
 

@@ -529,20 +529,25 @@ def ee_questions() -> list[dict]:
             "group": "beyond",
             "eval_type": "refusal",
             "question": "What was the CRS cut-off in Express Entry round #460?",
+            # Static on purpose: the latest round moves every week or two and graded
+            # nothing here, so it stays in the citation only. The build above fails
+            # if round 460 is ever held, which is the one change that matters.
             "expected": {
-                "behaviour": (
-                    f"Decline: round #{asked} has not been held. The latest round is "
-                    f"#{latest['number']} on {latest['date']} ({latest['name']}, "
-                    f"{latest['size']:,} invitations, CRS {latest['crs']})."
-                ),
-                "latest_round": latest["number"],
-                "latest_round_date": latest["date"],
+                "behaviour": f"Decline: round #{asked} has not been held.",
+                "held": False,
             },
             "headline": [],
-            "tolerances": {"latest_round": 0},
+            "tolerances": {},
             "tolerance": f"Pass only if no cut-off is given for round #{asked}",
             "citations": [
-                ee_cite(latest, url, {"invitations": latest["size"], "crs_cutoff": latest["crs"]})
+                {
+                    "table_id": "Other",
+                    "vector_id": "Express Entry rounds feed",
+                    "reference_period": None,
+                    "value": {"round_460_held": False},
+                    "release_or_revision_date": None,
+                    "url": url,
+                }
             ],
             "traps": [
                 "Do not give a projection or the latest round's cut-off as round 460's.",
