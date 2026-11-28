@@ -54,7 +54,9 @@ async def dfo_landings_get_landings(
     fishery="freshwater": 1990-2019 by province or territory, species such
     as Yellow Pickerel (walleye), Whitefish, Perch (up to 10 years a call).
     Default: the latest year. Filters match part of a name, accents
-    optional; region also accepts 'Canada'. lang="fr" reads DFO's French
+    optional; region also accepts 'Canada'. include_totals=False drops
+    group, all-species and region (Canada, Atlantic) totals, so rows can
+    be summed without double counting. lang="fr" reads DFO's French
     files (French species and province names). Licence: Open Government
     Licence - Canada.
     Use for: value of lobster landings in Nova Scotia, Canada's fish catch

@@ -164,7 +164,7 @@ def _parse_feed(raw_bytes: bytes, lang: str) -> list[ExpressEntryRound]:
         text = _decode_feed(raw_bytes)
         payload = json.loads(text)
         rounds = payload["rounds"]
-        return [_round_from_json(obj) for obj in rounds]
+        parsed = [_round_from_json(obj) for obj in rounds]
     except (UnicodeDecodeError, json.JSONDecodeError, KeyError, ValueError) as exc:
         if lang == "fr":
             raise UpstreamError(
@@ -176,6 +176,17 @@ def _parse_feed(raw_bytes: bytes, lang: str) -> list[ExpressEntryRound]:
         raise UpstreamError(
             f"IRCC Express Entry feed ({lang}) was not shaped as documented: {exc}"
         ) from exc
+    # The feed has listed every round since 2015, so an empty list is an outage stub
+    # ({"rounds": []}), not a state. Raised here, inside the cached fetch, so it is not
+    # cached for six hours and tools do not answer "0 rounds" as a success.
+    if not parsed:
+        _raise(
+            UpstreamError,
+            "IRCC Express Entry feed returned no rounds.",
+            "le fichier Entrée express d'IRCC ne contient aucune ronde.",
+            lang,
+        )
+    return parsed
 
 
 async def _fetch_rounds(lang: str) -> tuple[list[ExpressEntryRound], bool]:
@@ -308,13 +319,6 @@ async def get_express_entry_round(draw_number: str, lang: Lang = "en") -> Expres
 
 async def get_latest_express_entry_round(lang: Lang = "en") -> ExpressEntryRoundDetail:
     rounds, was_cached = await _fetch_rounds(lang)
-    if not rounds:
-        _raise(
-            UpstreamError,
-            "IRCC Express Entry feed returned no rounds.",
-            "le fichier Entrée express d'IRCC ne contient aucune ronde.",
-            lang,
-        )
     return ExpressEntryRoundDetail(
         round=rounds[0],
         provenance=make_provenance(

@@ -221,7 +221,9 @@ def _parse_select_options(soup: BeautifulSoup, select_id: str) -> list[FilterOpt
 
 def _parse_candidates(
     html: str,
-) -> tuple[list[Candidate], int, list[FilterOption], list[FilterOption]]:
+) -> tuple[list[Candidate], int, list[FilterOption], list[FilterOption], list[FilterOption]]:
+    """The candidates, the portal's own count, the party and province filters, and the
+    entries that are not in the confirmed three-part form (client id and text as listed)."""
     soup = BeautifulSoup(html, "html.parser")
 
     total_found = 0
@@ -231,6 +233,7 @@ def _parse_candidates(
         total_found = int(digits) if digits else 0
 
     candidates: list[Candidate] = []
+    unparsed: list[FilterOption] = []
     select = soup.find("select", id="SelectedClientIds")
     if select is not None:
         for option in select.find_all("option"):
@@ -243,6 +246,10 @@ def _parse_candidates(
             # is expected to contain the literal " / " separator itself.
             parts = text.split(" / ", 2)
             if len(parts) != 3:
+                # Only the three-part form was seen live, so another one is not guessed at
+                # (a candidate with no party might be listed with two parts). The entry
+                # is still a candidate of the election: its id is kept for the checks.
+                unparsed.append(FilterOption(id=value, label=text))
                 continue
             name_part, party, district = parts
             if ", " in name_part:
@@ -261,7 +268,41 @@ def _parse_candidates(
 
     parties = _parse_select_options(soup, "PartyList")
     provinces = _parse_select_options(soup, "ProvinceList")
-    return candidates, total_found, parties, provinces
+    return candidates, total_found, parties, provinces, unparsed
+
+
+_LABEL_CHARS = 100
+
+
+def _cut(label: str) -> str:
+    """A portal label cut to about _LABEL_CHARS characters, so a long entry cannot swell the note."""
+    return label if len(label) <= _LABEL_CHARS else label[:_LABEL_CHARS].rstrip() + "..."
+
+
+def _unparsed_note(unparsed: list[FilterOption], lang: str) -> str | None:
+    """A note naming the entries a search could not read as candidates (the first three).
+
+    The entries' own text is kept as the portal wrote it, outside the French spacing,
+    each cut to about 100 characters.
+    """
+    if not unparsed:
+        return None
+    shown = "; ".join(f"{o.id}: {_cut(o.label)}" for o in unparsed[:3])
+    if len(unparsed) > 3:
+        shown += "; ..."
+    head = fr_or_en(
+        lang,
+        "Left out of candidates, as not in the form 'Last, First / Party / Electoral "
+        f"District' (portal entries: {len(unparsed)}):",
+        "Absentes de candidates, faute de la forme « Nom, Prénom / Parti / Circonscription » "
+        f"(entrées du portail : {len(unparsed)}) :",
+    )
+    tail = fr_or_en(
+        lang,
+        "each client_id still works with get_financial_return_part",
+        "chaque client_id fonctionne quand même avec get_financial_return_part",
+    )
+    return f"{head} {shown}; {tail}"
 
 
 async def list_elections(*, act: str = "after_2019", lang: str = "en") -> ElectionList:
@@ -495,7 +536,7 @@ async def search_candidates(
         district_id=district_id,
     )
     html, was_cached = await _search_html(url, form, lang)
-    candidates, total_found, parties, provinces = _parse_candidates(html)
+    candidates, total_found, parties, provinces, unparsed = _parse_candidates(html)
     page = candidates[offset : offset + page_size]
     has_more = offset + len(page) < len(candidates)
     coverage = None
@@ -512,6 +553,9 @@ async def search_candidates(
                 f"; next page: offset={offset + len(page)}",
                 f" ; page suivante : offset={offset + len(page)}",
             )
+    note = _unparsed_note(unparsed, lang)
+    if note:
+        coverage = f"{coverage}{fr_or_en(lang, '; ', ' ; ')}{note}" if coverage else note
 
     return CandidateSearchResult(
         election_id=election_id,
@@ -547,8 +591,9 @@ async def _check_candidate_in_election(
     report_code = constants.REPORT_TYPES["campaign_returns"]
     url = _search_url(act_code, election_id, report_code, status_code, lang)
     html, _ = await _search_html(url, _search_form(status_code, lang), lang)
-    candidates, _total, _parties, _provinces = _parse_candidates(html)
-    if not any(c.client_id == candidate_client_id for c in candidates):
+    candidates, _total, _parties, _provinces, unparsed = _parse_candidates(html)
+    listed = {c.client_id for c in candidates} | {o.id for o in unparsed}
+    if candidate_client_id not in listed:
         raise lang_error(
             NotFound,
             lang,

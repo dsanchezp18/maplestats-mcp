@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import io
+import zipfile
 from pathlib import Path
 
 import httpx
@@ -93,3 +95,57 @@ async def test_a_range_answer_longer_than_the_range_is_cut_off(httpx_mock) -> No
 async def test_a_range_answer_of_the_right_length_is_returned(httpx_mock) -> None:
     httpx_mock.add_response(url=URL, status_code=206, content=b"y" * 1024)
     assert await files._range(URL, 0, 1023) == b"y" * 1024
+
+
+def test_read_rows_counts_the_records_it_skips() -> None:
+    # A record whose field count differs from the header is not a row, but the caller
+    # has to be told it was passed over: a blank line is not counted.
+    text = "id,name,city\n1,Ann,Oslo\n2,Bo\n\n3,Cy,Rome,extra\n4,Di,Bern\n"
+    header, rows, skipped = files.read_rows([text.encode()], True, {}, 10)
+    assert header == ["id", "name", "city"]
+    assert [row["id"] for row in rows] == ["1", "4"]
+    assert skipped == 2
+
+
+def test_read_rows_counts_only_what_it_scanned() -> None:
+    text = "id,name\n1,Ann\n2,Bo\n3\n"
+    _, rows, skipped = files.read_rows([text.encode()], True, {}, 1)
+    assert len(rows) == 1
+    assert skipped == 0  # it stopped at the limit, before the short record
+
+
+def _zip_of(member: str, content: bytes) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(member, content)
+    return buffer.getvalue()
+
+
+async def test_a_zip_replaced_at_the_same_url_is_downloaded_again(
+    httpx_mock, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MAPLE_LODE_CACHE_DIR", str(tmp_path / "cache"))
+    # The cached member is named for the archive's own size and the member's, which the
+    # range read of the central directory already gave: a rebuilt file under the same
+    # name has other sizes, so its old unpacked copy is never served for it.
+    old = _zip_of("data.csv", b"a,b\n1,2\n")
+    new = _zip_of("data.csv", b"a,b\n1,2\n3,4\n5,6\n")
+    served = {"blob": old}
+    httpx_mock.add_callback(
+        lambda request: httpx.Response(200, content=served["blob"]), url=URL, is_reusable=True
+    )
+    first, fresh = await files.local_member(URL, "data.csv", "100-9")
+    assert fresh
+    assert first.read_bytes() == b"a,b\n1,2\n"
+
+    served["blob"] = new
+    again, fresh_again = await files.local_member(URL, "data.csv", "100-9")
+    assert (again, fresh_again) == (first, False)  # the same stamp: the same file
+
+    rebuilt, fresh_rebuilt = await files.local_member(URL, "data.csv", "130-21")
+    assert fresh_rebuilt
+    assert rebuilt != first
+    assert rebuilt.read_bytes() == b"a,b\n1,2\n3,4\n5,6\n"
+    assert files.cached(URL, "data.csv", "130-21") == rebuilt
+    assert files.cached(URL, "data.csv", "100-9") == first
+    assert files.cached(URL, "data.csv", "999-9") is None

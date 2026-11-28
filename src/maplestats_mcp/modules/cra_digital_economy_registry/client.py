@@ -34,6 +34,7 @@ transport to give up the StatCan fix to accommodate one large page.
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import date
 from typing import NoReturn
 
@@ -97,6 +98,19 @@ def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
 def _text(en: str, fr: str, lang: str) -> str:
     """The English text, or the French one with no-break spaces."""
     return french_spacing(fr) if lang == "fr" else en
+
+
+def _fold(text: str) -> str:
+    """Lower-case, accent-free and single-spaced, so "societe" finds "Société"."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return " ".join("".join(c for c in decomposed if not unicodedata.combining(c)).split())
+
+
+def _compact(text: str) -> str:
+    return re.sub(r"[\s\-]", "", text)
+
+
+_NUMBER_CHARS = re.compile(r"[0-9rt\s\-]+")
 
 
 def _cell_text(cell) -> str | None:
@@ -222,7 +236,7 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
     url = constants.URL_EN if lang == "en" else constants.URL_FR
     cache_key = f"cra-digital-economy-registry:{lang}"
 
-    async def fetch() -> str:
+    async def fetch() -> tuple[list[DigitalEconomyRegistrant], int]:
         await _LIMITER.acquire()
         try:
             response = await _get(url)
@@ -241,19 +255,27 @@ async def search_registrants(query: str = "", *, lang: str = "en") -> DigitalEco
                 "cra_digital_economy_registry n'a pas répondu à temps.",
                 lang,
             )
-        return response.text
+        # Parsed here, not after the cache: an error or maintenance page answered
+        # with HTTP 200 raises UpstreamError from the parse and is never cached,
+        # where the raw text used to be kept for six hours and replayed.
+        return _parse_registrants(response.text, lang)
 
-    html, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-    all_registrants, skipped = _parse_registrants(html, lang)
+    (all_registrants, skipped), was_cached = await cached_fetch(
+        cache_key, constants.CACHE_TTL_SECONDS, fetch
+    )
 
-    needle = query.strip().lower()
+    needle = _fold(query)
     if needle:
+        # The page prints business numbers compact ("751950577RT9999"), so a number
+        # typed with spaces or dashes is compacted before it is compared. Only a
+        # query made of digits, "RT", spaces and dashes is: a name keeps its spaces.
+        number_needle = _compact(needle) if _NUMBER_CHARS.fullmatch(needle) else needle
         matched = [
             r
             for r in all_registrants
-            if needle in r.legal_name.lower()
-            or (r.trade_name and needle in r.trade_name.lower())
-            or needle in r.business_number.lower()
+            if needle in _fold(r.legal_name)
+            or (r.trade_name and needle in _fold(r.trade_name))
+            or number_needle in _compact(r.business_number.lower())
         ]
     else:
         matched = all_registrants

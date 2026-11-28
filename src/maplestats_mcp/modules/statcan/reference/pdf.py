@@ -25,7 +25,8 @@ What the files look like, and what this module does about it:
   lines of a third of the pages;
 - lines are joined into paragraphs: a line much shorter than the page's usual
   line, or one ending a sentence before a short line, ends a paragraph; a word
-  split at the end of a line ("situ-" / "ation") is joined;
+  split at the end of a line ("situ-" / "ation") is joined, but a compound keeps
+  its hyphen ("self-" / "employed"): see `_join_split_word`;
 - a page of a scan has no text layer at all (it is an image of a page): it comes out
   empty, so such a page (under 25 characters of text) is counted, kept apart from
   the pages that are merely short, and given a bracketed line saying so, with a
@@ -55,6 +56,7 @@ import statistics
 import time
 from collections import Counter
 from dataclasses import dataclass, field, replace
+from itertools import pairwise
 from typing import Any
 
 from pypdf import PdfReader
@@ -476,14 +478,58 @@ def _capitals(line: str) -> bool:
     )
 
 
-def _paragraphs(lines: list[str]) -> list[str]:
+# First parts that make a compound whenever a line ends on them, because no ordinary word
+# is split there: "self-" / "employed", "non-" / "farm", "sous-" / "estimation". Left out
+# on purpose are the ones typesetters also split ordinary words at ("co-" / "efficient",
+# "high-" / "est", "long-" / "er", "part-" / "nership", "cross-" / "ing", "mi-" / "nimum",
+# "auto-" / "matique"): for those the document has to hyphenate the pair elsewhere.
+_COMPOUND_PREFIXES = frozenset({"self", "non", "semi", "quasi", "sous", "demi"})
+_HYPHENATED = re.compile(r"[^\W\d_]+(?:-[^\W\d_]+)+")
+_LAST_WORD = re.compile(r"[^\W\d_]+$")
+
+
+def _hyphenated_pairs(texts: list[list[str]]) -> frozenset[str]:
+    """Every two words the document joins with a hyphen inside one line ("part-time",
+    and "year-over" and "over-year" from "year-over-year"), in lower case: the
+    evidence that a hyphen at the end of a line is part of the word."""
+    pairs: set[str] = set()
+    for lines in texts:
+        for line in lines:
+            for token in _HYPHENATED.findall(line.lower()):
+                words = token.split("-")
+                pairs.update(f"{a}-{b}" for a, b in pairwise(words))
+    return frozenset(pairs)
+
+
+def _join_split_word(current: str, line: str, compounds: frozenset[str]) -> str:
+    """`current`, which ends in a hyphen, joined to `line`, the line that continues it.
+
+    The hyphen at the end of a line is either one the typesetter added to split a word
+    ("statis-" / "tics": dropped) or the hyphen of a compound the line happened to end
+    on ("self-" / "employed": dropping it would leave "selfemployed", which a search
+    for "self-employed" never finds). The text does not say which, so the hyphen stays
+    when the first part is one of `_COMPOUND_PREFIXES` or when the document writes the
+    same pair with a hyphen somewhere else (`compounds`); otherwise the word is joined,
+    the commoner case.
+    """
+    head = _LAST_WORD.search(current[:-1])
+    tail = _WORD.match(line)
+    if head and tail:
+        pair = f"{head.group().lower()}-{tail.group().lower()}"
+        if head.group().lower() in _COMPOUND_PREFIXES or pair in compounds:
+            return current + line
+    return current[:-1] + line
+
+
+def _paragraphs(lines: list[str], compounds: frozenset[str] = frozenset()) -> list[str]:
     """A page's lines joined into paragraphs.
 
     A paragraph ends at a blank line, after a line ending a sentence that is
     shorter than the page's usual line, and after any short line (a heading, a
     table row) followed by one that does not start in lower case. Justified text
     in the 2006 LFS guide comes out a word per line ("or" / "only" / "job."):
-    those lines run on, since the next one starts in lower case.
+    those lines run on, since the next one starts in lower case. A word split at
+    the end of a line is joined, and a compound is not (see `_join_split_word`).
     """
     lengths = [len(line) for line in lines if len(line) > 20]
     usual = statistics.median(lengths) if lengths else 60
@@ -495,7 +541,7 @@ def _paragraphs(lines: list[str]) -> list[str]:
         if not current:
             current = line
         elif current.endswith("-") and line[:1].islower() and current[-2:-1].isalpha():
-            current = current[:-1] + line
+            current = _join_split_word(current, line, compounds)
         else:
             current = f"{current} {line}"
         following = next((other for other in lines[index + 1 :] if other), "")
@@ -695,8 +741,11 @@ def extract(
     # runs over its pages up to the next bookmark at its level or above.
     page_level = min(6, max(outline_levels, default=0) + 1)
 
+    # A line that ends in a hyphen is a compound when the document hyphenates the same
+    # pair elsewhere, so the evidence comes from every page before any is joined.
+    compounds = _hyphenated_pairs(texts)
     paragraphs_by_page = [
-        _paragraphs(lines if index in columned else _without_running(lines, running))
+        _paragraphs(lines if index in columned else _without_running(lines, running), compounds)
         for index, lines in enumerate(texts)
     ]
     # A heading inside a page is its own piece for a query, below the page's own

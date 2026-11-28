@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 from maplestats_mcp.modules.abs import client
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CATALOGUE = "https://data.api.abs.gov.au/rest/dataflow/ABS/all/latest"
@@ -169,6 +169,56 @@ async def test_no_records_is_not_found(httpx_mock):
     httpx_mock.add_response(url=_data("LF"), status_code=404, text="NoRecordsFound")
     with pytest.raises(NotFound, match="in the periods asked for"):
         await client.get_data("LF", "M13.3.1599.20.AUS.M", start_period="2040-01")
+
+
+@pytest.mark.parametrize(
+    ("body", "match"),
+    [
+        (
+            "<html><body>Service temporarily unavailable</body></html>",
+            "unexpected SDMX-CSV columns",
+        ),
+        ("", "empty body"),
+        ("  \n", "empty body"),
+    ],
+)
+async def test_a_200_that_is_not_sdmx_csv_is_an_error_and_is_not_cached(httpx_mock, body, match):
+    # The body was cached before it was read, so an outage page or an empty answer sent
+    # with HTTP 200 was replayed from the cache for hours, past the end of the outage.
+    _mock(httpx_mock, "LF", None)
+    httpx_mock.add_response(url=_data("LF"), text=body)
+    with pytest.raises(UpstreamError, match=match):
+        await client.get_data("LF", "m13.3.1599.20.1+2+aus.m", last_n=3)
+    httpx_mock.add_response(url=_data("LF"), text=_text("data_lf.csv"))
+    result = await client.get_data("LF", "m13.3.1599.20.1+2+aus.m", last_n=3)
+    assert len(result.rows) > 0 and not result.provenance.cached
+    assert len(_data_requests(httpx_mock)) == 2
+
+
+async def test_a_header_with_no_rows_is_still_no_values(httpx_mock):
+    # A well-formed answer with nothing in it stays "no values" (and may be cached).
+    _mock(httpx_mock, "LF", None)
+    header = _text("data_lf.csv").splitlines()[0] + "\n"
+    httpx_mock.add_response(url=_data("LF"), text=header)
+    with pytest.raises(NotFound, match="has no values for key"):
+        await client.get_data("LF", "m13.3.1599.20.1+2+aus.m", last_n=3)
+
+
+async def test_indicator_keeps_the_status_of_an_estimated_value(httpx_mock):
+    # get_data keeps each observation's status; the indicator rebuilt its observations as
+    # (period, value) and an estimated or provisional figure looked like any other.
+    _mock(httpx_mock, "CPI", None)
+    text = _text("data_cpi.csv")
+    row = "2026-08,4,PCT: Percent,,,,25: Sep 2025 = 100.0"
+    assert text.count(row) == 1
+    httpx_mock.add_response(
+        url=_data("CPI"),
+        text=text.replace(row, "2026-08,4,PCT: Percent,E: Estimate,,,25: Sep 2025 = 100.0"),
+    )
+    result = await client.get_indicator("cpi_inflation")
+    by_period = {o.period: o.status for o in result.observations}
+    assert by_period["2026-08"] == "Estimate"
+    assert by_period["2026-09"] is None
 
 
 async def test_indicator_gives_the_canadian_counterpart(httpx_mock):

@@ -112,13 +112,28 @@ def check_url(url: str) -> str:
     return url
 
 
-def cache_path(url: str, member: str) -> Path:
-    key = hashlib.sha1(f"{url}|{member}".encode()).hexdigest()[:16]
-    return constants.cache_dir() / key / Path(member).name
+def version_stamp(archive_bytes: int, member: remote_zip.ZipMember) -> str:
+    """What the archive's own directory says about this member's version: the archive's
+    size and the member's, packed and unpacked.
+
+    The copy of a member kept on disk is named for the URL, the member and this stamp,
+    so a ZIP rebuilt under the same link (a new release, a corrected file) is read
+    again, not served from the old copy for good. The sizes come from the range read of
+    the central directory that every call makes anyway, so nothing more is fetched.
+    A rebuilt file with all three sizes unchanged would still pass for the old one, and
+    the listing itself is cached for a day.
+    """
+    return f"{archive_bytes}-{member.compressed_size}-{member.size}"
 
 
-def cached(url: str, member: str) -> Path | None:
-    target = cache_path(url, member)
+def cache_path(url: str, member: str, stamp: str = "") -> Path:
+    # Without a stamp the key is the one this cache has always used.
+    key = hashlib.sha1((f"{url}|{member}" + (f"|{stamp}" if stamp else "")).encode()).hexdigest()
+    return constants.cache_dir() / key[:16] / Path(member).name
+
+
+def cached(url: str, member: str, stamp: str = "") -> Path | None:
+    target = cache_path(url, member, stamp)
     return target if target.exists() else None
 
 
@@ -215,9 +230,9 @@ async def _download(url: str, member: str, target: Path) -> Path:
     return target
 
 
-async def local_member(url: str, member: str) -> tuple[Path, bool]:
+async def local_member(url: str, member: str, stamp: str = "") -> tuple[Path, bool]:
     """The unpacked member's path and whether this call had to download it."""
-    target = cache_path(url, member)
+    target = cache_path(url, member, stamp)
     if target.exists():
         target.touch()
         return target, False
@@ -406,14 +421,16 @@ def decode_lines(chunks: list[bytes], complete: bool) -> Iterator[str]:
 
 def read_rows(
     chunks: list[bytes], complete: bool, match: dict[str, str], limit: int
-) -> tuple[list[str], list[dict[str, str | None]]]:
-    """Header and up to `limit` rows whose columns equal every `match` value
-    (case-insensitive, trimmed)."""
+) -> tuple[list[str], list[dict[str, str | None]], int]:
+    """Header, up to `limit` rows whose columns equal every `match` value
+    (case-insensitive, trimmed), and how many records were passed over because their
+    field count differs from the header (a blank line is not a record). Only the
+    records read before the limit was reached are counted."""
     reader = csv.reader(decode_lines(chunks, complete))
     try:
         header = [h.strip() for h in next(reader)]
     except StopIteration:
-        return [], []
+        return [], [], 0
     lower = {h.lower(): i for i, h in enumerate(header)}
     wanted: list[tuple[int, str]] = []
     for key, value in match.items():
@@ -426,11 +443,15 @@ def read_rows(
             )
         wanted.append((lower[key.lower()], value.strip().lower()))
     rows: list[dict[str, str | None]] = []
+    skipped = 0
     for record in reader:
         if len(record) != len(header):
+            # A lookup that finds nothing is only worth its answer if the caller can
+            # see that some records were never compared.
+            skipped += bool(record)
             continue
         if all(record[i].strip().lower() == v for i, v in wanted):
             rows.append({h: (c.strip() or None) for h, c in zip(header, record, strict=True)})
             if len(rows) >= limit:
                 break
-    return header, rows
+    return header, rows, skipped

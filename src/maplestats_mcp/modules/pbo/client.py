@@ -45,7 +45,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import yaml
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from maplestats_mcp.modules.pbo import constants
 from maplestats_mcp.modules.pbo.schemas import (
@@ -278,6 +278,78 @@ def _cell(value: Any, lang: str) -> Value:
     return str(value)
 
 
+def _unique_labels(labels: dict[Any, str]) -> dict[Any, str]:
+    """Variable id -> column label, a repeated label numbered from its second use.
+
+    Rows are keyed by label, so two variables sharing one (the same fiscal year under
+    two scenarios) would collapse into one key and the later value would overwrite the
+    earlier. The first keeps its label; a number that another variable already uses as
+    its own label is skipped, so no two columns end up with the same name.
+    """
+    taken = set(labels.values())
+    seen: set[str] = set()
+    unique: dict[Any, str] = {}
+    for key, label in labels.items():
+        if label in seen:
+            number = 2
+            while f"{label} ({number})" in taken:
+                number += 1
+            label = f"{label} ({number})"
+            taken.add(label)
+        seen.add(label)
+        unique[key] = label
+    return unique
+
+
+def _span(cell: Tag, attribute: str, cap: int) -> int:
+    """A colspan or rowspan as a count from 1 to `cap`; anything unreadable counts as 1."""
+    raw = str(cell.get(attribute) or "1").strip()
+    # ASCII only: "²" is a digit to isdigit() but int() refuses it. A number of ten or
+    # more digits is past any cap, and int() refuses one of thousands of digits.
+    if not (raw.isascii() and raw.isdigit()):
+        return 1
+    return min(cap, max(1, int(raw))) if len(raw) < 10 else cap
+
+
+def _html_grid(table: Tag) -> list[list[str]]:
+    """Cell text of one <table>, rows as written but colspans and rowspans expanded.
+
+    The cell text repeats across the columns of a colspan and down the rows of a
+    rowspan, so each header sits over the data it describes (the Fiscal Monitor reader,
+    finance_canada/monitor.py, lays its tables out the same way). A colspan is cut at
+    1000, as browsers do, and a rowspan at the rows the table has left; past
+    HTML_MAX_SPAN_CELLS copies in all, a span counts as 1, so one broken or hostile
+    table cannot become millions of entries.
+    """
+    grid: list[list[str]] = []
+    # Cells carried down by a rowspan: row -> column -> text.
+    carry: dict[int, dict[int, str]] = {}
+    spent = 0
+    trs = [tr for tr in table.find_all("tr") if tr.find_parent("table") is table]
+    for r, tr in enumerate(trs):
+        held = carry.pop(r, {})
+        line: list[str] = []
+        for cell in tr.find_all(["td", "th"], recursive=False):
+            while len(line) in held:
+                line.append(held.pop(len(line)))
+            text = " ".join(cell.get_text(" ").split())
+            columns = _span(cell, "colspan", constants.HTML_MAX_COLSPAN)
+            rows = _span(cell, "rowspan", len(trs) - r)
+            if spent + columns * rows - 1 > constants.HTML_MAX_SPAN_CELLS:
+                columns = rows = 1
+            spent += columns * rows - 1
+            for _ in range(columns):
+                for below in range(1, rows):
+                    carry.setdefault(r + below, {})[len(line)] = text
+                line.append(text)
+        # A carried cell to the right of this row's own cells keeps its column; the
+        # columns between are empty.
+        while len(line) <= max(held, default=-1):
+            line.append(held.pop(len(line), ""))
+        grid.append(line)
+    return grid
+
+
 def _table(slice_: dict[str, Any], lang: str) -> PboTable | None:
     kind = slice_.get("type")
     common = {
@@ -288,9 +360,11 @@ def _table(slice_: dict[str, Any], lang: str) -> PboTable | None:
     }
     if kind == "table":
         variables = slice_.get("variables") or {}
-        labels = {key: _pick((v or {}).get("label"), lang) or key for key, v in variables.items()}
+        labels = _unique_labels(
+            {key: _pick((v or {}).get("label"), lang) or key for key, v in variables.items()}
+        )
         rows = [
-            {labels.get(k, k): _cell(v, lang) for k, v in row.items()}
+            {str(labels.get(k, k)): _cell(v, lang) for k, v in row.items()}
             for row in slice_.get("content") or []
             if isinstance(row, dict)
         ]
@@ -299,9 +373,12 @@ def _table(slice_: dict[str, Any], lang: str) -> PboTable | None:
         soup = BeautifulSoup(_pick(slice_.get("content"), lang), "html.parser")
         if soup.find("table") is None:
             return None
+        # An outer table at a time: a nested one is part of its cell's text.
         cells = [
-            [" ".join(td.get_text(" ").split()) for td in tr.find_all(["td", "th"])]
-            for tr in soup.find_all("tr")
+            line
+            for table in soup.find_all("table")
+            if table.find_parent("table") is None
+            for line in _html_grid(table)
         ]
         return PboTable(kind="html", cells=[c for c in cells if any(c)], **common)
     if kind == "kvlist" and not slice_.get("print_only"):
@@ -574,8 +651,14 @@ async def search_information_requests(
     start = (page - 1) * constants.IR_PAGE_SIZE
     shown = matched[start : start + constants.IR_PAGE_SIZE]
     today = _today()
+    # The same acronym request_summary shows: the English one when there is no French one.
     departments = Counter(
-        str((r.get("department") or {}).get(f"acronym_{lang}") or "unknown") for r in matched
+        str(
+            (r.get("department") or {}).get(f"acronym_{lang}")
+            or (r.get("department") or {}).get("acronym_en")
+            or "unknown"
+        )
+        for r in matched
     )
     return PboInformationRequestList(
         requests=[request_summary(r, lang, today) for r in shown],

@@ -7,6 +7,7 @@ internal station `id` the data route needs is resolved here.
 
 from __future__ import annotations
 
+import unicodedata
 from datetime import UTC, datetime, timedelta
 from typing import Any, NoReturn
 
@@ -95,6 +96,13 @@ def _station(obj: dict[str, Any], lang: str) -> StationSummary:
     )
 
 
+def _fold(text: str) -> str:
+    """Lower-case, accent-free and single-spaced, so "pointe-au-pere" finds
+    "Pointe-au-Père" (the names are French and English official names)."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return " ".join("".join(c for c in decomposed if not unicodedata.combining(c)).split())
+
+
 async def _all_stations(lang: str = "en") -> tuple[list[dict[str, Any]], bool]:
     async def fetch() -> Any:
         return await _get("/stations", lang=lang)
@@ -132,7 +140,8 @@ async def search_stations(
     limit: int = constants.SEARCH_LIMIT_DEFAULT,
     lang: str = "en",
 ) -> StationSearchResult:
-    """Case-insensitive substring match on official and alternative names."""
+    """Case- and accent-insensitive substring match on official and alternative
+    names, or a station code (padded to five digits, as `_station_by_code` does)."""
     if limit < 1 or limit > constants.SEARCH_LIMIT_MAX:
         raise lang_error(
             InvalidInput,
@@ -141,16 +150,18 @@ async def search_stations(
             f"limit doit être compris entre 1 et {constants.SEARCH_LIMIT_MAX} ; reçu {limit}.",
         )
     stations, cached = await _all_stations(lang)
-    needle = query.strip().lower()
+    needle = _fold(query)
+    # "7120" is the station "07120": get_station pads codes, so the search does too.
+    code_needle = needle.zfill(5) if needle.isdigit() else needle
     matches = [
         s
         for s in stations
         if (not operating_only or s.get("operating"))
         and (
             not needle
-            or needle in (s.get("officialName") or "").lower()
-            or needle in (s.get("alternativeName") or "").lower()
-            or needle == s.get("code")
+            or needle in _fold(s.get("officialName") or "")
+            or needle in _fold(s.get("alternativeName") or "")
+            or code_needle == s.get("code")
         )
         and (
             not series_code
@@ -237,6 +248,10 @@ def _parse_time(
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
 def _iso(value: datetime) -> str:
     return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -252,8 +267,10 @@ async def get_water_levels(
 ) -> WaterLevelSeries:
     """One station's series over a window of at most 7 days (UTC).
 
-    Defaults to today plus 24 hours. `resolution` is ignored for
-    `wlp-hilo`, which the API answers with `[]` if one is sent.
+    With neither bound, the observed series (`wlo`) cover the last 24 h, up to
+    the last 10-minute mark, and every other series now to +24 h; with `end`
+    alone, the 24 h up to it. `resolution` is ignored for `wlp-hilo`, which the API answers
+    with `[]` if one is sent.
     """
     station = await _station_by_code(station_code, lang)
     series = next((ts for ts in station.get("timeSeries") or [] if ts["code"] == series_code), None)
@@ -267,9 +284,28 @@ async def get_water_levels(
             f"disponibles : {available}.",
         )
 
-    now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
-    start_dt = _parse_time(start, "start", now, lang=lang)
-    end_dt = _parse_time(end, "end", start_dt + timedelta(days=1), end_of_day=True, lang=lang)
+    one_day = timedelta(days=1)
+    now = _now()
+    if start:
+        start_dt = _parse_time(start, "start", now, lang=lang)
+        end_dt = _parse_time(end, "end", start_dt + one_day, end_of_day=True, lang=lang)
+    elif end:
+        # `end` alone used to leave start at "now", so a past `end` was refused as
+        # "end must be after start". The 24 hours up to `end` is what it asks for.
+        end_dt = _parse_time(end, "end", now, end_of_day=True, lang=lang)
+        start_dt = end_dt - one_day
+    elif series_code in constants.OBSERVED_SERIES:
+        # Observed levels do not exist ahead of now, so now to +24 h came back with no
+        # points and no note: the last 24 hours. The end is floored to the cache TTL
+        # step: the cache key holds from and to, so an end at the current minute made
+        # every default call a new key and stored a new day-long series.
+        step = constants.CACHE_TTL_DATA_SECONDS // 60
+        end_dt = now.replace(minute=now.minute - now.minute % step, second=0, microsecond=0)
+        start_dt = end_dt - one_day
+    else:
+        # Predictions and forecasts exist ahead of now: now to +24 h.
+        start_dt = now.replace(minute=0, second=0, microsecond=0)
+        end_dt = start_dt + one_day
     if end_dt <= start_dt:
         raise lang_error(
             InvalidInput,

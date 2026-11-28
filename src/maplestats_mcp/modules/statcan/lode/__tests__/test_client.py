@@ -19,7 +19,7 @@ from maplestats_mcp.modules.statcan.lode.__tests__.test_pages_geometry import LA
 from maplestats_mcp.modules.statcan.lode.__tests__.test_reader import make_geojson, make_gpkg
 from maplestats_mcp.modules.statcan.lode.schemas import LodeFile
 from maplestats_mcp.shared import cache, remote_zip
-from maplestats_mcp.shared.errors import InvalidInput, NotFound
+from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
 ZIP_URL = "https://www150.statcan.gc.ca/n1/pub/46-26-0002/2022001/202606.zip"
 
@@ -143,10 +143,63 @@ async def test_list_files_with_sizes_from_head(httpx_mock: HTTPXMock) -> None:
     assert result.max_download_bytes == 300_000_000
 
 
+# A product page that states its release date but links no ZIP: StatCan moved the files.
+NO_ZIP_PAGE = "<p>Release date: June 26, 2026</p>"
+
+
 async def test_list_files_no_downloads_is_not_found(httpx_mock: HTTPXMock) -> None:
-    httpx_mock.add_response(url=constants.BY_KEY["odhf"].page_en, text="<p>nothing</p>")
+    httpx_mock.add_response(url=constants.BY_KEY["odhf"].page_en, text=NO_ZIP_PAGE)
     with pytest.raises(NotFound):
         await client.list_files("odhf", sizes=False)
+
+
+MAINTENANCE = (
+    "<html><body><h1>Service unavailable</h1>"
+    "<p>This site is down for maintenance. Please try again later.</p></body></html>"
+)
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [
+        (409, NO_ZIP_PAGE),  # get_raw hands 406 and 409 back unraised
+        (406, PRODUCT),
+        (200, MAINTENANCE),
+        (200, ""),
+    ],
+)
+async def test_a_page_that_is_not_the_lode_page_is_an_upstream_error_and_is_not_cached(
+    httpx_mock: HTTPXMock, status: int, body: str
+) -> None:
+    page = constants.BY_KEY["odhf"].page_en
+    httpx_mock.add_response(url=page, status_code=status, text=body)
+    with pytest.raises(UpstreamError):
+        await client.list_files("odhf", sizes=False)
+    # Nothing was cached for the day: the next call reads the page again.
+    httpx_mock.add_response(url=page, text=PRODUCT)
+    result = await client.list_files("odhf", sizes=False)
+    assert result.files[0].filename == "odhf_v2_geojson.zip"
+
+
+async def test_a_maintenance_page_in_place_of_the_landing_page_is_an_error(
+    httpx_mock: HTTPXMock,
+) -> None:
+    # Before the check this came back as every database with no releases, and each
+    # product page was fetched to fill the gap.
+    httpx_mock.add_response(url=constants.LANDING_URL["en"], text=MAINTENANCE)
+    with pytest.raises(UpstreamError, match="not a LODE page"):
+        await client.list_databases("en")
+    httpx_mock.add_response(url=constants.LANDING_URL["en"], text=LANDING)
+    for db in constants.DATABASES:
+        if db.key != "odhf":
+            httpx_mock.add_response(url=db.page_en, text=NO_ZIP_PAGE, is_optional=True)
+    assert (await client.list_databases("en")).databases[0].releases
+
+
+async def test_the_page_error_is_reported_in_french(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url=constants.BY_KEY["odhf"].page_en, text=MAINTENANCE)
+    with pytest.raises(UpstreamError, match="pas une page LODE"):
+        await client.list_files("odhf", lang="fr", sizes=False)
 
 
 async def test_unknown_database_is_input_error() -> None:
@@ -158,7 +211,7 @@ async def test_errors_and_notes_in_french(httpx_mock: HTTPXMock) -> None:
     with pytest.raises(InvalidInput, match="Base de données inconnue"):
         await client.list_files("nope", lang="fr")
     # Download links are read from the English page even for French calls.
-    httpx_mock.add_response(url=constants.BY_KEY["odhf"].page_en, text="<p>rien</p>")
+    httpx_mock.add_response(url=constants.BY_KEY["odhf"].page_en, text=NO_ZIP_PAGE)
     with pytest.raises(NotFound, match="Aucun téléchargement ZIP trouvé"):
         await client.list_files("odhf", lang="fr", sizes=False)
     licence, url = client._licence(constants.BY_KEY["odhf"])
@@ -215,6 +268,43 @@ async def test_preview_member_reads_a_prefix_by_range_and_matches_rows(
         await client.preview_member(ZIP_URL, "guide.pdf")
 
 
+async def test_preview_says_how_many_records_it_skipped(httpx_mock: HTTPXMock) -> None:
+    # Two records have another field count than the header. A lookup that matches
+    # nothing must not read as "this value is absent" without saying so.
+    text = "ID,CITY\n1,Oslo\n2\n3,Rome,extra\n4,Bern\n"
+    blob = _zip_bytes({"t.csv": text.encode()})
+    _serve_ranges(httpx_mock, ZIP_URL, blob)
+    shown = await client.preview_member(ZIP_URL, "t.csv")
+    assert [r["ID"] for r in shown.rows] == ["1", "4"]
+    assert any("2 records" in note and "skipped" in note for note in shown.notes)
+    missed = await client.preview_member(ZIP_URL, "t.csv", match={"id": "3"})
+    assert missed.rows_returned == 0
+    assert any("No row matched" in note for note in missed.notes)
+    assert any("2 records" in note and "skipped" in note for note in missed.notes)
+
+
+async def test_a_clean_preview_has_no_skipped_note(httpx_mock: HTTPXMock) -> None:
+    blob = _zip_bytes({"t.csv": b"ID,CITY\n1,Oslo\n\n4,Bern\n"})
+    _serve_ranges(httpx_mock, ZIP_URL, blob)
+    preview = await client.preview_member(ZIP_URL, "t.csv")
+    assert preview.rows_returned == 2
+    assert not any("skipped" in note for note in preview.notes)
+
+
+async def test_describe_says_when_the_sample_row_came_after_skipped_records(
+    httpx_mock: HTTPXMock,
+) -> None:
+    page = constants.BY_KEY["odef"].page_en
+    httpx_mock.add_response(
+        url=page, text='<a href="2022001/ODEF_v3.0.zip">ODEF</a>', is_reusable=True
+    )
+    url = "https://www150.statcan.gc.ca/n1/pub/37-26-0001/2022001/ODEF_v3.0.zip"
+    _serve_ranges(httpx_mock, url, _zip_bytes({"odef.csv": b"a,b\n1\n2,3\n"}))
+    description = await client.describe("odef")
+    assert {f.name: f.example for f in description.fields}["a"] == "2"
+    assert any("1 record" in note and "skipped" in note for note in description.notes)
+
+
 async def test_preview_stops_at_the_scan_cap_and_drops_the_cut_line(httpx_mock: HTTPXMock) -> None:
     body = "".join(f"{i:07d},{'x' * 40}\n" for i in range(200_000))
     blob = _zip_bytes({"big.csv": ("id,pad\n" + body).encode()})
@@ -224,7 +314,7 @@ async def test_preview_stops_at_the_scan_cap_and_drops_the_cut_line(httpx_mock: 
     chunks, read, complete = await files.stream_member(ZIP_URL, members[0], 20_000)
     assert not complete
     assert read == 20_000
-    header, rows = files.read_rows(chunks, complete, {}, 10**9)
+    header, rows, _ = files.read_rows(chunks, complete, {}, 10**9)
     assert header == ["id", "pad"]
     assert rows[-1]["pad"] == "x" * 40  # a half-read last line is not returned
 
@@ -242,7 +332,7 @@ async def test_query_end_to_end_with_cached_member(
     blob = _zip_bytes({"odhf_v2.gpkg": gpkg.read_bytes(), "meta.pdf": b"%PDF"})
     _serve_ranges(httpx_mock, gpkg_url, blob)
 
-    async def fake_member(url: str, member: str) -> tuple[Path, bool]:
+    async def fake_member(url: str, member: str, stamp: str = "") -> tuple[Path, bool]:
         assert (url, member) == (gpkg_url, "odhf_v2.gpkg")
         return gpkg, True
 
@@ -359,3 +449,43 @@ def test_enforce_cap_survives_a_file_it_cannot_remove(
     assert not removable.exists()  # eviction went on past the locked file
     assert target.exists()
     assert "locked.csv" in caplog.text
+
+
+async def test_query_reads_the_new_rows_when_the_zip_is_replaced_at_the_same_url(
+    httpx_mock: HTTPXMock,
+) -> None:
+    # The unpacked copy used to be keyed by URL and member name alone, so a release
+    # published under the same link was never read once the first was cached.
+    page = constants.BY_KEY["odef"].page_en
+    httpx_mock.add_response(
+        url=page, text='<a href="2022001/ODEF_v3.0.zip">ODEF</a>', is_reusable=True
+    )
+    url = "https://www150.statcan.gc.ca/n1/pub/37-26-0001/2022001/ODEF_v3.0.zip"
+    served = {"blob": _zip_bytes({"odef.csv": b"name\nold school\n"})}
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        blob = served["blob"]
+        if request.method == "HEAD":
+            return httpx.Response(200, headers={"content-length": str(len(blob))})
+        if "range" not in request.headers:
+            return httpx.Response(200, content=blob)
+        match = re.match(r"bytes=(\d+)-(\d+)", request.headers["range"])
+        assert match
+        start, end = int(match.group(1)), int(match.group(2))
+        part = blob[start : end + 1]
+        headers = {"content-range": f"bytes {start}-{start + len(part) - 1}/{len(blob)}"}
+        return httpx.Response(206, content=part, headers=headers)
+
+    httpx_mock.add_callback(respond, url=url, is_reusable=True)
+    first = await client.query("odef")
+    assert [r["name"] for r in first.records] == ["old school"]
+    assert first.downloaded
+
+    again = await client.query("odef")
+    assert not again.downloaded  # the same archive is read from disk
+
+    served["blob"] = _zip_bytes({"odef.csv": b"name\nnew school\nsecond new school\n"})
+    cache._caches.clear()  # the day's cache of the page and the archive listing has run out
+    rebuilt = await client.query("odef")
+    assert [r["name"] for r in rebuilt.records] == ["new school", "second new school"]
+    assert rebuilt.downloaded

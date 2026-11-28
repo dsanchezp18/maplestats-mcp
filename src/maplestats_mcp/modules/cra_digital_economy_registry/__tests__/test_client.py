@@ -87,6 +87,32 @@ async def test_search_registrants_filters_by_business_number(httpx_mock):
     assert result.registrants[0].legal_name == "BERG SHOW LLC"
 
 
+@pytest.mark.parametrize(
+    "query",
+    ["751950577 RT9999", "751950577-RT-9999", "751950577rt9999", " 751950577RT9999 ", "RT 9999"],
+)
+async def test_business_number_matches_however_it_is_typed(httpx_mock, query):
+    # The page stores "751950577RT9999"; a query with a space or dash gave
+    # total_matched=0, a false "not registered" from a tool that confirms registrations.
+    httpx_mock.add_response(url=constants.URL_EN, html=_REGISTRY_HTML)
+    result = await client.search_registrants(query)
+    assert result.total_matched == (2 if query == "RT 9999" else 1)
+    assert result.registrants[0].business_number == "751950577RT9999"
+
+
+async def test_names_match_without_accents_or_case(httpx_mock):
+    html = _REGISTRY_HTML.replace(
+        "</tbody>",
+        "<tr><td>Société Générale SA</td><td>Crédit d'Été</td><td>800000001RT0001</td>"
+        '<td><span class="nowrap">July 1, 2021</span></td>'
+        '<td><span class="wb-inv">-</span></td></tr>\n</tbody>',
+    )
+    httpx_mock.add_response(url=constants.URL_EN, html=html)
+    for query in ("societe", "SOCIÉTÉ", "generale sa", "credit d'ete"):
+        result = await client.search_registrants(query)
+        assert [r.business_number for r in result.registrants] == ["800000001RT0001"], query
+
+
 async def test_search_registrants_no_match_returns_empty(httpx_mock):
     httpx_mock.add_response(url=constants.URL_EN, html=_REGISTRY_HTML)
     result = await client.search_registrants("no such business")
@@ -110,6 +136,20 @@ async def test_search_registrants_missing_table_raises(httpx_mock):
     httpx_mock.add_response(url=constants.URL_EN, html="<html><body>nope</body></html>")
     with pytest.raises(UpstreamError):
         await client.search_registrants()
+
+
+async def test_error_page_with_status_200_is_not_cached(httpx_mock):
+    # A maintenance page answered with HTTP 200 used to be cached as the registry
+    # and replayed for six hours; the next call must go to the source again.
+    httpx_mock.add_response(
+        url=constants.URL_EN, html="<html><body>Down for maintenance</body></html>"
+    )
+    httpx_mock.add_response(url=constants.URL_EN, html=_REGISTRY_HTML)
+    with pytest.raises(UpstreamError):
+        await client.search_registrants()
+    result = await client.search_registrants()
+    assert result.total_registrants == 3
+    assert result.provenance.cached is False
 
 
 async def test_rows_missing_a_cell_are_counted(httpx_mock):

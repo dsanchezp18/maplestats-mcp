@@ -393,6 +393,10 @@ ENGLISH_MARKERS = re.compile(
     r"|\b(?:queried|Queried|Source URL)\b|\bSource:"
     r"|\b(?:January|February|March|April|June|July|August|September|October|November|December)\b"
 )
+# The English month names, without "May" (a surname and a verb as well), as in ENGLISH_MARKERS.
+ENGLISH_MONTHS = re.compile(
+    r"\b(?:January|February|March|April|June|July|August|September|October|November|December)\b"
+)
 # Names that contain such words and stay as they are in French.
 ALLOWED_NAMES = re.compile(
     r"Bank of Canada Valet|Model Context Protocol|Beyond 20/20|Australian Bureau of Statistics"
@@ -412,6 +416,9 @@ class _FrenchText(HTMLParser):
         super().__init__()
         self.stack: list[tuple[str, str, bool]] = [("", "", False)]
         self.chunks: list[str] = []
+        # The home page's demo is JSON in a script element, text a reader sees once
+        # site.js has put it on the page: its pieces are read as French text too.
+        self._demo: list[str] | None = None
 
     def _french(self) -> bool:
         lang = next((lang for _, lang, _ in reversed(self.stack) if lang), "")
@@ -419,6 +426,8 @@ class _FrenchText(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
+        if tag == "script" and "data-ask-examples" in values and self._french():
+            self._demo = []
         literal = self.stack[-1][2] or tag in _LITERAL
         self.stack.append((tag, values.get("lang") or "", literal))
         if self._french():
@@ -434,15 +443,34 @@ class _FrenchText(HTMLParser):
             self.stack.pop()
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "script" and self._demo is not None:
+            self.chunks += _demo_chunks("".join(self._demo))
+            self._demo = None
         if any(name == tag for name, _, _ in self.stack[1:]):
             while self.stack.pop()[0] != tag:
                 pass
 
     def handle_data(self, data: str) -> None:
+        if self._demo is not None:
+            self._demo.append(data)
+            return
         # Collapse ASCII whitespace only: the no-break spaces are what is checked.
         text = re.sub(r"[ \t\r\n]+", " ", data).strip(" ")
         if text.strip() and self._french():
             self.chunks.append(text)
+
+
+def _demo_chunks(payload: str) -> list[str]:
+    """The text of the demo's examples, as a reader sees it: the question, the answer
+    (English left inside a lang="en" element is not French text), the rows and the source."""
+    chunks: list[str] = []
+    for example in json.loads(payload):
+        answer = _FrenchText()
+        answer.feed(f'<html lang="fr">{example["html"]}</html>')
+        chunks += [example["user"], *answer.chunks, example["cite"]]
+        # ASCII whitespace only, as in handle_data: the no-break spaces are what is checked.
+        chunks += [re.sub(r"[ \t\r\n]+", " ", row) for row in example["code"].split("\n")]
+    return chunks
 
 
 def french_text(page: Path) -> list[str]:
@@ -509,6 +537,64 @@ def test_french_typography_spaces_quotes_around_elements():
     out = site.french_typography(page)
     assert '(« <span lang="en">as is</span> »)' in out
     assert "« <b>gras</b> »" in out
+
+
+def _demo_examples(page: Path) -> list[dict[str, str]]:
+    """The home page's demo as the browser reads it: the JSON in the script element."""
+    match = re.search(
+        r'<script type="application/json" data-ask-examples="">(.*?)</script>',
+        page.read_text(encoding="utf-8"),
+        re.DOTALL,
+    )
+    assert match, page
+    return json.loads(match.group(1))
+
+
+def test_the_french_demo_in_the_built_page_is_typeset_and_in_french(built_site: Path):
+    """french_typography() skips <script>, so the demo's strings are spaced when they are
+    written: no plain space before ? : % $ or inside « », the outlook's month in
+    French, the English draw name marked, no English month."""
+    nbsp, nnbsp = " ", " "
+    examples = _demo_examples(built_site / "fr" / "index.html")
+    assert len(examples) == 4
+    for example in examples:
+        for key in ("user", "html", "code", "cite"):
+            text = re.sub(r"<[^>]+>", "", example[key])
+            assert not re.search(r" [:;?!%$»]|« |\d%", text), (key, text)
+    everything = " ".join(" ".join(example.values()) for example in examples)
+    assert not ENGLISH_MONTHS.search(everything)
+    by_tool = {example["tool"]: example for example in examples}
+    assert f"{nnbsp}?" in by_tool["wds_get_data_from_cube_coord"]["user"]
+    assert re.search(rf"\d{nbsp}\$", by_tool["wds_get_data_from_cube_coord"]["code"])
+    assert re.search(rf"\d{nnbsp}%", by_tool["fcac_search_credit_cards"]["html"])
+    assert re.search(r"perspectives d?e? ?\w+ 2026", by_tool["pbo_get_publication"]["html"])
+    draw = by_tool["ircc_get_latest_express_entry_round"]["html"]
+    assert re.search(rf'«{nbsp}<span lang="en">[^<]+</span>{nbsp}»', draw)
+    # The English page keeps its plain spaces and its English month.
+    english = {e["tool"]: e for e in _demo_examples(built_site / "index.html")}
+    assert "In its June 2026 outlook" in english["pbo_get_publication"]["html"]
+    assert re.search(r"\$\d", english["wds_get_data_from_cube_coord"]["html"])
+
+
+def test_the_standing_french_checks_read_the_demo_json(built_site: Path):
+    """french_text() reaches into the demo's script element, so the checks above on
+    every French page see what a reader sees there."""
+    chunks = french_text(built_site / "fr" / "index.html")
+    assert any("bœuf haché" in chunk for chunk in chunks)
+    assert any("perspectives" in chunk for chunk in chunks)
+
+
+def test_french_chart_labels_use_real_month_abbreviations(built_site: Path):
+    """ "avri.", "octo." and "jui" (for juin and juillet) are names cut to a length."""
+    page = (built_site / "fr" / "pulse.html").read_text(encoding="utf-8")
+    labels = [
+        re.sub(r"<[^>]+>", "", text).strip()
+        for text in re.findall(r"<text[^>]*>(.*?)</text>", page)
+    ]
+    months = [label for label in labels if re.fullmatch(r"[a-zéûô]+\.? \d{2}(?:\d{2})?", label)]
+    # Thirteen months of job changes and the bond yield's January and July ticks.
+    assert len(months) >= 17
+    assert {label.rsplit(" ", 1)[0] for label in months} <= set(site.MONTHS_FR_SHORT), months
 
 
 def _snippet_json(page: str, code_id: str) -> dict[str, Any]:

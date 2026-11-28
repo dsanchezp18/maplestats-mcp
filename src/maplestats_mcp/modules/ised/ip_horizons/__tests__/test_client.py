@@ -191,3 +191,31 @@ async def test_unlisted_trademark_release_is_added(httpx_mock):
     assert result.files[0].url.endswith("TM_CSV_2024_11_20/TM_claim_2024-11-20.zip")
     assert "application_main" in result.tables
     assert "2024-11-20" in (result.provenance.limits or "")
+
+
+async def test_tools_pass_lang_to_the_client(httpx_mock):
+    # The tools used to `del lang`, so a French call got English provenance and
+    # English errors although the client has the French text for both.
+    from maplestats_mcp.modules.ised.ip_horizons import tools
+
+    httpx_mock.add_response(url=_CKAN, json={"result": {"resources": _RESOURCES}})
+    result = await tools.ised_ip_horizons_list_files(ip_type="patent", lang="fr")
+    assert "/data/fr/" in result.provenance.url
+    assert "diffusions en bloc" in (result.provenance.freshness or "")
+    assert "bulk releases" not in (result.provenance.freshness or "")
+
+    # The package is cached, so the second call (an unknown table) needs no mock.
+    with pytest.raises(InvalidInput, match="aucune table"):
+        await tools.ised_ip_horizons_list_files(ip_type="patent", table="inventors", lang="fr")
+
+
+async def test_tools_pass_lang_on_errors_without_a_download():
+    from maplestats_mcp.modules.ised.ip_horizons import tools
+
+    with pytest.raises(InvalidInput, match="ne publie de dictionnaire"):
+        # trademark is outside the tool's DictionaryType on purpose: the client says so.
+        await tools.ised_ip_horizons_get_dictionary(ip_type="trademark", lang="fr")  # type: ignore[arg-type]
+    with pytest.raises(InvalidInput, match="doit être positif"):
+        await tools.ised_ip_horizons_get_patent(patent_number=0, lang="fr")
+    with pytest.raises(InvalidInput, match="donnez au moins"):
+        await tools.ised_ip_horizons_search_patents(lang="fr")

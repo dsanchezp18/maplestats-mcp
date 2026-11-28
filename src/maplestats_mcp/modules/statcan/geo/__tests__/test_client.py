@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from maplestats_mcp.modules.statcan.geo import client, constants
-from maplestats_mcp.modules.statcan.lang import use_lang
+from maplestats_mcp.modules.statcan.lang import current_lang, use_lang
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError
 
@@ -156,6 +156,32 @@ async def test_query_layer_features_exceeded_transfer_limit_flag(httpx_mock):
     assert result.exceeded_transfer_limit is True
 
 
+# With f=geojson an ArcGIS server moves the transfer-limit flag under a
+# top-level "properties" object (recorded live from Alberta Wildfire's
+# FeatureServer, ab_wildfire/__tests__/test_client.py), so the root-level flag
+# in _QUERY_GEOJSON is not the shape these f=geojson queries really get.
+_QUERY_GEOJSON_FULL_PAGE = {
+    "type": "FeatureCollection",
+    "properties": {"exceededTransferLimit": True},
+    "features": _QUERY_GEOJSON["features"],
+}
+
+
+async def test_geojson_transfer_limit_flag_under_properties_is_read(httpx_mock):
+    httpx_mock.add_response(json=_QUERY_GEOJSON_FULL_PAGE)
+    result = await client.query_layer_features("2021", "Cartographic_boundary_files", 12)
+    assert result.exceeded_transfer_limit is True
+    assert "page with result_offset" in (result.provenance.coverage or "")
+
+
+async def test_geojson_last_page_does_not_report_more(httpx_mock):
+    last_page = {**_QUERY_GEOJSON_FULL_PAGE, "properties": {"exceededTransferLimit": False}}
+    httpx_mock.add_response(json=last_page)
+    result = await client.query_layer_features("2021", "Cartographic_boundary_files", 12)
+    assert result.exceeded_transfer_limit is False
+    assert "page with result_offset" not in (result.provenance.coverage or "")
+
+
 async def test_query_layer_features_rejects_bad_record_count():
     with pytest.raises(InvalidInput):
         await client.query_layer_features(
@@ -255,6 +281,46 @@ async def test_query_500_for_unlisted_service_becomes_not_found(httpx_mock):
     httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=_SERVICES_JSON)
     with pytest.raises(NotFound):
         await client.query_layer_features("2021", "Not_A_Real_Service", 9)
+
+
+async def test_not_found_for_unlisted_service_follows_the_call_language(httpx_mock):
+    # list_services starts with use_lang(None), which reset a French call to
+    # English before the NotFound below was worded.
+    httpx_mock.add_response(url=f"{_BOGUS_BASE}/9?f=json", status_code=500, is_reusable=True)
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=_SERVICES_JSON)
+    use_lang("fr")
+    try:
+        with pytest.raises(NotFound, match="Aucun service 'Not_A_Real_Service'"):
+            await client.get_layer_detail("2021", "Not_A_Real_Service", 9)
+        assert current_lang() == "fr"
+    finally:
+        use_lang("en")
+
+
+async def test_not_found_for_unlisted_layer_follows_the_call_language(httpx_mock):
+    httpx_mock.add_response(url=f"{_BASE}/999?f=json", status_code=500, is_reusable=True)
+    httpx_mock.add_response(url=f"{constants.BASE_URL}/2021?f=json", json=_SERVICES_JSON)
+    httpx_mock.add_response(url=f"{_BASE}?f=json", json=_SERVICE_JSON)
+    use_lang("fr")
+    try:
+        with pytest.raises(NotFound, match="n'a pas de couche 999"):
+            await client.get_layer_detail("2021", "Cartographic_boundary_files", 999)
+        assert current_lang() == "fr"
+    finally:
+        use_lang("en")
+
+
+async def test_language_survives_a_failed_service_listing(httpx_mock):
+    # The listing fails too (a real outage): the original error is kept and the
+    # call's language is still French afterwards.
+    httpx_mock.add_response(status_code=500, is_reusable=True)
+    use_lang("fr")
+    try:
+        with pytest.raises(UpstreamError, match="get_layer_detail"):
+            await client.get_layer_detail("2021", "Cartographic_boundary_files", 9)
+        assert current_lang() == "fr"
+    finally:
+        use_lang("en")
 
 
 async def test_list_services_filters_by_language(httpx_mock):
@@ -475,6 +541,15 @@ async def test_query_point_in_da_layer(httpx_mock):
     assert request.url.params["geometry"] == "-79.38,43.65"
     assert request.url.params["f"] == "geojson"
     assert result.spatial_filter is not None and result.spatial_filter.lat == 43.65
+
+
+async def test_spatial_query_reads_transfer_limit_under_properties(httpx_mock):
+    _mock_config(httpx_mock)
+    httpx_mock.add_response(url=f"{_PROXY}?f=json", json=_INFC_SERVICE)
+    httpx_mock.add_response(json=_QUERY_GEOJSON_FULL_PAGE)
+    result = await client.query_spatial_layer("infc", 3, lat=43.65, lon=-79.38)
+    assert result.exceeded_transfer_limit is True
+    assert "page with result_offset" in (result.provenance.coverage or "")
 
 
 async def test_query_group_layer_is_invalid_input(httpx_mock):

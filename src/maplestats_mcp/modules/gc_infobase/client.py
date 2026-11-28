@@ -8,6 +8,7 @@ the CSV through shared/csv_files.py.
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import NoReturn
 
 from maplestats_mcp.modules.ckan import client as ckan
@@ -26,6 +27,12 @@ _LIMITER = get_limiter(
     capacity=constants.RATE_LIMIT_CAPACITY,
 )
 _YEAR = re.compile(r"(\d{4})")
+
+
+def _fold(text: str) -> str:
+    """Lower case without accents, so "Sante Canada" finds "Santé Canada"."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold().strip()
 
 
 def _raise(exc_cls: type[ValueError], en: str, fr: str, lang: str) -> NoReturn:
@@ -88,12 +95,12 @@ def _file(resource: ResourceInfo) -> InfoBaseFile:
 
 async def list_files(query: str | None = None, lang: str = "en") -> InfoBaseFileList:
     resources, url, cached = await _csv_resources(lang)
-    needle = (query or "").strip().lower()
+    needle = _fold(query or "")
     files = [
         _file(r)
         for r in resources
         if (not r.language or lang in r.language)
-        and (not needle or needle in f"{r.name} {r.description or ''}".lower())
+        and (not needle or needle in _fold(f"{r.name} {r.description or ''}"))
     ]
     return InfoBaseFileList(
         files=files,
@@ -166,7 +173,7 @@ async def query(
     limit: int = constants.ROWS_DEFAULT,
     lang: str = "en",
 ) -> InfoBaseRows:
-    """Rows of one file. `organization` is a case-insensitive substring;
+    """Rows of one file. `organization` is a case- and accent-insensitive substring;
     `fiscal_year` matches on the start year ("2023", "2023-24")."""
     if limit < 1 or limit > constants.ROWS_MAX:
         _raise(
@@ -217,8 +224,8 @@ async def query(
                 f"ce fichier n'a pas de colonne d'organisation ; ses colonnes sont {lookup.names}.",
                 lang,
             )
-        needle = organization.strip().lower()
-        matching = [r for r in matching if needle in (r.get(org_column) or "").lower()]
+        needle = _fold(organization)
+        matching = [r for r in matching if needle in _fold(r.get(org_column) or "")]
     if year:
         if year_column is None:
             _raise(

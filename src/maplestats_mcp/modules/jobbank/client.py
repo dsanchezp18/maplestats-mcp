@@ -217,7 +217,11 @@ async def _release(release_year: int | None, lang: str) -> _Release:
         translated = res.get("name_translated")
         if isinstance(translated, dict):
             names.append(translated.get("en"))
-        match = next((_RESOURCE_NAME.match(n) for n in names if isinstance(n, str)), None)
+        # The first name that matches, not the first name: a generator of match results
+        # yields None for a name that does not match, and next() returned that None.
+        match = next(
+            (m for n in names if isinstance(n, str) and (m := _RESOURCE_NAME.match(n))), None
+        )
         active = res.get("datastore_active")
         if match is None or active not in (True, "true", "True"):
             continue

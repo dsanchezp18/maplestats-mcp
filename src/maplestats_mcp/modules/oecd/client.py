@@ -944,7 +944,30 @@ async def _fetch(
             lang=lang,
             data=True,
         )
-        return response.text
+        text = response.text
+        # Checked here, before the text is cached: an outage page or an empty body sent
+        # with HTTP 200 would otherwise be replayed for CACHE_TTL_DATA_SECONDS, and a retry
+        # would not reach the source (or spend a download). A header with no rows is a
+        # well-formed "nothing" and is cached like any answer; the OECD says "no data"
+        # with a 404.
+        if not text.strip():
+            raise_localized(
+                UpstreamError,
+                f"{fid}: the OECD answered with an empty body.",
+                f"{fid} : l'OCDE a répondu par un corps vide.",
+                lang,
+            )
+        try:
+            # Only the header can fail the parse, so only the header is read.
+            _parse_csv(text.splitlines()[0], dimensions)
+        except UpstreamError as exc:
+            raise_localized(
+                UpstreamError,
+                f"{fid}: {str(exc)[:300]}",
+                f"{fid} : colonnes SDMX-CSV inattendues.",
+                lang,
+            )
+        return text
 
     text, cached = await cached_fetch(
         f"oecd:data:{fid}:{key}:{sorted(params.items())}:{lang}",
@@ -1242,7 +1265,9 @@ async def compare_countries(
             unit=pick(lang, spec.unit_en, spec.unit_fr or spec.unit_en)
             if spec.unit_en
             else series_info.unit,
-            observations=[Observation(period=r.period, value=r.value) for r in rows],
+            observations=[
+                Observation(period=r.period, value=r.value, status=r.status) for r in rows
+            ],
             latest_period=series_info.latest_period,
             latest_value=series_info.latest_value,
         )

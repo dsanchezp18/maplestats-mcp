@@ -52,7 +52,11 @@ class LandingsRow(BaseModel):
         "times 1,000)."
     )
     suppressed: bool = Field(description="DFO's 'x': withheld for confidentiality.")
-    is_total: bool = Field(description="A total row (group total, grand total or 'Total').")
+    is_total: bool = Field(
+        description="A total row: a group total, the grand total, a 'Total' row, or a region "
+        "sum ('Canada'; 'Atlantic' for sea). Leave these out (include_totals=False) before "
+        "adding rows up, or the provinces are counted again."
+    )
 
 
 class Landings(BaseModel):

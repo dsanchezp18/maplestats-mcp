@@ -7,9 +7,11 @@ headers and names stay exactly as Elections Canada wrote them.
 from __future__ import annotations
 
 import unicodedata
+from collections import defaultdict
 from typing import Literal
 
 from maplestats_mcp.modules.elections_results import constants
+from maplestats_mcp.modules.elections_results.historical import province_needle
 from maplestats_mcp.modules.elections_results.schemas import (
     ElectionInfo,
     ElectionList,
@@ -99,6 +101,43 @@ def bad_offset(lang: str) -> InvalidInput:
 def _fold(text: str) -> str:
     stripped = unicodedata.normalize("NFKD", text)
     return "".join(c for c in stripped if not unicodedata.combining(c)).casefold().strip()
+
+
+def _party_text(cells: list[str]) -> dict[str, str]:
+    """The party part of each candidate cell, folded, keyed by the cell's text.
+
+    Elections Canada writes the name and the party into one cell, with nothing between
+    them ("Paul Connors Liberal/Libéral", "Connors, Paul Liberal/Libéral"), so a party
+    filter on the whole cell also found a candidate surnamed Green. Every cell does end
+    with the party's name in both languages: what follows the last "/" is the French name
+    alone, and the English name is the words that end each English half sharing that
+    French name (read on the saved 38th and 45th files: "Liberal", "Conservative",
+    "NDP-New Democratic Party"). A party with one candidate has no second cell to compare
+    with, so its whole cell stays searchable as before; two candidates of one party who
+    also share their last name word would make that word part of the party's text.
+    """
+    halves = [cell.rpartition("/") for cell in cells]
+    by_french: dict[str, list[list[str]]] = defaultdict(list)
+    for english, slash, french in halves:
+        if slash:
+            by_french[_fold(french)].append(_fold(english).split())
+    shared: dict[str, list[str]] = {}
+    for french, groups in by_french.items():
+        tail = groups[0]
+        for words in groups[1:]:
+            size = 0
+            while size < min(len(tail), len(words)) and tail[-1 - size] == words[-1 - size]:
+                size += 1
+            tail = tail[len(tail) - size :]
+        shared[french] = tail
+    text: dict[str, str] = {}
+    for cell, (english, slash, french) in zip(cells, halves, strict=True):
+        if not slash:
+            text[cell] = _fold(cell)
+            continue
+        words = _fold(english).split()
+        text[cell] = f"{' '.join(shared[_fold(french)] or words)}/{_fold(french)}"
+    return text
 
 
 def _election(number: int, lang: str = "en") -> constants.Election:
@@ -201,6 +240,7 @@ async def get_table(
         allowed_hosts=constants.ALLOWED_HOSTS,
     )
     columns = Columns(rows)
+    table_rows = rows
 
     if province:
         column = _first_column(columns, starts=("province",))
@@ -213,7 +253,10 @@ async def get_table(
                 f"elections_results : le tableau {table!r} n'a pas de colonne de province (les "
                 "provinces en sont les colonnes) ; lisez la ligne du parti voulu.",
             )
-        wanted = _fold(province)
+        # A code ("AB", "48") or a French name becomes the English name's stem first: the
+        # column reads "Newfoundland and Labrador/Terre-Neuve-et-Labrador", where a bare
+        # "ab" is a piece of "Labrador" and "on" a piece of "Yukon".
+        wanted = province_needle(province)
         rows = [r for r in rows if wanted in _fold(r.get(column, ""))]
 
     if district:
@@ -250,7 +293,14 @@ async def get_table(
                 "parti à filtrer (les noms de parti y sont des en-têtes de colonne).",
             )
         wanted = _fold(party)
-        rows = [r for r in rows if wanted in _fold(r.get(column, ""))]
+        if column.lower().startswith(("candidate/", "elected candidate")):
+            # These cells hold the candidate's name and the party, so read the party only.
+            # The cells come from the whole table: the party's ending is easier to find
+            # in all its candidates than in the few left after the other filters.
+            party_of = _party_text([r.get(column, "") for r in table_rows])
+            rows = [r for r in rows if wanted in party_of[r.get(column, "")]]
+        else:
+            rows = [r for r in rows if wanted in _fold(r.get(column, ""))]
 
     if winners_only:
         column = _first_column(columns, starts=("majority/",))

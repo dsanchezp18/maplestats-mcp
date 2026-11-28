@@ -33,7 +33,7 @@ from maplestats_mcp.shared.executor import run_parse
 from maplestats_mcp.shared.http import get_raw
 from maplestats_mcp.shared.i18n import pick
 from maplestats_mcp.shared.rate_limiter import get_limiter
-from maplestats_mcp.shared.xlsx_sheets import open_workbook
+from maplestats_mcp.shared.xlsx_sheets import fix_dimensions, open_workbook
 
 _LIMITER = get_limiter(
     constants.RATE_LIMIT_SOURCE,
@@ -298,6 +298,11 @@ def _parse_xlsx(body: bytes) -> Workbook:
         cut: set[str] = set()
         for sheet in workbook.worksheets:
             rows: list[list[str]] = []
+            # A writer that declares the sheet as just A1 made openpyxl yield one
+            # row, read and reported as the whole sheet; an inflated declared size
+            # pads every row to it and runs into the parse deadline. The shared
+            # helper resets both (xlsx_sheets.fix_dimensions, confirmed live).
+            fix_dimensions(sheet)
             for row in sheet.iter_rows(values_only=True):
                 if len(rows) < constants.MAX_ROWS_PER_SHEET:
                     rows.append([_text(c) for c in row])

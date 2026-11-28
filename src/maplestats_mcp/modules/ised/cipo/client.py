@@ -230,7 +230,7 @@ async def search_trademarks(
     async def fetch() -> Any:
         await _LIMITER.acquire()
         try:
-            return await api_post(constants.BASE_URL, json_body=body)
+            answer = await api_post(constants.BASE_URL, json_body=body)
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             detail = exc.response.text[:200]
@@ -248,17 +248,19 @@ async def search_trademarks(
                 f"{_TOOL} n'a pas répondu à temps (déjà relancé). Réessayez sous peu.",
                 lang,
             )
+        # Checked here, inside the cached fetch: a payload that fails the check must not be
+        # stored, or every call for the next hour would raise from the cache.
+        if not isinstance(answer, dict) or "docs" not in answer:
+            _raise(
+                UpstreamError,
+                f"{_TOOL}: unexpected response shape (missing 'docs').",
+                f"{_TOOL} : forme de réponse inattendue ('docs' absent).",
+                lang,
+            )
+        return answer
 
     cache_key = f"ised-cipo:search:{api_field}:{text}:{nice}:{status}:{max_return}"
     payload, was_cached = await cached_fetch(cache_key, constants.CACHE_TTL_SECONDS, fetch)
-
-    if not isinstance(payload, dict) or "docs" not in payload:
-        _raise(
-            UpstreamError,
-            f"{_TOOL}: unexpected response shape (missing 'docs').",
-            f"{_TOOL} : forme de réponse inattendue ('docs' absent).",
-            lang,
-        )
 
     # The search is a JSON POST, so the URL alone cannot reproduce it.
     request = f"POST {constants.BASE_URL} with JSON body {json.dumps(body)}"

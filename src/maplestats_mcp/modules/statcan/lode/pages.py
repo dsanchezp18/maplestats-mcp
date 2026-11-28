@@ -159,11 +159,32 @@ def parse_fields(page: str) -> list[tuple[str, str]]:
     return pairs
 
 
-def parse_product(page: str, page_url: str) -> ProductPage:
-    text = text_of(re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", "", page))
-    released = re.search(
+def _visible_text(page: str) -> str:
+    return text_of(re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", "", page))
+
+
+def _released(text: str) -> re.Match[str] | None:
+    return re.search(
         r"(?:Release date|Date de diffusion)\s*:\s*([^:]{0,40}?\d{4})", text, re.IGNORECASE
     )
+
+
+def is_landing_page(page: str) -> bool:
+    """Whether `page` is the LODE landing page: panels, each with a title and a link."""
+    return bool(parse_landing(page))
+
+
+def is_product_page(page: str, page_url: str) -> bool:
+    """Whether `page` is a LODE product page: it links a ZIP on the data host or states a
+    release date, which the module docstring says the product pages do (the fixtures are
+    excerpts of them). A maintenance page or an empty one, which a server can send with
+    a 200, does neither."""
+    return bool(parse_downloads(page, page_url)) or bool(_released(_visible_text(page)))
+
+
+def parse_product(page: str, page_url: str) -> ProductPage:
+    text = _visible_text(page)
+    released = _released(text)
     modified = re.search(
         r"(?:Date modified|Date de modification)\s*:?\s*(\d{4}-\d{2}-\d{2})", text, re.IGNORECASE
     )

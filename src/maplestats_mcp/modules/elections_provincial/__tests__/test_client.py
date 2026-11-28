@@ -417,3 +417,61 @@ async def test_bc_bad_votes_cell_names_the_file_and_year(httpx_mock):
     httpx_mock.add_response(url=constants.BC_FILE_BY_PLACE, content=_bc_with_row("n/a"))
     with pytest.raises(UpstreamError, match="could not read the BC results file.*for 2024"):
         await client.get_results("bc", "2024")
+
+
+_PARTIES = [
+    ("Manitoba Liberal Party", "Lib."),
+    ("Libertarian Party of Manitoba", "LPM"),
+    ("Communist Party of Canada - Manitoba", "CPC-M"),
+    ("Progressive Conservative Party of Manitoba", "PC"),
+    ("Saskatchewan Party", "SP"),
+    ("Saskatchewan Progress Party", "SPP"),
+    ("Coalition avenir Québec - L'équipe François Legault", "C.A.Q.-E.F.L."),
+    ("Parti conservateur du Québec - Équipe Éric Duhaime", "P.C.Q-E.E.D."),
+    ("Parti libéral du Québec/Quebec Liberal Party", "P.L.Q./Q.L.P."),
+    ("Parti vert du Québec/Green Party of Québec", "P.V.Q./G.P.Q."),
+    ("Option nationale", "O.N."),
+    ("Independent", "Ind."),
+    ("BC NDP", None),
+]
+
+
+def _parties_named(wanted: str) -> set[str | None]:
+    keep = client._party_filter(wanted, [code for _name, code in _PARTIES])
+    return {code for name, code in _PARTIES if keep(name, code)}
+
+
+def test_party_filter_decides_by_code_when_the_text_is_a_code():
+    # "lib" is the Liberals' own code, so it is not also a piece of "Libertarian".
+    assert _parties_named("lib") == {"Lib."}
+    assert _parties_named("LIB") == {"Lib."}
+    assert _parties_named("PC") == {"PC"}
+    assert _parties_named("SP") == {"SP"}
+    assert _parties_named("spp") == {"SPP"}
+    assert _parties_named("ind") == {"Ind."}
+    assert _parties_named("o.n.") == {"O.N."}
+    assert _parties_named("on") == {"O.N."}
+    # Quebec writes several abbreviations in one dotted code; each one names the party.
+    assert _parties_named("caq") == {"C.A.Q.-E.F.L."}
+    assert _parties_named("efl") == {"C.A.Q.-E.F.L."}
+    assert _parties_named("C.A.Q.-E.F.L.") == {"C.A.Q.-E.F.L."}
+    assert _parties_named("pcq") == {"P.C.Q-E.E.D."}
+    assert _parties_named("plq") == {"P.L.Q./Q.L.P."}
+    assert _parties_named("qlp") == {"P.L.Q./Q.L.P."}
+    assert _parties_named("gpq") == {"P.V.Q./G.P.Q."}
+
+
+def test_party_filter_falls_back_to_names_when_the_text_is_no_code():
+    assert _parties_named("progress party") == {"SPP"}
+    assert _parties_named("libertarian") == {"LPM"}
+    assert _parties_named("communist") == {"CPC-M"}
+    assert _parties_named("liberal") == {"Lib.", "P.L.Q./Q.L.P."}
+    # Parties with no code (British Columbia) are found by name.
+    assert _parties_named("bc ndp") == {None}
+    assert _parties_named("ndp") == {None}
+
+
+def test_party_filter_splits_only_dotted_codes():
+    # "M" is not a code of its own: the "-M" of the plain code "CPC-M" is not split off.
+    assert client._party_filter("m", ["CPC-M"])(None, "CPC-M") is False
+    assert client._party_filter("cpc-m", ["CPC-M"])(None, "CPC-M") is True

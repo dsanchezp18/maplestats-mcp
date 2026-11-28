@@ -73,7 +73,7 @@ def _clean(value: str | None) -> str | None:
 
 async def _download(url: str, max_bytes: int, ttl: int, lang: Lang) -> tuple[bytes, bool]:
     async def fetch() -> file_download.Downloaded:
-        return await file_download.download(
+        downloaded = await file_download.download(
             url,
             allow_host=lambda host: host == constants.DOMAIN,
             limiter_for=lambda _host: _LIMITER,
@@ -81,19 +81,25 @@ async def _download(url: str, max_bytes: int, ttl: int, lang: Lang) -> tuple[byt
             context="mb_stats",
             timeout=120.0,
         )
+        # A web page in place of the file is an outage or error page served with
+        # HTTP 200, not proof that the file does not exist (it was called NotFound,
+        # which sent callers looking for a missing file), so it is an upstream error.
+        # It is refused here, before cached_download stores it: stored, it was
+        # rejected on every call for the whole cache window, after the site had
+        # recovered.
+        if downloaded.body[:256].lstrip()[:5].lower() in (b"<!doc", b"<html"):
+            _fail(
+                UpstreamError,
+                f"{url} returned a web page, not a file.",
+                f"{url} a renvoyé une page Web, pas un fichier.",
+                lang,
+            )
+        return downloaded
 
     downloaded, cached = await file_download.cached_download(
         file_download.cache_key(url), ttl, fetch
     )
-    body = downloaded.body
-    if body.lstrip()[:5].lower() in (b"<!doc", b"<html"):
-        _fail(
-            NotFound,
-            f"{url} returned a web page, not a file.",
-            f"{url} a renvoyé une page Web, pas un fichier.",
-            lang,
-        )
-    return body, cached
+    return downloaded.body, cached
 
 
 def parse_quick_facts(text: str) -> list[dict[str, str]]:

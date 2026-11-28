@@ -192,3 +192,16 @@ async def test_french_bad_nice_class_is_french(httpx_mock):
         await client.search_trademarks("nice_classification", "46", lang="fr")
     assert "les classes de Nice vont de 0 à 45" in str(excinfo.value)
     assert httpx_mock.get_requests() == []
+
+
+async def test_a_bad_shape_is_not_cached_so_the_next_call_retries(httpx_mock):
+    # The shape check ran after cached_fetch had stored the payload, so a 200 answer without
+    # `docs` kept raising from the cache for an hour instead of asking CIPO again.
+    httpx_mock.add_response(url=constants.BASE_URL, json={"unexpected": "shape"})
+    with pytest.raises(UpstreamError):
+        await client.search_trademarks("all", "maple")
+    httpx_mock.add_response(url=constants.BASE_URL, json={"numFound": 1, "docs": [_SAMPLE_DOC]})
+    result = await client.search_trademarks("all", "maple")
+    assert result.returned_count == 1
+    assert result.provenance.cached is False
+    assert len(httpx_mock.get_requests()) == 2

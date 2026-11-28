@@ -7,6 +7,9 @@ RATE_LIMIT_CAPACITY = 4.0
 
 CACHE_TTL_SECONDS = 60 * 60
 CACHE_TTL_DISCOVERY_SECONDS = 24 * 60 * 60
+# Pages of 100 packages read to find the yearly lists: about a quarter of a century of
+# lists is well inside the first one when the search is sorted newest first.
+DISCOVERY_MAX_PAGES = 5
 
 ORGANIZATION = "cra-arc"
 DATASET_TITLE_PATTERN = r"^(\d{4}) List of charities$"

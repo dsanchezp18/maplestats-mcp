@@ -101,7 +101,7 @@ async def test_a_header_less_security_check_page_counts_against_the_host(
     httpx_mock.add_response(url=URL, **{**statcan_security_check, "headers": headers})
     with pytest.raises(CloudflareChallenge, match="Cloudflare bot challenge"):
         await api_get(URL)
-    assert BREAKER.snapshot()["hosts"][HOST]["errors"]["cloudflare"] == 1
+    assert BREAKER.snapshot()["hosts"][f"{HOST}/wds"]["errors"]["cloudflare"] == 1
 
 
 # 2. The error a challenged call raises ----

@@ -419,7 +419,29 @@ async def _fetch(
             ),
             lang=lang,
         )
-        return response.text
+        text = response.text
+        # Checked here, before the text is cached: an outage page or an empty body sent
+        # with HTTP 200 would otherwise be replayed for CACHE_TTL_DATA_SECONDS. A header
+        # with no rows is a well-formed "nothing" and is cached like any answer; the ABS
+        # says "no data" with a 404.
+        if not text.strip():
+            raise_localized(
+                UpstreamError,
+                f"{fid}: the ABS Data API answered with an empty body.",
+                f"{fid} : l'API de données de l'ABS a répondu par un corps vide.",
+                lang,
+            )
+        try:
+            # Only the header can fail the parse, so only the header is read.
+            sdmx.parse_csv(text.splitlines()[0], structure.dimensions, ())
+        except sdmx.SdmxFormatError as exc:
+            raise_localized(
+                UpstreamError,
+                f"{fid}: {str(exc)[:300]}",
+                f"{fid} : colonnes SDMX-CSV inattendues.",
+                lang,
+            )
+        return text
 
     text, cached = await cached_fetch(
         f"abs:data:{fid}:{key}:{sorted(params.items())}", constants.CACHE_TTL_DATA_SECONDS, fetch
@@ -575,7 +597,9 @@ async def get_indicator(
     data = await get_data(spec.dataflow, spec.key, start_period, end_period, last_n, lang)
     info = data.series[0]
     observations = [
-        Observation(period=r.period, value=r.value) for r in data.rows if r.series_key == info.key
+        Observation(period=r.period, value=r.value, status=r.status)
+        for r in data.rows
+        if r.series_key == info.key
     ]
     return IndicatorResult(
         indicator=name,

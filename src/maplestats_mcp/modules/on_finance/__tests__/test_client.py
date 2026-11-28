@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import re
+import zipfile
 
 import pytest
 from openpyxl import Workbook
@@ -258,6 +259,36 @@ async def test_bad_arguments_are_refused(kwargs):
 async def test_an_ambiguous_area_is_refused(ontario):
     with pytest.raises(InvalidInput, match="matches 2 areas"):
         await client.get_population_projection(geography="census_division", area="o")
+
+
+def _declared_a1(body: bytes) -> bytes:
+    """The same workbook with the sheet's <dimension> cut to A1, as one writer leaves it."""
+    out = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(body)) as source,
+        zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as target,
+    ):
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename == "xl/worksheets/sheet1.xml":
+                data = re.sub(rb'<dimension ref="[^"]*"', b'<dimension ref="A1"', data)
+            target.writestr(item, data)
+    return out.getvalue()
+
+
+def test_a_sheet_declared_as_a1_is_still_read_whole():
+    # Confirmed live on other workbooks (shared/xlsx_sheets.fix_dimensions): a lone
+    # A1 made openpyxl yield one row, so the header row was never reached and the
+    # file was reported as no longer having it.
+    declared = _declared_a1(_ontario(2025, "Summer 2026"))
+    assert b'<dimension ref="A1"' in zipfile.ZipFile(io.BytesIO(declared)).read(
+        "xl/worksheets/sheet1.xml"
+    )
+    sheet = client.parse_workbook(declared)
+    assert sheet.header[:4] == ["SCENARIO", "YEAR (JULY 1)", "GENDER", "TOTAL"]
+    assert sheet.release == "Summer 2026"
+    # Three scenarios x two years x three genders.
+    assert len(sheet.rows) == 18
 
 
 async def test_a_missing_file_says_so(ontario):

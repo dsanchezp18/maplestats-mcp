@@ -1,5 +1,9 @@
 """Per-host circuit breaker for upstream requests, and the per-host error counts /stats shows.
 
+The key is the host, except for StatCan's www150, whose path groups (WDS, SDMX, CIMT, The
+Daily, files) fail independently: shared/http.py keys those as "host/group", so a slow
+group pauses only itself. Below, "host" means that key.
+
 Every client shared/http.py creates sends through it, so a host that keeps
 failing stops costing each caller its full timeout. After
 MAPLE_BREAKER_FAILURES failures in a row within MAPLE_BREAKER_WINDOW_SECONDS

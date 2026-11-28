@@ -58,7 +58,10 @@ async def _open(httpx_mock) -> None:
         await api_get(URL)
 
 
-def _host(name: str = HOST) -> dict:
+KEY = f"{HOST}/wds"  # the breaker's key for URL: host plus the path group
+
+
+def _host(name: str = KEY) -> dict:
     return BREAKER.snapshot()["hosts"][name]
 
 
@@ -128,12 +131,12 @@ async def test_caller_errors_do_not_trip_it(httpx_mock, two_failures):
     for _ in range(5):
         with pytest.raises(httpx.HTTPStatusError):
             await api_get(URL)
-    assert HOST not in BREAKER.snapshot()["hosts"]
+    assert KEY not in BREAKER.snapshot()["hosts"]
     httpx_mock.reset()
     httpx_mock.add_response(url=URL, status_code=406, is_reusable=True)
     for _ in range(5):
         assert (await get_raw(URL)).status_code == 406
-    assert HOST not in BREAKER.snapshot()["hosts"]
+    assert KEY not in BREAKER.snapshot()["hosts"]
 
 
 async def test_an_answer_resets_the_count(httpx_mock, two_failures):
@@ -212,6 +215,21 @@ async def test_challenged_path_does_not_cut_off_the_rest_of_the_host(
     assert await api_get(URL) == {"ok": True}
 
 
+async def test_a_failing_path_group_does_not_pause_the_others(httpx_mock, two_failures, clock):
+    # Live 2026-11-27: vectors, SDMX and CIMT timed out on www150 while metadata and
+    # The Daily answered; one breaker for the host paused them all.
+    await _open(httpx_mock)
+    assert _host()["state"] == "open"
+    cimt = f"https://{HOST}/t1/cimt/rest/getPeriods"
+    daily = f"https://{HOST}/n1/dai-quo/ssi/homepage/ind-hp.json"
+    httpx_mock.add_response(url=cimt, json={"ok": "cimt"})
+    httpx_mock.add_response(url=daily, json={"ok": "daily"})
+    assert await api_get(cimt) == {"ok": "cimt"}
+    assert await api_get(daily) == {"ok": "daily"}
+    with pytest.raises(CircuitOpen):
+        await api_get(URL)
+
+
 async def test_a_challenge_on_the_probe_lets_the_next_request_probe(
     httpx_mock, two_failures, clock, cloudflare_challenge
 ):
@@ -275,7 +293,7 @@ async def test_status_resource_lists_open_hosts(httpx_mock, two_failures):
     assert isinstance(after[0], TextResourceContents)
     assert "No host is paused" in before[0].text
     text = after[0].text
-    assert f"- {HOST}: paused until" in text
+    assert f"- {KEY}: paused until" in text
     assert "suspendu jusqu'à" in text
 
 
@@ -283,7 +301,7 @@ async def test_stats_add_latency_and_upstream_health(httpx_mock, two_failures):
     await _fail_once(httpx_mock)
     snap = public_snapshot()
     assert snap["upstreams"]["breaker"]["failures_to_open"] == 2
-    assert snap["upstreams"]["hosts"][HOST]["errors"]["server_error"] == 1
+    assert snap["upstreams"]["hosts"][KEY]["errors"]["server_error"] == 1
     assert "getAllCubesListLite" not in json.dumps(snap)
 
 

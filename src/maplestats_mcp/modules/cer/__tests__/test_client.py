@@ -146,3 +146,70 @@ async def test_list_datasets_keeps_csv_files_in_requested_language(httpx_mock):
     )
     result = await client.list_datasets("lng")
     assert [f.name for f in result.datasets[0].files] == ["annual"]
+
+
+_YEARLY = b"Year,Terminal,Volume\n2023,Queenston,5\n2024,Queenston,7\n2025,Queenston,9\n"
+
+
+async def test_year_only_rows_are_kept_when_their_year_overlaps_the_bounds(httpx_mock):
+    # A year-only value was read as January 1st, so start="2024-06" dropped every 2024 row
+    # of a file whose only date column is a year (and start="2024-01-15" did the same).
+    httpx_mock.add_response(url=_URL, content=_YEARLY, is_reusable=True)
+    mid_year = await client.query_file(_URL, start="2024-06", end="2024-12")
+    assert [r["Year"] for r in mid_year.rows] == ["2024"]
+    after = await client.query_file(_URL, start="2024-06-15")
+    assert [r["Year"] for r in after.rows] == ["2024", "2025"]
+    before = await client.query_file(_URL, end="2024-03")
+    assert [r["Year"] for r in before.rows] == ["2023", "2024"]
+    # A year that ends before the start is still out.
+    later = await client.query_file(_URL, start="2025-01")
+    assert [r["Year"] for r in later.rows] == ["2025"]
+
+
+async def test_month_rows_overlap_a_day_bound(httpx_mock):
+    body = b"Date,Volume\n2024-05,1\n2024-06,2\n2024-07,3\n"
+    httpx_mock.add_response(url=_URL, content=body)
+    result = await client.query_file(_URL, start="2024-06-15", end="2024-06-20")
+    assert [r["Date"] for r in result.rows] == ["2024-06"]
+
+
+_ODD_DATES = (
+    b"Date,Volume\n"
+    b"2024-Q1,1\n"
+    b"Q2 2024,2\n"
+    b"01/31/2024,3\n"
+    b"31/01/2024,4\n"
+    b"07/08/2024,5\n"
+    b"2024.09.10,6\n"
+    b"soon,7\n"
+    b",8\n"
+)
+
+
+async def test_common_date_forms_are_read_and_the_rest_is_counted(httpx_mock):
+    httpx_mock.add_response(url=_URL, content=_ODD_DATES, is_reusable=True)
+    result = await client.query_file(_URL, start="2024-02", end="2024-12")
+    # Q1 and Q2 overlap the range; both January dates are before it; 07/08/2024 could be
+    # July 8th or August 7th, so it is not guessed.
+    assert [r["Volume"] for r in result.rows] == ["1", "2", "6"]
+    assert result.matching_rows == 3
+    assert "3 rows passing the filters have a date" in (result.provenance.limits or "")
+    assert "'07/08/2024'" in (result.provenance.limits or "")
+    assert "left out of the start/end range" in (result.provenance.limits or "")
+
+    french = await client.query_file(_URL, start="2024-02", end="2024-12", lang="fr")
+    assert "3 lignes retenues par les filtres ont une date" in (french.provenance.limits or "")
+
+
+async def test_unreadable_dates_are_counted_when_there_is_no_range(httpx_mock):
+    httpx_mock.add_response(url=_URL, content=_ODD_DATES)
+    result = await client.query_file(_URL, limit=100)
+    # They sort before the oldest dated row, as before, and the note says so.
+    assert [r["Volume"] for r in result.rows] == ["5", "7", "8", "1", "3", "4", "2", "6"]
+    assert "sort before the oldest dated row" in (result.provenance.limits or "")
+
+
+async def test_a_clean_date_column_adds_no_note(httpx_mock):
+    httpx_mock.add_response(url=_URL, content=_THROUGHPUT)
+    result = await client.query_file(_URL, start="2025-01-01")
+    assert result.provenance.limits is None

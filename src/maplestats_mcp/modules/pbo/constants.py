@@ -10,6 +10,11 @@ LIST_TTL_SECONDS = 60 * 60
 PUBLICATION_TTL_SECONDS = 6 * 60 * 60
 PAGE_SIZE = 15  # fixed by the API; per_page and limit are ignored
 TEXT_MAX_CHARS = 20_000
+# An HTML table's colspan is read up to 1000 columns, as browsers do; the copies that
+# colspans and rowspans add to one table are read up to HTML_MAX_SPAN_CELLS in all
+# (a real table adds a few hundred at most).
+HTML_MAX_COLSPAN = 1000
+HTML_MAX_SPAN_CELLS = 100_000
 
 # Publication type codes seen in the API, with their meaning.
 TYPES = {

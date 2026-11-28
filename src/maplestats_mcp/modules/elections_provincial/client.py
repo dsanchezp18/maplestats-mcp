@@ -8,6 +8,8 @@ picks the election, applies the filters and builds the responses.
 
 from __future__ import annotations
 
+import re
+from collections.abc import Callable, Iterable
 from typing import Literal
 
 from maplestats_mcp.modules.elections_provincial import (
@@ -328,6 +330,40 @@ def _squash(text: str) -> str:
     return fold(text).replace(".", "").replace(" ", "")
 
 
+def _code_keys(code: str | None) -> set[str]:
+    """The squashed texts a party code answers to: the whole code and, for a dotted code,
+    each abbreviation in it.
+
+    Quebec writes several abbreviations into one dotted code ("C.A.Q.-E.F.L.",
+    "P.C.Q-E.E.D.", "P.L.Q./Q.L.P."), and "CAQ" has to find the first. A plain code is
+    not split, or the "-M" of Manitoba's "CPC-M" would be a code of its own.
+    """
+    if not code:
+        return set()
+    keys = {_squash(code)}
+    if "." in code:
+        keys.update(_squash(part) for part in re.split(r"[-/]", code))
+    return keys
+
+
+def _party_filter(
+    wanted: str, codes: Iterable[str | None]
+) -> Callable[[str | None, str | None], bool]:
+    """The (name, code) test for a party filter, given every party code of the result set.
+
+    Text that is the code of any party there ("lib", "SP", "PC", "CAQ") names those
+    parties and no others: "SP" was also found in Saskatchewan's "SPP", "PC" in Manitoba's
+    "CPC-M", and Manitoba's "lib" in the Libertarian Party's name. Any other text is a
+    piece of a party's name. The codes are the whole election's, so the same text means
+    the same parties whatever the other filters leave.
+    """
+    target = _squash(wanted)
+    if target and any(target in _code_keys(code) for code in codes):
+        return lambda _name, code: target in _code_keys(code)
+    needle = fold(wanted)
+    return lambda name, _code: needle in fold(name or "")
+
+
 def list_elections(province: str | None = None, lang: Lang = "en") -> ElectionList:
     code = _province(province, lang) if province else None
     elections = [
@@ -393,6 +429,10 @@ async def get_results(
     edition = _election(code, election, lang)
     districts, cached = await _load(edition, lang)
 
+    # Read from every district, before the district filter narrows them.
+    party_matches = _party_filter(
+        party or "", (c.party_code for d in districts for c in d.candidates)
+    )
     if district:
         wanted = fold(district)
         districts = [
@@ -406,9 +446,7 @@ async def get_results(
         for c in d.candidates:
             if winners_only and not c.elected:
                 continue
-            if party and not (
-                fold(party) in fold(c.party or "") or _squash(party) in _squash(c.party_code or "")
-            ):
+            if party and not party_matches(c.party, c.party_code):
                 continue
             if candidate and fold(candidate) not in fold(c.name or ""):
                 continue
@@ -690,13 +728,13 @@ async def get_voting_areas(
     areas, cached = await _areas(edition.source_key, chosen, lang)
 
     rows: list[VotingAreaRow] = []
+    # Read from every voting area, before the voting_area filter narrows them.
+    party_matches = _party_filter(party or "", (v.party_code for a in areas for v in a.votes))
     for area in areas:
         if voting_area and fold(voting_area) != fold(area.label):
             continue
         for vote in area.votes:
-            if party and not (
-                fold(party) in fold(vote.party) or _squash(party) in _squash(vote.party_code)
-            ):
+            if party and not party_matches(vote.party, vote.party_code):
                 continue
             if candidate and fold(candidate) not in fold(vote.name or ""):
                 continue

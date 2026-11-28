@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from maplestats_mcp.modules.nrcan_geo import client
+from maplestats_mcp.modules.nrcan_geo import client, constants
 from maplestats_mcp.shared import cache as cache_module
 from maplestats_mcp.shared.errors import InvalidInput, UpstreamError
 
@@ -223,6 +223,48 @@ async def test_locate_trims_live_shaped_results_to_limit(httpx_mock):
     assert result.locations[1].source == "geonames"
     assert result.total_found > 2
     assert f"first 2 of {result.total_found} results" in (result.provenance.limits or "")
+
+
+def _places(count: int) -> dict:
+    return {"items": [{"id": f"P{i}", "name": f"Place {i}"} for i in range(count)]}
+
+
+async def test_search_names_says_more_may_exist_when_the_limit_was_filled(httpx_mock):
+    # The service answers `num` places with no total, so a full page is the only sign
+    # that more exist; it came back with returned_count and no note.
+    httpx_mock.add_response(url=_NAMES, json=_places(2))
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    result = await client.search_names("Banff", limit=2)
+    assert result.returned_count == 2
+    assert "more may exist" in (result.provenance.limits or "")
+
+
+async def test_search_names_has_no_note_when_the_service_returned_fewer(httpx_mock):
+    httpx_mock.add_response(url=_NAMES, json=_places(2))
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    result = await client.search_names("Banff", limit=5)
+    assert result.provenance.limits is None
+
+
+async def test_full_page_note_does_not_offer_a_limit_that_is_not_allowed(httpx_mock):
+    # At the largest limit there is nothing to raise: the note only says to narrow.
+    for lang in ("en", "fr"):
+        httpx_mock.add_response(url=_NAMES, json=_places(constants.LIMIT_MAX))
+        httpx_mock.add_response(url=_CODES, json={"definitions": []})
+        result = await client.search_names("Banff", limit=constants.LIMIT_MAX, lang=lang)
+        limits = result.provenance.limits or ""
+        assert "more may exist" in limits or "il peut y en avoir d'autres" in limits
+        assert "raise limit" not in limits and "augmentez limit" not in limits
+        assert "(up to" not in limits and "jusqu'à" not in limits
+
+
+async def test_french_full_page_note_follows_the_names_note(httpx_mock):
+    httpx_mock.add_response(url=_NAMES, json=_places(2))
+    httpx_mock.add_response(url=_CODES, json={"definitions": []})
+    result = await client.search_names("Banff", limit=2, lang="fr")
+    limits = result.provenance.limits or ""
+    assert limits.startswith("Les noms de lieux sont les toponymes")
+    assert "il peut y en avoir d'autres" in limits
 
 
 async def test_search_names_empty_and_null_lists_give_empty_result(httpx_mock):

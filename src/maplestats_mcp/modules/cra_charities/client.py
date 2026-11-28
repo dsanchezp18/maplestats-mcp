@@ -107,16 +107,32 @@ async def _list_resources(
     """
 
     async def fetch() -> Any:
-        return await action(
-            _CONFIG,
-            "package_search",
-            {
-                "q": "List of charities",
-                "fq": f"organization:{constants.ORGANIZATION}",
-                "rows": 100,
-            },
-            lang=lang,
-        )
+        # The search is ranked by relevance unless sorted, and a page holds 100
+        # packages, so the newest list can sit past the first page. Newest first
+        # puts it on page one (`metadata_created` is CKAN's creation-time field; the
+        # federal portal takes `sort` on package_search, as ckan_package_search
+        # documents, but this field was not checked live), and the next pages are
+        # read up to a small cap: the search's own count is the only other bound,
+        # and a wrong one must not mean hundreds of requests.
+        packages: list[Any] = []
+        for _ in range(constants.DISCOVERY_MAX_PAGES):
+            page = await action(
+                _CONFIG,
+                "package_search",
+                {
+                    "q": "List of charities",
+                    "fq": f"organization:{constants.ORGANIZATION}",
+                    "rows": 100,
+                    "start": len(packages),
+                    "sort": "metadata_created desc",
+                },
+                lang=lang,
+            )
+            found = list_or_empty(page, "results")
+            packages.extend(found)
+            if not found or len(packages) >= int(get_or(page, "count", 0) or 0):
+                break
+        return {"results": packages}
 
     result, _ = await cached_fetch(
         "cra-charities:discovery", constants.CACHE_TTL_DISCOVERY_SECONDS, fetch
@@ -137,7 +153,9 @@ async def _list_resources(
             return year, package["id"], by_name, None
     # No published list has every table: the pinned 2024 list, and the response says it is
     # a fallback and why, so an older list is not taken for the newest one.
-    found = ", ".join(str(year) for year, _ in sorted(lists, reverse=True)) or "none"
+    # A key, not the tuples: two lists of one year would be compared by their dicts.
+    found = ", ".join(str(year) for year, _ in sorted(lists, key=lambda f: f[0], reverse=True))
+    found = found or "none"
     note = pick(
         lang,
         f"Fallback: open.canada.ca's search found no List of charities with the tables this "

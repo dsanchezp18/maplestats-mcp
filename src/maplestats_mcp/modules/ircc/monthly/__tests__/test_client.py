@@ -205,7 +205,9 @@ async def test_french_note_and_provenance(live):
 
 
 async def test_english_note_and_provenance_unchanged(live):
-    result = await client.query_table("ODP-PR-PT_IMMCAT", limit=2)
+    # limit=3 keeps all of 2026-07's rows; limit=2 would cut through that period, which the
+    # note now says (see test_limit_cutting_the_earliest_period_is_said).
+    result = await client.query_table("ODP-PR-PT_IMMCAT", limit=3)
     assert result.note == constants.ROUNDING_NOTE
     assert result.provenance.freshness == (
         "monthly; IRCC adds the latest month and may revise earlier ones"
@@ -258,3 +260,117 @@ async def test_unreadable_cells_are_reported_in_the_note(httpx_mock, catalogue):
     assert "2 TOTAL cells were not counts" in described.note and "'<5'" in described.note
     queried = await client.query_table("ODP-PR-PT_IMMCAT", lang="fr")
     assert "2 cellules TOTAL n'étaient pas des nombres" in queried.note
+
+
+# ------------------------------------------------- incomplete periods, odd period cells, limit
+
+_MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _monthly_tsv(*spans: tuple[int, int, int]) -> bytes:
+    """One Alberta row of 100 for each month of every (year, first_month, last_month) span."""
+    lines = ["EN_YEAR\tEN_QUARTER\tEN_MONTH\tEN_PROVINCE_TERRITORY\tTOTAL"]
+    for year, first, last in spans:
+        for month in range(first, last + 1):
+            quarter = (month - 1) // 3 + 1
+            lines.append(f"{year}\tQ{quarter}\t{_MONTH_ABBR[month - 1]}\tAlberta\t100")
+    return ("\n".join(lines) + "\n").encode()
+
+
+async def test_partial_latest_year_is_flagged_and_the_figures_stay(httpx_mock, catalogue):
+    # The year sums the months published so far, so 2026 (Jan-Jul) looked like a sharp
+    # drop next to 2025 with nothing saying why. The sums themselves must not change.
+    httpx_mock.add_response(url=_PR_URL, content=_monthly_tsv((2025, 1, 12), (2026, 1, 7)))
+    result = await client.query_table("ODP-PR-PT_IMMCAT", period="year", group_by=[])
+    assert {r.period: r.value for r in result.rows} == {"2025": 1200, "2026": 700}
+    assert "2026 has 7 of 12 months (Jan to Jul)" in result.note
+    assert "2025 has" not in result.note
+    assert "2026 has 7 of 12 months" in (result.provenance.limits or "")
+
+
+async def test_partial_periods_are_flagged_in_french_and_by_quarter(httpx_mock, catalogue):
+    httpx_mock.add_response(url=_PR_URL, content=_monthly_tsv((2024, 10, 12), (2025, 1, 12)))
+    first = await client.query_table("ODP-PR-PT_IMMCAT", period="year", group_by=[], lang="fr")
+    # The first year of the table starts in October, which is also a partial period.
+    assert "2024 compte 3 mois sur 12 (oct. à déc.)" in first.note
+    assert "2025 compte" not in first.note
+
+    httpx_mock.add_response(url=_PR_URL, content=_monthly_tsv((2026, 1, 7)))
+    cache_module._caches.clear()
+    quarters = await client.query_table("ODP-PR-PT_IMMCAT", period="quarter", group_by=[])
+    assert [(r.period, r.value) for r in quarters.rows] == [
+        ("2026-Q1", 300),
+        ("2026-Q2", 300),
+        ("2026-Q3", 100),
+    ]
+    assert "2026-Q3 has 1 of 3 months (Jul)" in quarters.note
+    assert "2026-Q1" not in quarters.note
+
+
+async def test_complete_periods_and_the_finest_grain_add_no_note(httpx_mock, catalogue):
+    httpx_mock.add_response(url=_PR_URL, content=_monthly_tsv((2025, 1, 12), (2026, 1, 7)))
+    by_month = await client.query_table("ODP-PR-PT_IMMCAT")
+    assert by_month.note == constants.ROUNDING_NOTE
+    full_years = await client.query_table("ODP-PR-PT_IMMCAT", period="year", year_to=2025)
+    assert full_years.note == constants.ROUNDING_NOTE
+
+
+async def test_year_of_a_quarterly_table_is_flagged_by_quarters(httpx_mock, catalogue):
+    body = (
+        b"EN_YEAR\tEN_QUARTER\tEN_PROVINCE_TERRITORY\tTOTAL\n"
+        b"2025\tQ1\tAlberta\t10\n2025\tQ2\tAlberta\t10\n2025\tQ3\tAlberta\t10\n"
+        b"2025\tQ4\tAlberta\t10\n2026\tQ1\tAlberta\t10\n2026\tQ2\tAlberta\t10\n"
+    )
+    httpx_mock.add_response(url=_PR_URL, content=body)
+    result = await client.query_table("ODP-PR-PT_IMMCAT", period="year", group_by=[])
+    assert "2026 has 2 of 4 quarters (Q1 to Q2)" in result.note
+
+
+def test_month_and_quarter_cells_in_other_spellings_are_read():
+    months = ["January", "Février", "Sept.", "août", "juil.", "mai", "7", "Dec"]
+    quarters = ["Q1 2024", "T2", "q3", "Quarter 4", "2024-Q1", "Q1", "Q2", "Q3"]
+    body = "EN_YEAR\tEN_QUARTER\tEN_MONTH\tTOTAL\n" + "".join(
+        f"2024\t{q}\t{m}\t5\n" for q, m in zip(quarters, months, strict=True)
+    )
+    parsed = client.parse_table(body.encode())
+    assert [r.month for r in parsed.rows] == [1, 2, 9, 8, 7, 5, 7, 12]
+    assert [r.quarter for r in parsed.rows] == [1, 2, 3, 4, 1, 1, 2, 3]
+    assert all(not r.unread_time for r in parsed.rows)
+
+    quarter_only = "EN_YEAR\tEN_QUARTER\tTOTAL\n" + "".join(
+        f"2024\t{q}\t5\n" for q in ("Q1 2024", "T2", "q3", "Quarter 4", "2024-Q1")
+    )
+    assert [r.quarter for r in client.parse_table(quarter_only.encode()).rows] == [1, 2, 3, 4, 1]
+
+
+async def test_unreadable_periods_are_counted_not_pooled_silently(httpx_mock, catalogue):
+    body = (
+        b"EN_YEAR\tEN_QUARTER\tEN_MONTH\tEN_PROVINCE_TERRITORY\tTOTAL\n"
+        b"2026\tQ1\tJan\tAlberta\t100\n"
+        b"2026\tQ1\tSmarch\tAlberta\t40\n"
+        b"2026\tQ1\tFlop\tAlberta\t60\n"
+    )
+    httpx_mock.add_response(url=_PR_URL, content=body, is_reusable=True)
+    result = await client.query_table("ODP-PR-PT_IMMCAT", group_by=[])
+    # The pooled row stays (figures unchanged), and the note says what it holds.
+    assert {r.period: r.value for r in result.rows} == {None: 100, "2026-01": 100}
+    assert "2 matched rows have no readable period (for example 'Smarch')" in result.note
+    french = await client.query_table("ODP-PR-PT_IMMCAT", group_by=[], lang="fr")
+    assert "2 lignes retenues n'ont pas de période lisible (par exemple 'Smarch')" in french.note
+    # Rows a filter drops are not counted.
+    other = await client.query_table(
+        "ODP-PR-PT_IMMCAT", {"province_territory": "Alberta"}, year_from=2027, group_by=[]
+    )
+    assert "no readable period" not in other.note
+
+
+async def test_limit_cutting_the_earliest_period_is_said(live):
+    # 2026-07 has 3 rows, 2026-06 has 2 and 2025-12 has 2; limit=4 keeps one of 2026-06's.
+    cut = await client.query_table("ODP-PR-PT_IMMCAT", limit=4)
+    assert [r.period for r in cut.rows] == ["2026-06", "2026-07", "2026-07", "2026-07"]
+    assert "earliest period shown, 2026-06, lists 1 of its 2 rows" in cut.note
+    assert "limit" in cut.note
+    whole = await client.query_table("ODP-PR-PT_IMMCAT", limit=5)
+    assert "earliest period shown" not in whole.note
+    ranked = await client.query_table("ODP-PR-PT_IMMCAT", limit=4, sort="value_desc")
+    assert "earliest period shown" not in ranked.note

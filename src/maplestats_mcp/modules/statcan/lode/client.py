@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+from typing import Literal
 
 import httpx
 
@@ -32,6 +33,7 @@ from maplestats_mcp.shared.envelope import make_provenance
 from maplestats_mcp.shared.errors import InvalidInput, NotFound, UpstreamError, UpstreamUnavailable
 from maplestats_mcp.shared.executor import run_in_pool
 from maplestats_mcp.shared.http import get_raw
+from maplestats_mcp.shared.i18n import fr_number
 from maplestats_mcp.shared.rate_limiter import get_limiter
 
 _LIMITER = get_limiter(
@@ -58,7 +60,16 @@ def _database(key: str) -> Database:
     return db
 
 
-async def _page(url: str) -> str:
+async def _page(url: str, kind: Literal["landing", "product"]) -> str:
+    """A StatCan page, cached for a day, and only if it is the kind of page asked for.
+
+    get_raw returns HTTP 406 and 409 as they are, and a server can answer a
+    maintenance page or an empty one with a 200. Cached unchecked, either made every
+    call fail for the next day (list_files and query: "No ZIP downloads found",
+    list_databases: every database with no release). An error raised inside the
+    fetch is never cached, so the next call asks StatCan again.
+    """
+
     async def fetch() -> str:
         await _LIMITER.acquire()
         try:
@@ -81,7 +92,27 @@ async def _page(url: str) -> str:
                     f"statcan_lode : {url} est injoignable.",
                 )
             ) from exc
-        return response.text
+        if not response.is_success:
+            raise UpstreamError(
+                say(
+                    f"statcan_lode: {url} returned HTTP {response.status_code}.",
+                    f"statcan_lode : {url} a renvoyé HTTP {response.status_code}.",
+                )
+            )
+        text = response.text
+        real = (
+            pages.is_landing_page(text) if kind == "landing" else pages.is_product_page(text, url)
+        )
+        if not real:
+            raise UpstreamError(
+                say(
+                    f"statcan_lode: {url} is not a LODE page (a maintenance or empty page?); "
+                    "it was not kept.",
+                    f"statcan_lode : {url} n'est pas une page LODE (page d'entretien ou vide ?) ; "
+                    "elle n'a pas été gardée.",
+                )
+            )
+        return text
 
     text, _ = await cached_fetch(f"statcan_lode:{url}", constants.CACHE_TTL_SECONDS, fetch)
     return text
@@ -99,7 +130,7 @@ def _licence(db: Database, product: pages.ProductPage | None = None) -> tuple[st
 async def list_databases(lang: str = "en") -> LodeDatabaseList:
     use_lang(lang)
     landing_url = constants.LANDING_URL[lang]
-    landing = pages.parse_landing(await _page(landing_url))
+    landing = pages.parse_landing(await _page(landing_url, "landing"))
     by_url = {entry.page_url.rstrip("/"): entry for entry in landing}
     databases: list[LodeDatabase] = []
     for db in constants.DATABASES:
@@ -110,7 +141,7 @@ async def list_databases(lang: str = "en") -> LodeDatabaseList:
         if not entry:
             # Accessibility products and the NAR are not on the landing page;
             # their product page carries the release date.
-            product = pages.parse_product(await _page(page_url), page_url)
+            product = pages.parse_product(await _page(page_url, "product"), page_url)
             if product.release_date:
                 label = f"{product.release_date}"
                 releases = [LodeRelease(date=product.release_date, version=None, label=label)]
@@ -159,7 +190,7 @@ async def _product(db: Database, lang: str) -> tuple[pages.ProductPage, str]:
     # Download links are language-neutral; the English page is read for
     # them so a French call needs no second set of parsing rules.
     page_url = db.page_en
-    return pages.parse_product(await _page(page_url), page_url), page_url
+    return pages.parse_product(await _page(page_url, "product"), page_url), page_url
 
 
 def _file_note(db: Database, fmt: str, url: str) -> tuple[bool, str | None]:
@@ -438,7 +469,7 @@ async def query(
                     f"{picked.name} occupe {picked.size / 1e6:,.0f} Mo une fois décompressé, au-delà de la limite de {constants.MAX_MEMBER_BYTES / 1e6:,.0f} Mo.",
                 )
             )
-        if files.cached(item.url, picked.name) is None:
+        if files.cached(item.url, picked.name, files.version_stamp(total, picked)) is None:
             to_download += total
         plan.append((item, picked, total))
     if to_download > cap:
@@ -458,8 +489,9 @@ async def query(
     downloaded = False
     outcome_layer: str | None = None
     outcome_crs: str | None = None
-    for item, data_file, _ in plan:
-        path, fresh = await files.local_member(item.url, data_file.name)
+    for item, data_file, archive_bytes in plan:
+        stamp = files.version_stamp(archive_bytes, data_file)
+        path, fresh = await files.local_member(item.url, data_file.name, stamp)
         downloaded = downloaded or fresh
         remaining = replace_limit(spec, limit - len(records))
         kind = _format_of(data_file)
@@ -586,10 +618,22 @@ def _geojson_sample(chunks: list[bytes]) -> list[LodeField]:
     return [LodeField(name=k, example=reader.tidy(v)) for k, v in props.items()]
 
 
-def _csv_sample(chunks: list[bytes]) -> list[LodeField]:
-    header, rows = files.read_rows(chunks, False, {}, 1)
+def _csv_sample(chunks: list[bytes]) -> tuple[list[LodeField], int]:
+    """The header's fields with the first complete record as their example, and how many
+    records before it had another field count."""
+    header, rows, skipped = files.read_rows(chunks, False, {}, 1)
     row = rows[0] if rows else {}
-    return [LodeField(name=h, example=row.get(h)) for h in header if h]
+    return [LodeField(name=h, example=row.get(h)) for h in header if h], skipped
+
+
+def _skipped_note(count: int) -> str:
+    many = count != 1
+    return say(
+        f"{count:,} record{'s' if many else ''} with a different number of fields than the "
+        f"header {'were' if many else 'was'} skipped.",
+        f"{fr_number(count)} enregistrement{'s' if many else ''} dont le nombre de champs "
+        f"diffère de l'en-tête {'ont' if many else 'a'} été ignoré{'s' if many else ''}.",
+    )
 
 
 def merge_fields(*groups: list[LodeField]) -> list[LodeField]:
@@ -645,13 +689,19 @@ async def describe(database: str, file: str | None = None, lang: str = "en") -> 
         if kind in ("csv", "geojson"):
             await _LIMITER.acquire()
             chunks, _, _ = await files.stream_member(item.url, data, 256 * 1024)
-            sample = _csv_sample(chunks) if kind == "csv" else _geojson_sample(chunks)
+            if kind == "csv":
+                sample, skipped = _csv_sample(chunks)
+                if skipped:
+                    notes.append(_skipped_note(skipped))
+            else:
+                sample = _geojson_sample(chunks)
             if sample:
                 sources.append(f"first record of {data.name}")
         else:
-            local = files.cached(item.url, data.name)
+            stamp = files.version_stamp(total, data)
+            local = files.cached(item.url, data.name, stamp)
             if local is None and total <= constants.DESCRIBE_DOWNLOAD_BYTES:
-                local, _ = await files.local_member(item.url, data.name)
+                local, _ = await files.local_member(item.url, data.name, stamp)
             if local is not None:
                 layers = await run_in_pool(reader.gpkg_layers, local)
                 sample, _ = await run_in_pool(reader.gpkg_schema, local, None)
@@ -772,7 +822,7 @@ async def preview_member(
         )
     await _LIMITER.acquire()
     chunks, read, complete = await files.stream_member(url, target, int(scan_mb * 1_000_000))
-    columns, found = files.read_rows(chunks, complete, match or {}, rows)
+    columns, found, skipped = files.read_rows(chunks, complete, match or {}, rows)
     notes: list[str] = []
     if not complete:
         notes.append(
@@ -792,6 +842,8 @@ async def preview_member(
                 "Aucune ligne ne correspond dans la partie parcourue.",
             )
         )
+    if skipped:
+        notes.append(_skipped_note(skipped))
     return LodeMemberPreview(
         url=url,
         member=target.name,

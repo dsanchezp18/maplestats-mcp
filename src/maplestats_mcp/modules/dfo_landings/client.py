@@ -95,6 +95,16 @@ def _fold(text: str) -> str:
     return "".join(c for c in plain if not unicodedata.combining(c)).lower().strip()
 
 
+# The region rows that sum other rows: Canada, and the sea file's Atlantic sum of the
+# provinces (the smoke test reads it as "Atlantic"; the French file's label is
+# matched as "Atlantique"). Province names contain neither word.
+_REGION_TOTAL = re.compile(r"^(?:canada|atlanti(?:c|que).*)$")
+
+
+def _is_region_total(region: str) -> bool:
+    return _REGION_TOTAL.match(_fold(region)) is not None
+
+
 def _decode(raw: bytes) -> str:
     # UTF-8, else Windows-1252, else latin-1: cp1252 alone fails on its five undefined
     # bytes (0x81, 0x8d, 0x8f, 0x90, 0x9d), and one stray byte lost the whole file.
@@ -235,7 +245,11 @@ def parse_sea_csv(text: str) -> tuple[list[ParsedRow], list[str]]:
                 "quantity_tonnes": round(quantity / 1000, 3) if quantity is not None else None,
                 "value_dollars": value,
                 "suppressed": q_hidden or v_hidden,
-                "is_total": _fold(species).startswith("total") or _fold(group) == "grand total",
+                # Region sums count too: summing the rows with include_totals=False
+                # must not add the provinces, then the Atlantic sum, then Canada.
+                "is_total": _fold(species).startswith("total")
+                or _fold(group) == "grand total"
+                or _is_region_total(cells[1]),
             }
         )
     return rows, list(dict.fromkeys(notes))
@@ -292,7 +306,7 @@ def parse_freshwater_csv(text: str, year: int, lang: str) -> tuple[list[ParsedRo
                     "quantity_tonnes": quantity,
                     "value_dollars": value * 1000 if value is not None else None,
                     "suppressed": q_hidden or v_hidden,
-                    "is_total": _fold(species) == "total",
+                    "is_total": _fold(species) == "total" or _is_region_total(region),
                 }
             )
     return rows, notes
@@ -565,11 +579,9 @@ async def get_landings(
             f"{available[-1]}.",
             lang,
         )
-    matched = [
-        r
-        for r in all_rows
-        if _matches(r, region, species, species_group) and (include_totals or not r["is_total"])
-    ]
+    in_scope = [r for r in all_rows if _matches(r, region, species, species_group)]
+    matched = [r for r in in_scope if include_totals or not r["is_total"]]
+    left_out = len(in_scope) - len(matched)
     return Landings(
         fishery=fishery,
         years=years,
@@ -603,6 +615,19 @@ async def get_landings(
                 "confidentielles ('x') sont nulles avec suppressed=true. Jeu de données : "
                 f"{_page(dataset_id, lang)}",
                 lang,
+            )
+            + (
+                _say(
+                    f" include_totals=False left out {left_out} total rows: species-group, "
+                    "all-species and 'Total' rows, and the Canada and Atlantic rows, which "
+                    "repeat the provinces.",
+                    f" include_totals=False a exclu {left_out} lignes de total : totaux par "
+                    "groupe d'espèces, toutes espèces et 'Total', et les lignes Canada et "
+                    "Atlantique, qui reprennent les provinces.",
+                    lang,
+                )
+                if left_out
+                else ""
             ),
             licence=OGL_CANADA,
             lang=lang,

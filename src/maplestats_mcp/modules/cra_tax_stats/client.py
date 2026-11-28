@@ -289,9 +289,22 @@ async def _find_file(
     )
 
 
-async def _download(url: str) -> tuple[bytes, bool]:
+def _is_web_page(text: str) -> bool:
+    return text[:1024].lstrip().lower().startswith(("<!doctype", "<html"))
+
+
+def _web_page_error(url: str, lang: str) -> NoReturn:
+    _fail(
+        UpstreamError,
+        f"cra_tax_stats: {url} returned a web page, not a CSV file.",
+        f"cra_tax_stats : {url} a renvoyé une page Web, pas un fichier CSV.",
+        lang,
+    )
+
+
+async def _download(url: str, lang: str = "en") -> tuple[bytes, bool]:
     async def fetch() -> file_download.Downloaded:
-        return await file_download.download(
+        downloaded = await file_download.download(
             url,
             allow_host=lambda host: host == constants.FILE_HOST,
             limiter_for=lambda _host: _FILES,
@@ -299,6 +312,14 @@ async def _download(url: str) -> tuple[bytes, bool]:
             context="cra_tax_stats",
             timeout=120.0,
         )
+        # Checked inside the function the cache calls, so a web page is never stored:
+        # canada.ca answers an outage or a moved file with an HTML page and HTTP 200,
+        # which used to sit in the byte cache for 24 hours (under the key every module
+        # reading this URL shares) and read as NotFound, so get_t1_series and
+        # get_fsa_series listed the year as missing instead of failing.
+        if _is_web_page(csv_files.decode(downloaded.body[:2048])):
+            _web_page_error(url, lang)
+        return downloaded
 
     downloaded, cached = await file_download.cached_download(
         file_download.cache_key(url), constants.FILE_TTL_SECONDS, fetch
@@ -309,15 +330,15 @@ async def _download(url: str) -> tuple[bytes, bool]:
 # ------------------------------------------------------------------ parsing
 
 
-def _rows(body: bytes, url: str) -> tuple[list[str], list[list[str]]]:
+def _rows(body: bytes, url: str, lang: str = "en") -> tuple[list[str], list[list[str]]]:
     """The header and data rows, skipping the lines before the header.
 
     The header is the first line with three or more non-empty cells: the 2021
     FSA files open with a line holding one quote and a blank line.
     """
     text = csv_files.decode(body)
-    if text[:1024].lstrip().lower().startswith(("<!doctype", "<html")):
-        raise NotFound(f"cra_tax_stats: {url} returned a web page, not a CSV file.")
+    if _is_web_page(text):
+        _web_page_error(url, lang)
     try:
         lines = list(csv.reader(io.StringIO(text)))
     except csv.Error as exc:
@@ -406,9 +427,9 @@ class _Layout:
     return_type: int | None = None
 
 
-def parse_t1(body: bytes, tax_year: int, url: str = "") -> list[T1Row]:
+def parse_t1(body: bytes, tax_year: int, url: str = "", lang: str = "en") -> list[T1Row]:
     """Every value of one T1 table file as long rows, amounts in thousands of dollars."""
-    header, lines = _rows(body, url)
+    header, lines = _rows(body, url, lang)
     layout = _Layout()
     values: list[tuple[int, str, Measure, Unit]] = []
     for i, name in enumerate(header):
@@ -472,9 +493,9 @@ def parse_t1(body: bytes, tax_year: int, url: str = "") -> list[T1Row]:
     return out
 
 
-def parse_fsa(body: bytes, tax_year: int, url: str = "") -> list[FsaRow]:
+def parse_fsa(body: bytes, tax_year: int, url: str = "", lang: str = "en") -> list[FsaRow]:
     """Every value of one national FSA table as long rows, amounts in thousands of dollars."""
-    header, lines = _rows(body, url)
+    header, lines = _rows(body, url, lang)
     lowered = [h.lower() for h in header]
     try:
         prov_i = lowered.index("prov/terr")
@@ -536,8 +557,8 @@ async def _t1_rows(
     found, package, api_cached = await _find_file("t1_final", tax_year, str(table), area, lang)
 
     async def fetch() -> list[T1Row]:
-        body, _ = await _download(found.url)
-        return await run_parse(parse_t1, body, tax_year, found.url)
+        body, _ = await _download(found.url, lang)
+        return await run_parse(parse_t1, body, tax_year, found.url, lang)
 
     rows, cached = await cached_fetch(
         f"cra-tax-stats:t1:{found.url}", constants.FILE_TTL_SECONDS, fetch
@@ -551,8 +572,8 @@ async def _fsa_rows(
     found, package, api_cached = await _find_file("fsa", tax_year, table, "ca", lang)
 
     async def fetch() -> list[FsaRow]:
-        body, _ = await _download(found.url)
-        return await run_parse(parse_fsa, body, tax_year, found.url)
+        body, _ = await _download(found.url, lang)
+        return await run_parse(parse_fsa, body, tax_year, found.url, lang)
 
     rows, cached = await cached_fetch(
         f"cra-tax-stats:fsa:{found.url}", constants.FILE_TTL_SECONDS, fetch
