@@ -2083,6 +2083,9 @@ async def main(modules: set[str], url: str | None = None) -> int:
         print("SKIP ourcommons: ourcommons.ca answers HTTP 403 to this GitHub runner")
         DOWN_MODULES["ourcommons"] = "blocked on this runner (HTTP 403)"
     step_tools = {step.tool for step in STEPS}
+    # Tools whose step met a Cloudflare challenge on a GitHub runner: like that step,
+    # the steps that read its result are the runner's block, not counted as outages.
+    blocked: set[str] = set()
     async with _HostedClient(url) if url else Client(mcp) as client:
         for step in STEPS:
             if modules and step.module not in modules:
@@ -2098,7 +2101,9 @@ async def main(modules: set[str], url: str | None = None) -> int:
                 # An earlier step that was skipped or failed left nothing in ctx: that
                 # step is already counted, so this one is a skip. An earlier result
                 # that lacks the field this step reads is a regression.
-                if (
+                if isinstance(exc, KeyError) and exc.args and exc.args[0] in blocked:
+                    print(f"SKIP {label}: no input; {exc.args[0]} is blocked on this runner")
+                elif (
                     isinstance(exc, KeyError)
                     and exc.args
                     and exc.args[0] in step_tools - ctx.keys()
@@ -2116,8 +2121,12 @@ async def main(modules: set[str], url: str | None = None) -> int:
             # steps after it: on Azure (2026-11-20) the French cihi_search_indicators
             # met a refusal, and the next step read the English search's result and
             # failed its check, a second failure for one cause. Without an entry, a
-            # dependent step is skipped ("no input from an earlier step").
-            ctx.pop(step.tool, None)
+            # dependent step is skipped ("no input from an earlier step"). A step that
+            # must be refused stores nothing, so it keeps the earlier result: clearing
+            # it there left senate_get_vote's wrong-session check with no input on
+            # every run from 2026-11-21 to 2026-11-28.
+            if step.expect_error is None:
+                ctx.pop(step.tool, None)
             result = await client.call_tool("call_tool", request, raise_on_error=False)
             text = _text(result)
             if step.expect_error is not None:
@@ -2154,6 +2163,7 @@ async def main(modules: set[str], url: str | None = None) -> int:
                     and "Cloudflare bot challenge" in text
                 ):
                     print(f"SKIP {label}: Cloudflare challenge for this GitHub runner")
+                    blocked.add(step.tool)
                     continue
                 # The server codes an outage (a timeout, a 5xx, a source that is down
                 # or locked) as [upstream_unavailable]: a skip, not a regression.
@@ -2170,6 +2180,7 @@ async def main(modules: set[str], url: str | None = None) -> int:
                 print(f"SKIP {label}: the source did not answer: {text[:200]}")
                 continue
             ctx[step.tool] = data
+            blocked.discard(step.tool)
             try:
                 passed = step.check(data)
             # A check that cannot read the result fails that step, not the whole run.
