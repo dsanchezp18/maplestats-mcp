@@ -1,7 +1,7 @@
 """What a reproduction script fetches, how to read it, and what to keep.
 
-A Spec is language-neutral: render.py turns it into R, Python, Stata and
-Julia. Filters name columns as the source file spells them and run right
+A Spec is language-neutral: render.py and sas.py turn it into R, Python, Stata,
+Julia and SAS. Filters name columns as the source file spells them and run right
 after loading, before any renaming, so the same filter works in every
 language whatever each one's name cleaning produces.
 """
@@ -120,7 +120,7 @@ class Spec:
     prepare: dict[str, Code] = field(default_factory=dict)
     # Extra header lines: provenance such as the dataset id and query.
     details: list[str] = field(default_factory=list)
-    languages: tuple[str, ...] = ("r", "python", "stata", "julia", "excel")
+    languages: tuple[str, ...] = ("r", "python", "stata", "julia", "sas", "excel")
     notes: list[str] = field(default_factory=list)
     source: str = ""  # key into cleaning.SPECIFIC
     # R and Python only: end with "4. Summarize", which prints the table's

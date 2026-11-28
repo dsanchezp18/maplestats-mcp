@@ -52,7 +52,7 @@ async def test_a_full_table_script_tries_the_file_then_wds(monkeypatch):
     }
     result = await _full_table(monkeypatch, arguments)
     code = _by_language(result)
-    assert set(code) == {"r", "python", "stata", "julia", "excel"}
+    assert set(code) == {"r", "python", "stata", "julia", "sas", "excel"}
     url = "https://www150.statcan.gc.ca/n1/tbl/csv/18100004-eng.zip"
     for language in ("r", "python", "stata"):
         assert url in code[language]

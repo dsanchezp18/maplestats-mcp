@@ -160,7 +160,7 @@ def full_table_spec(
 
     The R, Python and Stata scripts download StatCan's zip and, only where StatCan
     answers it with its captcha, rebuild the same rows through WDS
-    (reproduce/wds_table.py); Julia and Power Query read the zip alone.
+    (reproduce/wds_table.py); Julia, SAS and Power Query read the zip alone.
     """
     spec = table_spec(product_id, lang)
     spec.filters = table_member_filters(members, start_period, end_period, lang)
@@ -188,7 +188,7 @@ def full_table_spec(
             "StatCan serves this file to most scripts, but answers some networks with a captcha "
             "(since November 2026). There the R, Python and Stata scripts rebuild the same rows "
             "through StatCan's Web Data Service (WDS), slower but with the same columns and "
-            "values; the Julia and Power Query versions stop at the captcha."
+            "values; the Julia, SAS and Power Query versions stop at the captcha."
         ),
     ]
     return spec
